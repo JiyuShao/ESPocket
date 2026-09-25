@@ -166,42 +166,35 @@ constexpr std::string_view SHELL_JSON = R"json({
           "type": "container",
           "id": "status",
           "commonProps": { "clickable": false, "scrollable": false },
-          "layout": {
-            "type": "flex",
-            "flexFlow": "row",
-            "mainAlign": "spaceBetween",
-            "crossAlign": "center",
-            "gap": "8dp"
-          },
-          "style": { "bgColor": "#1c2430", "radius": "18dp", "paddingLeft": "12dp", "paddingRight": "12dp" },
+          "style": { "bgColor": "#1c2430", "radius": "29dp", "padding": 0 },
           "placement": {
             "mode": "absolute",
-            "x": "73dp",
-            "y": "28dp",
-            "width": "320dp",
-            "height": "38dp"
+            "x": "105dp",
+            "y": "44dp",
+            "width": "256dp",
+            "height": "58dp"
           },
           "children": [
             {
               "type": "label",
               "id": "wifi",
-              "labelProps": { "text": "Wi-Fi: unknown" },
-              "style": { "textColor": "#aeb9c8", "fontSize": "18sp" },
-              "placement": { "mode": "flow", "width": "wrap", "height": "wrap" }
+              "labelProps": { "text": "Wi-Fi: ?" },
+              "style": { "textColor": "#aeb9c8", "fontSize": "18sp", "textAlign": "left" },
+              "placement": { "mode": "absolute", "x": "14dp", "y": "32dp", "width": "122dp", "height": "22dp" }
             },
             {
               "type": "label",
               "id": "clock",
               "labelProps": { "text": "--:--" },
-              "style": { "textColor": "#ffffff", "fontSize": "20sp" },
-              "placement": { "mode": "flow", "width": "wrap", "height": "wrap" }
+              "style": { "textColor": "#ffffff", "fontSize": "20sp", "textAlign": "center" },
+              "placement": { "mode": "absolute", "x": "80dp", "y": "5dp", "width": "100dp", "height": "25dp" }
             },
             {
               "type": "label",
               "id": "battery",
-              "labelProps": { "text": "Battery: unknown" },
-              "style": { "textColor": "#aeb9c8", "fontSize": "18sp" },
-              "placement": { "mode": "flow", "width": "wrap", "height": "wrap" }
+              "labelProps": { "text": "Bat: ?" },
+              "style": { "textColor": "#aeb9c8", "fontSize": "18sp", "textAlign": "right" },
+              "placement": { "mode": "absolute", "x": "140dp", "y": "32dp", "width": "102dp", "height": "22dp" }
             }
           ]
         },
@@ -450,8 +443,8 @@ std::expected<void, std::string> CircularShell::open_launcher()
 void CircularShell::start_status()
 {
     set_status_text(CLOCK_PATH, "--:--");
-    set_status_text(WIFI_PATH, "Wi-Fi: unknown");
-    set_status_text(BATTERY_PATH, "Battery: unknown");
+    set_status_text(WIFI_PATH, "Wi-Fi: ?");
+    set_status_text(BATTERY_PATH, "Bat: ?");
 
     auto &manager = esp_brookesia::service::ServiceManager::get_instance();
 
@@ -465,12 +458,12 @@ void CircularShell::start_status()
                     ESP_LOGW(SHELL_TAG, "Wi-Fi reported unexpected event: %s", event.c_str());
                 }
                 if (event == "Connected") {
-                    set_status_text(WIFI_PATH, "Wi-Fi: connected");
+                    set_status_text(WIFI_PATH, "Wi-Fi: linked");
                 } else if (event == "Deinited" || event == "Inited" || event == "Stopped" ||
                            event == "Started" || event == "Disconnected") {
-                    set_status_text(WIFI_PATH, "Wi-Fi: not connected");
+                    set_status_text(WIFI_PATH, "Wi-Fi: no link");
                 } else {
-                    set_status_text(WIFI_PATH, "Wi-Fi: unknown");
+                    set_status_text(WIFI_PATH, "Wi-Fi: ?");
                 }
             }
                                );
@@ -485,16 +478,16 @@ void CircularShell::start_status()
             [this](const std::string &, const esp_brookesia::service::EventItemMap & items) {
                 auto item = items.find("State");
                 if (item == items.end() || !std::holds_alternative<boost::json::object>(item->second)) {
-                    set_status_text(BATTERY_PATH, "Battery: unknown");
+                    set_status_text(BATTERY_PATH, "Bat: ?");
                     return;
                 }
                 DeviceHelper::PowerBatteryState state;
                 if (!BROOKESIA_DESCRIBE_FROM_JSON(std::get<boost::json::object>(item->second), state) ||
                         !state.is_present || !state.percentage.has_value()) {
-                    set_status_text(BATTERY_PATH, "Battery: unknown");
+                    set_status_text(BATTERY_PATH, "Bat: ?");
                     return;
                 }
-                set_status_text(BATTERY_PATH, "Battery: " + std::to_string(*state.percentage) + "%");
+                set_status_text(BATTERY_PATH, "Bat: " + std::to_string(*state.percentage) + "%");
             }
                                   );
         }
@@ -572,27 +565,27 @@ void CircularShell::refresh_clock()
 void CircularShell::refresh_wifi()
 {
     if (!wifi_binding_.is_valid()) {
-        set_status_text(WIFI_PATH, "Wi-Fi: unknown");
+        set_status_text(WIFI_PATH, "Wi-Fi: ?");
         return;
     }
     auto state = WifiHelper::call_function_sync<std::string>(WifiHelper::FunctionId::GetGeneralState);
     if (!state) {
-        set_status_text(WIFI_PATH, "Wi-Fi: unknown");
+        set_status_text(WIFI_PATH, "Wi-Fi: ?");
     } else if (*state == "Connected") {
-        set_status_text(WIFI_PATH, "Wi-Fi: connected");
+        set_status_text(WIFI_PATH, "Wi-Fi: linked");
     } else if (*state == "Idle" || *state == "Initing" || *state == "Inited" || *state == "Deiniting" ||
                *state == "Starting" || *state == "Started" || *state == "Stopping" ||
                *state == "Connecting" || *state == "Disconnecting") {
-        set_status_text(WIFI_PATH, "Wi-Fi: not connected");
+        set_status_text(WIFI_PATH, "Wi-Fi: no link");
     } else {
-        set_status_text(WIFI_PATH, "Wi-Fi: unknown");
+        set_status_text(WIFI_PATH, "Wi-Fi: ?");
     }
 }
 
 void CircularShell::refresh_battery()
 {
     if (!device_binding_.is_valid()) {
-        set_status_text(BATTERY_PATH, "Battery: unknown");
+        set_status_text(BATTERY_PATH, "Bat: ?");
         return;
     }
     auto value = DeviceHelper::call_function_sync<boost::json::object>(
@@ -601,10 +594,10 @@ void CircularShell::refresh_battery()
     DeviceHelper::PowerBatteryState state;
     if (!value || !BROOKESIA_DESCRIBE_FROM_JSON(*value, state) || !state.is_present ||
             !state.percentage.has_value()) {
-        set_status_text(BATTERY_PATH, "Battery: unknown");
+        set_status_text(BATTERY_PATH, "Bat: ?");
         return;
     }
-    set_status_text(BATTERY_PATH, "Battery: " + std::to_string(*state.percentage) + "%");
+    set_status_text(BATTERY_PATH, "Bat: " + std::to_string(*state.percentage) + "%");
 }
 
 void CircularShell::set_status_text(std::string_view path, std::string text)

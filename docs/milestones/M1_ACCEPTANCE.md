@@ -3,7 +3,7 @@
 ## 状态
 
 - Implementation: `READY`
-- M1: `IN VERIFICATION`
+- M1: `PASS`（2026-09-25）
 - M0: `WAIVED`（2026-09-25，非 PASS）
 - System Core startup blocker: `RESOLVED`（2026-09-25；成功串口日志未保存在仓库中）
 
@@ -29,14 +29,14 @@
 | Dependency resolution | ESP-IDF 6.0.1；37 项目标板依赖已解析并锁定 | PASS |
 | Board config generation | Board Manager 已解析 `esp32_s3_touch_amoled_1_75c` 并生成 ESP32-S3 配置 | PASS |
 | `idf.py build` | ESP32-S3 编译、链接、镜像生成与分区尺寸检查完成 | PASS |
-| Clean reproduction | 2026-09-25 在无 `build/`、`managed_components/`、`sdkconfig`、`gen_bmgr_codes/` 的隔离副本中重新解析 37 项依赖、生成板配置并完整构建通过；修复后 release 尺寸同为 `0x4970f0` | PASS |
-| Firmware / partition size | release `espocket.bin` = `0x4970f0`；factory = `0xa41000`；余 `0x5a9f10`（55%） | PASS |
-| IRAM / DIRAM / Flash | IRAM `16384 / 16384`；DIRAM `163125 / 341760`；Flash Code `3225514`；Flash Data `1431988` bytes | PASS |
-| Total image size | `4812927` bytes（`.bin` 含 padding 后为 `4813040` bytes） | PASS |
-| Boot free internal heap | 待真机启动日志记录 | NOT TESTED |
-| Boot free PSRAM | 待真机启动日志记录 | NOT TESTED |
-| Largest internal block | 待真机启动日志记录 | NOT TESTED |
-| Largest PSRAM block | 待真机启动日志记录 | NOT TESTED |
+| Clean reproduction | 2026-09-25 在无 `build/`、`managed_components/`、`sdkconfig`、`gen_bmgr_codes/` 的隔离副本中重新解析 37 项依赖、生成板配置并完整构建通过；当时的启动顺序修复基线尺寸为 `0x4970f0` | PASS |
+| Firmware / partition size | release `espocket.bin` = `0x497080`；factory = `0xa41000`；余 `0x5a9f80`（55%） | PASS |
+| IRAM / DIRAM / Flash | IRAM `16384 / 16384`；DIRAM `163125 / 341760`；Flash Code `3225514`；Flash Data `1431876` bytes | PASS |
+| Total image size | `4812815` bytes（`.bin` 含 padding 后为 `4812928` bytes） | PASS |
+| Boot free internal heap | `99507` bytes（2026-09-25 最终 UI 镜像软件复位后） | PASS |
+| Boot free PSRAM | `4530332` bytes（同次启动） | PASS |
+| Largest internal block | `31744` bytes（同次启动） | PASS |
+| Largest PSRAM block | `4456448` bytes（同次启动） | PASS |
 
 ### 可复现命令
 
@@ -61,23 +61,26 @@ idf.py -C firmware size-components
 
 | 检查项 | 结果 | 状态 |
 |---|---|---|
-| Boot reaches Launcher | System Core 启动阻塞已解决；Launcher 是否正确显示仍待人工确认 | NOT TESTED |
-| Display layout | 待人工确认 | NOT TESTED |
-| Touch opens TestPage | 待人工确认 | NOT TESTED |
-| Bottom swipe returns Launcher | 待人工确认 | NOT TESTED |
-| Home gesture on Launcher is no-op | 待人工确认 | NOT TESTED |
-| Clock shows real time or `--:--` | 待人工确认 | NOT TESTED |
-| Wi-Fi shows connected / not connected / unknown | 待人工确认 | NOT TESTED |
-| Battery shows percentage or unknown | 待人工确认 | NOT TESTED |
+| Boot reaches Launcher | 用户于 2026-09-25 真机确认设备进入 Launcher | PASS |
+| Display layout | 用户于 2026-09-25 确认最终 UI 镜像显示正常；顶部状态条无圆边裁切，状态文字无重叠 | PASS |
+| Touch opens TestPage | 用户于 2026-09-25 真机确认 | PASS |
+| Bottom swipe returns Launcher | 用户于 2026-09-25 真机确认 | PASS |
+| Home gesture on Launcher is no-op | 用户于 2026-09-25 真机确认 | PASS |
+| Clock shows real time or `--:--` | 用户于 2026-09-25 确认最终 UI 显示正常 | PASS |
+| Wi-Fi shows connected / not connected / unknown | 用户于 2026-09-25 确认最终 UI 显示正常；紧凑状态文案不与相邻项重叠 | PASS |
+| Battery shows percentage or unknown | 用户于 2026-09-25 确认最终 UI 显示正常；紧凑状态文案不与相邻项重叠 | PASS |
 | Fatal failure remains diagnosable on serial | 首次启动因 LittleFS mount `-84` 缺失 Storage，随后 Display bind 失败；串口完整记录并停止启动，无自动重启 | PASS |
 
 ### 真机启动记录
 
-- 烧录与写入哈希校验：`PASS`。
+- 最终 UI 镜像于 2026-09-25 烧录至 `/dev/cu.usbmodem2101`；bootloader、分区表和应用镜像均通过 esptool 写入哈希校验，未擦除整片 Flash，未写入 NVS 或 `littlefs_data`：`PASS`。
+- 烧录后两次软件复位均观察到 `ESPocket started`；第二次完整记录还包含 Display `466x466`、Circular Shell 启动，以及 heap `99507/31744`、PSRAM `4530332/4456448`（free/largest）：`PASS`。
 - 首次启动：`FAIL`。`littlefs_data` 返回 LittleFS mount `-84`；Storage service 未注册，Display 的 Storage 依赖绑定失败；System 按设计停止且保留串口诊断。
 - Storage 修复：`PASS`。启用仅针对 `littlefs_data` 的 mount-failure format 后，LittleFS 成功挂载（总容量 5,120,000 bytes，启动时已用 8,192 bytes），Storage FileSystem/KeyValue 与 Display 服务成功启动；NVS 和其他分区未擦除。
 - 历史阻塞：Storage 修复后曾在 `SysCore: ... Version: 0.8.4` 后至少 60 秒无后续输出；无 panic、watchdog reset 或自动重启。
-- 启动阻塞修复：将背光开启改为在 LVGL worker 启动前同步完成，避免背光 Display 命令与首帧提交形成 Display/LVGL 反向取锁窗口。用户于 2026-09-25 确认问题已解决；本仓库未保存对应成功串口日志，因此这里只关闭该 blocker，不据此判定 Launcher、显示、触摸或手势 PASS。
+- 启动阻塞修复：将背光开启改为在 LVGL worker 启动前同步完成，避免背光 Display 命令与首帧提交形成 Display/LVGL 反向取锁窗口。用户于 2026-09-25 确认问题已解决；本仓库未保存对应成功串口日志，因此这里只关闭该 blocker。
+- 用户于 2026-09-25 真机确认 Launcher、触摸进入 TestPage、底部上滑返回 Launcher，以及 Launcher 上 Home 手势 no-op 均正常。
+- 同次真机检查发现旧镜像顶部状态条在圆屏边缘被裁切，且 `Wi-Fi: not connected` 与 Clock/Battery 重叠。修复将状态条收进 466×466 圆形安全弦，Clock 独占上行，Wi-Fi/Battery 使用固定且互不相交的下行槽位与紧凑文案；release 镜像（SHA-256 `d0ee1df184dbfba4a9377768827bd52962d9d46cdb60d4d511ef38bce64bd17e`）已烧录并成功启动，用户于 2026-09-25 确认最终 UI 正常。
 - 诊断过程曾构建临时 DEBUG/TRACE 镜像，并尝试 JTAG；OpenOCD 因芯片内存保护自动软复位且未取得有效回溯。单次 PC 采样未被作为根因证据。
 
 ## Stability
@@ -88,19 +91,21 @@ idf.py -C firmware size-components
 
 | # | 结果 | 日志摘要 |
 |---:|---|---|
-| 1–10 | 待执行 | |
+| 1–2 | PASS | 真正断电后重新上电，分别在 3.9 秒和 3.7 秒到达 `ESPocket started` |
+| 3–5 | PASS | 真正断电后重新上电，分别在 4.2、4.0、4.4 秒到达 `ESPocket started`；中途断电或空串口尝试均未计入结果 |
 
 ### EN / software resets
 
 | # | 结果 | 日志摘要 |
 |---:|---|---|
-| 1–10 | 待执行 | |
+| 1–2 | PASS | 烧录后经 esptool 硬复位，均到达 `ESPocket started`；第 2 次记录 heap/PSRAM 指标 |
+| 3–10 | PASS | 每次约 4.6–4.7 秒到达 `ESPocket started`；未检测到 panic、watchdog、assert 或 heap corruption |
 
 ## Result
 
-`IN VERIFICATION`
+`PASS`（2026-09-25）
 
-M1 只有在构建、真机 Smoke 和 20 次启动全部通过后才能标记 `PASS`。此前不创建 `v0.1-system`，不进入 M2。
+构建、真机 Smoke、5 次冷启动和 10 次 EN/软件复位均已通过。M0 仍为 `WAIVED`，不是 `PASS`。未经明确批准不创建 `v0.1-system`、不进入 M2。
 
 ## Known Issues
 
@@ -114,4 +119,4 @@ M1 只有在构建、真机 Smoke 和 20 次启动全部通过后才能标记 `P
 
 ## M2 Recommendation
 
-待 M1 完成后填写；未经明确批准不得开始 M2。
+M1 已完成。下一阶段可按独立授权进入 M2 Native App Validation；在获得明确批准前不创建 `app_hello`、不进入 M2。

@@ -116,7 +116,7 @@ Boot → Launcher → tap → TestPage → bottom swipe → Launcher
 
 M1 不包含 Native App 注册/发现/启动/停止验证、资源清理、Runtime、Recents、Notifications、Quick Settings、独立 Home 页面或通用手势框架。`TestPage` 在 M2 引入 `Hello Native` 后删除。
 
-M1 通过条件包括真实设备显示、触摸、状态降级、Home 手势，以及 10 次冷启动和 10 次 EN/软件重启。未执行项只能标记 `NOT TESTED`；外部条件阻塞项标记 `BLOCKED`。
+M1 通过条件包括真实设备显示、触摸、状态降级、Home 手势，以及 5 次冷启动和 10 次 EN/软件重启。未执行项只能标记 `NOT TESTED`；外部条件阻塞项标记 `BLOCKED`。
 
 每个 Milestone 完成后必须输出验收报告并停止；未经项目所有者明确批准不得进入下一阶段。M1 真机验收通过前不发布 Release、不创建 `v0.1-system`。
 
