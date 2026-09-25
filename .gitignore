@@ -1,0 +1,13 @@
+# ESP-IDF build output
+firmware/build/
+firmware/managed_components/
+firmware/sdkconfig
+firmware/sdkconfig.old
+firmware/components/gen_bmgr_codes/
+
+# Local tooling
+.claude/
+.DS_Store
+*.log
+__pycache__/
+*.py[cod]
