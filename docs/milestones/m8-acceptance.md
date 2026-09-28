@@ -41,21 +41,21 @@
 
 | 检查项 | PASS 条件 | 状态 |
 |---|---|---|
-| Canonical contract | Native、Runtime 与第三方指导使用相同术语和行为 | NOT TESTED |
-| Root / Detail | 两种执行模型都能验证 Root → Detail → Back → Root | NOT TESTED |
-| Launch Source | Root Back 返回一个直接来源；失效时回 Watch Face | NOT TESTED |
-| Home | 任意 App 页面 PWR 短按都回 Watch Face | NOT TESTED |
-| Display State | 两种执行模型遵守相同息屏、唤醒和 fallback 规则 | NOT TESTED |
-| Reclaim semantics | App 不依赖后台驻留；回收后重新启动进入 App Root | NOT TESTED |
-| Gesture ownership | App 保留 Tap、Scroll、普通横滑、Long Press；系统保留 Edge Back 与 PWR | NOT TESTED |
-| Guidance | 四类页面指导写入开发文档，但不建立模板框架 | NOT TESTED |
-| Minimal Runtime sample | 只实现验证契约所需的最小 Root / Detail 路径 | NOT TESTED |
-| Build | Native 与 Runtime 目标的 clean build/link/staging 成功 | NOT TESTED |
-| Static checks | JSON、package、脚本或项目既有检查全部通过 | NOT TESTED |
+| Canonical contract | Native、Runtime 与第三方指导使用相同术语和行为 | PASS（STATIC，dependency-gated） |
+| Root / Detail | 两种执行模型都能验证 Root → Detail → Back → Root | PASS（HOST BUILD + STATIC，真机待验收） |
+| Launch Source | Root Back 返回一个直接来源；失效时回 Watch Face | PASS（STATIC，真机待验收） |
+| Home | 任意 App 页面 PWR 短按都回 Watch Face | PASS（STATIC，真机待验收） |
+| Display State | 两种执行模型遵守相同息屏、唤醒和 fallback 规则 | PASS（STATIC，真机待验收） |
+| Reclaim semantics | App 不依赖后台驻留；回收后重新启动进入 App Root | PASS（STATIC，真机待验收） |
+| Gesture ownership | App 保留 Tap、Scroll、普通横滑、Long Press；系统保留 Edge Back 与 PWR | PASS（STATIC，真机待验收） |
+| Guidance | 四类页面指导写入开发文档，但不建立模板框架 | PASS（[`../design/app-interaction.md`](../design/app-interaction.md)） |
+| Minimal Runtime sample | 只实现验证契约所需的最小 Root / Detail 路径 | PASS（Toolkit build + staging，真机待验收） |
+| Build | Native 与 Runtime 目标的 clean build/link/staging 成功 | PASS（2026-09-28，dependency-gated） |
+| Static checks | JSON、package、脚本或项目既有检查全部通过 | PASS（Toolkit validation + JSON parse + `git diff --check`） |
 
 ## Hardware Acceptance
 
-真机证据是 M8 PASS 的必要条件。M8 的文档和 Native 工作可以在 M3 BLOCKED 时准备，但 Runtime 验证未完成前 M8 不得 PASS。
+真机证据是 M8 PASS 的必要条件。M3 已通过；M8 仍须完成本规范自己的 Runtime 路径验证后才能 PASS。
 
 ### Fixed repetition counts
 
@@ -105,8 +105,10 @@
 - 每次固定循环必须标识执行模型、attempt 编号、Launch Source 与最终目标。
 - Runtime 路径必须使用真实 Runtime App，不能用 Native mock 替代。
 - Preview、host 测试或串口状态打印不能替代物理显示、触摸和 PWR 观察。
-- M3 未 PASS、Runtime 路径未通过或任一必须项缺少证据时，M8 不得标记 `PASS`。
+- Runtime 路径未通过或任一必须项缺少证据时，M8 不得标记 `PASS`。
 
 ## Result
 
 `NOT ENTERED`
+
+M8 Native/Runtime 契约源码已按项目所有者授权提前开发，并通过 Toolkit、主机构建、staging 与静态检查；记录见 [`evidence/m7-m8/M7_M8_HOST_BUILD_2026-09-28.txt`](evidence/m7-m8/M7_M8_HOST_BUILD_2026-09-28.txt)。由于 M7 尚未 `PASS`，M8 仍保持 `NOT ENTERED`，所有真机和 lifecycle/heap 项保持 `NOT TESTED`。

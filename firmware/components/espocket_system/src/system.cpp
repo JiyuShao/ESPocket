@@ -21,6 +21,7 @@
 #include "esp_log.h"
 #include "espocket/circular_shell.hpp"
 #include "espocket/hello_app.hpp"
+#include "espocket/power_key_monitor.hpp"
 
 namespace espocket {
 namespace {
@@ -111,6 +112,13 @@ std::expected<void, std::string> run_m2_lifecycle_stress(
 
 } // namespace
 
+System::System()
+    : launch_source_(ShellSurface::WatchFace),
+      lifecycle_restore_surface_(ShellSurface::WatchFace)
+{}
+
+System::~System() = default;
+
 std::expected<void, std::string> System::init()
 {
     auto &service_manager = esp_brookesia::service::ServiceManager::get_instance();
@@ -191,13 +199,29 @@ std::expected<void, std::string> System::on_init()
     }
     ESP_LOGI(TAG, "App Store installed");
 
-    auto foreground_token = foreground_token_;
+    power_key_monitor_ = std::make_unique<PowerKeyMonitor>();
     shell_ = std::make_shared<CircularShell>(
-        [foreground_token]() {
-            return foreground_token->load(std::memory_order_acquire);
+        [this]() {
+            return power_key_monitor_ ? power_key_monitor_->short_press_count() : 0;
         },
-        [this](uint64_t token) {
-            handle_home_intent(token);
+        [this]() {
+            return display_on_.load(std::memory_order_acquire);
+        },
+        [this]() {
+            return foreground_app_id_.load(std::memory_order_acquire) !=
+                   esp_brookesia::system::core::INVALID_APP_ID;
+        },
+        [this]() {
+            handle_power_short_press();
+        },
+        [this]() {
+            handle_screen_timeout();
+        },
+        [this](std::string_view manifest_id, ShellSurface source) {
+            return launch_app(manifest_id, source);
+        },
+        [this]() {
+            handle_back();
         },
         [this](
             esp_brookesia::system::core::AppId app_id,
@@ -256,6 +280,13 @@ std::expected<void, std::string> System::on_start()
     if (!result) {
         return std::unexpected("Failed to start Circular Shell: " + result.error());
     }
+    auto power_result = power_key_monitor_->start();
+    if (!power_result) {
+        (void)stop_app(shell_id_);
+        return std::unexpected("Failed to start PWR input: " + power_result.error());
+    }
+    display_on_.store(true, std::memory_order_release);
+    resume_app_id_ = esp_brookesia::system::core::INVALID_APP_ID;
     return {};
 }
 
@@ -275,6 +306,7 @@ std::expected<void, std::string> System::on_app_started(
         ++foreground_generation_;
     } while (foreground_generation_ == 0);
     foreground_token_->store(foreground_generation_, std::memory_order_release);
+    lifecycle_restore_pending_ = false;
     return {};
 }
 
@@ -290,12 +322,12 @@ void System::on_app_start_failed(
         static_cast<int>(reason.size()),
         reason.data()
     );
-    restore_launcher_after_lifecycle(app);
+    restore_home_after_lifecycle(app);
 }
 
 void System::on_app_stopped(const esp_brookesia::system::core::AppInfo &app)
 {
-    restore_launcher_after_lifecycle(app);
+    restore_home_after_lifecycle(app);
 }
 
 void System::on_app_stop_failed(
@@ -314,7 +346,7 @@ void System::on_app_stop_failed(
         runtime_stop_failed_.store(true, std::memory_order_release);
         ESP_LOGE(TAG, "Keyboard input disabled after Runtime stop failure");
     }
-    restore_launcher_after_lifecycle(app);
+    restore_home_after_lifecycle(app);
 }
 
 std::expected<void, std::string> System::on_show_app_keyboard(
@@ -349,24 +381,187 @@ void System::on_hide_app_keyboard(
     }
 }
 
-void System::handle_home_intent(uint64_t foreground_token)
+void System::handle_power_short_press()
 {
-    // The token binds one physical gesture to the foreground run present at Press.
-    if (stopping_.load(std::memory_order_acquire) || foreground_token == 0 ||
-            foreground_token_->load(std::memory_order_acquire) != foreground_token) {
+    if (stopping_.load(std::memory_order_acquire) || !shell_) {
         return;
     }
 
-    const auto tracked_app_id = foreground_app_id_.load(std::memory_order_acquire);
+    if (!display_on_.load(std::memory_order_acquire)) {
+        auto result = set_display_on(true);
+        if (!result) {
+            ESP_LOGW(TAG, "PWR wake failed: %s", result.error().c_str());
+            return;
+        }
+        if (resume_app_id_ != esp_brookesia::system::core::INVALID_APP_ID) {
+            auto active = get_active_app();
+            auto app = get_app(resume_app_id_);
+            if (!active.has_value() || active->app_id != resume_app_id_ ||
+                    !app.has_value() || app->state != esp_brookesia::system::core::AppState::Running) {
+                show_watch_face();
+            }
+        }
+        resume_app_id_ = esp_brookesia::system::core::INVALID_APP_ID;
+        ESP_LOGI(TAG, "M6 display state: Wake");
+        return;
+    }
+
     auto active = get_active_app();
-    if (!active.has_value() || active->app_id != tracked_app_id ||
-            active->app_id == shell_id_ || !active->manifest.visible) {
+    if (active.has_value() && active->app_id != shell_id_ && active->manifest.visible) {
+        lifecycle_restore_surface_ = ShellSurface::WatchFace;
+        lifecycle_restore_pending_ = true;
+        auto result = stop_app(active->app_id);
+        if (!result) {
+            ESP_LOGW(TAG, "PWR Home failed to stop app: %s", result.error().c_str());
+        }
         return;
     }
 
+    if (!shell_->is_watch_face()) {
+        show_watch_face();
+        return;
+    }
+
+    auto result = set_display_on(false);
+    if (!result) {
+        ESP_LOGW(TAG, "PWR screen-off failed: %s", result.error().c_str());
+    }
+}
+
+std::expected<void, std::string> System::launch_app(
+    std::string_view manifest_id,
+    ShellSurface source
+)
+{
+    auto apps = list_apps();
+    auto app = std::find_if(apps.begin(), apps.end(), [manifest_id](const auto &candidate) {
+        return candidate.manifest.id == manifest_id;
+    });
+    if (app == apps.end()) {
+        return std::unexpected("App is not installed: " + std::string(manifest_id));
+    }
+    launch_source_ = source;
+    lifecycle_restore_surface_ = source;
+    lifecycle_restore_pending_ = true;
+    auto result = start_app(app->app_id);
+    if (!result) {
+        restore_surface(source);
+        lifecycle_restore_pending_ = false;
+        return result;
+    }
+    return {};
+}
+
+void System::handle_back()
+{
+    if (stopping_.load(std::memory_order_acquire) || !shell_) {
+        return;
+    }
+    auto active = get_active_app();
+    if (!active.has_value() || active->app_id == shell_id_ || !active->manifest.visible) {
+        if (shell_->current_surface() != ShellSurface::WatchFace) {
+            restore_surface(ShellSurface::WatchFace);
+        }
+        return;
+    }
+
+    const auto state = gui_get_screen_flow_state(active->app_id, "main");
+    if (state.has_value() && *state == "detail") {
+        auto result = gui_trigger_screen_flow(active->app_id, "main", "back_root");
+        if (!result) {
+            ESP_LOGW(TAG, "App Detail Back failed: %s", result.error().c_str());
+        }
+        return;
+    }
+
+    lifecycle_restore_surface_ = launch_source_;
+    lifecycle_restore_pending_ = true;
     auto result = stop_app(active->app_id);
     if (!result) {
-        ESP_LOGW(TAG, "Home intent failed to stop app: %s", result.error().c_str());
+        lifecycle_restore_pending_ = false;
+        ESP_LOGW(TAG, "App Root Back failed: %s", result.error().c_str());
+    }
+}
+
+void System::handle_screen_timeout()
+{
+    if (stopping_.load(std::memory_order_acquire) ||
+            !display_on_.load(std::memory_order_acquire)) {
+        return;
+    }
+    auto result = set_display_on(false);
+    if (!result) {
+        ESP_LOGW(TAG, "Automatic screen-off failed: %s", result.error().c_str());
+    }
+}
+
+std::expected<void, std::string> System::set_display_on(bool on)
+{
+    if (!shell_) {
+        return std::unexpected("Circular Shell is unavailable");
+    }
+    if (display_on_.load(std::memory_order_acquire) == on) {
+        return {};
+    }
+
+    if (!on) {
+        auto active = get_active_app();
+        resume_app_id_ = active.has_value() && active->app_id != shell_id_ && active->manifest.visible ?
+                         active->app_id : esp_brookesia::system::core::INVALID_APP_ID;
+        auto input_result = shell_->set_display_on(false);
+        if (!input_result) {
+            return input_result;
+        }
+    }
+
+    auto backlight_result = DisplayHelper::call_function_sync(
+                                DisplayHelper::FunctionId::SetBacklightOnOff,
+                                static_cast<double>(display_output_id_),
+                                on,
+                                esp_brookesia::service::helper::Timeout(DISPLAY_TIMEOUT_MS)
+                            );
+    if (!backlight_result) {
+        if (!on) {
+            (void)shell_->set_display_on(true);
+        }
+        return std::unexpected("Failed to change display power: " + backlight_result.error());
+    }
+
+    if (on) {
+        auto input_result = shell_->set_display_on(true);
+        if (!input_result) {
+            return input_result;
+        }
+    }
+    display_on_.store(on, std::memory_order_release);
+    ESP_LOGI(TAG, "M6 display state: %s", on ? "On" : "Off");
+    return {};
+}
+
+void System::show_watch_face()
+{
+    if (!shell_) {
+        return;
+    }
+    auto result = shell_->show_watch_face();
+    if (!result) {
+        ESP_LOGW(TAG, "Failed to show Watch Face: %s", result.error().c_str());
+    } else {
+        ESP_LOGI(TAG, "M6 Home: Watch Face");
+    }
+}
+
+void System::restore_surface(ShellSurface surface)
+{
+    if (!shell_) {
+        return;
+    }
+    auto result = shell_->show_surface(surface);
+    if (!result) {
+        ESP_LOGW(TAG, "Failed to restore Shell surface: %s", result.error().c_str());
+        if (surface != ShellSurface::WatchFace) {
+            show_watch_face();
+        }
     }
 }
 
@@ -385,7 +580,7 @@ void System::clear_foreground(
     foreground_token_->store(0, std::memory_order_release);
 }
 
-void System::restore_launcher_after_lifecycle(
+void System::restore_home_after_lifecycle(
     const esp_brookesia::system::core::AppInfo &app
 )
 {
@@ -404,16 +599,18 @@ void System::restore_launcher_after_lifecycle(
     if (!shell.has_value() || shell->state != esp_brookesia::system::core::AppState::Running) {
         return;
     }
-    auto result = shell_->restore_launcher();
-    if (!result) {
-        ESP_LOGW(TAG, "Failed to restore Launcher: %s", result.error().c_str());
-    }
+    const auto surface = lifecycle_restore_pending_ ? lifecycle_restore_surface_ : ShellSurface::WatchFace;
+    lifecycle_restore_pending_ = false;
+    restore_surface(surface);
 }
 
 void System::on_stop()
 {
     stopping_.store(true, std::memory_order_release);
     foreground_token_->store(0, std::memory_order_release);
+    if (power_key_monitor_) {
+        power_key_monitor_->stop();
+    }
 
     if (shell_id_ != esp_brookesia::system::core::INVALID_APP_ID) {
         auto shell_result = stop_app(shell_id_);
@@ -437,6 +634,7 @@ void System::on_stop()
 void System::on_deinit()
 {
     shell_.reset();
+    power_key_monitor_.reset();
     shell_id_ = esp_brookesia::system::core::INVALID_APP_ID;
     foreground_app_id_.store(
         esp_brookesia::system::core::INVALID_APP_ID,
@@ -444,6 +642,11 @@ void System::on_deinit()
     );
     foreground_token_->store(0, std::memory_order_release);
     stopping_.store(false, std::memory_order_release);
+    display_on_.store(true, std::memory_order_release);
+    resume_app_id_ = esp_brookesia::system::core::INVALID_APP_ID;
+    launch_source_ = ShellSurface::WatchFace;
+    lifecycle_restore_surface_ = ShellSurface::WatchFace;
+    lifecycle_restore_pending_ = false;
     if (display_started_) {
         DisplaySource::get_instance().stop();
         display_started_ = false;
@@ -516,6 +719,7 @@ std::expected<void, std::string> System::start_display()
 
     display_width_ = output->width;
     display_height_ = output->height;
+    display_output_id_ = output->id;
     ESP_LOGI(
         TAG,
         "Display ready: %s (%" PRIu32 "x%" PRIu32 ")",

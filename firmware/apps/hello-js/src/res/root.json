@@ -1,4 +1,4 @@
 {
   "version": "0.1.0",
-  "assets": ["screens/main.json", "flows/main.json"]
+  "assets": ["screens/main.json", "screens/detail.json", "flows/main.json"]
 }

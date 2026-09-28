@@ -9,13 +9,13 @@ namespace {
 
 constexpr char TAG[] = "ESPocket.Hello";
 constexpr std::string_view INCREMENT_ACTION = "hello.increment";
-constexpr std::string_view COUNTER_PATH = "/hello/counter";
+constexpr std::string_view COUNTER_PATH = "/root/counter";
 constexpr std::string_view HELLO_JSON = R"json({
   "version": "0.1.0",
   "assets": [
     {
       "type": "viewScreen",
-      "id": "hello",
+      "id": "root",
       "commonProps": { "scrollable": false },
       "style": { "bgColor": "#101722", "padding": 0 },
       "layout": {
@@ -55,14 +55,45 @@ constexpr std::string_view HELLO_JSON = R"json({
               "placement": { "mode": "relative", "align": "center" }
             }
           ]
+        },
+        {
+          "type": "button",
+          "id": "detail",
+          "events": [ { "type": "clicked", "action": "open_detail" } ],
+          "style": { "bgColor": "#334155", "radius": "24dp" },
+          "placement": { "width": "190dp", "height": "54dp" },
+          "children": [
+            {
+              "type": "label",
+              "id": "label",
+              "labelProps": { "text": "Open Detail" },
+              "style": { "textColor": "#ffffff", "fontSize": "18sp" },
+              "placement": { "mode": "relative", "align": "center" }
+            }
+          ]
         }
       ]
     },
     {
+      "type": "viewScreen",
+      "id": "detail",
+      "commonProps": { "scrollable": false },
+      "style": { "bgColor": "#172033", "padding": 0 },
+      "layout": { "type": "flex", "flexFlow": "column", "mainAlign": "center", "crossAlign": "center", "gap": "18dp" },
+      "children": [
+        { "type": "label", "id": "title", "labelProps": { "text": "Native Detail" }, "style": { "textColor": "#ffffff", "fontSize": "30sp" }, "placement": { "width": "280dp", "height": "44dp" } },
+        { "type": "label", "id": "hint", "labelProps": { "text": "Edge Back returns to Root" }, "style": { "textColor": "#a8b3c5", "fontSize": "17sp", "textAlign": "center" }, "placement": { "width": "300dp", "height": "30dp" } }
+      ]
+    },
+    {
       "type": "screenFlow",
-      "id": "hello_flow",
-      "screens": [ "hello" ],
-      "initial": "hello"
+      "id": "main",
+      "screens": [ "root", "detail" ],
+      "initial": "root",
+      "transitions": [
+        { "from": ["root"], "action": "open_detail", "to": "detail" },
+        { "from": ["detail"], "action": "back_root", "to": "root" }
+      ]
     }
   ]
 })json";
@@ -92,7 +123,7 @@ esp_brookesia::system::core::AppGuiDescriptor HelloApp::get_gui_descriptor() con
         .resources = {},
         .screen_flows = {
             {
-                .screen_flow = "hello_flow",
+                .screen_flow = "main",
                 .layer = esp_brookesia::system::core::GuiAppLayer::AppDefault,
             },
         },

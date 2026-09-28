@@ -1,6 +1,10 @@
 {
   "type": "screenFlow",
   "id": "main",
-  "screens": ["main"],
-  "initial": "main"
+  "screens": ["root", "detail"],
+  "initial": "root",
+  "transitions": [
+    { "from": ["root"], "action": "open_detail", "to": "detail" },
+    { "from": ["detail"], "action": "back_root", "to": "root" }
+  ]
 }

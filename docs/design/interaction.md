@@ -5,8 +5,8 @@
 本文是 ESPocket 的目标交互契约，适用于 Watch Face、Cards、Launcher、Quick Settings、Native App 和 Runtime App。
 
 - 目标模型：`Home → Watch Face`。
-- 当前实现：截至 M5，`Home → Launcher`；Watch Face、Cards、Quick Settings、Edge Back 和 PWR 导航尚未实现。
-- 生效路径：M6 起逐步实现本规范；M1–M5 验收文档继续记录当时的实现与证据。
+- 当前实现：M6 已进入实施，源码已引入 `Home → Watch Face`、PWR Home/息屏/唤醒和自动息屏；真机验收尚未完成。Cards、Quick Settings 与 Edge Back 仍未实现。
+- 生效路径：M6 起逐步实现本规范；M1–M5 验收文档继续记录当时的实现与证据，未通过真机门槛的 M6 行为不得描述为已验收。
 - 本文中的“必须”“应该”“可以”分别表示强制契约、默认原则和可选能力；示例不自动构成交付范围。
 
 本文只定义交互规则和页面关系，不定义手势阈值、识别优先级或算法。

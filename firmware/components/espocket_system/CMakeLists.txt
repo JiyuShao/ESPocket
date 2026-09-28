@@ -1,5 +1,5 @@
 idf_component_register(
-    SRCS "src/system.cpp"
+    SRCS "src/system.cpp" "src/power_key_monitor.cpp"
     INCLUDE_DIRS "include"
     REQUIRES
         app_hello
@@ -11,7 +11,7 @@ idf_component_register(
         brookesia_service_display
         brookesia_service_helper
         brookesia_service_manager
-    PRIV_REQUIRES brookesia_lib_utils
+    PRIV_REQUIRES brookesia_lib_utils esp_board_manager esp_driver_i2c
 )
 
 target_compile_features(${COMPONENT_LIB} PUBLIC cxx_std_23)

@@ -6,15 +6,15 @@
 - Toolkit install/doctor/debug package build: `PASS`
 - Boot-time Runtime discovery: `PASS`（clean formal image）
 - Interactive Runtime lifecycle and Native coexistence: `PASS`（clean formal image）
-- Core `.bpk` install path: `NOT TESTED`
-- M3: `BLOCKED`
+- Core `.bpk` install path: `ACCEPTED BY PROJECT OWNER`（无新增原始日志）
+- M3: `PASS`（2026-09-28）
 - M2: `PASS`（2026-09-26）
 - M1: `PASS`（2026-09-25，`v0.1-system`）
 - M0: `WAIVED`（2026-09-25，非 PASS）
 
 项目所有者于 2026-09-26 明确授权解析并构建 `espressif/brookesia_runtime_js@0.8.3`（包括 `quickjs-ng@0.14.*`），以及安装/执行 `esp-brookesia-toolkit@1.0.1` 来构建 Hello Runtime `.bpk`。授权后的全新隔离 ESP-IDF 构建成功，以下 firmware、lock、link map、staging 与 LittleFS 证据均来自该运行。更早由只读复核 agent 越界产生的 build、lock 和 managed components 仍保留在会话临时隔离区，继续不作为证据。
 
-项目所有者随后逐项命名授权所有相关外部源码。`esp-brookesia-toolkit@1.0.1` 已安装并生成 JavaScript lock；官方 `doctor` 与 `build` 已运行，产出 debug `.bpk`。2026-09-26 的授权 clean-image 设备验证证明 boot-time staged Runtime 可被 System Core 安装，并完成 Runtime 可见性、渲染、启动/停止、Home 返回及 Native/Runtime 双向交替；但 boot-time unpacked staging 不等于 Core `.bpk` install，因此 M3 继续为 `BLOCKED`。
+项目所有者随后逐项命名授权所有相关外部源码。`esp-brookesia-toolkit@1.0.1` 已安装并生成 JavaScript lock；官方 `doctor` 与 `build` 已运行，产出 debug `.bpk`。2026-09-26 的授权 clean-image 设备验证证明 boot-time staged Runtime 可被 System Core 安装，并完成 Runtime 可见性、渲染、启动/停止、Home 返回及 Native/Runtime 双向交替。2026-09-28，项目所有者确认 M3 可直接判定 `PASS`，不再把独立 Core `.bpk` file-install 作为 M3 阻塞门槛；本次确认没有新增可留存的原始设备日志。
 
 ## Scope
 
@@ -77,7 +77,7 @@ idf.py -C firmware \
 | Packaged JavaScript | PASS | `app/main.js` byte-identical to source and passes `node --check` |
 | Release signature | NOT CREATED | debug build intentionally contains no `META-INF/hash.json` or `META-INF/signature.sig`; official verifier rejects it as unsigned; no private-key operation authorized |
 
-`brookesia_stage_runtime_app_package()` copies the unpacked source tree into the boot image. Device logs now prove that System Core discovers and installs this staged package as `manifest(espocket.app.hello_runtime)`. This still does **not** exercise the Core `.bpk` install, verification, update, or uninstall paths.
+`brookesia_stage_runtime_app_package()` copies the unpacked source tree into the boot image. Device logs prove that System Core discovers and installs this staged package as `manifest(espocket.app.hello_runtime)`. This does **not** independently prove the Core `.bpk` verification, update, or uninstall paths; the project owner accepted that evidence boundary when marking M3 `PASS`.
 
 ## Runtime Lifecycle and Hardware
 
@@ -91,7 +91,7 @@ idf.py -C firmware \
 | Launcher restores | PASS (PHYSICAL) | restored after Native, Runtime, Settings, and Store |
 | Native/Runtime alternation | PASS (PHYSICAL + SERIAL) | start sequence contains `Runtime → Native → Runtime`; each start has a matching stop |
 | Runtime cleanup/stability | PASS (SMOKE) | Native 3/3 and Runtime 2/2 start/stop pairs; no fatal/reboot signal during combined window |
-| Official `.bpk` install path | NOT TESTED | unpacked staging is not install evidence |
+| Official `.bpk` install path | ACCEPTED (OWNER CONFIRMATION) | no new raw log retained; unpacked staging alone is not file-install evidence |
 
 The accepted cumulative image and isolated diagnostic canaries were flashed under explicit authorization without whole-chip/NVS erase. The first accepted image repeatedly overflowed the 64 KiB System workers. A 128 KiB canary removed that failure but exposed the missing official JPEG decoder gate. After enabling `CONFIG_ESP_LVGL_ADAPTER_ENABLE_DECODER=y`, a repeated no-input 60-second boot completed with one ROM banner, no fatal signal, and all four product apps installed. A later 16 KiB Service Manager secondary-worker canary failed deterministically before GUI startup because its two internal-SRAM stacks left no contiguous 46,600-byte LVGL secondary display buffer; the same failure reproduced after reset. This is diagnostic evidence, not a Runtime lifecycle result.
 
@@ -118,14 +118,14 @@ target = ceil((maximum_used + 16384) / 4096) * 4096
 
 selects `CONFIG_BROOKESIA_SYSTEM_CORE_WORKER_STACK_SIZE=94208`, leaving 18,784 bytes of observed reserve. This value applies only to System Core workers. The separate Service Manager workers were measured independently: ESP-IDF and Brookesia both express their configured stack and high-water mark in bytes, and the Store path used at most 8,688 of 12,288 bytes. The tracked formal value is therefore `CONFIG_BROOKESIA_SERVICE_MANAGER_SECONDARY_SCHEDULER_WORKER_STACK_SIZE=12288`, retaining 3,600 bytes of observed reserve while preserving enough internal SRAM for the existing LVGL buffers.
 
-## Required Unblock
+## Follow-up Boundaries
 
-1. Exercise Core `.bpk` install separately; boot-time unpacked staging and Host-side Toolkit output are not substitutes.
-2. Decide and authorize a release-signing procedure before generating private keys or claiming a verified release package.
+1. Re-test Core `.bpk` install if a later release needs auditable file-install evidence; boot-time unpacked staging and Host-side Toolkit output are not substitutes.
+2. Decide and authorize a release-signing procedure before generating private keys or claiming a verified release package. Signing remains a release/M5 concern, not an M3 blocker.
 3. No further interactive Runtime lifecycle work is required for M3; repeat only after a platform/runtime upgrade.
 
 ## Result
 
-`BLOCKED`
+`PASS`（2026-09-28）
 
-The Runtime JS/QuickJS dependency resolution, clean firmware build/boot, staged package tree, LittleFS image, Toolkit debug `.bpk`, physical Runtime lifecycle, Home restoration, and Native coexistence are accepted. M3 remains blocked only because the Core `.bpk` file-install path was not exercised; boot-time unpacked staging is not a substitute, and the debug package is intentionally unsigned rather than release-verification evidence.
+The Runtime JS/QuickJS dependency resolution, clean firmware build/boot, staged package tree, LittleFS image, Toolkit debug `.bpk`, physical Runtime lifecycle, Home restoration, and Native coexistence are accepted. On 2026-09-28 the project owner accepted M3 as `PASS` without retaining an additional Core `.bpk` file-install log. The debug package remains intentionally unsigned; release verification is tracked separately and is not implied by this result.

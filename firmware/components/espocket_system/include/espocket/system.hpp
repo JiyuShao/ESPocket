@@ -13,9 +13,13 @@
 namespace espocket {
 
 class CircularShell;
+class PowerKeyMonitor;
+enum class ShellSurface : uint8_t;
 
 class System final : public esp_brookesia::system::core::System {
 public:
+    System();
+    ~System() override;
     std::expected<void, std::string> init();
 
 protected:
@@ -48,12 +52,19 @@ protected:
 
 private:
     std::expected<void, std::string> start_display();
-    void handle_home_intent(uint64_t foreground_token);
+    void handle_power_short_press();
+    void handle_screen_timeout();
+    void handle_back();
+    std::expected<void, std::string> launch_app(std::string_view manifest_id, ShellSurface source);
+    std::expected<void, std::string> set_display_on(bool on);
+    void show_watch_face();
+    void restore_surface(ShellSurface surface);
     void clear_foreground(const esp_brookesia::system::core::AppInfo &app);
-    void restore_launcher_after_lifecycle(const esp_brookesia::system::core::AppInfo &app);
+    void restore_home_after_lifecycle(const esp_brookesia::system::core::AppInfo &app);
 
     esp_brookesia::service::ServiceBinding display_binding_;
     std::shared_ptr<CircularShell> shell_;
+    std::unique_ptr<PowerKeyMonitor> power_key_monitor_;
     std::shared_ptr<std::atomic<uint64_t>> foreground_token_ =
         std::make_shared<std::atomic<uint64_t>>(0);
     esp_brookesia::system::core::AppId shell_id_ = esp_brookesia::system::core::INVALID_APP_ID;
@@ -63,7 +74,14 @@ private:
     uint64_t foreground_generation_ = 0;
     uint32_t display_width_ = 0;
     uint32_t display_height_ = 0;
+    uint32_t display_output_id_ = 0;
     bool display_started_ = false;
+    std::atomic_bool display_on_ = true;
+    esp_brookesia::system::core::AppId resume_app_id_ =
+        esp_brookesia::system::core::INVALID_APP_ID;
+    ShellSurface launch_source_;
+    ShellSurface lifecycle_restore_surface_;
+    bool lifecycle_restore_pending_ = false;
     std::atomic_bool stopping_ = false;
     std::atomic_bool runtime_stop_failed_ = false;
 };

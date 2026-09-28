@@ -27,10 +27,11 @@ docs/
 | M0 | `WAIVED` | 官方基线由项目所有者明确豁免 |
 | M1 | `PASS` | System 与 Circular Shell 基线 |
 | M2 | `PASS` | Native App 生命周期与 50-cycle heap gate |
-| M3 | `BLOCKED` | Core `.bpk` file-install 路径尚未验收 |
+| M3 | `PASS` | Runtime 集成与生命周期已验收；独立 `.bpk` file-install 门槛由项目所有者接受 |
 | M4 | `BLOCKED` | 部分设备能力未验收；Audio 受上游边界阻塞 |
 | M5 | `BLOCKED` | HTTP cancel race、package trust 与兼容发布路径 |
-| M6–M8 | `NOT ENTERED` | 已定义验收规范，尚未实施 |
+| M6 | `IN PROGRESS` | Watch Face、PWR 与显示状态闭环实施中 |
+| M7–M8 | `NOT ENTERED` | 源码已提前开发并通过主机侧门槛；按依赖顺序等待真机验收 |
 
 详细判定和证据入口见 [Milestone 总览](milestones/README.md)。
 

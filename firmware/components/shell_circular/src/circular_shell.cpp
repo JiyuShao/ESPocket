@@ -18,7 +18,9 @@
 #include "brookesia/service_helper/system/device.hpp"
 #include "esp_log.h"
 #include "esp_lv_adapter.h"
+#include "esp_timer.h"
 #include "lvgl.h"
+#include "sdkconfig.h"
 
 namespace espocket {
 namespace {
@@ -33,7 +35,15 @@ constexpr std::string_view OPEN_HELLO_NATIVE_ACTION = "shell.open_hello_native";
 constexpr std::string_view OPEN_HELLO_RUNTIME_ACTION = "shell.open_hello_runtime";
 constexpr std::string_view OPEN_SETTINGS_ACTION = "shell.open_settings";
 constexpr std::string_view OPEN_APP_STORE_ACTION = "shell.open_app_store";
+constexpr std::string_view STEP_BRIGHTNESS_ACTION = "shell.step_brightness";
+constexpr std::string_view TOGGLE_WIFI_ACTION = "shell.toggle_wifi";
 constexpr std::string_view PAGE_FLOW = "shell_pages";
+constexpr std::string_view WATCH_FACE_TIME_PATH = "/watch_face/time";
+constexpr std::string_view BATTERY_CARD_PATH = "/battery_card/value";
+constexpr std::string_view BRIGHTNESS_CARD_PATH = "/brightness_card/value";
+constexpr std::string_view QUICK_BATTERY_PATH = "/quick_settings/battery";
+constexpr std::string_view QUICK_BRIGHTNESS_PATH = "/quick_settings/brightness";
+constexpr std::string_view QUICK_WIFI_PATH = "/quick_settings/wifi";
 constexpr std::string_view HOME_INTENT_TIMER = "espocket.home_intent";
 constexpr int HOME_INTENT_INTERVAL_MS = 50;
 constexpr std::string_view STATUS_TIMER = "espocket.status";
@@ -41,6 +51,18 @@ constexpr int STATUS_INTERVAL_MS = 30'000;
 constexpr std::string_view CLOCK_PATH = "/overlay/status/clock";
 constexpr std::string_view WIFI_PATH = "/overlay/status/wifi";
 constexpr std::string_view BATTERY_PATH = "/overlay/status/battery";
+constexpr int64_t SCREEN_TIMEOUT_US =
+    static_cast<int64_t>(CONFIG_ESPOCKET_M6_SCREEN_TIMEOUT_SECONDS) * 1'000'000;
+
+enum class GestureIntent : uint8_t {
+    None,
+    WatchFace,
+    BatteryCard,
+    BrightnessCard,
+    QuickSettings,
+    Launcher,
+    Back,
+};
 
 using DisplayHelper = esp_brookesia::service::helper::Display;
 using DisplayService = esp_brookesia::service::Display;
@@ -141,6 +163,81 @@ std::string make_clock_text()
 constexpr std::string_view SHELL_JSON = R"json({
   "version": "0.1.0",
   "assets": [
+    {
+      "type": "viewScreen",
+      "id": "watch_face",
+      "commonProps": { "scrollable": false },
+      "style": { "bgColor": "#05070b", "padding": 0 },
+      "layout": {
+        "type": "flex",
+        "flexFlow": "column",
+        "mainAlign": "center",
+        "crossAlign": "center",
+        "gap": "14dp"
+      },
+      "children": [
+        {
+          "type": "label",
+          "id": "time",
+          "labelProps": { "text": "--:--" },
+          "style": { "textColor": "#ffffff", "fontSize": "56sp", "textAlign": "center" },
+          "placement": { "width": "300dp", "height": "72dp" }
+        },
+        {
+          "type": "label",
+          "id": "date_hint",
+          "labelProps": { "text": "ESPocket" },
+          "style": { "textColor": "#8d98a8", "fontSize": "20sp", "textAlign": "center" },
+          "placement": { "width": "260dp", "height": "30dp" }
+        },
+        {
+          "type": "label",
+          "id": "launcher_hint",
+          "labelProps": { "text": "Swipe up for apps" },
+          "style": { "textColor": "#657286", "fontSize": "16sp", "textAlign": "center" },
+          "placement": { "width": "260dp", "height": "26dp" }
+        }
+      ]
+    },
+    {
+      "type": "viewScreen",
+      "id": "battery_card",
+      "commonProps": { "scrollable": false },
+      "style": { "bgColor": "#10251e", "padding": 0 },
+      "layout": { "type": "flex", "flexFlow": "column", "mainAlign": "center", "crossAlign": "center", "gap": "18dp" },
+      "children": [
+        { "type": "label", "id": "title", "labelProps": { "text": "Battery" }, "style": { "textColor": "#9ae6b4", "fontSize": "28sp" }, "placement": { "width": "250dp", "height": "40dp" } },
+        { "type": "label", "id": "value", "labelProps": { "text": "Battery: ?" }, "style": { "textColor": "#ffffff", "fontSize": "40sp", "textAlign": "center" }, "placement": { "width": "300dp", "height": "58dp" } },
+        { "type": "label", "id": "hint", "labelProps": { "text": "Read only · swipe left for Home" }, "style": { "textColor": "#86a89b", "fontSize": "15sp", "textAlign": "center" }, "placement": { "width": "300dp", "height": "26dp" } }
+      ]
+    },
+    {
+      "type": "viewScreen",
+      "id": "brightness_card",
+      "commonProps": { "scrollable": false },
+      "style": { "bgColor": "#261c0b", "padding": 0 },
+      "layout": { "type": "flex", "flexFlow": "column", "mainAlign": "center", "crossAlign": "center", "gap": "14dp" },
+      "children": [
+        { "type": "label", "id": "title", "labelProps": { "text": "Brightness" }, "style": { "textColor": "#fbd38d", "fontSize": "28sp" }, "placement": { "width": "250dp", "height": "40dp" } },
+        { "type": "label", "id": "value", "labelProps": { "text": "Brightness: ?" }, "style": { "textColor": "#ffffff", "fontSize": "28sp", "textAlign": "center" }, "placement": { "width": "300dp", "height": "44dp" } },
+        { "type": "button", "id": "step", "events": [ { "type": "clicked", "action": "shell.step_brightness" } ], "style": { "bgColor": "#c47c14", "radius": "26dp" }, "placement": { "width": "220dp", "height": "58dp" }, "children": [ { "type": "label", "id": "label", "labelProps": { "text": "Increase 20%" }, "style": { "textColor": "#ffffff", "fontSize": "18sp" }, "placement": { "mode": "relative", "align": "center" } } ] },
+        { "type": "button", "id": "settings", "events": [ { "type": "clicked", "action": "shell.open_settings" } ], "style": { "bgColor": "#725018", "radius": "22dp" }, "placement": { "width": "180dp", "height": "46dp" }, "children": [ { "type": "label", "id": "label", "labelProps": { "text": "Display Settings" }, "style": { "textColor": "#ffffff", "fontSize": "16sp" }, "placement": { "mode": "relative", "align": "center" } } ] }
+      ]
+    },
+    {
+      "type": "viewScreen",
+      "id": "quick_settings",
+      "commonProps": { "scrollable": false },
+      "style": { "bgColor": "#111827", "padding": 0 },
+      "layout": { "type": "flex", "flexFlow": "column", "mainAlign": "center", "crossAlign": "center", "gap": "10dp" },
+      "children": [
+        { "type": "label", "id": "title", "labelProps": { "text": "Quick Settings" }, "style": { "textColor": "#ffffff", "fontSize": "26sp" }, "placement": { "width": "280dp", "height": "38dp" } },
+        { "type": "label", "id": "battery", "labelProps": { "text": "Battery: ?" }, "style": { "textColor": "#aeb9c8", "fontSize": "17sp" }, "placement": { "width": "250dp", "height": "26dp" } },
+        { "type": "button", "id": "brightness_action", "events": [ { "type": "clicked", "action": "shell.step_brightness" } ], "style": { "bgColor": "#b7791f", "radius": "24dp" }, "placement": { "width": "230dp", "height": "52dp" }, "children": [ { "type": "label", "id": "brightness", "labelProps": { "text": "Brightness: ?" }, "style": { "textColor": "#ffffff", "fontSize": "17sp" }, "placement": { "mode": "relative", "align": "center" } } ] },
+        { "type": "button", "id": "wifi_action", "events": [ { "type": "clicked", "action": "shell.toggle_wifi" } ], "style": { "bgColor": "#2563a9", "radius": "24dp" }, "placement": { "width": "230dp", "height": "52dp" }, "children": [ { "type": "label", "id": "wifi", "labelProps": { "text": "Wi-Fi: ?" }, "style": { "textColor": "#ffffff", "fontSize": "17sp" }, "placement": { "mode": "relative", "align": "center" } } ] },
+        { "type": "button", "id": "settings", "events": [ { "type": "clicked", "action": "shell.open_settings" } ], "style": { "bgColor": "#277b65", "radius": "24dp" }, "placement": { "width": "230dp", "height": "52dp" }, "children": [ { "type": "label", "id": "label", "labelProps": { "text": "Open Settings" }, "style": { "textColor": "#ffffff", "fontSize": "17sp" }, "placement": { "mode": "relative", "align": "center" } } ] }
+      ]
+    },
     {
       "type": "viewScreen",
       "id": "launcher",
@@ -316,9 +413,13 @@ constexpr std::string_view SHELL_JSON = R"json({
     {
       "type": "screenFlow",
       "id": "shell_pages",
-      "screens": [ "launcher" ],
-      "initial": "launcher",
+      "screens": [ "watch_face", "battery_card", "brightness_card", "quick_settings", "launcher" ],
+      "initial": "watch_face",
       "transitions": [
+        { "from": [], "action": "open_watch_face", "to": "watch_face" },
+        { "from": [], "action": "open_battery_card", "to": "battery_card" },
+        { "from": [], "action": "open_brightness_card", "to": "brightness_card" },
+        { "from": [], "action": "open_quick_settings", "to": "quick_settings" },
         { "from": [], "action": "open_launcher", "to": "launcher" }
       ]
     },
@@ -347,12 +448,22 @@ struct CircularShell::KeyboardState {
 };
 
 CircularShell::CircularShell(
-    ForegroundTokenProvider foreground_token_provider,
-    HomeHandler home_handler,
+    PowerPressCountProvider power_press_count_provider,
+    DisplayOnProvider display_on_provider,
+    AppVisibleProvider app_visible_provider,
+    SystemHandler power_handler,
+    SystemHandler screen_timeout_handler,
+    AppLaunchHandler app_launch_handler,
+    SystemHandler back_handler,
     KeyboardResultHandler keyboard_result_handler
 )
-    : foreground_token_provider_(std::move(foreground_token_provider)),
-      home_handler_(std::move(home_handler)),
+    : power_press_count_provider_(std::move(power_press_count_provider)),
+      display_on_provider_(std::move(display_on_provider)),
+      app_visible_provider_(std::move(app_visible_provider)),
+      power_handler_(std::move(power_handler)),
+      screen_timeout_handler_(std::move(screen_timeout_handler)),
+      app_launch_handler_(std::move(app_launch_handler)),
+      back_handler_(std::move(back_handler)),
       keyboard_result_handler_(std::move(keyboard_result_handler))
 {}
 
@@ -403,6 +514,8 @@ std::expected<void, std::string> CircularShell::on_start(
              OPEN_HELLO_RUNTIME_ACTION,
              OPEN_SETTINGS_ACTION,
              OPEN_APP_STORE_ACTION,
+             STEP_BRIGHTNESS_ACTION,
+             TOGGLE_WIFI_ACTION,
          }) {
         auto action_result = context.gui().subscribe_action(action);
         if (!action_result) {
@@ -413,6 +526,10 @@ std::expected<void, std::string> CircularShell::on_start(
     }
 
     home_gesture_state_ = std::make_shared<HomeGestureState>();
+    last_power_press_count_ = power_press_count_provider_ ? power_press_count_provider_() : 0;
+    last_activity_generation_ = 0;
+    last_activity_us_ = esp_timer_get_time();
+    screen_timeout_latched_ = false;
     auto gesture_result = configure_home_gesture();
     if (!gesture_result) {
         home_gesture_state_.reset();
@@ -495,6 +612,12 @@ std::expected<void, std::string> CircularShell::on_action(
     if (action == OPEN_APP_STORE_ACTION) {
         return open_app(APP_STORE_MANIFEST_ID, "App Store");
     }
+    if (action == STEP_BRIGHTNESS_ACTION) {
+        return step_brightness();
+    }
+    if (action == TOGGLE_WIFI_ACTION) {
+        return toggle_wifi();
+    }
     return {};
 }
 
@@ -528,13 +651,61 @@ std::expected<void, std::string> CircularShell::on_timer(
                 keyboard_result_handler_(app_id, request_id, confirmed, std::move(text));
             }
         }
-        if (home_gesture_state_ && home_handler_) {
-            const auto token = home_gesture_state_->pending_token.exchange(
-                                   0,
-                                   std::memory_order_acq_rel
-                               );
-            if (token != 0) {
-                home_handler_(token);
+        if (power_press_count_provider_ && power_handler_) {
+            const auto count = power_press_count_provider_();
+            if (count != last_power_press_count_) {
+                last_power_press_count_ = count;
+                power_handler_();
+            }
+        }
+        if (home_gesture_state_) {
+            const auto activity = home_gesture_state_->activity_generation.load(std::memory_order_acquire);
+            if (activity != last_activity_generation_) {
+                last_activity_generation_ = activity;
+                last_activity_us_ = esp_timer_get_time();
+                screen_timeout_latched_ = false;
+            }
+            const auto intent = static_cast<GestureIntent>(
+                                    home_gesture_state_->pending_gesture.exchange(
+                                        static_cast<uint8_t>(GestureIntent::None),
+                                        std::memory_order_acq_rel
+                                    )
+                                );
+            std::expected<void, std::string> result{};
+            switch (intent) {
+            case GestureIntent::WatchFace:
+                result = show_surface(ShellSurface::WatchFace);
+                break;
+            case GestureIntent::BatteryCard:
+                result = show_surface(ShellSurface::BatteryCard);
+                break;
+            case GestureIntent::BrightnessCard:
+                result = show_surface(ShellSurface::BrightnessCard);
+                break;
+            case GestureIntent::QuickSettings:
+                result = show_surface(ShellSurface::QuickSettings);
+                break;
+            case GestureIntent::Launcher:
+                result = show_surface(ShellSurface::Launcher);
+                break;
+            case GestureIntent::Back:
+                if (back_handler_) {
+                    back_handler_();
+                }
+                break;
+            case GestureIntent::None:
+                break;
+            }
+            if (!result) {
+                ESP_LOGW(SHELL_TAG, "Failed to handle navigation gesture: %s", result.error().c_str());
+            }
+        }
+        const bool display_on = !display_on_provider_ || display_on_provider_();
+        if (display_on && !screen_timeout_latched_ && SCREEN_TIMEOUT_US > 0 &&
+                esp_timer_get_time() - last_activity_us_ >= SCREEN_TIMEOUT_US) {
+            screen_timeout_latched_ = true;
+            if (screen_timeout_handler_) {
+                screen_timeout_handler_();
             }
         }
         return {};
@@ -584,29 +755,65 @@ std::expected<void, std::string> CircularShell::configure_home_gesture()
                               output->name,
     [exit_distance_px,
      state = home_gesture_state_,
-     token_provider = foreground_token_provider_](
+     display_on_provider = display_on_provider_,
+     app_visible_provider = app_visible_provider_](
         const std::string &, const DisplayService::TouchGestureInfo &info
     ) {
         if (info.event_type == DisplayHelper::TouchGestureEventType::Press) {
             state->consumed.store(false, std::memory_order_release);
-            state->gesture_token.store(
-                token_provider ? token_provider() : 0,
-                std::memory_order_release
-            );
+            if (display_on_provider && !display_on_provider()) {
+                return;
+            }
+            state->activity_generation.fetch_add(1, std::memory_order_acq_rel);
             return;
         }
         if (info.event_type == DisplayHelper::TouchGestureEventType::Release) {
             state->consumed.store(false, std::memory_order_release);
-            state->gesture_token.store(0, std::memory_order_release);
             return;
         }
         if (info.event_type != DisplayHelper::TouchGestureEventType::Pressing ||
-                !has_gesture_area(info.start_area, DisplayHelper::TouchGestureArea::BottomEdge)) {
+                (display_on_provider && !display_on_provider()) ||
+                info.distance_px < exit_distance_px) {
             return;
         }
 
-        const auto upward_distance = std::max(0, info.start_y - info.stop_y);
-        if (upward_distance < exit_distance_px) {
+        GestureIntent intent = GestureIntent::None;
+        const bool edge_back =
+            (has_gesture_area(info.start_area, DisplayHelper::TouchGestureArea::LeftEdge) &&
+             info.direction == DisplayHelper::TouchGestureDirection::Right) ||
+            (has_gesture_area(info.start_area, DisplayHelper::TouchGestureArea::RightEdge) &&
+             info.direction == DisplayHelper::TouchGestureDirection::Left);
+        if (edge_back) {
+            intent = GestureIntent::Back;
+        } else if (!app_visible_provider || !app_visible_provider()) {
+            switch (state->surface.load(std::memory_order_acquire)) {
+            case ShellSurface::WatchFace:
+                if (info.direction == DisplayHelper::TouchGestureDirection::Up) {
+                    intent = GestureIntent::Launcher;
+                } else if (info.direction == DisplayHelper::TouchGestureDirection::Down) {
+                    intent = GestureIntent::QuickSettings;
+                } else if (info.direction == DisplayHelper::TouchGestureDirection::Right) {
+                    intent = GestureIntent::BatteryCard;
+                } else if (info.direction == DisplayHelper::TouchGestureDirection::Left) {
+                    intent = GestureIntent::BrightnessCard;
+                }
+                break;
+            case ShellSurface::BatteryCard:
+                if (info.direction == DisplayHelper::TouchGestureDirection::Left) {
+                    intent = GestureIntent::WatchFace;
+                }
+                break;
+            case ShellSurface::BrightnessCard:
+                if (info.direction == DisplayHelper::TouchGestureDirection::Right) {
+                    intent = GestureIntent::WatchFace;
+                }
+                break;
+            case ShellSurface::QuickSettings:
+            case ShellSurface::Launcher:
+                break;
+            }
+        }
+        if (intent == GestureIntent::None) {
             return;
         }
 
@@ -618,10 +825,7 @@ std::expected<void, std::string> CircularShell::configure_home_gesture()
                 )) {
             return;
         }
-        const auto token = state->gesture_token.load(std::memory_order_acquire);
-        if (token != 0) {
-            state->pending_token.store(token, std::memory_order_release);
-        }
+        state->pending_gesture.store(static_cast<uint8_t>(intent), std::memory_order_release);
     }
                           );
     if (!gesture_connection_.connected()) {
@@ -630,7 +834,7 @@ std::expected<void, std::string> CircularShell::configure_home_gesture()
 
     ESP_LOGI(
         SHELL_TAG,
-        "Home gesture ready: output=%s exit=%" PRId32 "px edge=%" PRIu16 "px",
+        "Navigation gesture ready: output=%s exit=%" PRId32 "px edge=%" PRIu16 "px",
         output->name.c_str(),
         exit_distance_px,
         config.threshold.vertical_edge
@@ -647,15 +851,11 @@ std::expected<void, std::string> CircularShell::open_app(
         return std::unexpected("Circular Shell is not running");
     }
 
-    auto apps = context_->system_service().list_apps();
-    auto app = std::find_if(apps.begin(), apps.end(), [manifest_id](const auto &candidate) {
-        return candidate.manifest.id == manifest_id && candidate.manifest.visible;
-    });
-    if (app == apps.end()) {
-        return std::unexpected(std::string(display_name) + " is not installed");
+    if (!app_launch_handler_) {
+        return std::unexpected("System app launch handler is unavailable");
     }
-
-    auto result = context_->system_service().start_app(app->app_id);
+    const auto source = current_surface();
+    auto result = app_launch_handler_(manifest_id, source);
     if (!result) {
         return std::unexpected("Failed to start " + std::string(display_name) + ": " + result.error());
     }
@@ -664,12 +864,65 @@ std::expected<void, std::string> CircularShell::open_app(
     return {};
 }
 
-std::expected<void, std::string> CircularShell::restore_launcher()
+std::expected<void, std::string> CircularShell::show_watch_face()
+{
+    return show_surface(ShellSurface::WatchFace);
+}
+
+std::expected<void, std::string> CircularShell::show_launcher()
+{
+    return show_surface(ShellSurface::Launcher);
+}
+
+std::expected<void, std::string> CircularShell::show_surface(ShellSurface surface)
 {
     if (context_ == nullptr) {
         return std::unexpected("Circular Shell is not running");
     }
-    return context_->gui().trigger_screen_flow(PAGE_FLOW, "open_launcher");
+    std::string_view action;
+    switch (surface) {
+    case ShellSurface::WatchFace: action = "open_watch_face"; break;
+    case ShellSurface::BatteryCard: action = "open_battery_card"; break;
+    case ShellSurface::BrightnessCard: action = "open_brightness_card"; break;
+    case ShellSurface::QuickSettings: action = "open_quick_settings"; break;
+    case ShellSurface::Launcher: action = "open_launcher"; break;
+    }
+    auto result = context_->gui().trigger_screen_flow(PAGE_FLOW, action);
+    if (result && home_gesture_state_) {
+        home_gesture_state_->surface.store(surface, std::memory_order_release);
+        home_gesture_state_->activity_generation.fetch_add(1, std::memory_order_acq_rel);
+    }
+    return result;
+}
+
+ShellSurface CircularShell::current_surface() const
+{
+    return home_gesture_state_ ?
+           home_gesture_state_->surface.load(std::memory_order_acquire) :
+           ShellSurface::WatchFace;
+}
+
+bool CircularShell::is_watch_face() const
+{
+    return current_surface() == ShellSurface::WatchFace;
+}
+
+std::expected<void, std::string> CircularShell::set_display_on(bool on)
+{
+    LvglLock lock;
+    if (!lock) {
+        return std::unexpected("Failed to lock LVGL while changing display input state");
+    }
+    for (auto *input = lv_indev_get_next(nullptr); input != nullptr; input = lv_indev_get_next(input)) {
+        if (lv_indev_get_type(input) == LV_INDEV_TYPE_POINTER) {
+            lv_indev_enable(input, on);
+        }
+    }
+    if (on) {
+        last_activity_us_ = esp_timer_get_time();
+        screen_timeout_latched_ = false;
+    }
+    return {};
 }
 
 std::expected<void, std::string> CircularShell::show_keyboard(
@@ -864,11 +1117,14 @@ void CircularShell::start_status()
                 }
                 if (event == "Connected") {
                     state->owner->set_status_text(WIFI_PATH, "Wi-Fi: linked");
+                    state->owner->set_status_text(QUICK_WIFI_PATH, "Wi-Fi: linked (tap to stop)");
                 } else if (event == "Deinited" || event == "Inited" || event == "Stopped" ||
                            event == "Started" || event == "Disconnected") {
                     state->owner->set_status_text(WIFI_PATH, "Wi-Fi: no link");
+                    state->owner->set_status_text(QUICK_WIFI_PATH, "Wi-Fi: off/unlinked (tap)");
                 } else {
                     state->owner->set_status_text(WIFI_PATH, "Wi-Fi: ?");
+                    state->owner->set_status_text(QUICK_WIFI_PATH, "Wi-Fi: ?");
                 }
             }
                                );
@@ -890,18 +1146,25 @@ void CircularShell::start_status()
                 auto item = items.find("State");
                 if (item == items.end() || !std::holds_alternative<boost::json::object>(item->second)) {
                     callback_state->owner->set_status_text(BATTERY_PATH, "Bat: ?");
+                    callback_state->owner->set_status_text(BATTERY_CARD_PATH, "Battery: ?");
+                    callback_state->owner->set_status_text(QUICK_BATTERY_PATH, "Battery: ?");
                     return;
                 }
                 DeviceHelper::PowerBatteryState state;
                 if (!BROOKESIA_DESCRIBE_FROM_JSON(std::get<boost::json::object>(item->second), state) ||
                         !state.is_present || !state.percentage.has_value()) {
                     callback_state->owner->set_status_text(BATTERY_PATH, "Bat: ?");
+                    callback_state->owner->set_status_text(BATTERY_CARD_PATH, "Battery: ?");
+                    callback_state->owner->set_status_text(QUICK_BATTERY_PATH, "Battery: ?");
                     return;
                 }
+                const auto text = "Battery: " + std::to_string(*state.percentage) + "%";
                 callback_state->owner->set_status_text(
                     BATTERY_PATH,
                     "Bat: " + std::to_string(*state.percentage) + "%"
                 );
+                callback_state->owner->set_status_text(BATTERY_CARD_PATH, text);
+                callback_state->owner->set_status_text(QUICK_BATTERY_PATH, text);
             }
                                   );
         }
@@ -972,6 +1235,7 @@ void CircularShell::refresh_status()
     refresh_clock();
     refresh_wifi();
     refresh_battery();
+    refresh_brightness();
 }
 
 void CircularShell::refresh_clock()
@@ -983,26 +1247,32 @@ void CircularShell::refresh_clock()
             text = make_clock_text();
         }
     }
-    set_status_text(CLOCK_PATH, std::move(text));
+    set_status_text(CLOCK_PATH, text);
+    set_status_text(WATCH_FACE_TIME_PATH, std::move(text));
 }
 
 void CircularShell::refresh_wifi()
 {
     if (!wifi_binding_.is_valid()) {
         set_status_text(WIFI_PATH, "Wi-Fi: ?");
+        set_status_text(QUICK_WIFI_PATH, "Wi-Fi: ?");
         return;
     }
     auto state = WifiHelper::call_function_sync<std::string>(WifiHelper::FunctionId::GetGeneralState);
     if (!state) {
         set_status_text(WIFI_PATH, "Wi-Fi: ?");
+        set_status_text(QUICK_WIFI_PATH, "Wi-Fi: ?");
     } else if (*state == "Connected") {
         set_status_text(WIFI_PATH, "Wi-Fi: linked");
+        set_status_text(QUICK_WIFI_PATH, "Wi-Fi: linked (tap to stop)");
     } else if (*state == "Idle" || *state == "Initing" || *state == "Inited" || *state == "Deiniting" ||
                *state == "Starting" || *state == "Started" || *state == "Stopping" ||
                *state == "Connecting" || *state == "Disconnecting") {
         set_status_text(WIFI_PATH, "Wi-Fi: no link");
+        set_status_text(QUICK_WIFI_PATH, "Wi-Fi: off/unlinked (tap)");
     } else {
         set_status_text(WIFI_PATH, "Wi-Fi: ?");
+        set_status_text(QUICK_WIFI_PATH, "Wi-Fi: ?");
     }
 }
 
@@ -1010,6 +1280,8 @@ void CircularShell::refresh_battery()
 {
     if (!device_binding_.is_valid()) {
         set_status_text(BATTERY_PATH, "Bat: ?");
+        set_status_text(BATTERY_CARD_PATH, "Battery: ?");
+        set_status_text(QUICK_BATTERY_PATH, "Battery: ?");
         return;
     }
     auto value = DeviceHelper::call_function_sync<boost::json::object>(
@@ -1019,9 +1291,82 @@ void CircularShell::refresh_battery()
     if (!value || !BROOKESIA_DESCRIBE_FROM_JSON(*value, state) || !state.is_present ||
             !state.percentage.has_value()) {
         set_status_text(BATTERY_PATH, "Bat: ?");
+        set_status_text(BATTERY_CARD_PATH, "Battery: ?");
+        set_status_text(QUICK_BATTERY_PATH, "Battery: ?");
         return;
     }
     set_status_text(BATTERY_PATH, "Bat: " + std::to_string(*state.percentage) + "%");
+    const auto text = "Battery: " + std::to_string(*state.percentage) + "%";
+    set_status_text(BATTERY_CARD_PATH, text);
+    set_status_text(QUICK_BATTERY_PATH, text);
+}
+
+void CircularShell::refresh_brightness()
+{
+    auto value = DisplayHelper::call_function_sync<double>(
+                     DisplayHelper::FunctionId::GetBacklightBrightness,
+                     0.0
+                 );
+    const auto text = value ?
+                      "Brightness: " + std::to_string(static_cast<int>(*value)) + "%" :
+                      "Brightness: ?";
+    set_status_text(BRIGHTNESS_CARD_PATH, text);
+    set_status_text(QUICK_BRIGHTNESS_PATH, text);
+}
+
+std::expected<void, std::string> CircularShell::step_brightness()
+{
+    auto current = DisplayHelper::call_function_sync<double>(
+                       DisplayHelper::FunctionId::GetBacklightBrightness,
+                       0.0
+                   );
+    if (!current) {
+        return std::unexpected("Failed to read brightness: " + current.error());
+    }
+    const double next = *current >= 100.0 ? 20.0 : std::min(100.0, *current + 20.0);
+    auto result = DisplayHelper::call_function_sync<void>(
+                      DisplayHelper::FunctionId::SetBacklightBrightness,
+                      0.0,
+                      next
+                  );
+    if (!result) {
+        return std::unexpected("Failed to set brightness: " + result.error());
+    }
+    refresh_brightness();
+    return {};
+}
+
+std::expected<void, std::string> CircularShell::toggle_wifi()
+{
+    if (!wifi_binding_.is_valid()) {
+        return std::unexpected("Wi-Fi service is unavailable");
+    }
+    auto state = WifiHelper::call_function_sync<std::string>(WifiHelper::FunctionId::GetGeneralState);
+    if (!state) {
+        return std::unexpected("Failed to read Wi-Fi state: " + state.error());
+    }
+    if (*state == "Idle") {
+        auto init = WifiHelper::call_function_sync<void>(
+                        WifiHelper::FunctionId::TriggerGeneralAction,
+                        BROOKESIA_DESCRIBE_TO_STR(WifiHelper::GeneralAction::Init)
+                    );
+        if (!init) {
+            return std::unexpected("Failed to initialize Wi-Fi: " + init.error());
+        }
+        *state = "Inited";
+    }
+    const bool enabled = *state == "Started" || *state == "Connecting" ||
+                         *state == "Connected" || *state == "Disconnecting";
+    const auto action = enabled ? WifiHelper::GeneralAction::Stop : WifiHelper::GeneralAction::Start;
+    auto result = WifiHelper::call_function_sync<void>(
+                      WifiHelper::FunctionId::TriggerGeneralAction,
+                      BROOKESIA_DESCRIBE_TO_STR(action)
+                  );
+    if (!result) {
+        return std::unexpected("Failed to toggle Wi-Fi: " + result.error());
+    }
+    refresh_wifi();
+    return {};
 }
 
 void CircularShell::set_status_text(std::string_view path, std::string text)

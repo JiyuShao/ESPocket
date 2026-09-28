@@ -18,3 +18,5 @@
 | [`m3-m5/`](m3-m5/) | M3–M5 共用的 clean boot、内存 canary 与生命周期 |
 | [`m4/`](m4/) | M4 键盘、Wi-Fi 和设备能力检查 |
 | [`m5/`](m5/) | M5 Store/HTTP 在线路径与 containment |
+| [`m6/`](m6/) | M6 Watch Face、PWR 与显示状态构建和真机验收 |
+| [`m7-m8/`](m7-m8/) | M7 系统导航与 M8 Native/Runtime 共用契约构建证据 |

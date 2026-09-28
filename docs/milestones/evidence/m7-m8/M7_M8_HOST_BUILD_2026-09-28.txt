@@ -1,0 +1,35 @@
+ESPocket M7 Navigation Surfaces + M8 App Interaction Contract host evidence
+Date: 2026-09-28
+Status: DEVELOPMENT BUILD/STATIC GATES PASS; DEPENDENCY AND HARDWARE GATES NOT SATISFIED
+
+Implemented M7 source
+- Fixed Home Space surfaces: Watch Face, read-only Battery Card, immediate-action Brightness Card.
+- Quick Settings reuses Display brightness, Wi-Fi, Battery state, and official Settings.
+- Left/right physical edge inward gestures request Back; ordinary App horizontal gestures do not drive the underlying Shell.
+- System stores exactly one direct ShellSurface launch source, not a history stack.
+- Launcher/Quick Settings Back returns Watch Face; Card-launched Settings Back restores the originating Card.
+- PWR Home remains stronger than ordinary Back and always targets Watch Face.
+
+Implemented M8 source
+- Native Hello and Runtime Hello both use Screen Flow `main`, initial page `root`, optional page `detail`, and action `back_root`.
+- Detail Edge Back triggers `back_root`; Root Edge Back stops the App and restores its one direct source.
+- Restart after stop/reclaim loads each App's initial Root instead of restoring stale page objects.
+- Shared developer guidance is in docs/design/app-interaction.md; no template framework was introduced.
+
+Validation
+- `npm run build` in firmware/apps/hello-js: PASS; toolkit validation and debug .bpk packaging succeeded.
+- Runtime staging included root.json, profile.json, main.js, screens/main.json, screens/detail.json, and flows/main.json.
+- Firmware clean build/link in a fresh build directory: PASS with ESP-IDF v6.0.1 for esp32_s3_touch_amoled_1_75c.
+- espocket.bin size: 0x5d3ab0 bytes; smallest app partition free: 0x46d550 bytes (43%).
+- espocket.bin SHA-256: c20d495104d16d426ab81c3e15a8cc522e3edf0c0cfc94082bd56375ef15e62a
+- littlefs_data.bin SHA-256: 23e8407297033823b66363d5dce76a5d201da033029b53963ee89c2b62ddf93e
+- Runtime debug .bpk SHA-256: 1c1ae62bba5592df10021f8388bd056b1e37b3b24c19cf9b9fc99488f86e5442
+- Shell embedded JSON, Native embedded JSON, and Runtime source JSON parse: PASS.
+- git diff --check: PASS.
+- No managed_components source was modified.
+
+Gate boundary
+- M6 has not passed its required physical acceptance, so M7 remains NOT ENTERED.
+- M7 has not passed, so M8 remains NOT ENTERED.
+- This host evidence does not prove physical rendering, gesture recognition, real brightness/Wi-Fi changes, PWR interaction, resume/reclaim behavior, repetition counts, or failure scans.
+- No firmware was flashed in this run.

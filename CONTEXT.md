@@ -40,15 +40,44 @@ _Avoid_: Plugin
 
 ## Shell 交互
 
+**Watch Face**：
+Circular Shell 的系统主界面，也是 Home 的固定目标和 Home Space 的中心锚点。
+_Avoid_: Home page、Launcher
+
+**Home Space**：
+由 Watch Face 与其左右有序 Cards 构成的系统一级内容空间；Watch Face 是固定锚点。
+
+**Card**：
+Home Space 中围绕单一主题提供一眼可读信息、少量即时操作或对应 App 入口的单页内容。
+_Avoid_: App、Detail page、generic UI card
+
 **Launcher**：
-Circular Shell 中用于进入可用应用或明确的 Shell 内部目标的系统界面。
+从 Watch Face 进入、用于找到并启动可用 App 或明确 Shell 内部目标的系统 Surface。
+_Avoid_: Home
+
+**Quick Settings**：
+从 Watch Face 进入、用于快速查看或切换系统状态，并可进入对应 Settings 页面的系统 Surface。
 
 **Home**：
-返回系统主界面的导航意图。V0.x 中其目标是 Launcher，而不是独立页面。
-_Avoid_: Home page
+无条件结束当前导航任务并前往 Watch Face 的系统级导航意图；它不等同于 Back，也不保证原 App 继续驻留。
+_Avoid_: Back、Launcher、Home page
+
+**Back**：
+返回当前导航层级的 Parent 或直接 Launch Source 的页面级导航意图；Watch Face 没有 Back 目标。
+_Avoid_: Home
+
+**Launch Source**：
+App 当前导航任务的直接启动来源，只保留 Launcher、Card 或其他系统 Surface 中的一项，不构成跨 App 历史链。
+_Avoid_: Recent Apps、navigation history
+
+**Display State**：
+与当前 Surface 和页面导航正交的屏幕点亮或熄灭状态；息屏本身不改变导航位置。
+
+**Shell Surface**：
+任一时刻占据主要交互区域的顶层系统界面，包括 Home Space、Launcher 与 Quick Settings。
 
 **Shell Overlay**：
-Circular Shell 的系统覆盖层，容纳状态呈现与 Home 手势等跨页面的 Shell 能力。
+Circular Shell 中覆盖当前 Surface 或 App 的系统层，用于状态呈现或临时系统交互，不属于普通 Back 栈。
 
 **Status View**：
 Shell Overlay 中呈现时间、网络和电池状态的区域；它不是传统手机式 Status Bar。

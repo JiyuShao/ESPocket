@@ -2,9 +2,9 @@
 
 ## 状态
 
-- M6: `NOT ENTERED`
+- M6: `IN PROGRESS`（2026-09-28）
 - Dependency: M2 `PASS`
-- M3: `BLOCKED`，不阻止 M6 进入
+- M3: `PASS`
 - M4: `BLOCKED`，不阻止 M6 进入
 - M5: `BLOCKED`，不阻止 M6 进入
 
@@ -75,16 +75,16 @@ PWR → Watch Face
 
 | 检查项 | PASS 条件 | 状态 |
 |---|---|---|
-| Interaction contract | 实现与主交互规范一致 | NOT TESTED |
-| Current-vs-target wording | 文档和 UI 不把 M1–M5 的 Launcher Home 误称为 Watch Face 实现 | NOT TESTED |
-| Existing Launcher reuse | 使用当前固定入口 Launcher；不把动态同步带入 M6 | NOT TESTED |
-| PWR integration | 短按只执行已定义的 Home/Off/Wake；长按不被系统层重定义 | NOT TESTED |
-| Display/navigation separation | 息屏不清空或改写有效导航位置 | NOT TESTED |
-| Resume fallback | 目标失效时只回 Watch Face | NOT TESTED |
-| Touch while off | Screen Off 时页面动作不可被触摸触发 | NOT TESTED |
-| BOOT | 不产生日常导航动作 | NOT TESTED |
-| Build | 正常固件 clean build/link 成功 | NOT TESTED |
-| Static checks | JSON、脚本或项目既有检查全部通过 | NOT TESTED |
+| Interaction contract | 实现与主交互规范一致 | PASS（STATIC，2026-09-28） |
+| Current-vs-target wording | 文档和 UI 不把 M1–M5 的 Launcher Home 误称为 Watch Face 实现 | PASS（STATIC，2026-09-28） |
+| Existing Launcher reuse | 使用当前固定入口 Launcher；不把动态同步带入 M6 | PASS（STATIC，2026-09-28） |
+| PWR integration | 短按只执行已定义的 Home/Off/Wake；长按不被系统层重定义 | PASS（HOST BUILD + STATIC，真机待验收） |
+| Display/navigation separation | 息屏不清空或改写有效导航位置 | PASS（STATIC，2026-09-28） |
+| Resume fallback | 目标失效时只回 Watch Face | PASS（STATIC，2026-09-28） |
+| Touch while off | Screen Off 时页面动作不可被触摸触发 | PASS（STATIC，真机待验收） |
+| BOOT | 不产生日常导航动作 | PASS（STATIC，真机待验收） |
+| Build | 正常固件 clean build/link 成功 | PASS（2026-09-28） |
+| Static checks | JSON、脚本或项目既有检查全部通过 | PASS（JSON parse + `git diff --check`） |
 
 ## Hardware Acceptance
 
@@ -121,4 +121,8 @@ PWR → Watch Face
 
 ## Result
 
-`NOT ENTERED`
+`IN PROGRESS`（2026-09-28）
+
+项目所有者已明确授权启动 M6–M8。实施遵守阶段依赖：当前仅 M6 正式进入；M7 等待 M6 `PASS`，M8 等待 M7 `PASS`。
+
+主机侧实现与构建记录见 [`evidence/m6/M6_HOST_BUILD_2026-09-28.txt`](evidence/m6/M6_HOST_BUILD_2026-09-28.txt)。该证据不替代本页规定的真机按键、显示和触摸验收，因此 M6 保持 `IN PROGRESS`。

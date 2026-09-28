@@ -11,6 +11,7 @@ idf_component_register(
         brookesia_service_sntp
         brookesia_service_helper
         brookesia_service_manager
+        esp_timer
 )
 
 target_compile_features(${COMPONENT_LIB} PUBLIC cxx_std_23)

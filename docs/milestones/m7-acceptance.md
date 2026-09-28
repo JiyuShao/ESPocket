@@ -4,7 +4,7 @@
 
 - M7: `NOT ENTERED`
 - Dependency: M6 `PASS`
-- M3–M5 may remain `BLOCKED`, but their blockers remain release gates
+- M4–M5 may remain `BLOCKED`, but their blockers remain release gates
 
 本文定义 M7 的范围与 PASS 门槛。实现必须遵守 [`../design/interaction.md`](../design/interaction.md)。
 
@@ -62,15 +62,15 @@ Any Screen On Non-Home Surface → PWR → Watch Face
 
 | 检查项 | PASS 条件 | 状态 |
 |---|---|---|
-| Surface model | Home Space、Launcher、Quick Settings 与 App Surface 关系符合主规范 | NOT TESTED |
-| Card boundary | Card 单页、单主题；无内部 Detail 栈 | NOT TESTED |
-| Launch Source | 只记录一个直接来源；无任意历史链 | NOT TESTED |
-| Native Back | Detail → Parent；Root → Launch Source；失效 → Watch Face | NOT TESTED |
-| Gesture ownership | Edge Back 不占用普通横滑；上下滑仍可滚动 | NOT TESTED |
-| Existing services | Battery、Brightness、Wi-Fi、Settings 复用现有能力 | NOT TESTED |
-| No premature framework | 无通用 Card SDK、插件框架或编辑器 | NOT TESTED |
-| Build | 正常固件 clean build/link 成功 | NOT TESTED |
-| Static checks | JSON、脚本或项目既有检查全部通过 | NOT TESTED |
+| Surface model | Home Space、Launcher、Quick Settings 与 App Surface 关系符合主规范 | PASS（STATIC，dependency-gated） |
+| Card boundary | Card 单页、单主题；无内部 Detail 栈 | PASS（STATIC，dependency-gated） |
+| Launch Source | 只记录一个直接来源；无任意历史链 | PASS（STATIC，dependency-gated） |
+| Native Back | Detail → Parent；Root → Launch Source；失效 → Watch Face | PASS（HOST BUILD + STATIC，真机待验收） |
+| Gesture ownership | Edge Back 不占用普通横滑；上下滑仍可滚动 | PASS（STATIC，真机待验收） |
+| Existing services | Battery、Brightness、Wi-Fi、Settings 复用现有能力 | PASS（HOST BUILD + STATIC，真机待验收） |
+| No premature framework | 无通用 Card SDK、插件框架或编辑器 | PASS（STATIC） |
+| Build | 正常固件 clean build/link 成功 | PASS（2026-09-28，dependency-gated） |
+| Static checks | JSON、脚本或项目既有检查全部通过 | PASS（JSON parse + `git diff --check`） |
 
 ## Hardware Acceptance
 
@@ -132,3 +132,5 @@ Watch Face
 ## Result
 
 `NOT ENTERED`
+
+M7 源码已按项目所有者授权提前开发，并通过主机构建与静态检查；记录见 [`evidence/m7-m8/M7_M8_HOST_BUILD_2026-09-28.txt`](evidence/m7-m8/M7_M8_HOST_BUILD_2026-09-28.txt)。由于 M6 尚未 `PASS`，M7 仍保持 `NOT ENTERED`，所有真机项保持 `NOT TESTED`。

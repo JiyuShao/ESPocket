@@ -17,11 +17,24 @@
 
 namespace espocket {
 
+enum class ShellSurface : uint8_t {
+    WatchFace,
+    BatteryCard,
+    BrightnessCard,
+    QuickSettings,
+    Launcher,
+};
+
 class CircularShell final : public esp_brookesia::system::core::IApp {
 public:
-    using ForegroundToken = uint64_t;
-    using ForegroundTokenProvider = std::function<ForegroundToken()>;
-    using HomeHandler = std::function<void(ForegroundToken)>;
+    using PowerPressCountProvider = std::function<uint32_t()>;
+    using DisplayOnProvider = std::function<bool()>;
+    using AppVisibleProvider = std::function<bool()>;
+    using SystemHandler = std::function<void()>;
+    using AppLaunchHandler = std::function<std::expected<void, std::string>(
+                                 std::string_view,
+                                 ShellSurface
+                             )>;
     using KeyboardResultHandler = std::function<void(
                                       esp_brookesia::system::core::AppId,
                                       esp_brookesia::system::core::KeyboardRequestId,
@@ -30,8 +43,13 @@ public:
                                   )>;
 
     explicit CircularShell(
-        ForegroundTokenProvider foreground_token_provider = {},
-        HomeHandler home_handler = {},
+        PowerPressCountProvider power_press_count_provider = {},
+        DisplayOnProvider display_on_provider = {},
+        AppVisibleProvider app_visible_provider = {},
+        SystemHandler power_handler = {},
+        SystemHandler screen_timeout_handler = {},
+        AppLaunchHandler app_launch_handler = {},
+        SystemHandler back_handler = {},
         KeyboardResultHandler keyboard_result_handler = {}
     );
 
@@ -54,7 +72,12 @@ public:
         std::string_view name
     ) override;
 
-    std::expected<void, std::string> restore_launcher();
+    std::expected<void, std::string> show_watch_face();
+    std::expected<void, std::string> show_launcher();
+    std::expected<void, std::string> show_surface(ShellSurface surface);
+    ShellSurface current_surface() const;
+    bool is_watch_face() const;
+    std::expected<void, std::string> set_display_on(bool on);
     std::expected<void, std::string> show_keyboard(
         esp_brookesia::system::core::AppId app_id,
         esp_brookesia::system::core::KeyboardRequestId request_id,
@@ -73,8 +96,9 @@ private:
 
     struct HomeGestureState {
         std::atomic_bool consumed = false;
-        std::atomic<ForegroundToken> gesture_token = 0;
-        std::atomic<ForegroundToken> pending_token = 0;
+        std::atomic<ShellSurface> surface = ShellSurface::WatchFace;
+        std::atomic<uint8_t> pending_gesture = 0;
+        std::atomic<uint32_t> activity_generation = 0;
     };
 
     struct KeyboardState;
@@ -91,10 +115,18 @@ private:
     void refresh_clock();
     void refresh_wifi();
     void refresh_battery();
+    void refresh_brightness();
+    std::expected<void, std::string> step_brightness();
+    std::expected<void, std::string> toggle_wifi();
     void set_status_text(std::string_view path, std::string text);
 
-    ForegroundTokenProvider foreground_token_provider_;
-    HomeHandler home_handler_;
+    PowerPressCountProvider power_press_count_provider_;
+    DisplayOnProvider display_on_provider_;
+    AppVisibleProvider app_visible_provider_;
+    SystemHandler power_handler_;
+    SystemHandler screen_timeout_handler_;
+    AppLaunchHandler app_launch_handler_;
+    SystemHandler back_handler_;
     KeyboardResultHandler keyboard_result_handler_;
     std::shared_ptr<HomeGestureState> home_gesture_state_;
     std::shared_ptr<KeyboardState> keyboard_state_;
@@ -104,6 +136,10 @@ private:
         esp_brookesia::system::core::INVALID_TIMER_ID;
     esp_brookesia::system::core::TimerId status_timer_id_ =
         esp_brookesia::system::core::INVALID_TIMER_ID;
+    uint32_t last_power_press_count_ = 0;
+    uint32_t last_activity_generation_ = 0;
+    int64_t last_activity_us_ = 0;
+    bool screen_timeout_latched_ = false;
 
     esp_brookesia::service::ServiceBinding display_binding_;
     esp_brookesia::service::ServiceBinding wifi_binding_;

@@ -40,7 +40,7 @@ espocket::System
    └── owns/starts → CircularShell
 ```
 
-`espocket::System` 基于 Brookesia System Core，负责产品装配、系统生命周期、GUI backend、隐藏 Shell App 的安装与启动。圆屏布局、Launcher、状态呈现和 Home 手势只属于 `shell_circular`。
+`espocket::System` 基于 Brookesia System Core，负责产品装配、系统生命周期、GUI backend、隐藏 Shell App 的安装与启动，以及 PWR 输入和显示状态编排。圆屏布局、Watch Face、Launcher、状态呈现和触摸手势属于 `shell_circular`。
 
 Circular Shell 使用隐藏 Native `IApp` 作为 Brookesia 承载机制，但它是系统 Shell，不出现在普通应用列表中。M1 不把这种承载机制描述为通用 App 生命周期验证。
 
@@ -69,7 +69,7 @@ ESPocket 不重新实现 App Manager、Runtime Manager、GUI Manager、Timer Man
 - 只有 JSON UI 明显不适合时才局部使用 Native LVGL。
 - 不为未来需求预建空资源目录、主题、模板或 Flow。
 - Circular Shell 可包含 466×466、圆屏安全区和真机校准参数；`espocket_system` 不包含这些设备 UI 细节。
-- 目标交互契约见 [`interaction.md`](interaction.md)。截至 M5，当前实现仍以 Launcher 为 Home 目标；M6 起将 Watch Face 引入为新的 Home 目标。目标规范不得被描述为已实现行为。
+- 目标交互契约见 [`interaction.md`](interaction.md)。M1–M5 的已验收实现以 Launcher 为 Home；当前 M6 源码已引入 Watch Face Home 与 PWR/显示状态闭环，但尚待真机验收。目标规范和未通过的 M6 行为不得描述为已验收行为。
 
 ## 错误分类
 
@@ -83,10 +83,10 @@ Recoverable：Time、Wi-Fi status、Battery status。数据不可用时分别显
 M0 Official Baseline       — WAIVED
 M1 ESPocket System         — PASS（v0.1-system）
 M2 Native App Validation   — PASS（2026-09-26）
-M3 Runtime App Validation  — BLOCKED（Core .bpk file-install only）
-M4 Device Capabilities     — BLOCKED（keyboard physical proof + audio + remaining controls）
+M3 Runtime App Validation  — PASS
+M4 Device Capabilities     — BLOCKED（audio + remaining Storage/Developer controls）
 M5 Application Ecosystem   — BLOCKED（remote/trust/runtime-isolation/catalog/sync gates）
-M6 Home & Display State    — NOT ENTERED（depends on M2 PASS）
+M6 Home & Display State    — IN PROGRESS（2026-09-28）
 M7 Navigation Surfaces     — NOT ENTERED（depends on M6 PASS）
 M8 App Interaction Contract — NOT ENTERED（Native/Contract depends on M7; Runtime validation also depends on M3）
 ```
@@ -142,13 +142,13 @@ M2 通过条件包括 Launcher → Hello → Increment → Home → Launcher 的
 
 每个 Milestone 必须输出独立验收报告；未执行项只能标记 `NOT TESTED`，外部条件阻塞项标记 `BLOCKED`。项目所有者于 2026-09-26 授权连续实施到 M5，非重大人工检查可集中延期，但缺少规定证据的 Milestone 不得标记 `PASS`。该授权不包含烧录、Git commit/push/tag、Release 或进入 M6。
 
-Milestone 编号表示产品演进主题，不表示前一编号必须先 PASS。M6 可以在 M3–M5 仍为 `BLOCKED` 时依赖 M2 独立进入；M3–M5 的阻塞项与验收结论不得因此隐藏或降级。完整产品基线仍要求 M1–M8 所有适用 Milestone 均为 `PASS`，M0 保持 `WAIVED`。阶段状态只使用 `NOT ENTERED`、`IN PROGRESS`、`BLOCKED` 和 `PASS`，不使用 `PARTIAL PASS`；Preview 或自动化结果不能替代规定的真机证据。
+Milestone 编号表示产品演进主题，不表示前一编号必须先 PASS。M6 依赖 M2，可在 M4–M5 仍为 `BLOCKED` 时独立进入；M4–M5 的阻塞项与验收结论不得因此隐藏或降级。完整产品基线仍要求 M1–M8 所有适用 Milestone 均为 `PASS`，M0 保持 `WAIVED`。阶段状态只使用 `NOT ENTERED`、`IN PROGRESS`、`BLOCKED` 和 `PASS`，不使用 `PARTIAL PASS`；Preview 或自动化结果不能替代规定的真机证据。
 
 ### M3 范围
 
 M3 只启用官方 JavaScript Runtime。`Hello Runtime` 使用 stable package ID `espocket.app.hello_runtime`，与 Native Hello 同时显示在固定 Launcher 中。System Core 的官方 staging helper 将 unpacked 源包预置到 `/littlefs/apps/<package-id>`，Core 在 boot 时扫描 package app；该路径只验证预置发现/加载，不等于 `.bpk` install。
 
-官方 `.bpk` 由 `esp-brookesia-toolkit@1.0.1` 构建，Runtime backend 使用 `espressif/brookesia_runtime_js@0.8.3`。项目所有者已逐项授权相关外部源码执行；ESP-IDF Component Manager 已将 Runtime JS 0.8.3 与确切的 QuickJS-NG 0.14.0 解析写入 lock，且 clean 固件构建/启动、链接保留、unpacked staging、LittleFS image、Runtime render/Home 与 Native/Runtime 双向交替均已通过。Toolkit npm lock、doctor、debug build、`.bpk` 结构与内容已验证；Core `.bpk` file-install 与 release signing 尚未执行。
+官方 `.bpk` 由 `esp-brookesia-toolkit@1.0.1` 构建，Runtime backend 使用 `espressif/brookesia_runtime_js@0.8.3`。项目所有者已逐项授权相关外部源码执行；ESP-IDF Component Manager 已将 Runtime JS 0.8.3 与确切的 QuickJS-NG 0.14.0 解析写入 lock，且 clean 固件构建/启动、链接保留、unpacked staging、LittleFS image、Runtime render/Home 与 Native/Runtime 双向交替均已通过。Toolkit npm lock、doctor、debug build、`.bpk` 结构与内容已验证。2026-09-28，项目所有者接受 M3 为 `PASS`，不再把独立 Core `.bpk` file-install 作为 M3 阻塞门槛；release signing 仍是独立发布/M5 concern。
 
 ## 依赖与版本策略
 
@@ -163,8 +163,8 @@ M3 只启用官方 JavaScript Runtime。`Hello Runtime` 使用 stable package ID
 ## 后续 Milestone
 
 - M2：`app_hello`、真机交互与 50 次启停/heap gate 已于 2026-09-26 通过。
-- M3：JavaScript Runtime dependency、clean 固件、unpacked staging、LittleFS、Toolkit debug `.bpk`、Runtime render/Home 与 Native/Runtime 交替已验证；仍缺 Core `.bpk` file-install 与 release signing。
-- M4：官方 Settings clean lifecycle、466×466 smoke、Wi-Fi 页面、Brightness、Time、Device Info 与 Home 已验证；系统键盘和 Wi-Fi 10/10 候选已 app-only 写入并通过 90 秒启动验证，Wi-Fi 初始化、保留 NVS 下的联网与 SNTP 同步均有脱敏真机证据；键盘 provider 已有一次真机 open/close，但掩码、模式、输入、确认/取消与清理语义以及 Storage/Battery/Developer 仍未单独确认。Sound 受官方 Audio-service 所需 `PlaybackIface` 仅由同时依赖 player+recorder 的 processor 提供这一上游边界阻塞；2026-09-28 的 Registry/`master` 核查见 [upstream status](../upstream/status-2026-09-28.md)。
+- M3：`PASS`。JavaScript Runtime dependency、clean 固件、unpacked staging、LittleFS、Toolkit debug `.bpk`、Runtime render/Home 与 Native/Runtime 交替已验证；独立 Core `.bpk` file-install 门槛由项目所有者接受，release signing 仍单独跟踪。
+- M4：官方 Settings clean lifecycle、466×466 smoke、Wi-Fi 页面、Brightness、Time、Battery、Device Info 与 Home 已验证；系统键盘和 Wi-Fi 10/10 候选已 app-only 写入并通过 90 秒启动验证，Wi-Fi 初始化、保留 NVS 下的联网与 SNTP 同步均有脱敏真机证据；项目所有者已确认键盘屏上语义、Time 与 Battery。Storage/Developer 仍未单独确认。Sound 受官方 Audio-service 所需 `PlaybackIface` 仅由同时依赖 player+recorder 的 processor 提供这一上游边界阻塞；2026-09-28 的 Registry/`master` 核查见 [upstream status](../upstream/status-2026-09-28.md)。
 - M5：官方 App Store clean offline lifecycle 与 Home 已验证；先前在线真机已成功拉取并缓存远程索引与部分 HTTPS 元数据，但并发请求/取消阶段出现一次 `LoadProhibited`、两次 `StoreProhibited` 与三次自动重启。`-0x008D` 已确认为内部 RAM TLS 分配失败；官方 HTTP Kconfig 1 worker / 1 concurrent request 的产品 containment 已完成 host build、app-only 写入、90 秒无 fatal 启动与缓存态 Store/Home 验证。后续显式 Refresh 成功提交远程索引/图标请求并写入 index cache，且未再出现 `-0x008D`；但 index 连接超时/重试后的 Store refresh timeout 紧接触发 `LoadProhibited`（`EXCVADDR=0x8`）与自动重启，符号化崩溃栈位于 HTTP worker 的 Mbed TLS handshake。该 containment 只缓解已观测的 TLS 分配压力，不是在线稳定性或上游竞态修复。package trust gate 与 Launcher 同步策略已经在 [Package Trust Gate](package-trust.md) 和 [Launcher Sync](launcher-sync.md) 定义，但 digest/signature 尚未在 Core 公共安装/重启发现路径强制执行，动态 Launcher 实现按 fail-closed 规则延期；Core `KeyboardClosed.Text` 仍缺少 owner isolation（产品仅在 Runtime stop failure 后 fail-closed），已知官方包仅支持 `super`，兼容发布路径仍阻塞。
 - M6 — Home & Display State：依赖 M2 PASS；引入 Watch Face 作为 Home、复用当前固定 Launcher，并验证 PWR 短按 Home/息屏/唤醒、自动息屏与 best-effort 页面恢复。Cards、Quick Settings、Edge Back、动态 Launcher 和表盘自定义不在本阶段。
 - M7 — Navigation Surfaces：依赖 M6 PASS；引入 Cards、Quick Settings、Edge Back 与单一直接 Launch Source，先验证系统 Surface 与 Native App 路径。
@@ -176,8 +176,7 @@ M3 只启用官方 JavaScript Runtime。`Hello Runtime` 使用 stable package ID
 M2 PASS ───────→ M6 ───────→ M7 ───────→ M8 Native/Contract
 M3 PASS ─────────────────────────────────→ M8 Runtime Validation
 
-M3 BLOCKED ─┐
-M4 BLOCKED ─┼─ 可与 M6/M7 准备并行，但必须在完整产品基线前关闭
+M4 BLOCKED ─┬─ 可与 M6/M7 准备并行，但必须在完整产品基线前关闭
 M5 BLOCKED ─┘
 ```
 

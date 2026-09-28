@@ -8,4 +8,12 @@ menu "ESPocket"
             This emits deterministic lifecycle and heap samples for M2 acceptance
             and must remain disabled in normal interactive firmware builds.
 
+    config ESPOCKET_M6_SCREEN_TIMEOUT_SECONDS
+        int "M6 global screen timeout in seconds"
+        range 0 3600
+        default 30
+        help
+            Turn the display off after this many seconds without touch input.
+            Set to 0 for the global Never setting. Apps cannot override it.
+
 endmenu

@@ -1,12 +1,14 @@
 {
   "type": "viewScreen",
-  "id": "main",
+  "id": "root",
   "commonProps": { "scrollable": false },
   "style": { "bgColor": "#07090d", "padding": 0 },
   "layout": {
     "type": "flex",
+    "flexFlow": "column",
     "mainAlign": "center",
-    "crossAlign": "center"
+    "crossAlign": "center",
+    "gap": "20dp"
   },
   "children": [
     {
@@ -15,6 +17,22 @@
       "labelProps": { "text": "Hello from JavaScript" },
       "style": { "textColor": "#f4f7fb", "fontSize": "20sp" },
       "placement": { "width": "280dp", "height": "40dp" }
+    },
+    {
+      "type": "button",
+      "id": "detail",
+      "events": [ { "type": "clicked", "action": "open_detail" } ],
+      "style": { "bgColor": "#7047eb", "radius": "26dp" },
+      "placement": { "width": "210dp", "height": "62dp" },
+      "children": [
+        {
+          "type": "label",
+          "id": "label",
+          "labelProps": { "text": "Open Detail" },
+          "style": { "textColor": "#ffffff", "fontSize": "18sp" },
+          "placement": { "mode": "relative", "align": "center" }
+        }
+      ]
     }
   ]
 }

@@ -18,7 +18,7 @@
 - Runtime keyboard-event isolation: `BLOCKED (UPSTREAM)` / `CONTAINED (PRODUCT FAIL-CLOSED)`
 - M5: `BLOCKED`
 - M4: `BLOCKED`
-- M3: `BLOCKED`（Core `.bpk` install path only）
+- M3: `PASS`（2026-09-28）
 - M2: `PASS`（2026-09-26）
 - M1: `PASS`（2026-09-25，`v0.1-system`）
 - M0: `WAIVED`（2026-09-25，非 PASS）

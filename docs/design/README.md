@@ -6,6 +6,7 @@
 |---|---|
 | [项目设计](project.md) | 产品定位、架构边界、阶段门与依赖策略 |
 | [交互设计](interaction.md) | Home、Launcher、Quick Settings、App 导航与圆屏规则 |
+| [App Interaction Contract](app-interaction.md) | Native、Runtime 与第三方 App 的 Root/Detail/Back、生命周期和页面指导 |
 | [Package Trust Gate](package-trust.md) | Runtime 包验证、安装、重启发现与回滚契约 |
 | [Launcher Synchronization](launcher-sync.md) | 固定入口与可信动态入口的同步策略 |
 

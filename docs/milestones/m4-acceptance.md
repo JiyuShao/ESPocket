@@ -7,18 +7,18 @@
 - Firmware build/link/staging: `PASS`
 - Settings boot-time install: `PASS`（clean formal image）
 - Settings lifecycle and 466×466 UI smoke: `PASS`（physical）
-- Wi-Fi page / Brightness / Time / Device info: `PASS`（physical smoke）
-- System keyboard provider: `PASS (HOST BUILD + DEVICE OPEN/CLOSE)` / `PARTIAL (PHYSICAL SEMANTICS)`
+- Wi-Fi page / Brightness / Time / Battery / Device info: `PASS`（physical；Time/Battery owner-confirmed）
+- System keyboard provider: `PASS (HOST BUILD + PHYSICAL SEMANTICS)`（owner-confirmed）
 - Wi-Fi initialize / preserved-NVS reconnect / SNTP: `PASS (DEVICE)`
-- Storage / Battery / Developer controls: `NOT TESTED`
+- Storage / Developer controls: `NOT TESTED`
 - Sound/Volume capability: `BLOCKED`
 - M4: `BLOCKED`
-- M3: `BLOCKED`（Core `.bpk` install path only）
+- M3: `PASS`（2026-09-28）
 - M2: `PASS`（2026-09-26）
 - M1: `PASS`（2026-09-25，`v0.1-system`）
 - M0: `WAIVED`（2026-09-25，非 PASS）
 
-M4 复用官方 `brookesia_app_settings@0.8.3` 与 `brookesia_service_audio@0.8.2`，不复制官方资源、不修改 `managed_components/`、不增加 ESPocket 私有 Settings 或 Audio framework。项目已解析并锁定两个官方组件，项目所有者也已逐项命名授权相关外部源码。修正 build-local Board Manager defaults、worker stack 与严格 Audio-disabled 边界后，全新 ESP32-S3 clean build、稳定启动和 Settings 物理 smoke 均通过。2026-09-27 键盘/Wi-Fi 候选随后完成 app-only 写入和 90 秒真机启动验证；Wi-Fi 以实际 10 个静态 RX buffer 初始化，保留 NVS 下网络就绪且 SNTP 同步完成。脱敏串口随后确认键盘 provider 在同一 boot 中完成一次 matching open/close；密码掩码、模式切换、输入、确认/取消与清理的屏上语义未被逐项报告。M4 仍因这些键盘视觉/语义检查、Storage/Battery/Developer 未单独确认以及 Sound/Volume 上游能力边界而 `BLOCKED`。
+M4 复用官方 `brookesia_app_settings@0.8.3` 与 `brookesia_service_audio@0.8.2`，不复制官方资源、不修改 `managed_components/`、不增加 ESPocket 私有 Settings 或 Audio framework。项目已解析并锁定两个官方组件，项目所有者也已逐项命名授权相关外部源码。修正 build-local Board Manager defaults、worker stack 与严格 Audio-disabled 边界后，全新 ESP32-S3 clean build、稳定启动和 Settings 物理 smoke 均通过。2026-09-27 键盘/Wi-Fi 候选随后完成 app-only 写入和 90 秒真机启动验证；Wi-Fi 以实际 10 个静态 RX buffer 初始化，保留 NVS 下网络就绪且 SNTP 同步完成。脱敏串口确认键盘 provider 在同一 boot 中完成一次 matching open/close；2026-09-28，项目所有者进一步确认键盘屏上语义、Time 与 Battery 均无问题。M4 仍因 Storage/Developer 未单独确认以及 Sound/Volume 上游能力边界而 `BLOCKED`。
 
 ## Source Integration
 
@@ -31,7 +31,7 @@ M4 复用官方 `brookesia_app_settings@0.8.3` 与 `brookesia_service_audio@0.8.
 | Launcher | fixed `brookesia.general.settings` manifest ID、`shell.open_settings` action；复用现有 `open_app()` | PASS |
 | Circular layout guard | 品牌、caption 与三个 48dp 按钮的 fixed content height 为 230dp | PASS (STATIC) |
 | Settings resources | official staging target → 46 files / 236,537 bytes；与组件 source 逐字一致；全部 36 个 JSON 可解析 | PASS |
-| System keyboard provider | `espocket::System` 实现 Core keyboard hooks；Circular Shell 提供 transient native-LVGL overlay | PASS (HOST BUILD + DEVICE OPEN/CLOSE) / PARTIAL (VISUAL SEMANTICS) |
+| System keyboard provider | `espocket::System` 实现 Core keyboard hooks；Circular Shell 提供 transient native-LVGL overlay | PASS (HOST BUILD + PHYSICAL; OWNER CONFIRMED) |
 | Keyboard contract | password immediate-mask；`max_length` 先于 `initial_text`；受限 `allowed_modes` fail-closed | PASS (STATIC + BUILD) |
 | Private framework/managed patch | 无私有输入 framework；未修改 `managed_components/` | PASS |
 | Embedded JSON/action wiring | 标准 JSON parser + 三个 fixed action/manifest 静态检查 | PASS |
@@ -108,9 +108,9 @@ Static review also found that Core 0.8.4 broadcasts `KeyboardClosed.Text` servic
 | 90-second boot validator | PASS — exactly one ROM banner; `required_missing=[]`; `fatal_signals=[]` |
 | Wi-Fi initialization | PASS (DEVICE) — actual static RX buffer count 10; no shortfall, `ESP_ERR_NO_MEM`, or initialization failure |
 | Network / SNTP | PASS (DEVICE) — credential-safe capture observed network ready and completed SNTP synchronization |
-| Physical keyboard provider lifecycle | PARTIAL PASS — exactly one matching open/close observed; visual/semantic details not separately confirmed |
+| Physical keyboard provider lifecycle | PASS — matching open/close retained in serial evidence; visual/semantic behavior confirmed by project owner on 2026-09-28 |
 
-The immutable host-build-phase record is `evidence/m4/M4_KEYBOARD_WIFI_HOST_BUILD_2026-09-27.txt` (SHA-256 `935045d32dec63c8870ec40639e09b7447042e49bb94043cf24ec862094f374f`); its device-absent statement describes that earlier phase and is superseded only for device status. The later device summary is `evidence/m4/M4_KEYBOARD_WIFI_DEVICE_BOOT_2026-09-27.txt` (SHA-256 `cec46292215317dbb07d7249eb4765983b67a0a5a56daf72530049f7fa550810`). A subsequent interaction recorded exactly one matching keyboard open/close; the conservative boundary is retained in `evidence/m4/M4_KEYBOARD_INTERACTION_2026-09-27.txt` (SHA-256 `ffa041ad2611c9b790294dc5c66b2bcc1b6ba9aecc34a4f7e6554a83978bdcef`). The current hardware image is the later M5 HTTP-containment app (`870c7031dfa64dd20347d0879e3753608df37365973a07b609c2697ca98cf72b`), which retains this keyboard implementation and Wi-Fi 10/10 policy and passed another credential-safe 90-second boot/network/SNTP validation. No keyboard interaction was performed on that later boot; password masking, mode switching, typed input, confirm/cancel distinction, and visual cleanup remain unconfirmed.
+The immutable host-build-phase record is `evidence/m4/M4_KEYBOARD_WIFI_HOST_BUILD_2026-09-27.txt` (SHA-256 `935045d32dec63c8870ec40639e09b7447042e49bb94043cf24ec862094f374f`); its device-absent statement describes that earlier phase and is superseded only for device status. The later device summary is `evidence/m4/M4_KEYBOARD_WIFI_DEVICE_BOOT_2026-09-27.txt` (SHA-256 `cec46292215317dbb07d7249eb4765983b67a0a5a56daf72530049f7fa550810`). A subsequent interaction recorded exactly one matching keyboard open/close in `evidence/m4/M4_KEYBOARD_INTERACTION_2026-09-27.txt` (SHA-256 `ffa041ad2611c9b790294dc5c66b2bcc1b6ba9aecc34a4f7e6554a83978bdcef`). The current hardware image is the later M5 HTTP-containment app (`870c7031dfa64dd20347d0879e3753608df37365973a07b609c2697ca98cf72b`), which retains this keyboard implementation and Wi-Fi 10/10 policy and passed another credential-safe 90-second boot/network/SNTP validation. No keyboard interaction was performed during that later retained capture; the project owner separately confirmed the keyboard's masking, modes, typed-input, confirm/cancel, and visual-cleanup semantics on 2026-09-28, without retaining credential-bearing evidence.
 
 ## Audio Capability Boundary
 
@@ -156,26 +156,25 @@ Official Settings 0.8.3 variants include exact 1024×600, 800×480, 480×480, po
 | M4 capability | Source path | 状态 |
 |---|---|---|
 | Wi-Fi page reachability | Official Settings + existing Wi-Fi/Storage services | PASS (PHYSICAL UI SMOKE) |
-| Password keyboard | System Core hook + Circular Shell LVGL overlay | PARTIAL PASS (DEVICE OPEN/CLOSE); masking/modes/input/confirm/cancel/cleanup not separately confirmed |
+| Password keyboard | System Core hook + Circular Shell LVGL overlay | PASS (PHYSICAL; OWNER CONFIRMED); no credential-bearing evidence retained |
 | Wi-Fi initialize/connect | Official Settings + Wi-Fi service; RX/BA 10/10 | PASS (DEVICE; actual RX 10, network ready, no memory/init failure) |
 | SNTP synchronization | Official SNTP service after network connection | PASS (DEVICE; synchronization completed) |
 | Brightness | Official Settings + existing Display/Backlight service | PASS (PHYSICAL ADJUSTMENT) |
 | Volume/mute | Official Settings + AudioPlayback | BLOCKED (Audio Device disabled; upstream playback-only config is not resolvable) |
-| Time/timezone | Official Settings + existing SNTP/Storage services | PASS (UI SMOKE; page reachable) |
+| Time/timezone | Official Settings + existing SNTP/Storage services | PASS (PHYSICAL; OWNER CONFIRMED) |
 | Storage visibility | Official Settings device data | NOT TESTED |
-| Battery | Official Settings/Device data; not a full battery management page | NOT TESTED |
+| Battery | Official Settings/Device data; not a full battery management page | PASS (PHYSICAL; OWNER CONFIRMED) |
 | Device info | Official Settings + Device service | PASS (PHYSICAL SMOKE) |
 | Developer/debug controls | Official Settings debug UI | NOT TESTED |
 | Files | intentionally not added | OUT OF SCOPE |
 
 ## Required Unblock
 
-1. Complete the remaining keyboard visual/semantic proof: immediate masking, typing, mode switching, confirm versus cancel, and cleanup, with credentials entered only on-device and no password or SSID retained.
-2. Exercise Storage visibility, Battery data, and Developer/debug controls on hardware.
-3. Consume an official HAL/Audio-service fix that provides the `PlaybackIface` required by `AudioPlayback` with Codec Player enabled and Codec Recorder disabled before Sound/Volume can pass without violating the product constraint.
+1. Exercise Storage visibility and Developer/debug controls on hardware.
+2. Consume an official HAL/Audio-service fix that provides the `PlaybackIface` required by `AudioPlayback` with Codec Player enabled and Codec Recorder disabled before Sound/Volume can pass without violating the product constraint.
 
 ## Result
 
 `BLOCKED`
 
-The official Settings integration, exact dependency resolution, 466×466 interaction smoke, Wi-Fi page/Brightness/Time/Device UI, and Home restoration are accepted. The current app-only image also passed a one-banner 90-second boot, initialized Wi-Fi with all 10 configured static RX buffers, reached the preserved-NVS network, and completed SNTP synchronization without a fatal signal. The keyboard provider's physical open/close lifecycle is now observed, but its masking, modes, typed-input, confirm/cancel, and visual-cleanup semantics remain unconfirmed. M4 therefore remains `BLOCKED` for those remaining keyboard checks, the outstanding Storage/Battery/Developer checks, and the Sound/Volume upstream playback-only boundary.
+The official Settings integration, exact dependency resolution, 466×466 interaction smoke, Wi-Fi page, Brightness, Time, Battery, Device UI, keyboard semantics, and Home restoration are accepted. The current app-only image also passed a one-banner 90-second boot, initialized Wi-Fi with all 10 configured static RX buffers, reached the preserved-NVS network, and completed SNTP synchronization without a fatal signal. M4 remains `BLOCKED` only for the outstanding Storage/Developer checks and the Sound/Volume upstream playback-only boundary.
