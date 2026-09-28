@@ -5,14 +5,22 @@
 #include <utility>
 #include <vector>
 
+#include "sdkconfig.h"
+
 #include "boost/json/array.hpp"
 #include "boost/json/value.hpp"
+#include "brookesia/app_settings.hpp"
+#include "brookesia/app_store.hpp"
 #include "brookesia/gui_lvgl.hpp"
 #include "brookesia/lib_utils/describe_helpers.hpp"
+#if CONFIG_ESPOCKET_M2_LIFECYCLE_STRESS
+#include "brookesia/lib_utils/memory_profiler.hpp"
+#endif
 #include "brookesia/service_helper/media/display.hpp"
 #include "brookesia/service_manager/helper/base.hpp"
 #include "esp_log.h"
 #include "espocket/circular_shell.hpp"
+#include "espocket/hello_app.hpp"
 
 namespace espocket {
 namespace {
@@ -22,6 +30,84 @@ constexpr uint32_t DISPLAY_TIMEOUT_MS = 1000;
 
 using DisplayHelper = esp_brookesia::service::helper::Display;
 using DisplaySource = esp_brookesia::gui::lvgl::DisplaySource;
+
+#if CONFIG_ESPOCKET_M2_LIFECYCLE_STRESS
+constexpr size_t M2_STRESS_CYCLES = 50;
+
+std::expected<void, std::string> run_m2_lifecycle_stress(
+    esp_brookesia::system::core::System &system,
+    esp_brookesia::system::core::AppId app_id
+)
+{
+    using AppState = esp_brookesia::system::core::AppState;
+    using MemoryProfiler = esp_brookesia::lib_utils::MemoryProfiler;
+
+    ESP_LOGI(TAG, "M2_STRESS BEGIN cycles=%zu app_id=%" PRIu32, M2_STRESS_CYCLES, app_id);
+    for (size_t cycle = 1; cycle <= M2_STRESS_CYCLES; ++cycle) {
+        const auto expected_state = cycle == 1 ? AppState::Installed : AppState::Stopped;
+        auto before_start = system.get_app(app_id);
+        if (!before_start.has_value() || before_start->state != expected_state) {
+            ESP_LOGE(TAG, "M2_STRESS FAIL cycle=%zu phase=pre_start_state", cycle);
+            return std::unexpected("M2 lifecycle stress has an invalid pre-start state at cycle " + std::to_string(cycle));
+        }
+
+        auto start_result = system.start_app(app_id);
+        if (!start_result) {
+            ESP_LOGE(TAG, "M2_STRESS FAIL cycle=%zu phase=start error=%s", cycle, start_result.error().c_str());
+            return std::unexpected("M2 lifecycle stress start failed at cycle " + std::to_string(cycle));
+        }
+
+        auto running = system.get_app(app_id);
+        if (!running.has_value() || running->state != AppState::Running) {
+            ESP_LOGE(TAG, "M2_STRESS FAIL cycle=%zu phase=running_state", cycle);
+            auto cleanup_result = system.stop_app(app_id);
+            if (!cleanup_result) {
+                ESP_LOGE(TAG, "M2_STRESS cleanup failed: %s", cleanup_result.error().c_str());
+            }
+            return std::unexpected("M2 lifecycle stress did not reach Running at cycle " + std::to_string(cycle));
+        }
+
+        auto stop_result = system.stop_app(app_id);
+        if (!stop_result) {
+            ESP_LOGE(TAG, "M2_STRESS FAIL cycle=%zu phase=stop error=%s", cycle, stop_result.error().c_str());
+            return std::unexpected("M2 lifecycle stress stop failed at cycle " + std::to_string(cycle));
+        }
+
+        auto stopped = system.get_app(app_id);
+        if (!stopped.has_value() || stopped->state != AppState::Stopped) {
+            ESP_LOGE(TAG, "M2_STRESS FAIL cycle=%zu phase=stopped_state", cycle);
+            return std::unexpected("M2 lifecycle stress did not reach Stopped at cycle " + std::to_string(cycle));
+        }
+
+        auto gui_probe = system.gui_set_text(app_id, "/hello/counter", "cleanup probe");
+        if (gui_probe || gui_probe.error() != "App GUI document is not loaded") {
+            ESP_LOGE(TAG, "M2_STRESS FAIL cycle=%zu phase=gui_cleanup", cycle);
+            return std::unexpected("M2 lifecycle stress GUI cleanup failed at cycle " + std::to_string(cycle));
+        }
+
+        const auto heap = MemoryProfiler::take_raw_heap_snapshot();
+        if (!heap.valid || heap.internal_free == 0 || heap.external_free == 0 ||
+                heap.internal_largest == 0 || heap.external_largest == 0) {
+            ESP_LOGE(TAG, "M2_STRESS FAIL cycle=%zu phase=heap_snapshot", cycle);
+            return std::unexpected("M2 lifecycle stress heap snapshot failed at cycle " + std::to_string(cycle));
+        }
+
+        ESP_LOGI(
+            TAG,
+            "M2_STRESS CYCLE cycle=%zu start=Running stop=Stopped gui=Unloaded internal_free=%zu psram_free=%zu "
+            "internal_largest=%zu psram_largest=%zu",
+            cycle,
+            heap.internal_free,
+            heap.external_free,
+            heap.internal_largest,
+            heap.external_largest
+        );
+    }
+
+    ESP_LOGI(TAG, "M2_STRESS COMPLETE cycles=%zu", M2_STRESS_CYCLES);
+    return {};
+}
+#endif
 
 } // namespace
 
@@ -53,7 +139,7 @@ std::expected<void, std::string> System::init()
     config.system_type = "espocket";
     config.start_service_manager = true;
     config.install_registered_apps = false;
-    config.install_package_apps = false;
+    config.install_package_apps = true;
 
     auto result = esp_brookesia::system::core::System::init(std::move(config));
     if (!result) {
@@ -69,13 +155,67 @@ esp_brookesia::system::core::SystemInfo System::on_get_system_info() const
 {
     return {
         .name = "ESPocket",
-        .version = "0.1.0",
+        .version = "0.3.0",
     };
 }
 
 std::expected<void, std::string> System::on_init()
 {
-    shell_ = std::make_shared<CircularShell>();
+    auto hello_result = install_app(std::make_shared<HelloApp>());
+    if (!hello_result) {
+        return std::unexpected("Failed to install Hello Native: " + hello_result.error());
+    }
+    ESP_LOGI(TAG, "Hello Native installed");
+
+    auto settings_result = install_app(
+                               std::make_shared<
+                                   esp_brookesia::app::settings::SettingsApp
+                               >()
+                           );
+    if (!settings_result) {
+        return std::unexpected(
+            "Failed to install Settings: " + settings_result.error()
+        );
+    }
+    ESP_LOGI(TAG, "Settings installed");
+
+    auto store_result = install_app(
+                            std::make_shared<
+                                esp_brookesia::app::app_store::AppStoreApp
+                            >()
+                        );
+    if (!store_result) {
+        return std::unexpected(
+            "Failed to install App Store: " + store_result.error()
+        );
+    }
+    ESP_LOGI(TAG, "App Store installed");
+
+    auto foreground_token = foreground_token_;
+    shell_ = std::make_shared<CircularShell>(
+        [foreground_token]() {
+            return foreground_token->load(std::memory_order_acquire);
+        },
+        [this](uint64_t token) {
+            handle_home_intent(token);
+        },
+        [this](
+            esp_brookesia::system::core::AppId app_id,
+            esp_brookesia::system::core::KeyboardRequestId request_id,
+            bool confirmed,
+            std::string text
+        ) {
+            auto result = complete_app_keyboard(
+                              app_id,
+                              request_id,
+                              confirmed,
+                              std::move(text)
+                          );
+            if (!result) {
+                ESP_LOGW(TAG, "Failed to complete keyboard request: %s", result.error().c_str());
+            }
+        }
+    );
     auto result = install_app(shell_);
     if (!result) {
         shell_.reset();
@@ -88,9 +228,30 @@ std::expected<void, std::string> System::on_init()
 
 std::expected<void, std::string> System::on_start()
 {
+    stopping_.store(false, std::memory_order_release);
+    foreground_app_id_.store(
+        esp_brookesia::system::core::INVALID_APP_ID,
+        std::memory_order_release
+    );
+    foreground_token_->store(0, std::memory_order_release);
     if (shell_id_ == esp_brookesia::system::core::INVALID_APP_ID) {
         return std::unexpected("Circular Shell is not installed");
     }
+
+#if CONFIG_ESPOCKET_M2_LIFECYCLE_STRESS
+    auto apps = list_apps();
+    auto hello = std::find_if(apps.begin(), apps.end(), [](const auto &app) {
+        return app.manifest.id == "espocket.app.hello";
+    });
+    if (hello == apps.end()) {
+        return std::unexpected("Hello Native is not installed for M2 lifecycle stress");
+    }
+    auto stress_result = run_m2_lifecycle_stress(*this, hello->app_id);
+    if (!stress_result) {
+        return stress_result;
+    }
+#endif
+
     auto result = start_app(shell_id_);
     if (!result) {
         return std::unexpected("Failed to start Circular Shell: " + result.error());
@@ -98,10 +259,191 @@ std::expected<void, std::string> System::on_start()
     return {};
 }
 
+std::expected<void, std::string> System::on_app_started(
+    const esp_brookesia::system::core::AppInfo &app
+)
+{
+    if (stopping_.load(std::memory_order_acquire)) {
+        return std::unexpected("ESPocket System is stopping");
+    }
+    if (app.app_id == shell_id_ || !app.manifest.visible) {
+        return {};
+    }
+
+    foreground_app_id_.store(app.app_id, std::memory_order_release);
+    do {
+        ++foreground_generation_;
+    } while (foreground_generation_ == 0);
+    foreground_token_->store(foreground_generation_, std::memory_order_release);
+    return {};
+}
+
+void System::on_app_start_failed(
+    const esp_brookesia::system::core::AppInfo &app,
+    std::string_view reason
+)
+{
+    ESP_LOGW(
+        TAG,
+        "App start failed: manifest=%s reason=%.*s",
+        app.manifest.id.c_str(),
+        static_cast<int>(reason.size()),
+        reason.data()
+    );
+    restore_launcher_after_lifecycle(app);
+}
+
+void System::on_app_stopped(const esp_brookesia::system::core::AppInfo &app)
+{
+    restore_launcher_after_lifecycle(app);
+}
+
+void System::on_app_stop_failed(
+    const esp_brookesia::system::core::AppInfo &app,
+    std::string_view reason
+)
+{
+    ESP_LOGW(
+        TAG,
+        "App stop failed: manifest=%s reason=%.*s",
+        app.manifest.id.c_str(),
+        static_cast<int>(reason.size()),
+        reason.data()
+    );
+    if (app.manifest.kind == esp_brookesia::system::core::AppKind::Runtime) {
+        runtime_stop_failed_.store(true, std::memory_order_release);
+        ESP_LOGE(TAG, "Keyboard input disabled after Runtime stop failure");
+    }
+    restore_launcher_after_lifecycle(app);
+}
+
+std::expected<void, std::string> System::on_show_app_keyboard(
+    esp_brookesia::system::core::AppId app_id,
+    esp_brookesia::system::core::KeyboardRequestId request_id,
+    const esp_brookesia::system::core::KeyboardRequestOptions &options
+)
+{
+    if (runtime_stop_failed_.load(std::memory_order_acquire)) {
+        return std::unexpected("Keyboard input is disabled until restart after Runtime stop failure");
+    }
+    auto app = get_app(app_id);
+    if (!app.has_value()) {
+        return std::unexpected("Keyboard owner app is not installed");
+    }
+    if (app->state != esp_brookesia::system::core::AppState::Running) {
+        return std::unexpected("Keyboard input requires a running owner app");
+    }
+    if (!shell_) {
+        return std::unexpected("Circular Shell is unavailable for keyboard input");
+    }
+    return shell_->show_keyboard(app_id, request_id, options);
+}
+
+void System::on_hide_app_keyboard(
+    esp_brookesia::system::core::AppId app_id,
+    esp_brookesia::system::core::KeyboardRequestId request_id
+)
+{
+    if (shell_) {
+        shell_->hide_keyboard(app_id, request_id);
+    }
+}
+
+void System::handle_home_intent(uint64_t foreground_token)
+{
+    // The token binds one physical gesture to the foreground run present at Press.
+    if (stopping_.load(std::memory_order_acquire) || foreground_token == 0 ||
+            foreground_token_->load(std::memory_order_acquire) != foreground_token) {
+        return;
+    }
+
+    const auto tracked_app_id = foreground_app_id_.load(std::memory_order_acquire);
+    auto active = get_active_app();
+    if (!active.has_value() || active->app_id != tracked_app_id ||
+            active->app_id == shell_id_ || !active->manifest.visible) {
+        return;
+    }
+
+    auto result = stop_app(active->app_id);
+    if (!result) {
+        ESP_LOGW(TAG, "Home intent failed to stop app: %s", result.error().c_str());
+    }
+}
+
+void System::clear_foreground(
+    const esp_brookesia::system::core::AppInfo &app
+)
+{
+    auto expected = app.app_id;
+    if (!foreground_app_id_.compare_exchange_strong(
+                expected,
+                esp_brookesia::system::core::INVALID_APP_ID,
+                std::memory_order_acq_rel
+            )) {
+        return;
+    }
+    foreground_token_->store(0, std::memory_order_release);
+}
+
+void System::restore_launcher_after_lifecycle(
+    const esp_brookesia::system::core::AppInfo &app
+)
+{
+    clear_foreground(app);
+    if (stopping_.load(std::memory_order_acquire) || app.app_id == shell_id_ ||
+            !app.manifest.visible || !shell_) {
+        return;
+    }
+
+    auto active = get_active_app();
+    if (active.has_value() && active->app_id != shell_id_ && active->manifest.visible) {
+        return;
+    }
+
+    auto shell = get_app(shell_id_);
+    if (!shell.has_value() || shell->state != esp_brookesia::system::core::AppState::Running) {
+        return;
+    }
+    auto result = shell_->restore_launcher();
+    if (!result) {
+        ESP_LOGW(TAG, "Failed to restore Launcher: %s", result.error().c_str());
+    }
+}
+
+void System::on_stop()
+{
+    stopping_.store(true, std::memory_order_release);
+    foreground_token_->store(0, std::memory_order_release);
+
+    if (shell_id_ != esp_brookesia::system::core::INVALID_APP_ID) {
+        auto shell_result = stop_app(shell_id_);
+        if (!shell_result) {
+            ESP_LOGW(TAG, "Failed to stop Circular Shell: %s", shell_result.error().c_str());
+        }
+    }
+
+    const auto app_id = foreground_app_id_.exchange(
+                            esp_brookesia::system::core::INVALID_APP_ID,
+                            std::memory_order_acq_rel
+                        );
+    if (app_id != esp_brookesia::system::core::INVALID_APP_ID) {
+        auto app_result = stop_app(app_id);
+        if (!app_result) {
+            ESP_LOGW(TAG, "Failed to stop foreground app: %s", app_result.error().c_str());
+        }
+    }
+}
+
 void System::on_deinit()
 {
     shell_.reset();
     shell_id_ = esp_brookesia::system::core::INVALID_APP_ID;
+    foreground_app_id_.store(
+        esp_brookesia::system::core::INVALID_APP_ID,
+        std::memory_order_release
+    );
+    foreground_token_->store(0, std::memory_order_release);
+    stopping_.store(false, std::memory_order_release);
     if (display_started_) {
         DisplaySource::get_instance().stop();
         display_started_ = false;

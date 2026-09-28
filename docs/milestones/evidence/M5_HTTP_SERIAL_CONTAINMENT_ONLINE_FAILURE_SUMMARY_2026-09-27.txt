@@ -1,0 +1,74 @@
+ESPocket M5 serialized-HTTP containment online failure summary
+Date: 2026-09-27
+Status: DEVICE FAIL; LOADPROHIBITED DURING TLS HANDSHAKE AFTER STORE REFRESH TIMEOUT
+
+Firmware identity
+- App image SHA-256: 870c7031dfa64dd20347d0879e3753608df37365973a07b609c2697ca98cf72b
+- ELF SHA-256: cc40c08b4da608962624f7dd4daa4e455a8a3e5efaefa149495a4fe7c8f770e1
+- Panic log ELF prefix: cc40c08b4 (matches the containment ELF)
+- HTTP policy: one worker and one maximum concurrent request
+
+Validated trigger
+- The Store tab's top-right Refresh action was used to exercise remote traffic without selecting an Install or Update row action.
+- HTTP was already Started after completed SNTP synchronization.
+- The capture retained no Wi-Fi credential or SSID value.
+
+First boot and panic window
+- Store started/opened at 63,679/63,680 ms.
+- Cached index and five cached metadata files loaded.
+- Icon request id(1) was submitted at 67,502 ms and canceled at 70,385 ms.
+- Remote index request id(2) was submitted at 74,225 ms.
+- The index cache was successfully written at 78,028 ms.
+- A further remote index request id(3) was submitted at 83,969 ms.
+- At 100,712 ms, its TLS connection open timed out and HTTP announced one retry.
+- At 114,986 ms, App Store logged refresh request timeout for request id(3).
+- Immediately afterward, Core 0 raised an unhandled LoadProhibited.
+- EXCVADDR: 0x00000008
+- PC: 0x423379ec
+- The device automatically rebooted; a second ROM banner followed.
+- No matching App stop occurred before the panic.
+
+Symbolized crashing-task stack
+- mbedtls_ssl_handshake_step (ssl_tls.c:4158)
+- mbedtls_ssl_handshake
+- esp_mbedtls_handshake (esp_tls_mbedtls.c:280)
+- esp_tls_handshake / esp_tls_low_level_conn / esp_tls_conn_new_sync
+- ssl_connect / esp_transport_connect
+- esp_http_client_connect / esp_http_client_open
+- EspHttpTransaction::open (brookesia_hal_adaptor/src/network/http_client_impl.cpp:146)
+- Http::perform_once (brookesia_service_http/src/service_http.cpp:481)
+- Http::perform_request / execute_request / submitted worker closure
+- Brookesia TaskScheduler / Boost.Asio / pthread / FreeRTOS task wrapper
+
+Whole sanitized capture counts
+- ROM banners: 2
+- Store opens: 2
+- Normal HTTP request submissions: 8
+- Async HTTP request submission logs: 8
+- Remote-index normal submissions: 4
+- Icon normal submissions: 4
+- Index-cache writes: 3
+- mbedtls_ssl_setup -0x008D allocation failures: 0
+- Connection-open timeouts: 1
+- App Store refresh timeouts: 1
+- HTTP cancel events: 1
+- LoadProhibited: 1
+- StoreProhibited: 0
+- Automatic reboots: 1
+- Matching App Store stops: 0
+
+Interpretation boundary
+- The 1/1 setting prevented recurrence of the previously observed -0x008D TLS allocation failures in this run.
+- It did not make the online Store path stable.
+- The crashing task was actively inside Mbed TLS handshake through esp_http_client_open when it dereferenced an invalid/null-adjacent address.
+- Locked-source timing matches the incident: Store starts a 31,000 ms watchdog for a 15,000 ms request with one immediate retry; the observed watchdog fired 31,017 ms after request id(3) submission while the sole HTTP worker was in the second TLS handshake.
+- The watchdog runs App Store timeout handling in the SystemApp scheduler context. Its scheduler-free CancelRequest executes inline there, sets the cancel flag, copies the active transaction under a shared-pointer mutex, releases that mutex, and can call esp_http_client_close() without an operation mutex while the HTTP worker remains blocked in open().
+- esp_http_client_close() destructively closes ESP-TLS and frees/zeros Mbed TLS state. ESP-IDF explicitly forbids simultaneous same-handle open/close operations. One worker/one active request does not serialize this SystemApp cancellation path against the worker.
+- This makes close-versus-handshake invalidation the strongest and most likely cause, consistent with EXCVADDR 0x8. However, the trace does not contain the canceling worker's stack inside esp_http_client_close(), so the precise runtime overlap and exact invalid Mbed TLS member remain strongly supported rather than instruction-for-instruction proven.
+- No further device reproduction is required: this run already rejects the containment as an M5 online-stability fix.
+
+Evidence files
+- Sanitized serial capture: M5_HTTP_SERIAL_CONTAINMENT_ONLINE_FAILURE_2026-09-27.txt
+- Sanitized serial capture SHA-256: 83060cddcfaa729895d38f845cb7908585c22c39c3638ed13fe8b74be80f02e5
+- Symbolized backtrace: M5_HTTP_SERIAL_CONTAINMENT_ONLINE_FAILURE_SYMBOLIZED_2026-09-27.txt
+- Symbolized backtrace SHA-256: c000c9cb914f2e450b273e42935a214a60c61701087a3c9979f97badfb90608f

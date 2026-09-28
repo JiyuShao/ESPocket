@@ -1,0 +1,20 @@
+{
+  "type": "viewScreen",
+  "id": "main",
+  "commonProps": { "scrollable": false },
+  "style": { "bgColor": "#07090d", "padding": 0 },
+  "layout": {
+    "type": "flex",
+    "mainAlign": "center",
+    "crossAlign": "center"
+  },
+  "children": [
+    {
+      "type": "label",
+      "id": "title",
+      "labelProps": { "text": "Hello from JavaScript" },
+      "style": { "textColor": "#f4f7fb", "fontSize": "20sp" },
+      "placement": { "width": "280dp", "height": "40dp" }
+    }
+  ]
+}

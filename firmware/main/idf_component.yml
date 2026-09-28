@@ -10,3 +10,7 @@ dependencies:
   espressif/brookesia_service_usb: "0.8.0"
   espressif/brookesia_gui_lvgl: "0.8.*"
   espressif/brookesia_system_core: "0.8.*"
+  espressif/brookesia_runtime_js: "0.8.3"
+  espressif/brookesia_app_settings: "0.8.3"
+  espressif/brookesia_service_audio: "0.8.2"
+  espressif/brookesia_app_store: "0.8.2"

@@ -1,0 +1,39 @@
+ESPocket M4 keyboard/Wi-Fi candidate device boot evidence
+Date: 2026-09-27
+Status: APP-ONLY FLASH PASS; BOOT PASS; WI-FI INIT PASS; NETWORK/SNTP PASS; KEYBOARD INTERACTION NOT OBSERVED
+
+Authorized write
+- Device: /dev/cu.usbmodem2101
+- Chip: ESP32-S3 QFN56 revision v0.2
+- Image offset: 0x60000
+- Image size: 6,087,072 bytes (0x5ce1a0)
+- Image SHA-256: 594708e9f62d42fc58cf0648913f795b65aac35c2d9fba589ad3cde352d39e37
+- esptool: v5.3.1
+- Result: Wrote 6,087,072 bytes; written-data hash verified
+- Excluded from the write command: bootloader, partition table, NVS, LittleFS, and every other address/image pair
+
+90-second clean boot
+- Exactly one ESP32-S3 ROM banner was captured.
+- `check_m4_keyboard_wifi_boot.py` result:
+  required_missing=[]
+  fatal_signals=[]
+  keyboard_opened=0
+  keyboard_closed=0
+- Required markers present: Settings installed, App Store installed, Runtime Hello installed, Circular Shell installed, Wi-Fi Init requested, ESPocket started.
+- Wi-Fi driver marker: `Init static rx buffer num: 10`.
+- No RX-buffer shortfall, ESP_ERR_NO_MEM, Wi-Fi initialization failure, display allocation failure, stack overflow, panic, watchdog, assertion, heap corruption, reboot, or Runtime-stop keyboard latch was found.
+- Raw boot capture SHA-256: a966919c2943bc335bc5e39d3608775b9335548438a8449ec903eb1bed35ee76
+- The raw boot capture remains outside the repository because complete serial logs can contain device/network identifiers.
+
+Credential-safe network/SNTP capture
+- The capture filter discarded every line containing password/passphrase/credential/PSK/SSID tokens before writing evidence.
+- `Network is ready, starting SNTP synchronization` was observed.
+- `SNTP time synchronization completed` was observed.
+- The network/SNTP result used preserved on-device NVS; no credentials were entered through chat or retained in this evidence.
+- Sanitized source capture SHA-256: fa936cd853a3f0036ec1dd67044fd5ea6855557e8267ad1b3e9ce959160b7f21
+
+Unverified boundaries
+- No `System keyboard opened` or `System keyboard closed` marker was captured. Keyboard visibility, immediate masking, mode switching, typing, confirm, cancel, and cleanup remain physically unverified.
+- No App Store remote-index request, HTTPS/TLS handshake, or remote-list result was captured. M5 online transport remains unverified.
+- Storage, Battery, and Developer pages were not independently confirmed during this capture.
+- Sound/Volume remains blocked by the documented upstream playback-only HAL Adaptor configuration boundary.

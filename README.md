@@ -8,27 +8,27 @@ ESPocket 负责产品平台层；ESP-Brookesia 提供基础应用框架。V0.x �
 
 ## 当前阶段
 
-当前只实施 **M1 — ESPocket System**：
+当前已实施至 **M5 — Application Ecosystem** 的可执行边界：
 
 ```text
 app_main
    └── espocket::System
-       └── CircularShell
-           ├── Launcher
-           ├── TestPage        # M1 临时，M2 删除
-           └── ShellOverlay
-               ├── StatusView
-               ├── HomeIndicator
-               └── HomeGesture
+       ├── HelloApp                 # visible Native App
+       ├── Hello Runtime            # staged JavaScript package
+       ├── Settings                 # official Native App
+       ├── App Store                # official Native App
+       └── CircularShell            # hidden Native IApp
+           ├── fixed product Launcher entries
+           └── ShellOverlay → Home Gesture → stop active app → Launcher
 ```
 
-M1 只验证 System + Circular Shell，不验证通用 Native App 生命周期。M0 已由项目所有者于 2026-09-25 明确豁免，状态为 `WAIVED`，不是 `PASS`。
+M1 已于 2026-09-25 通过并保存在 `v0.1-system`。M2 已于 2026-09-26 通过：normal/stress 完整镜像、真机 50-cycle lifecycle/heap gate，以及 Launcher → Hello → Increment → Home → Launcher 物理交互均已验证。M3 已完成 Runtime JS 0.8.3 / QuickJS-NG 0.14.0、unpacked staging、Toolkit 1.0.1 debug `.bpk`、clean-image Runtime 生命周期、Home 与 Native/Runtime 双向交替；仅 Core `.bpk` file-install 路径仍未验证。M4 的 clean Settings 圆屏 smoke、Wi-Fi 页面、亮度、时间、设备信息与 Home 已通过；系统键盘与 Wi-Fi 10/10 候选已于 2026-09-27 app-only 写入并通过 90 秒启动验证，Wi-Fi 初始化、保留 NVS 下的联网与 SNTP 同步均有脱敏真机证据，键盘 provider 已有一次真机 open/close，但掩码、模式、输入、确认/取消与清理语义尚未逐项确认，Storage/Battery/Developer 仍未测，Audio playback-only 仍受上游边界阻塞。M5 的 clean offline Store 启动/Home 已通过；先前在线真机成功拉取并缓存远程索引与部分 HTTPS 元数据，但后续并发请求/取消阶段发生一次 `LoadProhibited`、两次 `StoreProhibited` 与三次自动重启。`-0x008D` 已确认为内部 RAM TLS 分配失败；HTTP worker/并发限制为 1/1 的 containment 镜像已 app-only 写入并通过 written-data hash、单 ROM banner 90 秒启动验证以及缓存态 Store/Home 生命周期。随后显式 Refresh 真机验证成功提交远程索引/图标请求并多次写入 index cache，且未再出现 `-0x008D`；但一次 index 连接超时并进入重试后，Store refresh timeout 紧接触发 `LoadProhibited`（`EXCVADDR=0x8`）与自动重启。符号化崩溃栈位于 HTTP worker 的 `mbedtls_ssl_handshake_step()` → `esp_http_client_open()`，因此 1/1 只缓解了已观测的 TLS 分配压力，未解决在线稳定性。package trust、Runtime 键盘事件 owner isolation、catalog compatibility、Launcher sync 与兼容发布路径也继续阻塞。M0 仍为 `WAIVED`，不是 `PASS`；M6 未进入。
 
-详细边界见 [`docs/PROJECT_DESIGN.md`](docs/PROJECT_DESIGN.md)，当前验收状态见 [`docs/milestones/M1_ACCEPTANCE.md`](docs/milestones/M1_ACCEPTANCE.md)。
+详细边界见 [`docs/PROJECT_DESIGN.md`](docs/PROJECT_DESIGN.md)，验收记录见 [`M1`](docs/milestones/M1_ACCEPTANCE.md)、[`M2`](docs/milestones/M2_ACCEPTANCE.md)、[`M3`](docs/milestones/M3_ACCEPTANCE.md)、[`M4`](docs/milestones/M4_ACCEPTANCE.md) 与 [`M5`](docs/milestones/M5_ACCEPTANCE.md)。
 
 ## 构建
 
-已验证基线为 ESP-IDF 6.0.1 与仓库中的 `firmware/dependencies.lock`。目标板选择器为 `esp32_s3_touch_amoled_1_75c`。
+当前验证基线为 ESP-IDF 6.0.1 与 `firmware/dependencies.lock`；目标板选择器为 `esp32_s3_touch_amoled_1_75c`。lock 已固定 Runtime JS 0.8.3 与 QuickJS-NG 0.14.0；Toolkit 1.0.1 与 debug `.bpk` 的验收边界见 M3 验收报告。
 
 从仓库根目录执行：
 

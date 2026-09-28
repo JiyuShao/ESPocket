@@ -1,0 +1,267 @@
+ESP-ROM:esp32s3-20210327
+I (1436) SvcMgr: [manager.cpp:0812] (topological_sort) :   4. SNTP
+I (1437) SvcMgr: [manager.cpp:0812] (topological_sort) :   6. Http
+I (1695) SvcMgr: [manager.cpp:0342] (add_service) : Initializing service: SNTP
+I (1697) SvcMgr: [base.cpp:1015] (init_internal) : Initialized service: SNTP
+I (1698) SvcMgr: [manager.cpp:0360] (add_service) : Service added: SNTP
+I (4377) SvcMgr: [manager.cpp:0342] (add_service) : Initializing service: Http
+I (4380) SvcHTTP: [service_http.cpp:0145] (on_init) : HTTP service initialized
+I (4382) SvcMgr: [base.cpp:1015] (init_internal) : Initialized service: Http
+I (4383) SvcMgr: [manager.cpp:0360] (add_service) : Service added: Http
+I (5061) HalAdpt: [backend.cpp:1012] (do_general_action) : WiFi do 'Init' running...
+I (5080) wifi:Init static rx buffer num: 10
+I (9024) ESPocket.System: Settings installed
+I (10114) ESPocket.System: App Store installed
+I (10175) ESPocket.System: Circular Shell installed
+I (10535) SysCore: [manager.cpp:0482] (install_runtime_app) : Runtime app installed: id(5), manifest(espocket.app.hello_runtime)
+W (10936) HalAdpt: [key_value_nvs_impl.cpp:0282] (set_last_error) : Key 'Servers' not found in namespace 'SNTP'
+W (10937) HalAdpt: [key_value_nvs_impl.cpp:0218] (get) : Skipping key 'Servers': Key 'Servers' not found in namespace 'SNTP'
+I (10946) SvcMgr: [base.cpp:1131] (start_internal) : Started service: SNTP
+I (10946) SvcMgr: [manager.cpp:0542] (bind) : Service started: SNTP
+I (10997) ESPocket.System: ESPocket started
+I (11949) SvcSNTP: [service_sntp.cpp:0324] (start_checking_network) : Network is ready, starting SNTP synchronization
+I (11960) HalAdpt: [sntp_client_impl.cpp:0060] (init) : Initializing SNTP with DHCP NTP server support
+I (27230) ESPocket.Shell: System keyboard opened
+I (42077) SvcSNTP: [service_sntp.cpp:0372] (start_syncing) : SNTP time synchronization completed
+I (42691) ESPocket.Shell: System keyboard closed
+I (57733) ESPocket.Launcher: Opened App Store
+I (57752) SvcHTTP: [service_http.cpp:0748] (start_time_sync_if_available) : SNTP already synced, skip HTTP startup time sync start
+I (57753) SvcHTTP: [service_http.cpp:0200] (on_start) : HTTP service started
+I (57756) SvcMgr: [base.cpp:1131] (start_internal) : Started service: Http
+I (57757) SvcMgr: [manager.cpp:0542] (bind) : Service started: Http
+I (57822) AppStore: [remote_index.ipp:0104] (finish_cached_index_load_without_cache) : App Store cache load skipped or failed: Failed to read cached App Store index /littlefs/apps/brookesia.general.app_store/cache/index.json: Failed to open file for read: /littlefs/apps/brookesia.general.app_store/cache/index.json
+W (57829) AppStore: [http.ipp:1571] (ensure_message_dialog) : Failed to show App Store message dialog: Message dialog is not supported by this system
+I (57864) AppStore: [http.ipp:1456] (parse_network_ready) : App Store network status: instance(Network:Connectivity:WiFi), state(LocalNetworkReady), network_ready(true), internet_ready(false)
+W (58167) AppStore: [http.ipp:1571] (ensure_message_dialog) : Failed to show App Store message dialog: Message dialog is not supported by this system
+I (58351) SvcHTTP: [service_http.cpp:0397] (submit_request) : Submitted HTTP request: id(1), url(https://brookesia-app-store.espressif.com/api/v1/index.json)
+I (58355) SvcHTTP: [service_http.cpp:0285] (function_request_async) : Submitted async HTTP request: id(1), url(https://brookesia-app-store.espressif.com/api/v1/index.json)
+I (60846) AppStore: [storage.ipp:0305] (write_cache_text_file) : Wrote App Store cache file: /littlefs/apps/brookesia.general.app_store/cache/index.json
+I (62160) SvcHTTP: [service_http.cpp:0397] (submit_request) : Submitted HTTP request: id(2), url(https://brookesia-app-store.espressif.com/api/v1/apps/brookesia.general.nes_emulator/versions/0.2.1/metadata.json)
+I (62162) SvcHTTP: [service_http.cpp:0285] (function_request_async) : Submitted async HTTP request: id(2), url(https://brookesia-app-store.espressif.com/api/v1/apps/brookesia.general.nes_emulator/versions/0.2.1/metadata.json)
+I (62525) SvcHTTP: [service_http.cpp:0397] (submit_request) : Submitted HTTP request: id(3), url(https://brookesia-app-store.espressif.com/files/icons/brookesia.general.nes_emulator/launcher_icon.png)
+I (62527) SvcHTTP: [service_http.cpp:0285] (function_request_async) : Submitted async HTTP request: id(3), url(https://brookesia-app-store.espressif.com/files/icons/brookesia.general.nes_emulator/launcher_icon.png)
+E (62717) esp-tls-mbedtls: mbedtls_ssl_setup returned -0x008D
+E (62717) esp-tls: create_ssl_handle failed
+E (62717) esp-tls: Failed to open new connection
+W (62721) SvcHTTP: [service_http.cpp:0448] (perform_request) : HTTP request 3 failed on attempt 1: error(RequestFailed), message(ESP_ERR_HTTP_CONNECT), retrying
+E (62922) esp-tls-mbedtls: mbedtls_ssl_setup returned -0x008D
+E (62923) esp-tls: create_ssl_handle failed
+E (62923) esp-tls: Failed to open new connection
+W (62941) AppStore: [http.ipp:0841] (handle_refresh_icon_failed) : Failed to request App Store icon: url(https://brookesia-app-store.espressif.com/files/icons/brookesia.general.nes_emulator/launcher_icon.png), error(ESP_ERR_HTTP_CONNECT)
+I (63125) SvcHTTP: [service_http.cpp:0397] (submit_request) : Submitted HTTP request: id(4), url(https://brookesia-app-store.espressif.com/files/icons/brookesia.general.music_player/launcher_icon.png)
+I (63126) SvcHTTP: [service_http.cpp:0285] (function_request_async) : Submitted async HTTP request: id(4), url(https://brookesia-app-store.espressif.com/files/icons/brookesia.general.music_player/launcher_icon.png)
+E (63268) esp-tls-mbedtls: mbedtls_ssl_setup returned -0x008D
+E (63268) esp-tls: create_ssl_handle failed
+E (63268) esp-tls: Failed to open new connection
+W (63272) SvcHTTP: [service_http.cpp:0448] (perform_request) : HTTP request 4 failed on attempt 1: error(RequestFailed), message(ESP_ERR_HTTP_CONNECT), retrying
+E (63440) esp-tls-mbedtls: mbedtls_ssl_setup returned -0x008D
+E (63441) esp-tls: create_ssl_handle failed
+E (63441) esp-tls: Failed to open new connection
+W (63455) AppStore: [http.ipp:0841] (handle_refresh_icon_failed) : Failed to request App Store icon: url(https://brookesia-app-store.espressif.com/files/icons/brookesia.general.music_player/launcher_icon.png), error(ESP_ERR_HTTP_CONNECT)
+I (64053) SvcHTTP: [service_http.cpp:0397] (submit_request) : Submitted HTTP request: id(5), url(https://brookesia-app-store.espressif.com/files/icons/brookesia.general.flappy_bird/launcher_icon.png)
+I (64055) SvcHTTP: [service_http.cpp:0285] (function_request_async) : Submitted async HTTP request: id(5), url(https://brookesia-app-store.espressif.com/files/icons/brookesia.general.flappy_bird/launcher_icon.png)
+I (64230) AppStore: [storage.ipp:0305] (write_cache_text_file) : Wrote App Store cache file: /littlefs/apps/brookesia.general.app_store/cache/apps/brookesia.general.nes_emulator/metadata.json
+I (64421) SvcHTTP: [service_http.cpp:0397] (submit_request) : Submitted HTTP request: id(6), url(https://brookesia-app-store.espressif.com/api/v1/apps/brookesia.general.music_player/versions/0.2.1/metadata.json)
+I (64423) SvcHTTP: [service_http.cpp:0285] (function_request_async) : Submitted async HTTP request: id(6), url(https://brookesia-app-store.espressif.com/api/v1/apps/brookesia.general.music_player/versions/0.2.1/metadata.json)
+E (64566) esp-tls-mbedtls: mbedtls_ssl_setup returned -0x008D
+E (64567) esp-tls: create_ssl_handle failed
+E (64569) esp-tls: Failed to open new connection
+W (64578) SvcHTTP: [service_http.cpp:0448] (perform_request) : HTTP request 6 failed on attempt 1: error(RequestFailed), message(ESP_ERR_HTTP_CONNECT), retrying
+E (64769) esp-tls-mbedtls: mbedtls_ssl_setup returned -0x008D
+E (64770) esp-tls: create_ssl_handle failed
+E (64770) esp-tls: Failed to open new connection
+W (64800) AppStore: [http.ipp:0639] (handle_size_metadata_failed) : App Store size metadata request failed: package(brookesia.general.music_player), error(ESP_ERR_HTTP_CONNECT)
+I (64810) SvcHTTP: [service_http.cpp:0397] (submit_request) : Submitted HTTP request: id(7), url(https://brookesia-app-store.espressif.com/api/v1/apps/brookesia.general.flappy_bird/versions/0.3.0/metadata.json)
+I (64812) SvcHTTP: [service_http.cpp:0285] (function_request_async) : Submitted async HTTP request: id(7), url(https://brookesia-app-store.espressif.com/api/v1/apps/brookesia.general.flappy_bird/versions/0.3.0/metadata.json)
+E (64971) esp-tls-mbedtls: mbedtls_ssl_setup returned -0x008D
+E (64972) esp-tls: create_ssl_handle failed
+E (64972) esp-tls: Failed to open new connection
+W (64988) SvcHTTP: [service_http.cpp:0448] (perform_request) : HTTP request 7 failed on attempt 1: error(RequestFailed), message(ESP_ERR_HTTP_CONNECT), retrying
+E (65176) esp-tls-mbedtls: mbedtls_ssl_setup returned -0x008D
+E (65177) esp-tls: create_ssl_handle failed
+E (65178) esp-tls: Failed to open new connection
+W (65210) AppStore: [http.ipp:0639] (handle_size_metadata_failed) : App Store size metadata request failed: package(brookesia.general.flappy_bird), error(ESP_ERR_HTTP_CONNECT)
+I (65219) SvcHTTP: [service_http.cpp:0397] (submit_request) : Submitted HTTP request: id(8), url(https://brookesia-app-store.espressif.com/api/v1/apps/brookesia.general.ai_chatbot/versions/0.2.1/metadata.json)
+I (65221) SvcHTTP: [service_http.cpp:0285] (function_request_async) : Submitted async HTTP request: id(8), url(https://brookesia-app-store.espressif.com/api/v1/apps/brookesia.general.ai_chatbot/versions/0.2.1/metadata.json)
+E (65379) esp-tls-mbedtls: mbedtls_ssl_setup returned -0x008D
+E (65380) esp-tls: create_ssl_handle failed
+E (65381) esp-tls: Failed to open new connection
+W (65391) SvcHTTP: [service_http.cpp:0448] (perform_request) : HTTP request 8 failed on attempt 1: error(RequestFailed), message(ESP_ERR_HTTP_CONNECT), retrying
+E (65532) esp-tls-mbedtls: mbedtls_ssl_setup returned -0x008D
+E (65533) esp-tls: create_ssl_handle failed
+E (65536) esp-tls: Failed to open new connection
+W (65555) AppStore: [http.ipp:0639] (handle_size_metadata_failed) : App Store size metadata request failed: package(brookesia.general.ai_chatbot), error(ESP_ERR_HTTP_CONNECT)
+I (65566) SvcHTTP: [service_http.cpp:0397] (submit_request) : Submitted HTTP request: id(9), url(https://brookesia-app-store.espressif.com/api/v1/apps/brookesia.general.camera/versions/0.2.1/metadata.json)
+I (65567) SvcHTTP: [service_http.cpp:0285] (function_request_async) : Submitted async HTTP request: id(9), url(https://brookesia-app-store.espressif.com/api/v1/apps/brookesia.general.camera/versions/0.2.1/metadata.json)
+E (65687) esp-tls-mbedtls: mbedtls_ssl_setup returned -0x008D
+E (65687) esp-tls: create_ssl_handle failed
+E (65687) esp-tls: Failed to open new connection
+W (65691) SvcHTTP: [service_http.cpp:0448] (perform_request) : HTTP request 9 failed on attempt 1: error(RequestFailed), message(ESP_ERR_HTTP_CONNECT), retrying
+E (65895) esp-tls-mbedtls: mbedtls_ssl_setup returned -0x008D
+E (65895) esp-tls: create_ssl_handle failed
+E (65896) esp-tls: Failed to open new connection
+W (65913) AppStore: [http.ipp:0639] (handle_size_metadata_failed) : App Store size metadata request failed: package(brookesia.general.camera), error(ESP_ERR_HTTP_CONNECT)
+I (67046) SvcHTTP: [service_http.cpp:0397] (submit_request) : Submitted HTTP request: id(10), url(https://brookesia-app-store.espressif.com/files/icons/brookesia.general.ai_chatbot/launcher_icon.png)
+I (67047) SvcHTTP: [service_http.cpp:0285] (function_request_async) : Submitted async HTTP request: id(10), url(https://brookesia-app-store.espressif.com/files/icons/brookesia.general.ai_chatbot/launcher_icon.png)
+I (68963) SvcHTTP: [service_http.cpp:0310] (function_cancel_request) : Canceled HTTP request: id(10)
+W (69181) AppStore: [app_store_app.cpp:0511] (remove_invalid_icon_file) : Removed invalid App Store icon cache file: path(/littlefs/apps/brookesia.general.app_store/cache/apps/brookesia.general.ai_chatbot/icon.png), reason(icon request canceled)
+W (69203) AppStore: [http.ipp:1571] (ensure_message_dialog) : Failed to show App Store message dialog: Message dialog is not supported by this system
+I (69399) SvcHTTP: [service_http.cpp:0397] (submit_request) : Submitted HTTP request: id(11), url(https://brookesia-app-store.espressif.com/api/v1/apps/brookesia.general.flappy_bird/versions/0.3.0/metadata.json)
+I (69400) SvcHTTP: [service_http.cpp:0285] (function_request_async) : Submitted async HTTP request: id(11), url(https://brookesia-app-store.espressif.com/api/v1/apps/brookesia.general.flappy_bird/versions/0.3.0/metadata.json)
+I (71129) AppStore: [storage.ipp:0305] (write_cache_text_file) : Wrote App Store cache file: /littlefs/apps/brookesia.general.app_store/cache/apps/brookesia.general.flappy_bird/metadata.json
+W (71170) AppStore: [http.ipp:1571] (ensure_message_dialog) : Failed to show App Store message dialog: Message dialog is not supported by this system
+I (71382) SvcHTTP: [service_http.cpp:0397] (submit_request) : Submitted HTTP request: id(12), url(https://brookesia-app-store.espressif.com/api/v1/apps/brookesia.general.flappy_bird/versions/0.3.0/download)
+I (71383) SvcHTTP: [service_http.cpp:0285] (function_request_async) : Submitted async HTTP request: id(12), url(https://brookesia-app-store.espressif.com/api/v1/apps/brookesia.general.flappy_bird/versions/0.3.0/download)
+W (71389) AppStore: [http.ipp:1571] (ensure_message_dialog) : Failed to show App Store message dialog: Message dialog is not supported by this system
+W (77183) AppStore: [http.ipp:1571] (ensure_message_dialog) : Failed to show App Store message dialog: Message dialog is not supported by this system
+W (77412) AppStore: [http.ipp:1571] (ensure_message_dialog) : Failed to show App Store message dialog: Message dialog is not supported by this system
+W (77564) AppStore: [http.ipp:1571] (ensure_message_dialog) : Failed to show App Store message dialog: Message dialog is not supported by this system
+W (81434) AppStore: [http.ipp:1571] (ensure_message_dialog) : Failed to show App Store message dialog: Message dialog is not supported by this system
+I (85359) SvcHTTP: [service_http.cpp:0397] (submit_request) : Submitted HTTP request: id(13), url(https://brookesia-app-store.espressif.com/files/icons/brookesia.general.nes_emulator/launcher_icon.png)
+I (85361) SvcHTTP: [service_http.cpp:0285] (function_request_async) : Submitted async HTTP request: id(13), url(https://brookesia-app-store.espressif.com/files/icons/brookesia.general.nes_emulator/launcher_icon.png)
+I (88801) SvcHTTP: [service_http.cpp:0397] (submit_request) : Submitted HTTP request: id(14), url(https://brookesia-app-store.espressif.com/files/icons/brookesia.general.music_player/launcher_icon.png)
+I (88803) SvcHTTP: [service_http.cpp:0285] (function_request_async) : Submitted async HTTP request: id(14), url(https://brookesia-app-store.espressif.com/files/icons/brookesia.general.music_player/launcher_icon.png)
+I (88808) SvcHTTP: [service_http.cpp:0310] (function_cancel_request) : Canceled HTTP request: id(14)
+W (88893) AppStore: [http.ipp:1571] (ensure_message_dialog) : Failed to show App Store message dialog: Message dialog is not supported by this system
+I (89119) SvcHTTP: [service_http.cpp:0397] (submit_request) : Submitted HTTP request: id(15), url(https://brookesia-app-store.espressif.com/api/v1/apps/brookesia.general.flappy_bird/versions/0.3.0/download)
+I (89121) SvcHTTP: [service_http.cpp:0285] (function_request_async) : Submitted async HTTP request: id(15), url(https://brookesia-app-store.espressif.com/api/v1/apps/brookesia.general.flappy_bird/versions/0.3.0/download)
+W (89126) AppStore: [http.ipp:1571] (ensure_message_dialog) : Failed to show App Store message dialog: Message dialog is not supported by this system
+Guru Meditation Error: Core  1 panic'ed (LoadProhibited). Exception was unhandled.
+Rebooting...
+ESP-ROM:esp32s3-20210327
+I (1441) SvcMgr: [manager.cpp:0812] (topological_sort) :   4. SNTP
+I (1442) SvcMgr: [manager.cpp:0812] (topological_sort) :   6. Http
+I (1720) SvcMgr: [manager.cpp:0342] (add_service) : Initializing service: SNTP
+I (1722) SvcMgr: [base.cpp:1015] (init_internal) : Initialized service: SNTP
+I (1723) SvcMgr: [manager.cpp:0360] (add_service) : Service added: SNTP
+I (4402) SvcMgr: [manager.cpp:0342] (add_service) : Initializing service: Http
+I (4405) SvcHTTP: [service_http.cpp:0145] (on_init) : HTTP service initialized
+I (4407) SvcMgr: [base.cpp:1015] (init_internal) : Initialized service: Http
+I (4408) SvcMgr: [manager.cpp:0360] (add_service) : Service added: Http
+I (5097) HalAdpt: [backend.cpp:1012] (do_general_action) : WiFi do 'Init' running...
+I (5114) wifi:Init static rx buffer num: 10
+I (9178) ESPocket.System: Settings installed
+I (10226) ESPocket.System: App Store installed
+I (10281) ESPocket.System: Circular Shell installed
+I (10622) SysCore: [manager.cpp:0482] (install_runtime_app) : Runtime app installed: id(5), manifest(espocket.app.hello_runtime)
+W (11019) HalAdpt: [key_value_nvs_impl.cpp:0282] (set_last_error) : Key 'Servers' not found in namespace 'SNTP'
+W (11020) HalAdpt: [key_value_nvs_impl.cpp:0218] (get) : Skipping key 'Servers': Key 'Servers' not found in namespace 'SNTP'
+I (11029) SvcMgr: [base.cpp:1131] (start_internal) : Started service: SNTP
+I (11030) SvcMgr: [manager.cpp:0542] (bind) : Service started: SNTP
+I (11079) ESPocket.System: ESPocket started
+I (12032) SvcSNTP: [service_sntp.cpp:0324] (start_checking_network) : Network is ready, starting SNTP synchronization
+I (12048) HalAdpt: [sntp_client_impl.cpp:0060] (init) : Initializing SNTP with DHCP NTP server support
+I (13067) SvcSNTP: [service_sntp.cpp:0372] (start_syncing) : SNTP time synchronization completed
+I (22573) ESPocket.Launcher: Opened App Store
+I (22589) SvcHTTP: [service_http.cpp:0748] (start_time_sync_if_available) : SNTP already synced, skip HTTP startup time sync start
+I (22591) SvcHTTP: [service_http.cpp:0200] (on_start) : HTTP service started
+I (22593) SvcMgr: [base.cpp:1131] (start_internal) : Started service: Http
+I (22594) SvcMgr: [manager.cpp:0542] (bind) : Service started: Http
+I (22671) AppStore: [remote_index.ipp:0071] (handle_cached_index_load_result) : Loading App Store index cache: /littlefs/apps/brookesia.general.app_store/cache/index.json
+I (22722) AppStore: [download.ipp:0345] (apply_cached_metadata) : Loaded App Store metadata cache: /littlefs/apps/brookesia.general.app_store/cache/apps/brookesia.general.nes_emulator/metadata.json
+I (22779) AppStore: [download.ipp:0345] (apply_cached_metadata) : Loaded App Store metadata cache: /littlefs/apps/brookesia.general.app_store/cache/apps/brookesia.general.flappy_bird/metadata.json
+I (24194) SvcHTTP: [service_http.cpp:0397] (submit_request) : Submitted HTTP request: id(1), url(https://brookesia-app-store.espressif.com/api/v1/apps/brookesia.general.music_player/versions/0.2.1/metadata.json)
+I (24196) SvcHTTP: [service_http.cpp:0285] (function_request_async) : Submitted async HTTP request: id(1), url(https://brookesia-app-store.espressif.com/api/v1/apps/brookesia.general.music_player/versions/0.2.1/metadata.json)
+I (24328) AppStore: [http.ipp:1456] (parse_network_ready) : App Store network status: instance(Network:Connectivity:WiFi), state(LocalNetworkReady), network_ready(true), internet_ready(false)
+W (25495) AppStore: [http.ipp:1571] (ensure_message_dialog) : Failed to show App Store message dialog: Message dialog is not supported by this system
+I (26830) SvcHTTP: [service_http.cpp:0397] (submit_request) : Submitted HTTP request: id(2), url(https://brookesia-app-store.espressif.com/files/icons/brookesia.general.music_player/launcher_icon.png)
+I (26831) SvcHTTP: [service_http.cpp:0285] (function_request_async) : Submitted async HTTP request: id(2), url(https://brookesia-app-store.espressif.com/files/icons/brookesia.general.music_player/launcher_icon.png)
+W (26835) AppStore: [http.ipp:1571] (ensure_message_dialog) : Failed to show App Store message dialog: Message dialog is not supported by this system
+W (26841) AppStore: [http.ipp:1571] (ensure_message_dialog) : Failed to show App Store message dialog: Message dialog is not supported by this system
+I (27416) AppStore: [storage.ipp:0305] (write_cache_text_file) : Wrote App Store cache file: /littlefs/apps/brookesia.general.app_store/cache/apps/brookesia.general.music_player/metadata.json
+W (27639) AppStore: [http.ipp:1571] (ensure_message_dialog) : Failed to show App Store message dialog: Message dialog is not supported by this system
+W (27841) AppStore: [storage.ipp:0827] (process_local_package_scan_step) : Skip invalid App Store local package: path(/littlefs/apps/brookesia.general.app_store/cache/apps/brookesia.general.flappy_bird/0.3.0.bpk), error(Package does not support system type: espocket)
+I (27849) SvcHTTP: [service_http.cpp:0397] (submit_request) : Submitted HTTP request: id(3), url(https://brookesia-app-store.espressif.com/api/v1/apps/brookesia.general.ai_chatbot/versions/0.2.1/metadata.json)
+I (27851) SvcHTTP: [service_http.cpp:0285] (function_request_async) : Submitted async HTTP request: id(3), url(https://brookesia-app-store.espressif.com/api/v1/apps/brookesia.general.ai_chatbot/versions/0.2.1/metadata.json)
+E (27985) esp-tls-mbedtls: mbedtls_ssl_setup returned -0x008D
+E (27987) esp-tls: create_ssl_handle failed
+E (27989) esp-tls: Failed to open new connection
+W (28002) SvcHTTP: [service_http.cpp:0448] (perform_request) : HTTP request 3 failed on attempt 1: error(RequestFailed), message(ESP_ERR_HTTP_CONNECT), retrying
+I (28041) SvcHTTP: [service_http.cpp:0310] (function_cancel_request) : Canceled HTTP request: id(3)
+I (28045) SvcHTTP: [service_http.cpp:0310] (function_cancel_request) : Canceled HTTP request: id(2)
+Guru Meditation Error: Core  1 panic'ed (StoreProhibited). Exception was unhandled.
+Rebooting...
+ESP-ROM:esp32s3-20210327
+I (1440) SvcMgr: [manager.cpp:0812] (topological_sort) :   4. SNTP
+I (1441) SvcMgr: [manager.cpp:0812] (topological_sort) :   6. Http
+I (1720) SvcMgr: [manager.cpp:0342] (add_service) : Initializing service: SNTP
+I (1723) SvcMgr: [base.cpp:1015] (init_internal) : Initialized service: SNTP
+I (1724) SvcMgr: [manager.cpp:0360] (add_service) : Service added: SNTP
+I (4403) SvcMgr: [manager.cpp:0342] (add_service) : Initializing service: Http
+I (4406) SvcHTTP: [service_http.cpp:0145] (on_init) : HTTP service initialized
+I (4408) SvcMgr: [base.cpp:1015] (init_internal) : Initialized service: Http
+I (4409) SvcMgr: [manager.cpp:0360] (add_service) : Service added: Http
+I (5135) HalAdpt: [backend.cpp:1012] (do_general_action) : WiFi do 'Init' running...
+I (5153) wifi:Init static rx buffer num: 10
+I (9228) ESPocket.System: Settings installed
+I (10199) ESPocket.System: App Store installed
+I (10259) ESPocket.System: Circular Shell installed
+I (10631) SysCore: [manager.cpp:0482] (install_runtime_app) : Runtime app installed: id(5), manifest(espocket.app.hello_runtime)
+W (11025) HalAdpt: [key_value_nvs_impl.cpp:0282] (set_last_error) : Key 'Servers' not found in namespace 'SNTP'
+W (11027) HalAdpt: [key_value_nvs_impl.cpp:0218] (get) : Skipping key 'Servers': Key 'Servers' not found in namespace 'SNTP'
+I (11036) SvcMgr: [base.cpp:1131] (start_internal) : Started service: SNTP
+I (11038) SvcMgr: [manager.cpp:0542] (bind) : Service started: SNTP
+I (11089) ESPocket.System: ESPocket started
+I (12013) ESPocket.Launcher: Opened App Store
+I (12036) SvcHTTP: [service_http.cpp:0752] (start_time_sync_if_available) : SNTP already active, wait for HTTP startup time sync: state(CheckingNetwork)
+I (12038) SvcHTTP: [service_http.cpp:0197] (on_start) : HTTP service waiting for time sync
+I (12040) SvcSNTP: [service_sntp.cpp:0324] (start_checking_network) : Network is ready, starting SNTP synchronization
+I (12041) SvcMgr: [base.cpp:1131] (start_internal) : Started service: Http
+I (12042) SvcMgr: [manager.cpp:0542] (bind) : Service started: Http
+I (12053) HalAdpt: [sntp_client_impl.cpp:0060] (init) : Initializing SNTP with DHCP NTP server support
+I (12150) AppStore: [remote_index.ipp:0071] (handle_cached_index_load_result) : Loading App Store index cache: /littlefs/apps/brookesia.general.app_store/cache/index.json
+I (12209) AppStore: [download.ipp:0345] (apply_cached_metadata) : Loaded App Store metadata cache: /littlefs/apps/brookesia.general.app_store/cache/apps/brookesia.general.nes_emulator/metadata.json
+I (12248) AppStore: [download.ipp:0345] (apply_cached_metadata) : Loaded App Store metadata cache: /littlefs/apps/brookesia.general.app_store/cache/apps/brookesia.general.music_player/metadata.json
+I (12295) AppStore: [download.ipp:0345] (apply_cached_metadata) : Loaded App Store metadata cache: /littlefs/apps/brookesia.general.app_store/cache/apps/brookesia.general.flappy_bird/metadata.json
+W (13709) AppStore: [download.ipp:0155] (start_size_metadata_request) : Failed to start App Store size metadata request: package(brookesia.general.ai_chatbot), error(HTTP service is not ready: state(TimeSyncing))
+I (13819) AppStore: [http.ipp:1456] (parse_network_ready) : App Store network status: instance(Network:Connectivity:WiFi), state(LocalNetworkReady), network_ready(true), internet_ready(false)
+W (16033) AppStore: [http.ipp:1137] (process_refresh_icon_step) : Failed to submit App Store icon request: url(https://brookesia-app-store.espressif.com/files/icons/brookesia.general.music_player/launcher_icon.png), error(HTTP service is not ready: state(TimeSyncing))
+W (16171) AppStore: [storage.ipp:0827] (process_local_package_scan_step) : Skip invalid App Store local package: path(/littlefs/apps/brookesia.general.app_store/cache/apps/brookesia.general.flappy_bird/0.3.0.bpk), error(Package does not support system type: espocket)
+W (16424) AppStore: [http.ipp:1571] (ensure_message_dialog) : Failed to show App Store message dialog: Message dialog is not supported by this system
+W (17224) AppStore: [http.ipp:1137] (process_refresh_icon_step) : Failed to submit App Store icon request: url(https://brookesia-app-store.espressif.com/files/icons/brookesia.general.ai_chatbot/launcher_icon.png), error(HTTP service is not ready: state(TimeSyncing))
+W (20614) AppStore: [http.ipp:1571] (ensure_message_dialog) : Failed to show App Store message dialog: Message dialog is not supported by this system
+W (22658) AppStore: [storage.ipp:0827] (process_local_package_scan_step) : Skip invalid App Store local package: path(/littlefs/apps/brookesia.general.app_store/cache/apps/brookesia.general.flappy_bird/0.3.0.bpk), error(Package does not support system type: espocket)
+W (25313) AppStore: [http.ipp:1571] (ensure_message_dialog) : Failed to show App Store message dialog: Message dialog is not supported by this system
+W (42183) SvcSNTP: [service_sntp.cpp:0390] (start_syncing) : SNTP sync timeout, retrying after 1000ms
+I (44194) SvcSNTP: [service_sntp.cpp:0324] (start_checking_network) : Network is ready, starting SNTP synchronization
+I (44196) HalAdpt: [sntp_client_impl.cpp:0060] (init) : Initializing SNTP with DHCP NTP server support
+I (44395) SvcHTTP: [service_http.cpp:0714] (set_general_state_from_state_machine) : HTTP service started
+I (44398) AppStore: [http.ipp:0159] (handle_http_general_state_changed) : App Store HTTP general state changed: Started
+I (45210) SvcSNTP: [service_sntp.cpp:0372] (start_syncing) : SNTP time synchronization completed
+I (47330) SvcHTTP: [service_http.cpp:0397] (submit_request) : Submitted HTTP request: id(1), url(https://brookesia-app-store.espressif.com/api/v1/apps/brookesia.general.camera/versions/0.2.1/metadata.json)
+I (47332) SvcHTTP: [service_http.cpp:0285] (function_request_async) : Submitted async HTTP request: id(1), url(https://brookesia-app-store.espressif.com/api/v1/apps/brookesia.general.camera/versions/0.2.1/metadata.json)
+I (49098) SvcHTTP: [service_http.cpp:0397] (submit_request) : Submitted HTTP request: id(2), url(https://brookesia-app-store.espressif.com/files/icons/brookesia.general.music_player/launcher_icon.png)
+I (49100) SvcHTTP: [service_http.cpp:0285] (function_request_async) : Submitted async HTTP request: id(2), url(https://brookesia-app-store.espressif.com/files/icons/brookesia.general.music_player/launcher_icon.png)
+E (49228) esp-tls-mbedtls: mbedtls_ssl_setup returned -0x008D
+E (49229) esp-tls: create_ssl_handle failed
+E (49230) esp-tls: Failed to open new connection
+W (49237) SvcHTTP: [service_http.cpp:0448] (perform_request) : HTTP request 2 failed on attempt 1: error(RequestFailed), message(ESP_ERR_HTTP_CONNECT), retrying
+I (49556) AppStore: [storage.ipp:0305] (write_cache_text_file) : Wrote App Store cache file: /littlefs/apps/brookesia.general.app_store/cache/apps/brookesia.general.camera/metadata.json
+I (49948) SvcHTTP: [service_http.cpp:0310] (function_cancel_request) : Canceled HTTP request: id(2)
+W (49985) AppStore: [catalog.ipp:0524] (stop_size_metadata_timer) : Failed to stop App Store size metadata timer: 364
+Guru Meditation Error: Core  1 panic'ed (StoreProhibited). Exception was unhandled.
+Rebooting...
+ESP-ROM:esp32s3-20210327
+I (1441) SvcMgr: [manager.cpp:0812] (topological_sort) :   4. SNTP
+I (1442) SvcMgr: [manager.cpp:0812] (topological_sort) :   6. Http
+I (1724) SvcMgr: [manager.cpp:0342] (add_service) : Initializing service: SNTP
+I (1727) SvcMgr: [base.cpp:1015] (init_internal) : Initialized service: SNTP
+I (1728) SvcMgr: [manager.cpp:0360] (add_service) : Service added: SNTP
+I (4407) SvcMgr: [manager.cpp:0342] (add_service) : Initializing service: Http
+I (4410) SvcHTTP: [service_http.cpp:0145] (on_init) : HTTP service initialized
+I (4412) SvcMgr: [base.cpp:1015] (init_internal) : Initialized service: Http
+I (4413) SvcMgr: [manager.cpp:0360] (add_service) : Service added: Http
+I (5112) HalAdpt: [backend.cpp:1012] (do_general_action) : WiFi do 'Init' running...
+I (5130) wifi:Init static rx buffer num: 10
+I (9103) ESPocket.System: Settings installed
+I (10057) ESPocket.System: App Store installed
+I (10120) ESPocket.System: Circular Shell installed
+I (10466) SysCore: [manager.cpp:0482] (install_runtime_app) : Runtime app installed: id(5), manifest(espocket.app.hello_runtime)
+W (10882) HalAdpt: [key_value_nvs_impl.cpp:0282] (set_last_error) : Key 'Servers' not found in namespace 'SNTP'
+W (10883) HalAdpt: [key_value_nvs_impl.cpp:0218] (get) : Skipping key 'Servers': Key 'Servers' not found in namespace 'SNTP'
+I (10892) SvcMgr: [base.cpp:1131] (start_internal) : Started service: SNTP
+I (10893) SvcMgr: [manager.cpp:0542] (bind) : Service started: SNTP
+I (10942) ESPocket.System: ESPocket started
+I (11892) SvcSNTP: [service_sntp.cpp:0324] (start_checking_network) : Network is ready, starting SNTP synchronization
+I (11907) HalAdpt: [sntp_client_impl.cpp:0060] (init) : Initializing SNTP with DHCP NTP server support
+I (12928) SvcSNTP: [service_sntp.cpp:0372] (start_syncing) : SNTP time synchronization completed

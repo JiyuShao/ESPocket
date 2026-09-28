@@ -1,10 +1,12 @@
 #include "espocket/circular_shell.hpp"
 
 #include <algorithm>
+#include <array>
 #include <chrono>
 #include <cinttypes>
 #include <cstdio>
 #include <ctime>
+#include <mutex>
 #include <string>
 #include <utility>
 
@@ -15,14 +17,25 @@
 #include "brookesia/service_helper/network/wifi.hpp"
 #include "brookesia/service_helper/system/device.hpp"
 #include "esp_log.h"
+#include "esp_lv_adapter.h"
+#include "lvgl.h"
 
 namespace espocket {
 namespace {
 
 constexpr char SHELL_TAG[] = "ESPocket.Shell";
 constexpr char LAUNCHER_TAG[] = "ESPocket.Launcher";
-constexpr std::string_view OPEN_PREVIEW_ACTION = "shell.open_preview";
+constexpr std::string_view HELLO_NATIVE_MANIFEST_ID = "espocket.app.hello";
+constexpr std::string_view HELLO_RUNTIME_MANIFEST_ID = "espocket.app.hello_runtime";
+constexpr std::string_view SETTINGS_MANIFEST_ID = "brookesia.general.settings";
+constexpr std::string_view APP_STORE_MANIFEST_ID = "brookesia.general.app_store";
+constexpr std::string_view OPEN_HELLO_NATIVE_ACTION = "shell.open_hello_native";
+constexpr std::string_view OPEN_HELLO_RUNTIME_ACTION = "shell.open_hello_runtime";
+constexpr std::string_view OPEN_SETTINGS_ACTION = "shell.open_settings";
+constexpr std::string_view OPEN_APP_STORE_ACTION = "shell.open_app_store";
 constexpr std::string_view PAGE_FLOW = "shell_pages";
+constexpr std::string_view HOME_INTENT_TIMER = "espocket.home_intent";
+constexpr int HOME_INTENT_INTERVAL_MS = 50;
 constexpr std::string_view STATUS_TIMER = "espocket.status";
 constexpr int STATUS_INTERVAL_MS = 30'000;
 constexpr std::string_view CLOCK_PATH = "/overlay/status/clock";
@@ -59,6 +72,59 @@ static_assert(gesture_exit_distance_px(466) == 93);
 static_assert(gesture_vertical_edge_px(466) == 37);
 static_assert(gesture_horizontal_edge_px(466) == 27);
 
+class LvglLock {
+public:
+    LvglLock()
+        : locked_(esp_lv_adapter_lock(-1) == ESP_OK)
+    {}
+
+    ~LvglLock()
+    {
+        if (locked_) {
+            esp_lv_adapter_unlock();
+        }
+    }
+
+    explicit operator bool() const
+    {
+        return locked_;
+    }
+
+private:
+    bool locked_ = false;
+};
+
+lv_keyboard_mode_t keyboard_mode(std::string_view mode)
+{
+    if (mode == "number") {
+        return LV_KEYBOARD_MODE_NUMBER;
+    }
+    if (mode == "special") {
+        return LV_KEYBOARD_MODE_SPECIAL;
+    }
+    if (mode == "upper") {
+        return LV_KEYBOARD_MODE_TEXT_UPPER;
+    }
+    return LV_KEYBOARD_MODE_TEXT_LOWER;
+}
+
+constexpr std::array<std::string_view, 4> KEYBOARD_MODES = {
+    "text", "upper", "number", "special"
+};
+
+template <typename Modes>
+constexpr bool supports_keyboard_modes(const Modes &allowed_modes)
+{
+    return allowed_modes.empty() ||
+           (allowed_modes.size() == KEYBOARD_MODES.size() &&
+            std::ranges::all_of(KEYBOARD_MODES, [&allowed_modes](std::string_view mode) {
+                return std::ranges::find(allowed_modes, mode) != allowed_modes.end();
+            }));
+}
+
+static_assert(supports_keyboard_modes(KEYBOARD_MODES));
+static_assert(!supports_keyboard_modes(std::array<std::string_view, 1>{"text"}));
+
 std::string make_clock_text()
 {
     const auto now = std::chrono::system_clock::now();
@@ -85,67 +151,101 @@ constexpr std::string_view SHELL_JSON = R"json({
         "flexFlow": "column",
         "mainAlign": "center",
         "crossAlign": "center",
-        "gap": "24dp"
+        "gap": "6dp"
       },
       "children": [
         {
           "type": "label",
           "id": "brand",
           "labelProps": { "text": "ESPocket" },
-          "style": { "textColor": "#f4f7fb", "fontSize": "32sp" },
-          "placement": { "width": "220dp", "height": "44dp" }
+          "style": { "textColor": "#f4f7fb", "fontSize": "28sp" },
+          "placement": { "width": "220dp", "height": "38dp" }
         },
         {
           "type": "label",
           "id": "caption",
           "labelProps": { "text": "Circular Shell" },
-          "style": { "textColor": "#8d98a8", "fontSize": "18sp" },
-          "placement": { "width": "220dp", "height": "28dp" }
+          "style": { "textColor": "#8d98a8", "fontSize": "16sp" },
+          "placement": { "width": "220dp", "height": "24dp" }
         },
         {
           "type": "button",
-          "id": "shell_preview",
-          "events": [ { "type": "clicked", "action": "shell.open_preview" } ],
+          "id": "hello_native",
+          "events": [ { "type": "clicked", "action": "shell.open_hello_native" } ],
           "style": { "bgColor": "#2157d5", "radius": "28dp" },
-          "placement": { "width": "210dp", "height": "74dp" },
+          "placement": { "width": "210dp", "height": "48dp" },
           "children": [
             {
               "type": "label",
               "id": "label",
-              "labelProps": { "text": "Shell Preview" },
+              "labelProps": { "text": "Hello Native" },
               "style": { "textColor": "#ffffff", "fontSize": "20sp" },
               "placement": { "mode": "relative", "align": "center" }
             }
           ]
-        }
-      ]
-    },
-    {
-      "type": "viewScreen",
-      "id": "test_page",
-      "commonProps": { "scrollable": false },
-      "style": { "bgColor": "#101722", "padding": 0 },
-      "layout": {
-        "type": "flex",
-        "flexFlow": "column",
-        "mainAlign": "center",
-        "crossAlign": "center",
-        "gap": "18dp"
-      },
-      "children": [
-        {
-          "type": "label",
-          "id": "title",
-          "labelProps": { "text": "Shell Preview" },
-          "style": { "textColor": "#f4f7fb", "fontSize": "32sp" },
-          "placement": { "width": "260dp", "height": "44dp" }
         },
         {
-          "type": "label",
-          "id": "hint",
-          "labelProps": { "text": "Swipe up from the bottom edge" },
-          "style": { "textColor": "#9ba8ba", "fontSize": "18sp" },
-          "placement": { "width": "330dp", "height": "30dp" }
+          "type": "button",
+          "id": "hello_runtime",
+          "events": [ { "type": "clicked", "action": "shell.open_hello_runtime" } ],
+          "style": { "bgColor": "#7047eb", "radius": "28dp" },
+          "placement": { "width": "210dp", "height": "48dp" },
+          "children": [
+            {
+              "type": "label",
+              "id": "label",
+              "labelProps": { "text": "Hello Runtime" },
+              "style": { "textColor": "#ffffff", "fontSize": "20sp" },
+              "placement": { "mode": "relative", "align": "center" }
+            }
+          ]
+        },
+        {
+          "type": "container",
+          "id": "system_apps",
+          "commonProps": { "scrollable": false },
+          "layout": {
+            "type": "flex",
+            "flexFlow": "row",
+            "mainAlign": "spaceBetween",
+            "crossAlign": "center"
+          },
+          "style": { "padding": 0 },
+          "placement": { "width": "210dp", "height": "48dp" },
+          "children": [
+            {
+              "type": "button",
+              "id": "settings",
+              "events": [ { "type": "clicked", "action": "shell.open_settings" } ],
+              "style": { "bgColor": "#277b65", "radius": "24dp" },
+              "placement": { "width": "102dp", "height": "48dp" },
+              "children": [
+                {
+                  "type": "label",
+                  "id": "label",
+                  "labelProps": { "text": "Settings" },
+                  "style": { "textColor": "#ffffff", "fontSize": "16sp" },
+                  "placement": { "mode": "relative", "align": "center" }
+                }
+              ]
+            },
+            {
+              "type": "button",
+              "id": "app_store",
+              "events": [ { "type": "clicked", "action": "shell.open_app_store" } ],
+              "style": { "bgColor": "#a05b25", "radius": "24dp" },
+              "placement": { "width": "102dp", "height": "48dp" },
+              "children": [
+                {
+                  "type": "label",
+                  "id": "label",
+                  "labelProps": { "text": "Store" },
+                  "style": { "textColor": "#ffffff", "fontSize": "16sp" },
+                  "placement": { "mode": "relative", "align": "center" }
+                }
+              ]
+            }
+          ]
         }
       ]
     },
@@ -216,10 +316,9 @@ constexpr std::string_view SHELL_JSON = R"json({
     {
       "type": "screenFlow",
       "id": "shell_pages",
-      "screens": [ "launcher", "test_page" ],
+      "screens": [ "launcher" ],
       "initial": "launcher",
       "transitions": [
-        { "from": [], "action": "open_preview", "to": "test_page" },
         { "from": [], "action": "open_launcher", "to": "launcher" }
       ]
     },
@@ -233,6 +332,29 @@ constexpr std::string_view SHELL_JSON = R"json({
 })json";
 
 } // namespace
+
+struct CircularShell::KeyboardState {
+    std::mutex mutex;
+    esp_brookesia::system::core::AppId app_id =
+        esp_brookesia::system::core::INVALID_APP_ID;
+    esp_brookesia::system::core::KeyboardRequestId request_id =
+        esp_brookesia::system::core::INVALID_KEYBOARD_REQUEST_ID;
+    lv_obj_t *overlay = nullptr;
+    lv_obj_t *text_area = nullptr;
+    bool result_pending = false;
+    bool confirmed = false;
+    std::string text;
+};
+
+CircularShell::CircularShell(
+    ForegroundTokenProvider foreground_token_provider,
+    HomeHandler home_handler,
+    KeyboardResultHandler keyboard_result_handler
+)
+    : foreground_token_provider_(std::move(foreground_token_provider)),
+      home_handler_(std::move(home_handler)),
+      keyboard_result_handler_(std::move(keyboard_result_handler))
+{}
 
 esp_brookesia::system::core::AppManifest CircularShell::get_manifest() const
 {
@@ -274,20 +396,49 @@ std::expected<void, std::string> CircularShell::on_start(
 )
 {
     context_ = &context;
-    preview_open_ = false;
+    keyboard_state_ = std::make_shared<KeyboardState>();
 
-    auto action_result = context.gui().subscribe_action(OPEN_PREVIEW_ACTION);
-    if (!action_result) {
-        context_ = nullptr;
-        return std::unexpected("Failed to subscribe Launcher action: " + action_result.error());
+    for (const auto action : {
+             OPEN_HELLO_NATIVE_ACTION,
+             OPEN_HELLO_RUNTIME_ACTION,
+             OPEN_SETTINGS_ACTION,
+             OPEN_APP_STORE_ACTION,
+         }) {
+        auto action_result = context.gui().subscribe_action(action);
+        if (!action_result) {
+            keyboard_state_.reset();
+            context_ = nullptr;
+            return std::unexpected("Failed to subscribe Launcher action: " + action_result.error());
+        }
     }
 
+    home_gesture_state_ = std::make_shared<HomeGestureState>();
     auto gesture_result = configure_home_gesture();
     if (!gesture_result) {
+        home_gesture_state_.reset();
+        keyboard_state_.reset();
         context_ = nullptr;
         return gesture_result;
     }
 
+    auto home_timer = context.timer().start_periodic(
+                          HOME_INTENT_TIMER,
+                          HOME_INTENT_INTERVAL_MS
+                      );
+    if (!home_timer) {
+        gesture_connection_.disconnect();
+        display_binding_.release();
+        home_gesture_state_.reset();
+        keyboard_state_.reset();
+        context_ = nullptr;
+        return std::unexpected(
+            "Failed to start Home intent timer: " + home_timer.error()
+        );
+    }
+    home_intent_timer_id_ = *home_timer;
+
+    callback_state_ = std::make_shared<CallbackState>();
+    callback_state_->owner = this;
     start_status();
     ESP_LOGI(SHELL_TAG, "Circular Shell started");
     return {};
@@ -298,12 +449,31 @@ std::expected<void, std::string> CircularShell::on_stop(
 )
 {
     (void)context;
-    stop_status();
+    if (keyboard_state_) {
+        esp_brookesia::system::core::AppId app_id =
+            esp_brookesia::system::core::INVALID_APP_ID;
+        esp_brookesia::system::core::KeyboardRequestId request_id =
+            esp_brookesia::system::core::INVALID_KEYBOARD_REQUEST_ID;
+        {
+            std::lock_guard lock(keyboard_state_->mutex);
+            app_id = keyboard_state_->app_id;
+            request_id = keyboard_state_->request_id;
+        }
+        if (request_id != esp_brookesia::system::core::INVALID_KEYBOARD_REQUEST_ID) {
+            hide_keyboard(app_id, request_id);
+        }
+    }
     gesture_connection_.disconnect();
+    if (home_intent_timer_id_ != esp_brookesia::system::core::INVALID_TIMER_ID) {
+        (void)context.timer().stop(home_intent_timer_id_);
+    }
+    home_intent_timer_id_ = esp_brookesia::system::core::INVALID_TIMER_ID;
+    home_gesture_state_.reset();
+    stop_status();
     display_binding_.release();
-    preview_open_ = false;
-    gesture_exit_distance_px_ = 0;
     context_ = nullptr;
+    keyboard_state_.reset();
+    callback_state_.reset();
     return {};
 }
 
@@ -313,8 +483,17 @@ std::expected<void, std::string> CircularShell::on_action(
 )
 {
     (void)context;
-    if (action == OPEN_PREVIEW_ACTION) {
-        return open_preview();
+    if (action == OPEN_HELLO_NATIVE_ACTION) {
+        return open_app(HELLO_NATIVE_MANIFEST_ID, "Hello Native");
+    }
+    if (action == OPEN_HELLO_RUNTIME_ACTION) {
+        return open_app(HELLO_RUNTIME_MANIFEST_ID, "Hello Runtime");
+    }
+    if (action == OPEN_SETTINGS_ACTION) {
+        return open_app(SETTINGS_MANIFEST_ID, "Settings");
+    }
+    if (action == OPEN_APP_STORE_ACTION) {
+        return open_app(APP_STORE_MANIFEST_ID, "App Store");
     }
     return {};
 }
@@ -326,6 +505,40 @@ std::expected<void, std::string> CircularShell::on_timer(
 )
 {
     (void)context;
+    if (timer_id == home_intent_timer_id_ && name == HOME_INTENT_TIMER) {
+        if (keyboard_state_ && keyboard_result_handler_) {
+            esp_brookesia::system::core::AppId app_id =
+                esp_brookesia::system::core::INVALID_APP_ID;
+            esp_brookesia::system::core::KeyboardRequestId request_id =
+                esp_brookesia::system::core::INVALID_KEYBOARD_REQUEST_ID;
+            bool confirmed = false;
+            std::string text;
+            {
+                std::lock_guard lock(keyboard_state_->mutex);
+                if (keyboard_state_->result_pending) {
+                    app_id = keyboard_state_->app_id;
+                    request_id = keyboard_state_->request_id;
+                    confirmed = keyboard_state_->confirmed;
+                    text = std::move(keyboard_state_->text);
+                    keyboard_state_->result_pending = false;
+                }
+            }
+            if (request_id != esp_brookesia::system::core::INVALID_KEYBOARD_REQUEST_ID) {
+                hide_keyboard(app_id, request_id);
+                keyboard_result_handler_(app_id, request_id, confirmed, std::move(text));
+            }
+        }
+        if (home_gesture_state_ && home_handler_) {
+            const auto token = home_gesture_state_->pending_token.exchange(
+                                   0,
+                                   std::memory_order_acq_rel
+                               );
+            if (token != 0) {
+                home_handler_(token);
+            }
+        }
+        return {};
+    }
     if (timer_id == status_timer_id_ && name == STATUS_TIMER) {
         refresh_status();
     }
@@ -361,7 +574,7 @@ std::expected<void, std::string> CircularShell::configure_home_gesture()
     config.release_debounce_ms = 40;
     config.threshold.horizontal_edge = gesture_horizontal_edge_px(output->width);
     config.threshold.vertical_edge = gesture_vertical_edge_px(output->height);
-    gesture_exit_distance_px_ = gesture_exit_distance_px(static_cast<int32_t>(output->height));
+    const auto exit_distance_px = gesture_exit_distance_px(static_cast<int32_t>(output->height));
     auto config_result = display.set_touch_gesture_config(output->id, config);
     if (!config_result) {
         return std::unexpected("Failed to configure Home gesture: " + config_result.error());
@@ -369,8 +582,46 @@ std::expected<void, std::string> CircularShell::configure_home_gesture()
 
     gesture_connection_ = display.connect_touch_gesture(
                               output->name,
-    [this](const std::string &, const DisplayService::TouchGestureInfo & info) {
-        handle_home_gesture(info);
+    [exit_distance_px,
+     state = home_gesture_state_,
+     token_provider = foreground_token_provider_](
+        const std::string &, const DisplayService::TouchGestureInfo &info
+    ) {
+        if (info.event_type == DisplayHelper::TouchGestureEventType::Press) {
+            state->consumed.store(false, std::memory_order_release);
+            state->gesture_token.store(
+                token_provider ? token_provider() : 0,
+                std::memory_order_release
+            );
+            return;
+        }
+        if (info.event_type == DisplayHelper::TouchGestureEventType::Release) {
+            state->consumed.store(false, std::memory_order_release);
+            state->gesture_token.store(0, std::memory_order_release);
+            return;
+        }
+        if (info.event_type != DisplayHelper::TouchGestureEventType::Pressing ||
+                !has_gesture_area(info.start_area, DisplayHelper::TouchGestureArea::BottomEdge)) {
+            return;
+        }
+
+        const auto upward_distance = std::max(0, info.start_y - info.stop_y);
+        if (upward_distance < exit_distance_px) {
+            return;
+        }
+
+        bool expected = false;
+        if (!state->consumed.compare_exchange_strong(
+                    expected,
+                    true,
+                    std::memory_order_acq_rel
+                )) {
+            return;
+        }
+        const auto token = state->gesture_token.load(std::memory_order_acquire);
+        if (token != 0) {
+            state->pending_token.store(token, std::memory_order_release);
+        }
     }
                           );
     if (!gesture_connection_.connected()) {
@@ -381,63 +632,213 @@ std::expected<void, std::string> CircularShell::configure_home_gesture()
         SHELL_TAG,
         "Home gesture ready: output=%s exit=%" PRId32 "px edge=%" PRIu16 "px",
         output->name.c_str(),
-        gesture_exit_distance_px_,
+        exit_distance_px,
         config.threshold.vertical_edge
     );
     return {};
 }
 
-void CircularShell::handle_home_gesture(const DisplayHelper::TouchGestureInfo &info)
-{
-    if (context_ == nullptr || !preview_open_) {
-        return;
-    }
-    if (info.event_type != DisplayHelper::TouchGestureEventType::Pressing ||
-            !has_gesture_area(info.start_area, DisplayHelper::TouchGestureArea::BottomEdge)) {
-        return;
-    }
-
-    const auto upward_distance = std::max(0, info.start_y - info.stop_y);
-    if (upward_distance < gesture_exit_distance_px_ &&
-            info.direction != DisplayHelper::TouchGestureDirection::Up) {
-        return;
-    }
-    if (upward_distance < gesture_exit_distance_px_) {
-        return;
-    }
-
-    auto result = open_launcher();
-    if (!result) {
-        ESP_LOGW(SHELL_TAG, "Home gesture failed: %s", result.error().c_str());
-    }
-}
-
-std::expected<void, std::string> CircularShell::open_preview()
+std::expected<void, std::string> CircularShell::open_app(
+    std::string_view manifest_id,
+    std::string_view display_name
+)
 {
     if (context_ == nullptr) {
         return std::unexpected("Circular Shell is not running");
     }
-    auto result = context_->gui().trigger_screen_flow(PAGE_FLOW, "open_preview");
-    if (!result) {
-        return result;
+
+    auto apps = context_->system_service().list_apps();
+    auto app = std::find_if(apps.begin(), apps.end(), [manifest_id](const auto &candidate) {
+        return candidate.manifest.id == manifest_id && candidate.manifest.visible;
+    });
+    if (app == apps.end()) {
+        return std::unexpected(std::string(display_name) + " is not installed");
     }
-    preview_open_ = true;
-    ESP_LOGI(LAUNCHER_TAG, "Opened Shell Preview");
+
+    auto result = context_->system_service().start_app(app->app_id);
+    if (!result) {
+        return std::unexpected("Failed to start " + std::string(display_name) + ": " + result.error());
+    }
+
+    ESP_LOGI(LAUNCHER_TAG, "Opened %.*s", static_cast<int>(display_name.size()), display_name.data());
     return {};
 }
 
-std::expected<void, std::string> CircularShell::open_launcher()
+std::expected<void, std::string> CircularShell::restore_launcher()
 {
     if (context_ == nullptr) {
         return std::unexpected("Circular Shell is not running");
     }
-    auto result = context_->gui().trigger_screen_flow(PAGE_FLOW, "open_launcher");
-    if (!result) {
-        return result;
+    return context_->gui().trigger_screen_flow(PAGE_FLOW, "open_launcher");
+}
+
+std::expected<void, std::string> CircularShell::show_keyboard(
+    esp_brookesia::system::core::AppId app_id,
+    esp_brookesia::system::core::KeyboardRequestId request_id,
+    const esp_brookesia::system::core::KeyboardRequestOptions &options
+)
+{
+    if (context_ == nullptr || !keyboard_state_) {
+        return std::unexpected("Circular Shell is not running");
     }
-    preview_open_ = false;
-    ESP_LOGI(LAUNCHER_TAG, "Home intent opened Launcher");
+    if (std::ranges::find(KEYBOARD_MODES, options.mode) == KEYBOARD_MODES.end()) {
+        return std::unexpected("Unsupported keyboard mode: " + options.mode);
+    }
+    if (!supports_keyboard_modes(options.allowed_modes)) {
+        return std::unexpected("Restricted keyboard mode sets are not supported");
+    }
+    if (options.max_length < 0) {
+        return std::unexpected("Keyboard max_length must not be negative");
+    }
+
+    LvglLock lvgl_lock;
+    if (!lvgl_lock) {
+        return std::unexpected("Failed to lock LVGL for keyboard");
+    }
+
+    std::lock_guard state_lock(keyboard_state_->mutex);
+    if (keyboard_state_->request_id !=
+            esp_brookesia::system::core::INVALID_KEYBOARD_REQUEST_ID) {
+        return std::unexpected("Another keyboard request is already active");
+    }
+
+    auto *overlay = lv_obj_create(lv_layer_top());
+    if (overlay == nullptr) {
+        return std::unexpected("Failed to create keyboard overlay");
+    }
+    lv_obj_remove_flag(overlay, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_size(overlay, lv_pct(100), lv_pct(100));
+    lv_obj_center(overlay);
+    lv_obj_set_style_bg_color(overlay, lv_color_hex(0x07090d), 0);
+    lv_obj_set_style_bg_opa(overlay, LV_OPA_COVER, 0);
+    lv_obj_set_style_border_width(overlay, 0, 0);
+    lv_obj_set_style_radius(overlay, 0, 0);
+    lv_obj_set_style_pad_all(overlay, 0, 0);
+
+    auto *title = lv_label_create(overlay);
+    auto *text_area = lv_textarea_create(overlay);
+    auto *keyboard = lv_keyboard_create(overlay);
+    if (title == nullptr || text_area == nullptr || keyboard == nullptr) {
+        lv_obj_delete(overlay);
+        return std::unexpected("Failed to create keyboard controls");
+    }
+
+    lv_label_set_text(title, options.title.empty() ? "Enter text" : options.title.c_str());
+    lv_label_set_long_mode(title, LV_LABEL_LONG_MODE_DOTS);
+    lv_obj_set_size(title, 330, 28);
+    lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 52);
+    lv_obj_set_style_text_color(title, lv_color_hex(0xf4f7fb), 0);
+    lv_obj_set_style_text_font(title, &lv_font_montserrat_20, 0);
+    lv_obj_set_style_text_align(title, LV_TEXT_ALIGN_CENTER, 0);
+
+    lv_textarea_set_one_line(text_area, true);
+    lv_textarea_set_password_mode(text_area, options.password);
+    if (options.password) {
+        lv_textarea_set_password_show_time(text_area, 0);
+    }
+    if (options.max_length > 0) {
+        lv_textarea_set_max_length(text_area, static_cast<uint32_t>(options.max_length));
+    }
+    lv_textarea_set_text(text_area, options.initial_text.c_str());
+    lv_textarea_set_placeholder_text(text_area, options.placeholder.c_str());
+    lv_obj_set_size(text_area, 330, 54);
+    lv_obj_align(text_area, LV_ALIGN_TOP_MID, 0, 94);
+    lv_obj_set_style_bg_color(text_area, lv_color_hex(0x18212f), 0);
+    lv_obj_set_style_bg_opa(text_area, LV_OPA_COVER, 0);
+    lv_obj_set_style_border_color(text_area, lv_color_hex(0x50627a), 0);
+    lv_obj_set_style_border_width(text_area, 2, 0);
+    lv_obj_set_style_radius(text_area, 16, 0);
+    lv_obj_set_style_text_color(text_area, lv_color_hex(0xffffff), 0);
+    lv_obj_set_style_text_color(
+        text_area,
+        lv_color_hex(0x8d98a8),
+        LV_PART_TEXTAREA_PLACEHOLDER
+    );
+    lv_obj_set_style_text_font(text_area, &lv_font_montserrat_20, 0);
+
+    lv_keyboard_set_textarea(keyboard, text_area);
+    lv_keyboard_set_mode(keyboard, keyboard_mode(options.mode));
+    lv_keyboard_set_popovers(keyboard, false);
+    lv_obj_set_size(keyboard, 330, 220);
+    lv_obj_align(keyboard, LV_ALIGN_BOTTOM_MID, 0, -68);
+    lv_obj_set_style_bg_color(keyboard, lv_color_hex(0x18212f), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(keyboard, LV_OPA_COVER, LV_PART_MAIN);
+    lv_obj_set_style_bg_color(keyboard, lv_color_hex(0x31405a), LV_PART_ITEMS);
+    lv_obj_set_style_bg_color(
+        keyboard,
+        lv_color_hex(0x2157d5),
+        static_cast<lv_style_selector_t>(
+            static_cast<uint32_t>(LV_PART_ITEMS) |
+            static_cast<uint32_t>(LV_STATE_PRESSED)
+        )
+    );
+    lv_obj_set_style_text_color(keyboard, lv_color_hex(0xffffff), LV_PART_ITEMS);
+    lv_obj_set_style_text_font(keyboard, &lv_font_montserrat_18, LV_PART_ITEMS);
+    lv_obj_set_style_radius(keyboard, 8, LV_PART_ITEMS);
+
+    keyboard_state_->app_id = app_id;
+    keyboard_state_->request_id = request_id;
+    keyboard_state_->overlay = overlay;
+    keyboard_state_->text_area = text_area;
+    keyboard_state_->result_pending = false;
+    keyboard_state_->confirmed = false;
+    keyboard_state_->text.clear();
+
+    auto keyboard_event = [](lv_event_t *event) {
+        auto *state = static_cast<KeyboardState *>(lv_event_get_user_data(event));
+        if (state == nullptr) {
+            return;
+        }
+        std::lock_guard lock(state->mutex);
+        if (state->request_id ==
+                esp_brookesia::system::core::INVALID_KEYBOARD_REQUEST_ID ||
+                state->result_pending) {
+            return;
+        }
+        state->confirmed = lv_event_get_code(event) == LV_EVENT_READY;
+        state->text = state->confirmed && state->text_area != nullptr ?
+                      lv_textarea_get_text(state->text_area) : "";
+        state->result_pending = true;
+    };
+    lv_obj_add_event_cb(keyboard, keyboard_event, LV_EVENT_READY, keyboard_state_.get());
+    lv_obj_add_event_cb(keyboard, keyboard_event, LV_EVENT_CANCEL, keyboard_state_.get());
+    lv_obj_add_state(text_area, LV_STATE_FOCUSED);
+
+    ESP_LOGI(SHELL_TAG, "System keyboard opened");
     return {};
+}
+
+void CircularShell::hide_keyboard(
+    esp_brookesia::system::core::AppId app_id,
+    esp_brookesia::system::core::KeyboardRequestId request_id
+)
+{
+    if (!keyboard_state_) {
+        return;
+    }
+
+    LvglLock lvgl_lock;
+    if (!lvgl_lock) {
+        ESP_LOGW(SHELL_TAG, "Failed to lock LVGL while hiding keyboard");
+        return;
+    }
+
+    std::lock_guard state_lock(keyboard_state_->mutex);
+    if (keyboard_state_->app_id != app_id || keyboard_state_->request_id != request_id) {
+        return;
+    }
+    if (keyboard_state_->overlay != nullptr && lv_obj_is_valid(keyboard_state_->overlay)) {
+        lv_obj_delete(keyboard_state_->overlay);
+    }
+    keyboard_state_->app_id = esp_brookesia::system::core::INVALID_APP_ID;
+    keyboard_state_->request_id =
+        esp_brookesia::system::core::INVALID_KEYBOARD_REQUEST_ID;
+    keyboard_state_->overlay = nullptr;
+    keyboard_state_->text_area = nullptr;
+    keyboard_state_->result_pending = false;
+    keyboard_state_->confirmed = false;
+    keyboard_state_->text.clear();
+    ESP_LOGI(SHELL_TAG, "System keyboard closed");
 }
 
 void CircularShell::start_status()
@@ -453,17 +854,21 @@ void CircularShell::start_status()
         if (wifi_binding_.is_valid()) {
             wifi_connection_ = WifiHelper::subscribe_event(
                                    WifiHelper::EventId::GeneralEventHappened,
-            [this](const std::string &, const std::string & event, bool unexpected) {
+            [state = callback_state_](const std::string &, const std::string & event, bool unexpected) {
+                std::lock_guard lock(state->mutex);
+                if (state->owner == nullptr) {
+                    return;
+                }
                 if (unexpected) {
                     ESP_LOGW(SHELL_TAG, "Wi-Fi reported unexpected event: %s", event.c_str());
                 }
                 if (event == "Connected") {
-                    set_status_text(WIFI_PATH, "Wi-Fi: linked");
+                    state->owner->set_status_text(WIFI_PATH, "Wi-Fi: linked");
                 } else if (event == "Deinited" || event == "Inited" || event == "Stopped" ||
                            event == "Started" || event == "Disconnected") {
-                    set_status_text(WIFI_PATH, "Wi-Fi: no link");
+                    state->owner->set_status_text(WIFI_PATH, "Wi-Fi: no link");
                 } else {
-                    set_status_text(WIFI_PATH, "Wi-Fi: ?");
+                    state->owner->set_status_text(WIFI_PATH, "Wi-Fi: ?");
                 }
             }
                                );
@@ -475,19 +880,28 @@ void CircularShell::start_status()
         if (device_binding_.is_valid()) {
             battery_connection_ = DeviceHelper::subscribe_event(
                                       DeviceHelper::EventId::PowerBatteryStateChanged,
-            [this](const std::string &, const esp_brookesia::service::EventItemMap & items) {
+            [callback_state = callback_state_](
+                const std::string &, const esp_brookesia::service::EventItemMap &items
+            ) {
+                std::lock_guard lock(callback_state->mutex);
+                if (callback_state->owner == nullptr) {
+                    return;
+                }
                 auto item = items.find("State");
                 if (item == items.end() || !std::holds_alternative<boost::json::object>(item->second)) {
-                    set_status_text(BATTERY_PATH, "Bat: ?");
+                    callback_state->owner->set_status_text(BATTERY_PATH, "Bat: ?");
                     return;
                 }
                 DeviceHelper::PowerBatteryState state;
                 if (!BROOKESIA_DESCRIBE_FROM_JSON(std::get<boost::json::object>(item->second), state) ||
                         !state.is_present || !state.percentage.has_value()) {
-                    set_status_text(BATTERY_PATH, "Bat: ?");
+                    callback_state->owner->set_status_text(BATTERY_PATH, "Bat: ?");
                     return;
                 }
-                set_status_text(BATTERY_PATH, "Bat: " + std::to_string(*state.percentage) + "%");
+                callback_state->owner->set_status_text(
+                    BATTERY_PATH,
+                    "Bat: " + std::to_string(*state.percentage) + "%"
+                );
             }
                                   );
         }
@@ -498,14 +912,20 @@ void CircularShell::start_status()
         if (sntp_binding_.is_valid()) {
             sntp_state_connection_ = SNTPHelper::subscribe_event(
                                          SNTPHelper::EventId::StateChanged,
-            [this](const std::string &, const std::string &) {
-                refresh_clock();
+            [state = callback_state_](const std::string &, const std::string &) {
+                std::lock_guard lock(state->mutex);
+                if (state->owner != nullptr) {
+                    state->owner->refresh_clock();
+                }
             }
                                      );
             sntp_timezone_connection_ = SNTPHelper::subscribe_event(
                                             SNTPHelper::EventId::TimezoneChanged,
-            [this](const std::string &, const std::string &) {
-                refresh_clock();
+            [state = callback_state_](const std::string &, const std::string &) {
+                std::lock_guard lock(state->mutex);
+                if (state->owner != nullptr) {
+                    state->owner->refresh_clock();
+                }
             }
                                         );
 
@@ -538,6 +958,10 @@ void CircularShell::stop_status()
     battery_connection_.disconnect();
     sntp_state_connection_.disconnect();
     sntp_timezone_connection_.disconnect();
+    if (callback_state_) {
+        std::lock_guard lock(callback_state_->mutex);
+        callback_state_->owner = nullptr;
+    }
     wifi_binding_.release();
     device_binding_.release();
     sntp_binding_.release();

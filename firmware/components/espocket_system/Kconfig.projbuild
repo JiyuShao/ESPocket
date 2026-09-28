@@ -1,0 +1,11 @@
+menu "ESPocket"
+
+    config ESPOCKET_M2_LIFECYCLE_STRESS
+        bool "Run the M2 Native App lifecycle stress test at boot"
+        default n
+        help
+            Start and stop Hello Native 50 times before starting Circular Shell.
+            This emits deterministic lifecycle and heap samples for M2 acceptance
+            and must remain disabled in normal interactive firmware builds.
+
+endmenu

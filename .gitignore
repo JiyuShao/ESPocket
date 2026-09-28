@@ -4,6 +4,10 @@ firmware/managed_components/
 firmware/sdkconfig
 firmware/sdkconfig.old
 firmware/components/gen_bmgr_codes/
+firmware/littlefs/
+firmware/apps/hello-js/build/
+firmware/apps/hello-js/dist/
+firmware/apps/hello-js/node_modules/
 
 # Local tooling
 .claude/

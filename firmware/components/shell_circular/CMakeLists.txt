@@ -3,6 +3,8 @@ idf_component_register(
     INCLUDE_DIRS "include"
     REQUIRES
         brookesia_system_core
+        esp_lvgl_adapter
+        lvgl
         brookesia_service_display
         brookesia_service_device
         brookesia_service_wifi

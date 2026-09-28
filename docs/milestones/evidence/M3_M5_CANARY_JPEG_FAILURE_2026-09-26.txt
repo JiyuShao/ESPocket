@@ -1,0 +1,290 @@
+ESP-ROM:esp32s3-20210327
+Build:Mar 27 2021
+rst:0x15 (USB_UART_CHIP_RESET),boot:0x2b (SPI_FAST_FLASH_BOOT)
+Saved PC:0x4037eb96
+SPIWP:0xee
+mode:DIO, clock div:1
+load:0x3fce2820,len:0x16b8
+load:0x403c8700,len:0xef8
+load:0x403cb700,len:0x31f4
+entry 0x403c892c
+I (24) boot: ESP-IDF v6.0.1 2nd stage bootloader
+I (24) boot: compile time Sep 26 2026 12:47:44
+I (25) boot: Multicore bootloader
+I (25) boot: chip revision: v0.2
+I (25) boot: efuse block revision: v1.4
+I (25) qio_mode: Enabling default flash chip QIO
+I (26) boot.esp32s3: Boot SPI Speed : 80MHz
+I (26) boot.esp32s3: SPI Mode       : QIO
+I (26) boot.esp32s3: SPI Flash Size : 16MB
+I (26) boot: Enabling RNG early entropy source...
+I (26) boot: Partition Table:
+I (26) boot: ## Label            Usage          Type ST Offset   Length
+I (27) boot:  0 nvs              WiFi data        01 02 00009000 00006000
+I (27) boot:  1 phy_init         RF data          01 01 0000f000 00001000
+I (28) boot:  2 model            Unknown data     01 83 00010000 0004b000
+I (28) boot:  3 factory          factory app      00 00 00060000 00a41000
+I (28) boot:  4 littlefs_data    Unknown data     01 83 00aa1000 004e2000
+I (29) boot: End of partition table
+I (29) esp_image: segment 0: paddr=00060020 vaddr=3c3e0020 size=1a7a0ch (1735180) map
+I (292) esp_image: segment 1: paddr=00207a34 vaddr=3fc9e700 size=085e4h ( 34276) load
+I (299) esp_image: segment 2: paddr=00210020 vaddr=42000020 size=3d80fch (4030716) map
+I (910) esp_image: segment 3: paddr=005e8124 vaddr=3fca6ce4 size=06004h ( 24580) load
+I (914) esp_image: segment 4: paddr=005ee130 vaddr=40374000 size=1a634h (108084) load
+I (935) esp_image: segment 5: paddr=0060876c vaddr=50000000 size=00024h (    36) load
+I (949) boot: Loaded app from partition at offset 0x60000
+I (949) boot: Disabling RNG early entropy source...
+I (950) octal_psram: vendor id    : 0x0d (AP)
+I (950) octal_psram: dev id       : 0x02 (generation 3)
+I (950) octal_psram: density      : 0x03 (64 Mbit)
+I (950) octal_psram: good-die     : 0x01 (Pass)
+I (951) octal_psram: Latency      : 0x01 (Fixed)
+I (951) octal_psram: VCC          : 0x01 (3V)
+I (951) octal_psram: SRF          : 0x01 (Fast Refresh)
+I (951) octal_psram: BurstType    : 0x01 (Hybrid Wrap)
+I (951) octal_psram: BurstLen     : 0x01 (32 Byte)
+I (952) octal_psram: Readlatency  : 0x02 (10 cycles@Fixed)
+I (952) octal_psram: DriveStrength: 0x00 (1/1)
+I (952) MSPI Timing: Enter psram timing tuning
+I (953) esp_psram: Found 8MB PSRAM device
+I (953) esp_psram: Speed: 80MHz
+I (1216) mmu_psram: Instructions copied and mapped to SPIRAM
+I (1216) cpu_start: Multicore app
+I (1371) esp_psram: SPI SRAM memory test OK
+I (1380) cpu_start: Pro cpu start user code
+I (1380) cpu_start: cpu freq: 240000000 Hz
+I (1380) app_init: Application information:
+I (1380) app_init: Project name:     espocket
+I (1381) app_init: App version:      1
+I (1381) app_init: Compile time:     Sep 26 2026 13:49:33
+I (1381) app_init: ELF file SHA256:  72ef6cfaa...
+I (1381) app_init: ESP-IDF:          v6.0.1
+I (1381) efuse_init: Min chip rev:     v0.0
+I (1381) efuse_init: Max chip rev:     v0.99 
+I (1381) efuse_init: Chip rev:         v0.2
+I (1382) heap_init: Initializing. RAM available for dynamic allocation:
+I (1382) heap_init: At 3FCB2D50 len 000369C0 (218 KiB): RAM
+I (1382) heap_init: At 3FCE9710 len 00005724 (21 KiB): RAM
+I (1382) heap_init: At 3FCF0000 len 00008000 (32 KiB): DRAM
+I (1382) heap_init: At 600FE000 len 00001FE8 (7 KiB): RTCRAM
+I (1383) esp_psram: Adding pool of 4210K of PSRAM memory to heap allocator
+I (1383) spi_flash: detected chip: gd
+I (1383) spi_flash: flash io: qio
+W (1383) spi_flash: Detected size(32768k) larger than the size in the binary image header(16384k). Using the size in the binary image header.
+I (1388) sleep_gpio: Configure to isolate all GPIO pins in sleep state
+I (1388) sleep_gpio: Enable automatic switching of GPIO sleep configuration
+I (1389) main_task: Started on CPU0
+I (1390) esp_psram: Reserving pool of 32K of internal memory for DMA/internal allocations
+I (1390) main_task: Calling app_main()
+I (1392) SvcMgr: [manager.cpp:0093] (init_internal) : Version: 0.8.2
+I (1394) SvcMgr: [manager.cpp:0342] (add_service) : Initializing service: Manager
+I (1395) SvcMgr: [base.cpp:1015] (init_internal) : Initialized service: Manager
+I (1396) SvcMgr: [manager.cpp:0360] (add_service) : Service added: Manager
+I (1397) SvcMgr: [manager.cpp:0342] (add_service) : Initializing service: Utils
+I (1399) SvcMgr: [base.cpp:1015] (init_internal) : Initialized service: Utils
+I (1400) SvcMgr: [manager.cpp:0360] (add_service) : Service added: Utils
+I (1401) SvcMgr: [manager.cpp:0342] (add_service) : Initializing service: DataFlow
+I (1404) SvcMgr: [base.cpp:1015] (init_internal) : Initialized service: DataFlow
+I (1405) SvcMgr: [manager.cpp:0360] (add_service) : Service added: DataFlow
+I (1406) SvcMgr: [manager.cpp:0810] (topological_sort) : Service initialization order: 
+I (1407) SvcMgr: [manager.cpp:0812] (topological_sort) :   1. Usb
+I (1408) SvcMgr: [manager.cpp:0812] (topological_sort) :   2. Storage
+I (1408) SvcMgr: [manager.cpp:0812] (topological_sort) :   3. Wifi
+I (1409) SvcMgr: [manager.cpp:0812] (topological_sort) :   4. SNTP
+I (1409) SvcMgr: [manager.cpp:0812] (topological_sort) :   5. Display
+I (1410) SvcMgr: [manager.cpp:0812] (topological_sort) :   6. Http
+I (1410) SvcMgr: [manager.cpp:0812] (topological_sort) :   7. Device
+I (1411) SvcMgr: [manager.cpp:0342] (add_service) : Initializing service: Usb
+I (1412) SvcUsb: [service_usb.cpp:1175] (on_init) : Version: 0.8.0
+I (1414) SvcMgr: [base.cpp:1015] (init_internal) : Initialized service: Usb
+I (1415) SvcMgr: [manager.cpp:0360] (add_service) : Service added: Usb
+I (1415) SvcMgr: [manager.cpp:0342] (add_service) : Initializing service: Storage
+I (1416) SvcStorage: [service_storage.cpp:0789] (on_init) : Version: 0.8.3
+I (1418) HalIface: [device.cpp:0415] (init) : Version: 0.8.2
+I (1601) HalAdpt: [file_system_impl.cpp:0346] (init_littlefs) : LittleFS partition size: total: 5120000, used: 741376
+I (1615) HalIface: [device.cpp:0443] (init) : - [Storage] Registered interface 'Storage:FileSystem'
+I (1616) HalIface: [device.cpp:0443] (init) : - [Storage] Registered interface 'Storage:KeyValue'
+I (1617) HalIface: [device.cpp:0448] (init) : - [Storage] Initialized
+I (1617) HalIface: [device.cpp:0496] (acquire) : - [Storage] Reference count increased to 1
+I (1618) HalIface: [device.cpp:0155] (try_acquire_interface) : - [Storage] Acquired interface 'Storage:KeyValue' with reference count 1
+I (1619) SvcStorage: [service_storage.cpp:0795] (on_init) : Using storage KV interface: Storage:KeyValue
+I (1620) HalIface: [device.cpp:0490] (acquire) : - [Storage] Reference count increased to 2
+I (1621) HalIface: [device.cpp:0155] (try_acquire_interface) : - [Storage] Acquired interface 'Storage:FileSystem' with reference count 2
+I (1622) SvcStorage: [service_storage.cpp:0806] (on_init) : Using storage file-system interface: Storage:FileSystem
+I (1625) SvcMgr: [base.cpp:1015] (init_internal) : Initialized service: Storage
+I (1626) SvcMgr: [manager.cpp:0360] (add_service) : Service added: Storage
+I (1627) SvcMgr: [manager.cpp:0342] (add_service) : Initializing service: Wifi
+I (1628) SvcWiFi: [service_wifi.cpp:0224] (on_init) : Version: 0.8.2
+I (1629) HalIface: [device.cpp:0415] (init) : Version: 0.8.2
+I (1630) HalIface: [device.cpp:0443] (init) : - [WiFi] Registered interface 'Network:Connectivity:WiFi'
+I (1631) HalIface: [device.cpp:0443] (init) : - [WiFi] Registered interface 'WiFi:Basic'
+I (1632) HalIface: [device.cpp:0443] (init) : - [WiFi] Registered interface 'WiFi:SoftAP'
+I (1632) HalIface: [device.cpp:0443] (init) : - [WiFi] Registered interface 'WiFi:Station'
+I (1633) HalIface: [device.cpp:0448] (init) : - [WiFi] Initialized
+I (1633) HalIface: [device.cpp:0496] (acquire) : - [WiFi] Reference count increased to 1
+I (1634) HalIface: [device.cpp:0155] (try_acquire_interface) : - [WiFi] Acquired interface 'WiFi:Basic' with reference count 1
+I (1636) HalIface: [device.cpp:0490] (acquire) : - [WiFi] Reference count increased to 2
+I (1636) HalIface: [device.cpp:0155] (try_acquire_interface) : - [WiFi] Acquired interface 'WiFi:Station' with reference count 2
+I (1638) HalIface: [device.cpp:0490] (acquire) : - [WiFi] Reference count increased to 3
+I (1639) HalIface: [device.cpp:0155] (try_acquire_interface) : - [WiFi] Acquired interface 'WiFi:SoftAP' with reference count 3
+I (1640) SvcWiFi: [service_wifi.cpp:0236] (on_init) : Using Wi-Fi basic interface: WiFi:Basic
+I (1640) SvcWiFi: [service_wifi.cpp:0237] (on_init) : Using Wi-Fi station interface: WiFi:Station
+I (1641) SvcWiFi: [service_wifi.cpp:0239] (on_init) : Using Wi-Fi SoftAP interface: WiFi:SoftAP
+I (1645) SvcWiFi: [state_machine.cpp:0398] (init) : State machine initialized
+I (1648) SvcMgr: [base.cpp:1015] (init_internal) : Initialized service: Wifi
+I (1649) SvcMgr: [manager.cpp:0360] (add_service) : Service added: Wifi
+I (1650) SvcMgr: [manager.cpp:0342] (add_service) : Initializing service: SNTP
+I (1651) SvcSNTP: [service_sntp.cpp:0071] (on_init) : Version: 0.8.2
+I (1653) SvcMgr: [base.cpp:1015] (init_internal) : Initialized service: SNTP
+I (1653) SvcMgr: [manager.cpp:0360] (add_service) : Service added: SNTP
+I (1654) SvcMgr: [manager.cpp:0342] (add_service) : Initializing service: Display
+I (1655) SvcDisplay: [display_lifecycle.cpp:0023] (on_init) : Version: 0.8.2
+I (1656) HalIface: [device.cpp:0415] (init) : Version: 0.8.2
+I (1656) BOARD_DEVICE: Device display_lcd config found: 0x3c497f98 (size: 104)
+I (1657) BOARD_DEVICE: Device display_lcd config found: 0x3c497f98 (size: 104)
+I (1657) DEV_DISPLAY_LCD: Initializing LCD display: display_lcd, chip: co5300, sub_type: spi
+I (1658) DEV_DISPLAY_LCD_SUB_SPI: Initializing SPI LCD display: display_lcd, chip: co5300
+I (1658) PERIPH_SPI: SPI-1 peripheral initialized successfully
+I (1659) co5300: version: 2.2.0
+I (1659) co5300_spi: LCD panel create success, version: 2.2.0
+W (1819) co5300_spi: The 3Ah command has been used and will be overwritten by external initialization sequence
+W (3020) co5300_spi: The 3Ah command has been used and will be overwritten by external initialization sequence
+I (4221) DEV_DISPLAY_LCD: Successfully initialized LCD display: display_lcd (sub_type: spi), panel: 0x3c5ab674, io: 0x3c5ab5d0
+I (4221) BOARD_MANAGER: Device display_lcd initialized
+I (4222) BOARD_DEVICE: Device handle display_lcd found, Handle: 0x3c5ab574 TO: 0x3c5ab574
+I (4222) BOARD_DEVICE: Device lcd_touch config found: 0x3c497f30 (size: 104)
+I (4223) PERIPH_I2C: I2C master bus initialized successfully
+I (4297) CST9217: Checkcode: 0x204ECACA
+I (4299) CST9217: Resolution X: 466, Y: 466
+I (4301) CST9217: Chip Type: 0x9217, ProjectID: 0x5734
+I (4301) DEV_LCD_TOUCH_SUB_I2C: Successfully initialized LCD touch: lcd_touch, addr: 0xb4, touch:0x3c5abaf8, io:0x3c5aba88
+I (4301) DEV_LCD_TOUCH: Successfully initialized LCD touch: lcd_touch, chip: cst9217, sub_type: i2c
+I (4301) BOARD_MANAGER: Device lcd_touch initialized
+I (4302) BOARD_DEVICE: Device handle lcd_touch found, Handle: 0x3c5ab468 TO: 0x3c5ab468
+I (4302) HalIface: [device.cpp:0443] (init) : - [Display] Registered interface 'Display:LcdPanel'
+I (4303) HalIface: [device.cpp:0443] (init) : - [Display] Registered interface 'Display:LcdTouch'
+I (4304) HalIface: [device.cpp:0448] (init) : - [Display] Initialized
+I (4304) HalIface: [device.cpp:0496] (acquire) : - [Display] Reference count increased to 1
+I (4305) HalIface: [device.cpp:0155] (try_acquire_interface) : - [Display] Acquired interface 'Display:LcdPanel' with reference count 1
+I (4307) HalIface: [device.cpp:0490] (acquire) : - [Display] Reference count increased to 2
+I (4308) HalIface: [device.cpp:0155] (try_acquire_interface) : - [Display] Acquired interface 'Display:LcdTouch' with reference count 2
+I (4309) HalIface: [device.cpp:0415] (init) : Version: 0.8.2
+I (4309) BOARD_DEVICE: Device display_lcd already initialized, ref_count: 2
+I (4310) BOARD_MANAGER: Device display_lcd initialized
+I (4310) BOARD_DEVICE: Device handle display_lcd found, Handle: 0x3c5ab574 TO: 0x3c5ab574
+I (4310) HalAdptExtra: [backlight_impl.cpp:0109] (set_brightness_internal) : Set brightness: 0
+I (4311) HalIface: [device.cpp:0443] (init) : - [CustomDisplay] Registered interface 'CustomDisplay:Backlight'
+I (4312) HalIface: [device.cpp:0448] (init) : - [CustomDisplay] Initialized
+I (4313) HalIface: [device.cpp:0496] (acquire) : - [CustomDisplay] Reference count increased to 1
+I (4313) HalIface: [device.cpp:0155] (try_acquire_interface) : - [CustomDisplay] Acquired interface 'CustomDisplay:Backlight' with reference count 1
+I (4315) SvcDisplay: [display_lifecycle.cpp:0061] (on_init) : Registered display output Output0: 466x466, pixel_format=RGB565, panel=Display:LcdPanel, group_id=display_lcd
+I (4316) SvcDisplay: [display_lifecycle.cpp:0092] (on_init) : Registered display touch Touch0: 466x466, max_points=5, operation_mode=Interrupt, touch=Display:LcdTouch, group_id=display_lcd
+I (4317) SvcDisplay: [display_render_tasks.cpp:0171] (bind_default_touches_locked) : Bound display output Output0 to touch Touch0 by group_id(display_lcd)
+I (4318) SvcDisplay: [display_backlight.cpp:0357] (bind_backlights_to_outputs_locked) : Bound display output Output0 to backlight CustomDisplay:Backlight by group_id(display_lcd)
+I (4320) HalIface: [device.cpp:0490] (acquire) : - [Display] Reference count increased to 3
+I (4321) HalIface: [device.cpp:0155] (try_acquire_interface) : - [Display] Acquired interface 'Display:LcdPanel' with reference count 3
+I (4322) BOARD_DEVICE: Device display_lcd config found: 0x3c497f98 (size: 104)
+I (4322) HalIface: [device.cpp:0511] (release) : - [Display] Reference count decreased to 2
+I (4324) SvcDisplay: [display_lifecycle.cpp:0120] (on_init) : Registered Display DataFlow provider
+I (4331) SvcMgr: [base.cpp:1015] (init_internal) : Initialized service: Display
+I (4331) SvcMgr: [manager.cpp:0360] (add_service) : Service added: Display
+I (4332) SvcMgr: [manager.cpp:0342] (add_service) : Initializing service: Http
+I (4333) SvcHTTP: [service_http.cpp:0124] (on_init) : Version: 0.8.2
+I (4335) SvcHTTP: [service_http.cpp:0145] (on_init) : HTTP service initialized
+I (4337) SvcMgr: [base.cpp:1015] (init_internal) : Initialized service: Http
+I (4338) SvcMgr: [manager.cpp:0360] (add_service) : Service added: Http
+I (4339) SvcMgr: [manager.cpp:0342] (add_service) : Initializing service: Device
+I (4339) SvcDevice: [service_device.cpp:0031] (on_init) : Version: 0.8.2
+I (4340) SvcDevice: [service_device.cpp:0036] (on_init) : Initialized
+I (4342) SvcMgr: [base.cpp:1015] (init_internal) : Initialized service: Device
+I (4343) SvcMgr: [manager.cpp:0360] (add_service) : Service added: Device
+I (4343) SvcMgr: [manager.cpp:0844] (add_all_registered_services) : All services added
+I (4349) SvcMgr: [base.cpp:1131] (start_internal) : Started service: Manager
+I (4350) SvcMgr: [manager.cpp:0542] (bind) : Service started: Manager
+I (4352) SvcMgr: [base.cpp:1131] (start_internal) : Started service: Utils
+I (4353) SvcMgr: [manager.cpp:0542] (bind) : Service started: Utils
+I (4355) SvcMgr: [base.cpp:1131] (start_internal) : Started service: DataFlow
+I (4356) SvcMgr: [manager.cpp:0542] (bind) : Service started: DataFlow
+I (4356) SvcMgr: [manager.cpp:0259] (start) : Service manager started
+I (4358) SvcMgr: [base.cpp:1131] (start_internal) : Started service: Storage
+I (4358) SvcMgr: [manager.cpp:0542] (bind) : Service started: Storage
+W (4369) SvcDisplay: [display_backlight.cpp:0638] (make_backlight_storage_key) : KV key 'backlight.display_lcd.Brightness' length 32 exceeds backend limit 15; using stable hash 'h3end6nhmswuvv'
+W (4374) HalAdpt: [key_value_nvs_impl.cpp:0282] (set_last_error) : Key 'h3end6nhmswuvv' not found in namespace 'Display'
+W (4374) HalAdpt: [key_value_nvs_impl.cpp:0218] (get) : Skipping key 'h3end6nhmswuvv': Key 'h3end6nhmswuvv' not found in namespace 'Display'
+W (4380) SvcDisplay: [display_backlight.cpp:0638] (make_backlight_storage_key) : KV key 'backlight.display_lcd.On' length 24 exceeds backend limit 15; using stable hash 'h2m1fy28e3uznh'
+I (4390) SvcDisplay: [display_backlight.cpp:0515] (load_backlight_data_from_storage_locked) : Loaded 'On' from Storage for output Output0: true
+I (4391) HalAdptExtra: [backlight_impl.cpp:0109] (set_brightness_internal) : Set brightness: 92
+I (4392) SvcMgr: [base.cpp:1131] (start_internal) : Started service: Display
+I (4393) SvcMgr: [manager.cpp:0542] (bind) : Service started: Display
+E (4394) HalAdpt: [lcd_touch_impl.cpp:0098] (read_points) : Checked ESP error: ESP_ERR_INVALID_RESPONSE(264)
+E (4395) HalAdpt: [lcd_touch_impl.cpp:0098] (read_points) : Failed to read touch data
+W (4396) SvcDisplay: [display_touch_tasks.cpp:0277] (read_touch) : Failed to read Display touch Touch0
+I (4407) HalIface: [device.cpp:0490] (acquire) : - [Display] Reference count increased to 3
+I (4408) HalIface: [device.cpp:0155] (try_acquire_interface) : - [Display] Acquired interface 'Display:LcdPanel' with reference count 3
+I (4410) GuiLvgl: [display_source.cpp:0318] (select_output) : LVGL Display source uses output Output0 (466x466, panel=Display:LcdPanel)
+I (4412) esp_lvgl:adapter: LVGL adapter initialized successfully
+I (4412) BOARD_DEVICE: Device display_lcd config found: 0x3c497f98 (size: 104)
+I (4413) GuiLvgl: [display_source.cpp:0410] (start_lvgl_adapter) : LVGL Display source uses bus Generic, frame buffers=0, tear mode=NONE
+I (4416) GuiLvgl: [display_source.cpp:0480] (start_lvgl_adapter) : LVGL Display source created 5 pointer input(s)
+I (4416) BOARD_DEVICE: Device display_lcd config found: 0x3c497f98 (size: 104)
+I (4430) esp_lvgl:adapter: LVGL task started successfully
+I (4437) ESPocket.System: Display ready: Output0 (466x466)
+I (4440) SysCore: [lifecycle.cpp:0070] (init) : Version: 0.8.4
+I (4483) SvcMgr: [manager.cpp:0342] (add_service) : Initializing service: SystemCore
+I (4490) SvcMgr: [base.cpp:1015] (init_internal) : Initialized service: SystemCore
+I (4492) SvcMgr: [manager.cpp:0360] (add_service) : Service added: SystemCore
+I (4493) SvcMgr: [manager.cpp:0342] (add_service) : Initializing service: SystemGui
+I (4498) SvcMgr: [base.cpp:1015] (init_internal) : Initialized service: SystemGui
+I (4499) SvcMgr: [manager.cpp:0360] (add_service) : Service added: SystemGui
+I (4501) SvcMgr: [manager.cpp:0342] (add_service) : Initializing service: SystemTimer
+I (4504) SvcMgr: [base.cpp:1015] (init_internal) : Initialized service: SystemTimer
+I (4505) SvcMgr: [manager.cpp:0360] (add_service) : Service added: SystemTimer
+I (4507) SvcMgr: [base.cpp:1131] (start_internal) : Started service: Device
+I (4509) SvcMgr: [manager.cpp:0542] (bind) : Service started: Device
+I (4510) SvcMgr: [base.cpp:1131] (start_internal) : Started service: SystemCore
+I (4512) SvcMgr: [manager.cpp:0542] (bind) : Service started: SystemCore
+I (4514) SvcMgr: [base.cpp:1131] (start_internal) : Started service: SystemGui
+I (4516) SvcMgr: [manager.cpp:0542] (bind) : Service started: SystemGui
+I (4518) SvcMgr: [base.cpp:1131] (start_internal) : Started service: SystemTimer
+I (4519) SvcMgr: [manager.cpp:0542] (bind) : Service started: SystemTimer
+W (4526) SysCore: [storage.cpp:0057] (make_storage_kv_namespace) : KV namespace 'brookesia.system.storage' length 24 exceeds backend limit 15; using stable hash 'h3t1mdqi16omay'
+W (4534) SysCore: [storage.cpp:0069] (make_storage_kv_key) : KV key 'DefaultInstallTarget' length 20 exceeds backend limit 15; using stable hash 'h87e8co8unx7s'
+W (4540) SysCore: [storage.cpp:0069] (make_storage_kv_key) : KV key 'PreferredExternalId' length 19 exceeds backend limit 15; using stable hash 'h3f3wm1aeqr88o'
+W (4546) HalAdpt: [key_value_nvs_impl.cpp:0282] (set_last_error) : Namespace 'h3t1mdqi16omay' not found
+W (4547) HalAdpt: [key_value_nvs_impl.cpp:0218] (get) : Skipping key 'h87e8co8unx7s': Namespace 'h3t1mdqi16omay' not found
+W (4556) HalAdpt: [key_value_nvs_impl.cpp:0282] (set_last_error) : Namespace 'h3t1mdqi16omay' not found
+W (4557) HalAdpt: [key_value_nvs_impl.cpp:0218] (get) : Skipping key 'h3f3wm1aeqr88o': Namespace 'h3t1mdqi16omay' not found
+I (4639) SysCore: [storage.cpp:0660] (initialize_storage_layout) : Storage layout initialized: internal(id=internal, root=/littlefs), external_count(0)
+W (4659) HalAdpt: [key_value_nvs_impl.cpp:0282] (set_last_error) : Namespace 'h2a1k71xqvyaxm' not found
+W (4660) HalAdpt: [key_value_nvs_impl.cpp:0218] (get) : Skipping key 'ThemeId': Namespace 'h2a1k71xqvyaxm' not found
+W (4678) HalAdpt: [key_value_nvs_impl.cpp:0282] (set_last_error) : Namespace 'h2a1k71xqvyaxm' not found
+W (4681) HalAdpt: [key_value_nvs_impl.cpp:0218] (get) : Skipping key 'Language': Namespace 'h2a1k71xqvyaxm' not found
+I (4734) SysCore: [manager.cpp:0389] (install_app) : Native app installed: id(1), manifest(espocket.app.hello)
+I (4735) ESPocket.System: Hello Native installed
+I (4811) SvcWiFi: [state_machine.cpp:0467] (start) : State machine started
+W (4827) HalAdpt: [key_value_nvs_impl.cpp:0282] (set_last_error) : Namespace 'Wifi' not found
+W (4828) HalAdpt: [key_value_nvs_impl.cpp:0218] (get) : Skipping key 'LastAp': Namespace 'Wifi' not found
+W (4849) HalAdpt: [key_value_nvs_impl.cpp:0282] (set_last_error) : Namespace 'Wifi' not found
+W (4851) HalAdpt: [key_value_nvs_impl.cpp:0218] (get) : Skipping key 'ConnectedAps': Namespace 'Wifi' not found
+W (4866) HalAdpt: [key_value_nvs_impl.cpp:0282] (set_last_error) : Namespace 'Wifi' not found
+W (4867) HalAdpt: [key_value_nvs_impl.cpp:0218] (get) : Skipping key 'ScanParams': Namespace 'Wifi' not found
+W (4880) HalAdpt: [key_value_nvs_impl.cpp:0282] (set_last_error) : Namespace 'Wifi' not found
+W (4882) HalAdpt: [key_value_nvs_impl.cpp:0218] (get) : Skipping key 'SoftApParams': Namespace 'Wifi' not found
+I (4883) SvcWiFi: [service_wifi.cpp:0687] (try_load_data) : Loaded all data from Storage
+I (4885) SvcMgr: [base.cpp:1131] (start_internal) : Started service: Wifi
+I (4885) SvcMgr: [manager.cpp:0542] (bind) : Service started: Wifi
+W (4902) HalAdpt: [key_value_nvs_impl.cpp:0282] (set_last_error) : Namespace 'app.settings' not found
+W (4903) HalAdpt: [key_value_nvs_impl.cpp:0218] (get) : Skipping key 'WifiEnabled': Namespace 'app.settings' not found
+W (8155) GuiIface: [runtime_style.cpp:0190] (compose_style_set) : Document 1 and theme 'dark' do not contain named style ref: app.page
+W (8166) GuiIface: [runtime_style.cpp:0190] (compose_style_set) : Document 1 and theme 'dark' do not contain named style ref: app.card
+W (8174) GuiIface: [runtime_style.cpp:0190] (compose_style_set) : Document 1 and theme 'dark' do not contain named style ref: app.listItem
+I (8213) SvcWiFi: [state_machine.cpp:0486] (stop) : State machine stopped
+I (8214) SvcMgr: [base.cpp:1199] (stop_internal) : Stopped service: Wifi
+I (8216) SvcMgr: [manager.cpp:0630] (unbind) : Service stopped: Wifi
+I (8217) BOARD_DEVICE: Device display_lcd config found: 0x3c497f98 (size: 104)
+W (8217) lcd_panel.io.spi: Callback on_color_trans_done was already set and now it was overwritten!
+I (8243) esp_lvgl:disp: Display unregistered successfully
+I (8247) SvcMgr: [base.cpp:1199] (stop_internal) : Stopped service: Display
+I (8248) SvcMgr: [manager.cpp:0630] (unbind) : Service stopped: Display
+E (8249) ESPocket.System: Fatal initialization failure: Failed to install Settings: Failed to preload image resource 'home.my_device': JPEG image decoder is not available: /littlefs/apps/brookesia.general.settings/res/images/icon/my_device.jpg
+I (8250) main_task: Returned from app_main()

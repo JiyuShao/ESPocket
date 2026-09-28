@@ -5,6 +5,64 @@ dependencies:
       path: managed_components/espressif__brookesia_hal_boards/boards/waveshare/esp32_s3_touch_amoled_1_75c/components/brookesia_hal_custom
       type: local
     version: 0.1.0
+  espressif/brookesia_app_settings:
+    component_hash: 46dd5de734a74672203240420fd52967b3f61f9882b600813d24b1fccd3204a5
+    dependencies:
+    - name: espressif/brookesia_hal_interface
+      registry_url: https://components.espressif.com
+      require: private
+      version: 0.8.*
+    - name: espressif/brookesia_service_device
+      registry_url: https://components.espressif.com
+      require: private
+      version: 0.8.*
+    - name: espressif/brookesia_service_sntp
+      registry_url: https://components.espressif.com
+      require: private
+      version: 0.8.*
+    - name: espressif/brookesia_service_storage
+      registry_url: https://components.espressif.com
+      require: private
+      version: 0.8.*
+    - name: espressif/brookesia_service_wifi
+      registry_url: https://components.espressif.com
+      require: private
+      version: 0.8.*
+    - name: espressif/brookesia_system_core
+      registry_url: https://components.espressif.com
+      require: private
+      version: 0.8.*
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 0.8.3
+  espressif/brookesia_app_store:
+    component_hash: ad0bbb0e101e79c88cf1686fe7dc27c3428e8499451ae46b5cac744845eb5036
+    dependencies:
+    - name: espressif/brookesia_service_device
+      registry_url: https://components.espressif.com
+      require: private
+      version: 0.8.*
+    - name: espressif/brookesia_service_helper
+      registry_url: https://components.espressif.com
+      require: private
+      version: 0.8.*
+    - name: espressif/brookesia_service_http
+      registry_url: https://components.espressif.com
+      require: private
+      version: 0.8.*
+    - name: espressif/brookesia_service_storage
+      registry_url: https://components.espressif.com
+      require: private
+      version: 0.8.*
+    - name: espressif/brookesia_system_core
+      registry_url: https://components.espressif.com
+      require: private
+      version: 0.8.*
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 0.8.2
   espressif/brookesia_gui_interface:
     component_hash: 8fdb7914e96fb869f2b4cd9bc590af06e1928a78cb1f64526f6cc2979080a2a2
     dependencies:
@@ -178,6 +236,25 @@ dependencies:
       registry_url: https://components.espressif.com
       type: service
     version: 0.8.2
+  espressif/brookesia_runtime_js:
+    component_hash: be4ae9c11b34b259ea9148fb3b4f475125587849d2b635bc2c8c5026883359cb
+    dependencies:
+    - name: espressif/brookesia_runtime_manager
+      registry_url: https://components.espressif.com
+      require: private
+      version: 0.8.*
+    - name: espressif/brookesia_service_helper
+      registry_url: https://components.espressif.com
+      require: private
+      version: 0.8.*
+    - name: espressif/quickjs-ng
+      registry_url: https://components.espressif.com
+      require: private
+      version: 0.14.*
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 0.8.3
   espressif/brookesia_runtime_manager:
     component_hash: c98f5275d666e62dc8384a164b240ec2497885aacf3c2d9d81cb4282433008d8
     dependencies:
@@ -187,6 +264,21 @@ dependencies:
       version: 0.8.*
     source:
       registry_url: https://components.espressif.com
+      type: service
+    version: 0.8.2
+  espressif/brookesia_service_audio:
+    component_hash: fa2c42fa777aad7b2f5b8dab3829c7e2448fd211f3dc29418eb1353662e53afc
+    dependencies:
+    - name: espressif/brookesia_service_helper
+      registry_url: https://components.espressif.com
+      require: private
+      version: 0.8.*
+    - name: espressif/brookesia_service_storage
+      registry_url: https://components.espressif.com
+      require: private
+      version: 0.8.*
+    source:
+      registry_url: https://components.espressif.com/
       type: service
     version: 0.8.2
   espressif/brookesia_service_device:
@@ -230,6 +322,17 @@ dependencies:
       registry_url: https://components.espressif.com/
       type: service
     version: 0.8.4
+  espressif/brookesia_service_http:
+    component_hash: 501a2ccff2c76005696f513e207de6cea1abd4d2eed630c5c6ac19f5ae11cb6f
+    dependencies:
+    - name: espressif/brookesia_service_sntp
+      registry_url: https://components.espressif.com
+      require: private
+      version: 0.8.*
+    source:
+      registry_url: https://components.espressif.com
+      type: service
+    version: 0.8.2
   espressif/brookesia_service_manager:
     component_hash: 4d8d063bcb368c77de089c15f494365cf38a4f560313c583d464d58b0bd05aa2
     dependencies:
@@ -605,6 +708,16 @@ dependencies:
       registry_url: https://components.espressif.com
       type: service
     version: 1.6.58~1
+  espressif/quickjs-ng:
+    component_hash: 51ead31abca34af01a44df24128e9ea10331cf35beb976a18fae62a03d36d6e2
+    dependencies:
+    - name: idf
+      require: private
+      version: '>=5.4'
+    source:
+      registry_url: https://components.espressif.com
+      type: service
+    version: 0.14.0
   espressif/zlib:
     component_hash: 9083cada65f1c9d298ef92266232d071c6f2f335164e2799554b3eae73aedc55
     dependencies:
@@ -652,9 +765,13 @@ dependencies:
     version: 1.0.4
 direct_dependencies:
 - brookesia_hal_custom
+- espressif/brookesia_app_settings
+- espressif/brookesia_app_store
 - espressif/brookesia_gui_lvgl
 - espressif/brookesia_hal_adaptor
 - espressif/brookesia_hal_boards
+- espressif/brookesia_runtime_js
+- espressif/brookesia_service_audio
 - espressif/brookesia_service_device
 - espressif/brookesia_service_display
 - espressif/brookesia_service_helper
@@ -665,6 +782,6 @@ direct_dependencies:
 - espressif/esp_lcd_co5300
 - idf
 - waveshare/esp_lcd_touch_cst9217
-manifest_hash: f27c19a33ee0aca2a6c03445370babe58349f4b47cc4360507887225e532eb0b
+manifest_hash: 9837e1c6294dd3a90103ea18aa2e89a0d1c91815b5557dadcb90d412c08a8104
 target: esp32s3
 version: 3.0.0

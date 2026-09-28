@@ -1,0 +1,84 @@
+ESPocket M5 serialized-HTTP containment host-build evidence
+Date: 2026-09-27
+Status: HOST BUILD PASS; DEVICE VALIDATION NOT PERFORMED
+
+Observed device failure
+- Credential-safe online Store evidence: M5_ONLINE_STORE_CRASH_2026-09-27.txt
+- Evidence SHA-256: e0d9ed7173cc3969bad7bb624c106acacf607412a5e03fe701906a3fe800be47
+- Remote index request succeeded and `/littlefs/apps/brookesia.general.app_store/cache/index.json` was written.
+- Several metadata responses were also written to cache.
+- The same capture recorded 14 `mbedtls_ssl_setup returned -0x008D` failures, one LoadProhibited panic, two StoreProhibited panics, and three automatic reboots.
+- Request cancellation immediately preceded each panic window.
+
+Confirmed root-cause boundary
+- ESP-IDF 6.0.1 bundles Mbed TLS 4.0.0.
+- `MBEDTLS_ERR_SSL_ALLOC_FAILED` maps to `PSA_ERROR_INSUFFICIENT_MEMORY`.
+- `PSA_ERROR_INSUFFICIENT_MEMORY` is numeric -141, which is the logged -0x008D.
+- The generated configuration selects `CONFIG_MBEDTLS_INTERNAL_MEM_ALLOC=y`, a 16,384-byte input content length, and a 4,096-byte output content length.
+- ESP-IDF's Mbed TLS allocator therefore requests `MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT`; PSRAM cannot satisfy these TLS allocations.
+- Internal-RAM exhaustion during TLS setup is confirmed. It is not a certificate, DNS, or server-identity failure.
+
+Cancellation concurrency boundary
+- The failed image allowed two HTTP workers and two concurrent requests.
+- App Store invokes `CancelRequest` asynchronously, but the HTTP service schema marks that function `require_scheduler=false`; Service Manager therefore executes it directly on the caller thread.
+- HTTP cancellation sets the cancel flag, copies the transaction under its transaction mutex, releases the mutex, and calls `transaction->cancel()`.
+- The ESP HAL transaction implements cancel with `esp_http_client_close(client_)`.
+- Worker paths can concurrently execute transaction `open()`, `read()`, and `is_complete()` without the same mutex serializing those operations.
+- ESP-IDF documents that the same HTTP client handle must never be operated simultaneously from two places and identifies open/read/close as phases of that one client operation. The Brookesia close-vs-active-operation path is therefore unsupported concurrent access to the same mutable handle, not merely a theoretical C++ lifetime concern.
+- Shared ownership keeps the C++ wrapper alive but does not serialize the underlying ESP HTTP client state.
+- Because no panic PC/EXCVADDR/backtrace was captured, this confirmed concurrency-contract violation is the strongest supported panic cause, but the exact faulting instruction remains unproven.
+- The `Failed to stop App Store size metadata timer: 364` warning is not treated as UAF evidence: Core clears App timers before native `on_stop()`, after which Store attempts to stop its stale local timer ID.
+
+Product containment
+- No managed component was modified.
+- Product defaults now set the official public Kconfig values:
+  CONFIG_BROOKESIA_SERVICE_HTTP_WORKER_NUM=1
+  CONFIG_BROOKESIA_SERVICE_HTTP_MAX_CONCURRENT_REQUESTS=1
+- This limits active Store HTTP requests to one and prevents overlapping TLS setup peaks.
+- It does not serialize scheduler-free `CancelRequest` with the sole worker's active transaction, so the upstream unsupported close-vs-use path remains. Device validation can show whether lower memory pressure avoids the observed failure, but cannot convert this containment into an upstream race fix.
+- TLS verification, required time sync, and the full certificate bundle remain enabled. No insecure TLS option was enabled.
+
+Generated configuration
+- CONFIG_BROOKESIA_SERVICE_HTTP_WORKER_NUM=1
+- CONFIG_BROOKESIA_SERVICE_HTTP_MAX_CONCURRENT_REQUESTS=1
+- CONFIG_BROOKESIA_SERVICE_HTTP_ENABLE_HTTPS=y
+- CONFIG_BROOKESIA_SERVICE_HTTP_REQUIRE_TLS_VERIFY=y
+- CONFIG_BROOKESIA_SERVICE_HTTP_REQUIRE_TIME_SYNC=y
+- CONFIG_MBEDTLS_INTERNAL_MEM_ALLOC=y
+- CONFIG_MBEDTLS_SSL_IN_CONTENT_LEN=16384
+- CONFIG_MBEDTLS_SSL_OUT_CONTENT_LEN=4096
+- CONFIG_MBEDTLS_CERTIFICATE_BUNDLE=y
+- CONFIG_MBEDTLS_CERTIFICATE_BUNDLE_DEFAULT_FULL=y
+- CONFIG_ESP_WIFI_STATIC_RX_BUFFER_NUM=10
+- CONFIG_ESP_WIFI_RX_BA_WIN=10
+- CONFIG_BROOKESIA_GUI_LVGL_DISPLAY_SOURCE_BUFFER_HEIGHT=50
+- CONFIG_BROOKESIA_GUI_LVGL_DISPLAY_SOURCE_REQUIRE_DOUBLE_BUFFER=y
+- CONFIG_BROOKESIA_SYSTEM_CORE_WORKER_STACK_SIZE=94208
+- CONFIG_BROOKESIA_SERVICE_MANAGER_SECONDARY_SCHEDULER_WORKER_STACK_SIZE=12288
+
+Build result
+- ESP-IDF: 6.0.1
+- Target: esp32s3
+- Fresh isolated configure: PASS
+- Full firmware build/link/image generation: PASS (`Project build complete`)
+- Firmware image: 6,086,880 bytes
+- Firmware SHA-256: 870c7031dfa64dd20347d0879e3753608df37365973a07b609c2697ca98cf72b
+- ELF size: 215,909,440 bytes
+- ELF SHA-256: cc40c08b4da608962624f7dd4daa4e455a8a3e5efaefa149495a4fe7c8f770e1
+- App-partition headroom: 4,665,120 bytes (`0x472f20`, 43%)
+- LittleFS image: 5,120,000 bytes
+- LittleFS SHA-256: 576301fde75b758b679ec178fb3a9a9828bf75f6a6ff1dd24c388acff01b55bb
+- LittleFS remains byte-identical to the accepted image.
+- Image header/checksum/hash: ESP32-S3, DIO, 80 MHz, 16 MB; checksum and validation hash valid.
+- Image validation hash: f6b187b96c443972a7defd1d68ea2752692c1d5bd419b4ca8a23c99e308c2a3a
+
+Static internal-memory comparison against the flashed 2026-09-27 candidate
+- .dram0.data: 59,062 -> 59,062 (delta 0)
+- .dram0.bss: 24,696 -> 24,696 (delta 0)
+- .iram0.text: 113,371 -> 113,371 (delta 0)
+- .iram0.vectors: 1,028 -> 1,028 (delta 0)
+
+Hardware boundary
+- This containment image has not been written to a device.
+- No bootloader, partition table, NVS, LittleFS, app partition, or other device was written during this containment build.
+- Online Store stability, TLS allocation behavior, single-active-request behavior, Home/stop cleanup, and absence of panic/reboot remain physically unverified for this image.
