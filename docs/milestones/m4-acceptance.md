@@ -83,14 +83,14 @@ sdkconfig.defaults
 
 An earlier image was flashed under explicit authorization and preserved NVS, but it repeatedly overflowed the default 64 KiB System Core workers during Settings DOM preload. Diagnostic canaries identified the required JPEG decoder gate and measured worker stacks. The resulting clean baseline app image (`03642f156ace69ab35dc853bc86c950569e5ce50b206f691baa27cccf05123e1`) was then flashed app-only, passed a 90-second fail-closed boot, and completed a physical Settings open/browse/device-page/Home smoke with no reported UI anomaly or fatal signal. It was the accepted baseline before the 2026-09-27 keyboard/Wi-Fi candidate below; the current hardware image is the later M5 HTTP-containment build, which retains the same M4 keyboard and Wi-Fi changes.
 
-Raw recovery and final evidence is preserved under `docs/milestones/evidence/`; the clean boot and combined physical files have SHA-256 `70beabca32097210587e72857d3a5908c65e6f777dedd54dad995a4929b1f095` and `8c7450759a10f404357acdae9a22db851d1039e8ed44f94c24ef5f79084a3020`. Their lifecycle counts and the measured worker calculations are recorded in `M3_ACCEPTANCE.md`.
+Raw recovery and final evidence is preserved under `docs/milestones/evidence/`; the clean boot and combined physical files have SHA-256 `70beabca32097210587e72857d3a5908c65e6f777dedd54dad995a4929b1f095` and `8c7450759a10f404357acdae9a22db851d1039e8ed44f94c24ef5f79084a3020`. Their lifecycle counts and the measured worker calculations are recorded in [M3 acceptance](m3-acceptance.md).
 
 ## 2026-09-27 Keyboard/Wi-Fi Candidate and Current Containment Image
 
 The subsequent Wi-Fi attempt exposed two independent blockers in the accepted image: ESPocket did not provide System Core's keyboard hooks, and ESP-IDF could allocate only 11 of the configured 16 static Wi-Fi RX buffers before returning `ESP_ERR_NO_MEM`. The retained captures are:
 
-- `evidence/M4_M5_CLEAN_WIFI_OFFLINE_ATTEMPT_2026-09-26.txt` (SHA-256 `315a55b8e756de13394771f7a6a069453e5d00b9a7b39c93f1ebbea415227b50`): Settings Wi-Fi page reached, but no successful enable/connect evidence.
-- `evidence/M4_WIFI_INPUT_AND_MEMORY_BLOCKERS_2026-09-26.txt` (SHA-256 `28285ad7e7466841e7409cd0a54c517a07b2212d99a357086a36d716ba9d87f1`): keyboard/input investigation plus the Wi-Fi static-RX allocation failure; contains no password or connection target.
+- `evidence/m4/M4_M5_CLEAN_WIFI_OFFLINE_ATTEMPT_2026-09-26.txt` (SHA-256 `315a55b8e756de13394771f7a6a069453e5d00b9a7b39c93f1ebbea415227b50`): Settings Wi-Fi page reached, but no successful enable/connect evidence.
+- `evidence/m4/M4_WIFI_INPUT_AND_MEMORY_BLOCKERS_2026-09-26.txt` (SHA-256 `28285ad7e7466841e7409cd0a54c517a07b2212d99a357086a36d716ba9d87f1`): keyboard/input investigation plus the Wi-Fi static-RX allocation failure; contains no password or connection target.
 
 The product-only candidate now forwards the official keyboard request/completion hooks to a transient Circular Shell LVGL overlay and changes Wi-Fi RX/BA values to 10/10. It preserves the accepted 50-row double display buffers, 94,208-byte Core workers, and 12,288-byte secondary workers. Full build/link and image validation pass, and the final ELF has zero delta in `.dram0.data`, `.dram0.bss`, `.iram0.text`, and `.iram0.vectors` versus the accepted clean ELF.
 
@@ -110,7 +110,7 @@ Static review also found that Core 0.8.4 broadcasts `KeyboardClosed.Text` servic
 | Network / SNTP | PASS (DEVICE) — credential-safe capture observed network ready and completed SNTP synchronization |
 | Physical keyboard provider lifecycle | PARTIAL PASS — exactly one matching open/close observed; visual/semantic details not separately confirmed |
 
-The immutable host-build-phase record is `evidence/M4_KEYBOARD_WIFI_HOST_BUILD_2026-09-27.txt` (SHA-256 `935045d32dec63c8870ec40639e09b7447042e49bb94043cf24ec862094f374f`); its device-absent statement describes that earlier phase and is superseded only for device status. The later device summary is `evidence/M4_KEYBOARD_WIFI_DEVICE_BOOT_2026-09-27.txt` (SHA-256 `cec46292215317dbb07d7249eb4765983b67a0a5a56daf72530049f7fa550810`). A subsequent interaction recorded exactly one matching keyboard open/close; the conservative boundary is retained in `evidence/M4_KEYBOARD_INTERACTION_2026-09-27.txt` (SHA-256 `ffa041ad2611c9b790294dc5c66b2bcc1b6ba9aecc34a4f7e6554a83978bdcef`). The current hardware image is the later M5 HTTP-containment app (`870c7031dfa64dd20347d0879e3753608df37365973a07b609c2697ca98cf72b`), which retains this keyboard implementation and Wi-Fi 10/10 policy and passed another credential-safe 90-second boot/network/SNTP validation. No keyboard interaction was performed on that later boot; password masking, mode switching, typed input, confirm/cancel distinction, and visual cleanup remain unconfirmed.
+The immutable host-build-phase record is `evidence/m4/M4_KEYBOARD_WIFI_HOST_BUILD_2026-09-27.txt` (SHA-256 `935045d32dec63c8870ec40639e09b7447042e49bb94043cf24ec862094f374f`); its device-absent statement describes that earlier phase and is superseded only for device status. The later device summary is `evidence/m4/M4_KEYBOARD_WIFI_DEVICE_BOOT_2026-09-27.txt` (SHA-256 `cec46292215317dbb07d7249eb4765983b67a0a5a56daf72530049f7fa550810`). A subsequent interaction recorded exactly one matching keyboard open/close; the conservative boundary is retained in `evidence/m4/M4_KEYBOARD_INTERACTION_2026-09-27.txt` (SHA-256 `ffa041ad2611c9b790294dc5c66b2bcc1b6ba9aecc34a4f7e6554a83978bdcef`). The current hardware image is the later M5 HTTP-containment app (`870c7031dfa64dd20347d0879e3753608df37365973a07b609c2697ca98cf72b`), which retains this keyboard implementation and Wi-Fi 10/10 policy and passed another credential-safe 90-second boot/network/SNTP validation. No keyboard interaction was performed on that later boot; password masking, mode switching, typed input, confirm/cancel distinction, and visual cleanup remain unconfirmed.
 
 ## Audio Capability Boundary
 
@@ -119,24 +119,24 @@ M4 does not silently enable recording merely to make the official Sound page ava
 Source and configure analysis proves:
 
 1. Official `AudioPlayback::on_start()` unconditionally acquires `hal::audio::PlaybackIface`.
-2. HAL Adaptor publishes `PlaybackIface` only through Audio Processor.
+2. HAL Adaptor publishes `PlaybackIface` only through Audio Processor; the independently selectable Codec Player exposes a lower-level `CodecPlayerIface` instead.
 3. Audio Processor Kconfig depends on both Codec Player and Codec Recorder.
-4. With `recorder=n`, the processor symbol becomes invisible rather than a readable false value.
-5. HAL Adaptor 0.8.4 nevertheless references that processor symbol in Component Manager dependency conditions, causing `Missing required kconfig option after retry`.
-6. Enabling recorder would make the configuration resolve but violate ESPocket's product boundary; patching or copying `managed_components/` is also forbidden.
+4. With `recorder=n`, the processor symbol becomes invisible rather than a readable false value, so no `PlaybackIface` is registered.
+5. HAL Adaptor 0.8.4 nevertheless references that processor symbol in Component Manager dependency conditions, causing `Missing required kconfig option after retry` in the attempted official Audio-service configuration.
+6. Enabling recorder would make the official service path resolvable but violate ESPocket's playback-only product boundary; patching or copying `managed_components/` is also forbidden.
 
 Result:
 
 | Capability | 状态 | 备注 |
 |---|---|---|
-| Audio Device HAL | DISABLED | only build-safe unpatched boundary that does not enable the HAL Adaptor recorder implementation |
-| Codec player HAL | DISABLED | playback-only cannot be represented safely by HAL Adaptor 0.8.4 manifest conditions |
+| Audio Device HAL | DISABLED | product does not enable a partial HAL that cannot satisfy the official Audio-service contract |
+| Codec player HAL | DISABLED (PRODUCT) | can be selected without recorder, but exposes `CodecPlayerIface`, not the `PlaybackIface` required by `AudioPlayback` |
 | Codec recorder HAL | DISABLED | product constraint |
 | Audio processor | DISABLED | requires both player and recorder |
 | AudioPlayback service | DISABLED | prevents ServiceManager startup failure without `PlaybackIface` |
-| Settings Sound/Volume | BLOCKED | unavailable until an upstream-fixed adaptor can represent playback-only safely |
+| Settings Sound/Volume | BLOCKED | unavailable until the official HAL/Audio-service path provides playback control with recorder disabled |
 
-This is a verified upstream Kconfig/manifest capability boundary, not a reason to fork HAL, patch managed code, enable the unwanted HAL Adaptor recorder implementation, or claim a false PASS.
+This is a verified upstream HAL/Audio-service capability boundary, not a reason to fork HAL, patch managed code, enable the unwanted HAL Adaptor recorder implementation, or claim a false PASS. The 2026-09-28 released-version and immutable-`master` recheck is recorded in [`../upstream/status-2026-09-28.md`](../upstream/status-2026-09-28.md); it found no official playback-only fix.
 
 ## Settings Resource and Round-Screen Boundary
 
@@ -172,7 +172,7 @@ Official Settings 0.8.3 variants include exact 1024×600, 800×480, 480×480, po
 
 1. Complete the remaining keyboard visual/semantic proof: immediate masking, typing, mode switching, confirm versus cancel, and cleanup, with credentials entered only on-device and no password or SSID retained.
 2. Exercise Storage visibility, Battery data, and Developer/debug controls on hardware.
-3. Consume an upstream-fixed HAL Adaptor whose dependency conditions can represent player `y`, recorder `n`, processor `n` before Sound/Volume can pass without violating the product constraint.
+3. Consume an official HAL/Audio-service fix that provides the `PlaybackIface` required by `AudioPlayback` with Codec Player enabled and Codec Recorder disabled before Sound/Volume can pass without violating the product constraint.
 
 ## Result
 

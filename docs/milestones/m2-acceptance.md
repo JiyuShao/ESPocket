@@ -96,7 +96,7 @@ M2 的设备端 50-cycle lifecycle/heap gate 与 normal image 真机 Launcher/He
 
 - 用户明确授权在 `/dev/cu.usbmodem2101` 先写 stress、后恢复 normal，且不得擦除整片 Flash 或 NVS。
 - Stress image 的 bootloader、partition table、app 和 `littlefs_data` 均由 esptool 写入并通过哈希校验；未执行 erase-all 或 NVS 擦除。
-- Accepted raw dataset: [`evidence/M2_LIFECYCLE_2026-09-26.txt`](evidence/M2_LIFECYCLE_2026-09-26.txt)，47,445 bytes，SHA-256 `543b0eaf8c0fa77e34200b77c4811ad64163afdd8469a66d3ca1960071a9c1ee`。
+- Accepted raw dataset: [`evidence/m2/M2_LIFECYCLE_2026-09-26.txt`](evidence/m2/M2_LIFECYCLE_2026-09-26.txt)，47,445 bytes，SHA-256 `543b0eaf8c0fa77e34200b77c4811ad64163afdd8469a66d3ca1960071a9c1ee`。
 - Marker cardinality：BEGIN `1`；CYCLE `50`；COMPLETE `1`；`ESPocket started` `1`；cycles 精确为 `1..50`。
 - 每轮均为 `start=Running stop=Stopped gui=Unloaded`；无 `M2_STRESS FAIL`、panic、assert、heap corruption、watchdog failure、run-local reset 或 Core GUI cleanup warning。
 - cycles 2–6 对比 46–50 的 stopped-state median：
