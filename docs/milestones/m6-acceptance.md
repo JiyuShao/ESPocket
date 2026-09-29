@@ -8,7 +8,7 @@
 - M4: `BLOCKED`，不阻止 M6 进入
 - M5: `BLOCKED`，不阻止 M6 进入
 
-本文定义 M6 的范围与 PASS 门槛。实现前后都必须遵守 [`../design/interaction.md`](../design/interaction.md)。
+本文定义 M6 的范围与 PASS 门槛。实现前后都必须遵守 [`../design/product/interaction-model.md`](../design/product/interaction-model.md)。
 
 ## 目标
 

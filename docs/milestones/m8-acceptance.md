@@ -7,7 +7,7 @@
 - Runtime validation dependency: M3 `PASS`
 - M8 cannot become `PASS` until both dependency branches and all required evidence pass
 
-本文定义 M8 的范围与 PASS 门槛。实现和 App 指导必须遵守 [`../design/interaction.md`](../design/interaction.md)。
+本文定义 M8 的范围与 PASS 门槛。实现和 App 指导必须遵守 [`../design/product/interaction-model.md`](../design/product/interaction-model.md)。
 
 ## 目标
 
@@ -48,7 +48,7 @@
 | Display State | 两种执行模型遵守相同息屏、唤醒和 fallback 规则 | PASS（STATIC，真机待验收） |
 | Reclaim semantics | App 不依赖后台驻留；回收后重新启动进入 App Root | PASS（STATIC，真机待验收） |
 | Gesture ownership | App 保留 Tap、Scroll、普通横滑、Long Press；系统保留 Edge Back 与 PWR | PASS（STATIC，真机待验收） |
-| Guidance | 四类页面指导写入开发文档，但不建立模板框架 | PASS（[`../design/app-interaction.md`](../design/app-interaction.md)） |
+| Guidance | 四类页面指导写入开发文档，但不建立模板框架 | PASS（[`../design/product/app-contract.md`](../design/product/app-contract.md)） |
 | Minimal Runtime sample | 只实现验证契约所需的最小 Root / Detail 路径 | PASS（Toolkit build + staging，真机待验收） |
 | Build | Native 与 Runtime 目标的 clean build/link/staging 成功 | PASS（2026-09-28，dependency-gated） |
 | Static checks | JSON、package、脚本或项目既有检查全部通过 | PASS（Toolkit validation + JSON parse + `git diff --check`） |

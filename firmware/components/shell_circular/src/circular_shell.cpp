@@ -39,6 +39,7 @@ constexpr std::string_view STEP_BRIGHTNESS_ACTION = "shell.step_brightness";
 constexpr std::string_view TOGGLE_WIFI_ACTION = "shell.toggle_wifi";
 constexpr std::string_view PAGE_FLOW = "shell_pages";
 constexpr std::string_view WATCH_FACE_TIME_PATH = "/watch_face/time";
+constexpr std::string_view WATCH_FACE_DATE_PATH = "/watch_face/date";
 constexpr std::string_view BATTERY_CARD_PATH = "/battery_card/value";
 constexpr std::string_view BRIGHTNESS_CARD_PATH = "/brightness_card/value";
 constexpr std::string_view QUICK_BATTERY_PATH = "/quick_settings/battery";
@@ -48,7 +49,6 @@ constexpr std::string_view HOME_INTENT_TIMER = "espocket.home_intent";
 constexpr int HOME_INTENT_INTERVAL_MS = 50;
 constexpr std::string_view STATUS_TIMER = "espocket.status";
 constexpr int STATUS_INTERVAL_MS = 30'000;
-constexpr std::string_view CLOCK_PATH = "/overlay/status/clock";
 constexpr std::string_view WIFI_PATH = "/overlay/status/wifi";
 constexpr std::string_view BATTERY_PATH = "/overlay/status/battery";
 constexpr int64_t SCREEN_TIMEOUT_US =
@@ -160,6 +160,19 @@ std::string make_clock_text()
     return text;
 }
 
+std::string make_date_text()
+{
+    const auto now = std::chrono::system_clock::now();
+    const auto value = std::chrono::system_clock::to_time_t(now);
+    std::tm local_time{};
+    localtime_r(&value, &local_time);
+    char text[20] = {};
+    if (std::strftime(text, sizeof(text), "%a, %b %d", &local_time) == 0) {
+        return "Date unavailable";
+    }
+    return text;
+}
+
 constexpr std::string_view SHELL_JSON = R"json({
   "version": "0.1.0",
   "assets": [
@@ -167,35 +180,49 @@ constexpr std::string_view SHELL_JSON = R"json({
       "type": "viewScreen",
       "id": "watch_face",
       "commonProps": { "scrollable": false },
-      "style": { "bgColor": "#05070b", "padding": 0 },
+      "style": { "bgColor": "#070a10", "padding": 0 },
       "layout": {
         "type": "flex",
         "flexFlow": "column",
         "mainAlign": "center",
         "crossAlign": "center",
-        "gap": "14dp"
+        "gap": "10dp"
       },
       "children": [
         {
           "type": "label",
-          "id": "time",
-          "labelProps": { "text": "--:--" },
-          "style": { "textColor": "#ffffff", "fontSize": "56sp", "textAlign": "center" },
-          "placement": { "width": "300dp", "height": "72dp" }
+          "id": "eyebrow",
+          "labelProps": { "text": "LOCAL TIME" },
+          "style": { "textColor": "#718096", "fontSize": "14sp", "textAlign": "center" },
+          "placement": { "width": "220dp", "height": "22dp" }
         },
         {
           "type": "label",
-          "id": "date_hint",
-          "labelProps": { "text": "ESPocket" },
-          "style": { "textColor": "#8d98a8", "fontSize": "20sp", "textAlign": "center" },
-          "placement": { "width": "260dp", "height": "30dp" }
+          "id": "time",
+          "labelProps": { "text": "--:--" },
+          "style": { "textColor": "#f8fafc", "fontSize": "76sp", "textAlign": "center" },
+          "placement": { "width": "340dp", "height": "100dp" }
+        },
+        {
+          "type": "label",
+          "id": "date",
+          "labelProps": { "text": "Waiting for sync" },
+          "style": { "textColor": "#cbd5e1", "fontSize": "20sp", "textAlign": "center" },
+          "placement": { "width": "280dp", "height": "32dp" }
+        },
+        {
+          "type": "container",
+          "id": "accent",
+          "commonProps": { "clickable": false, "scrollable": false },
+          "style": { "bgColor": "#2dd4bf", "radius": "2dp", "padding": 0 },
+          "placement": { "width": "38dp", "height": "4dp" }
         },
         {
           "type": "label",
           "id": "launcher_hint",
-          "labelProps": { "text": "Swipe up for apps" },
-          "style": { "textColor": "#657286", "fontSize": "16sp", "textAlign": "center" },
-          "placement": { "width": "260dp", "height": "26dp" }
+          "labelProps": { "text": "APPS" },
+          "style": { "textColor": "#64748b", "fontSize": "14sp", "textAlign": "center" },
+          "placement": { "width": "160dp", "height": "22dp" }
         }
       ]
     },
@@ -242,105 +269,78 @@ constexpr std::string_view SHELL_JSON = R"json({
       "type": "viewScreen",
       "id": "launcher",
       "commonProps": { "scrollable": false },
-      "style": { "bgColor": "#07090d", "padding": 0 },
+      "style": { "bgColor": "#070a10", "padding": 0 },
       "layout": {
         "type": "flex",
         "flexFlow": "column",
         "mainAlign": "center",
         "crossAlign": "center",
-        "gap": "6dp"
+        "gap": "8dp"
       },
       "children": [
         {
           "type": "label",
-          "id": "brand",
-          "labelProps": { "text": "ESPocket" },
-          "style": { "textColor": "#f4f7fb", "fontSize": "28sp" },
-          "placement": { "width": "220dp", "height": "38dp" }
+          "id": "title",
+          "labelProps": { "text": "Apps" },
+          "style": { "textColor": "#f8fafc", "fontSize": "34sp", "textAlign": "center" },
+          "placement": { "width": "220dp", "height": "44dp" }
         },
         {
           "type": "label",
           "id": "caption",
-          "labelProps": { "text": "Circular Shell" },
-          "style": { "textColor": "#8d98a8", "fontSize": "16sp" },
-          "placement": { "width": "220dp", "height": "24dp" }
+          "labelProps": { "text": "ESPocket" },
+          "style": { "textColor": "#64748b", "fontSize": "15sp", "textAlign": "center" },
+          "placement": { "width": "220dp", "height": "22dp" }
         },
         {
-          "type": "button",
-          "id": "hello_native",
-          "events": [ { "type": "clicked", "action": "shell.open_hello_native" } ],
-          "style": { "bgColor": "#2157d5", "radius": "28dp" },
-          "placement": { "width": "210dp", "height": "48dp" },
+          "type": "container",
+          "id": "app_row_primary",
+          "commonProps": { "scrollable": false },
+          "layout": { "type": "flex", "flexFlow": "row", "mainAlign": "spaceBetween", "crossAlign": "center" },
+          "style": { "padding": 0 },
+          "placement": { "width": "294dp", "height": "90dp" },
           "children": [
             {
-              "type": "label",
-              "id": "label",
-              "labelProps": { "text": "Hello Native" },
-              "style": { "textColor": "#ffffff", "fontSize": "20sp" },
-              "placement": { "mode": "relative", "align": "center" }
-            }
-          ]
-        },
-        {
-          "type": "button",
-          "id": "hello_runtime",
-          "events": [ { "type": "clicked", "action": "shell.open_hello_runtime" } ],
-          "style": { "bgColor": "#7047eb", "radius": "28dp" },
-          "placement": { "width": "210dp", "height": "48dp" },
-          "children": [
+              "type": "button",
+              "id": "hello_native",
+              "events": [ { "type": "clicked", "action": "shell.open_hello_native" } ],
+              "style": { "bgColor": "#1d4ed8", "radius": "30dp" },
+              "placement": { "width": "142dp", "height": "90dp" },
+              "children": [ { "type": "label", "id": "label", "labelProps": { "text": "Native" }, "style": { "textColor": "#ffffff", "fontSize": "18sp" }, "placement": { "mode": "relative", "align": "center" } } ]
+            },
             {
-              "type": "label",
-              "id": "label",
-              "labelProps": { "text": "Hello Runtime" },
-              "style": { "textColor": "#ffffff", "fontSize": "20sp" },
-              "placement": { "mode": "relative", "align": "center" }
+              "type": "button",
+              "id": "hello_runtime",
+              "events": [ { "type": "clicked", "action": "shell.open_hello_runtime" } ],
+              "style": { "bgColor": "#6d28d9", "radius": "30dp" },
+              "placement": { "width": "142dp", "height": "90dp" },
+              "children": [ { "type": "label", "id": "label", "labelProps": { "text": "Runtime" }, "style": { "textColor": "#ffffff", "fontSize": "18sp" }, "placement": { "mode": "relative", "align": "center" } } ]
             }
           ]
         },
         {
           "type": "container",
-          "id": "system_apps",
+          "id": "app_row_system",
           "commonProps": { "scrollable": false },
-          "layout": {
-            "type": "flex",
-            "flexFlow": "row",
-            "mainAlign": "spaceBetween",
-            "crossAlign": "center"
-          },
+          "layout": { "type": "flex", "flexFlow": "row", "mainAlign": "spaceBetween", "crossAlign": "center" },
           "style": { "padding": 0 },
-          "placement": { "width": "210dp", "height": "48dp" },
+          "placement": { "width": "294dp", "height": "90dp" },
           "children": [
             {
               "type": "button",
               "id": "settings",
               "events": [ { "type": "clicked", "action": "shell.open_settings" } ],
-              "style": { "bgColor": "#277b65", "radius": "24dp" },
-              "placement": { "width": "102dp", "height": "48dp" },
-              "children": [
-                {
-                  "type": "label",
-                  "id": "label",
-                  "labelProps": { "text": "Settings" },
-                  "style": { "textColor": "#ffffff", "fontSize": "16sp" },
-                  "placement": { "mode": "relative", "align": "center" }
-                }
-              ]
+              "style": { "bgColor": "#0f766e", "radius": "30dp" },
+              "placement": { "width": "142dp", "height": "90dp" },
+              "children": [ { "type": "label", "id": "label", "labelProps": { "text": "Settings" }, "style": { "textColor": "#ffffff", "fontSize": "17sp" }, "placement": { "mode": "relative", "align": "center" } } ]
             },
             {
               "type": "button",
               "id": "app_store",
               "events": [ { "type": "clicked", "action": "shell.open_app_store" } ],
-              "style": { "bgColor": "#a05b25", "radius": "24dp" },
-              "placement": { "width": "102dp", "height": "48dp" },
-              "children": [
-                {
-                  "type": "label",
-                  "id": "label",
-                  "labelProps": { "text": "Store" },
-                  "style": { "textColor": "#ffffff", "fontSize": "16sp" },
-                  "placement": { "mode": "relative", "align": "center" }
-                }
-              ]
+              "style": { "bgColor": "#9a5a16", "radius": "30dp" },
+              "placement": { "width": "142dp", "height": "90dp" },
+              "children": [ { "type": "label", "id": "label", "labelProps": { "text": "Store" }, "style": { "textColor": "#ffffff", "fontSize": "18sp" }, "placement": { "mode": "relative", "align": "center" } } ]
             }
           ]
         }
@@ -363,35 +363,28 @@ constexpr std::string_view SHELL_JSON = R"json({
           "type": "container",
           "id": "status",
           "commonProps": { "clickable": false, "scrollable": false },
-          "style": { "bgColor": "#1c2430", "radius": "29dp", "padding": 0 },
+          "style": { "bgColor": "#111827", "radius": "21dp", "padding": 0 },
           "placement": {
             "mode": "absolute",
-            "x": "105dp",
-            "y": "44dp",
-            "width": "256dp",
-            "height": "58dp"
+            "x": "113dp",
+            "y": "42dp",
+            "width": "240dp",
+            "height": "42dp"
           },
           "children": [
             {
               "type": "label",
               "id": "wifi",
               "labelProps": { "text": "Wi-Fi: ?" },
-              "style": { "textColor": "#aeb9c8", "fontSize": "18sp", "textAlign": "left" },
-              "placement": { "mode": "absolute", "x": "14dp", "y": "32dp", "width": "122dp", "height": "22dp" }
-            },
-            {
-              "type": "label",
-              "id": "clock",
-              "labelProps": { "text": "--:--" },
-              "style": { "textColor": "#ffffff", "fontSize": "20sp", "textAlign": "center" },
-              "placement": { "mode": "absolute", "x": "80dp", "y": "5dp", "width": "100dp", "height": "25dp" }
+              "style": { "textColor": "#94a3b8", "fontSize": "15sp", "textAlign": "left" },
+              "placement": { "mode": "absolute", "x": "14dp", "y": "10dp", "width": "112dp", "height": "22dp" }
             },
             {
               "type": "label",
               "id": "battery",
               "labelProps": { "text": "Bat: ?" },
-              "style": { "textColor": "#aeb9c8", "fontSize": "18sp", "textAlign": "right" },
-              "placement": { "mode": "absolute", "x": "140dp", "y": "32dp", "width": "102dp", "height": "22dp" }
+              "style": { "textColor": "#94a3b8", "fontSize": "15sp", "textAlign": "right" },
+              "placement": { "mode": "absolute", "x": "126dp", "y": "10dp", "width": "100dp", "height": "22dp" }
             }
           ]
         },
@@ -402,9 +395,9 @@ constexpr std::string_view SHELL_JSON = R"json({
           "style": { "bgColor": "#e6ebf2", "radius": "3dp", "padding": 0 },
           "placement": {
             "mode": "absolute",
-            "x": "191dp",
-            "y": "438dp",
-            "width": "84dp",
+            "x": "201dp",
+            "y": "439dp",
+            "width": "64dp",
             "height": "6dp"
           }
         }
@@ -1096,7 +1089,8 @@ void CircularShell::hide_keyboard(
 
 void CircularShell::start_status()
 {
-    set_status_text(CLOCK_PATH, "--:--");
+    set_status_text(WATCH_FACE_TIME_PATH, "--:--");
+    set_status_text(WATCH_FACE_DATE_PATH, "Waiting for sync");
     set_status_text(WIFI_PATH, "Wi-Fi: ?");
     set_status_text(BATTERY_PATH, "Bat: ?");
 
@@ -1241,14 +1235,16 @@ void CircularShell::refresh_status()
 void CircularShell::refresh_clock()
 {
     std::string text = "--:--";
+    std::string date = "Waiting for sync";
     if (sntp_binding_.is_valid()) {
         auto synced = SNTPHelper::call_function_sync<bool>(SNTPHelper::FunctionId::IsTimeSynced);
         if (synced && *synced) {
             text = make_clock_text();
+            date = make_date_text();
         }
     }
-    set_status_text(CLOCK_PATH, text);
     set_status_text(WATCH_FACE_TIME_PATH, std::move(text));
+    set_status_text(WATCH_FACE_DATE_PATH, std::move(date));
 }
 
 void CircularShell::refresh_wifi()

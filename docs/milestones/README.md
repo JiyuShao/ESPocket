@@ -6,7 +6,7 @@
 
 | 阶段 | 状态 | 文档 | 下一条件 |
 |---|---|---|---|
-| M0 Official Baseline | `WAIVED` | [项目设计中的 M0 决策](../design/project.md#m0-决策) | 无；不得改写为 `PASS` |
+| M0 Official Baseline | `WAIVED` | [M0 豁免决策](#m0-official-baseline-waiver) | 无；不得改写为 `PASS` |
 | M1 ESPocket System | `PASS` | [M1 验收](m1-acceptance.md) | 已完成并标记 `v0.1-system` |
 | M2 Native App Validation | `PASS` | [M2 验收](m2-acceptance.md) | 已完成 |
 | M3 Runtime App Validation | `PASS` | [M3 验收](m3-acceptance.md) | 已完成；独立 Core `.bpk` file-install 门槛由项目所有者接受 |
@@ -15,6 +15,13 @@
 | M6 Home & Display State | `IN PROGRESS` | [M6 验收](m6-acceptance.md) | 实现并完成真机验收 |
 | M7 Navigation Surfaces | `NOT ENTERED` | [M7 规范](m7-acceptance.md) | M6 通过 |
 | M8 App Interaction Contract | `NOT ENTERED` | [M8 规范](m8-acceptance.md) | Native 依赖 M7；Runtime 验证另依赖 M3 |
+
+## M0 Official Baseline waiver
+
+- 状态：`WAIVED`
+- 日期：2026-09-25
+- 决策：项目所有者选择直接进入 M1。
+- 影响：官方基线风险被接受，并在 M1 中暴露和处理；M0 不得标记为 `PASS`。
 
 ## 证据组织
 

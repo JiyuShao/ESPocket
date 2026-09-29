@@ -45,7 +45,7 @@ Cards  ←─────────── Watch Face ────────�
 
 任一时刻只有一个顶层 Surface 可见。临时系统层可以覆盖当前 Surface，但不进入普通 Back 栈。
 
-## Watch Face 与 Home Space
+## 表盘（Watch Face）与主空间（Home Space）
 
 Watch Face 是 Home 的固定目标，也是 Home Space 的中心锚点。
 
@@ -59,7 +59,7 @@ Watch Face 是 Home 的固定目标，也是 Home Space 的中心锚点。
 
 点击表盘快捷操作、长按自定义、更换表盘、Card 排序管理、抬腕唤醒和轻触唤醒不属于 M6–M8 的基础契约。
 
-### Cards
+### 卡片（Cards）
 
 Card 必须是单页、单主题的高频信息或快速操作界面，可以：
 
@@ -75,7 +75,7 @@ Cards 构成以 Watch Face 为固定锚点的有序序列。模型允许未来�
 Battery ← Brightness ← Watch Face → Weather → Device
 ```
 
-## Launcher
+## 启动器（Launcher）
 
 Launcher 的唯一职责是找到并启动 App。它不是 Home。
 
@@ -85,7 +85,7 @@ Launcher 的唯一职责是找到并启动 App。它不是 Home。
 - PWR 短按必须返回 Watch Face。
 - M6 可以继续复用当前固定入口 Launcher；动态 App 同步不属于 M6。
 
-## Quick Settings
+## 快捷设置（Quick Settings）
 
 Quick Settings 必须从 Watch Face 下滑进入，并区分两类操作：
 
@@ -112,7 +112,7 @@ Optional Detail
 
 能在当前页面完成或展示的信息不应该增加 Detail 页面。
 
-### Back
+### 返回（Back）
 
 Back 是页面级导航，不等同于 Home。
 

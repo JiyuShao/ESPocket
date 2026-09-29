@@ -6,7 +6,7 @@
 - Dependency: M6 `PASS`
 - M4–M5 may remain `BLOCKED`, but their blockers remain release gates
 
-本文定义 M7 的范围与 PASS 门槛。实现必须遵守 [`../design/interaction.md`](../design/interaction.md)。
+本文定义 M7 的范围与 PASS 门槛。实现必须遵守 [`../design/product/interaction-model.md`](../design/product/interaction-model.md)。
 
 ## 目标
 

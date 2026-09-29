@@ -155,7 +155,7 @@ System Core 0.8.4 provides `verify_app_package_release()` with RSA-PSS-SHA256 an
 
 Result: compiling the verifier is not equivalent to enforcing it.
 
-The required common install/discovery gate, immutable verify-to-unpack boundary, trusted reboot receipt, transactional rollback, cleanup policy, and acceptance matrix are defined in [`../design/package-trust.md`](../design/package-trust.md). The design is complete; enforcement remains blocked on upstream Core/Store integration and a signed ESPocket-compatible publication route.
+The required common install/discovery gate, immutable verify-to-unpack boundary, trusted reboot receipt, transactional rollback, cleanup policy, and acceptance matrix are defined in [`../design/policies/package-trust.md`](../design/policies/package-trust.md). The design is complete; enforcement remains blocked on upstream Core/Store integration and a signed ESPocket-compatible publication route.
 
 ### Runtime keyboard event isolation
 
@@ -214,7 +214,7 @@ The Native App Store itself has no supported-system restriction and can be insta
 | Install compatible official BPK | BLOCKED | no known official `espocket`-compatible package |
 | Update | BLOCKED | requires a compatible installed package |
 | Uninstall | BLOCKED | requires a compatible installed package |
-| Launcher sync for downloaded apps | POLICY DEFINED / IMPLEMENTATION BLOCKED | [`../design/launcher-sync.md`](../design/launcher-sync.md) keeps fixed product entries separate and reconciles trusted Runtime Apps from Core; exposure stays disabled until trust and online stability gates pass |
+| Launcher sync for downloaded apps | POLICY DEFINED / IMPLEMENTATION BLOCKED | [`../design/policies/launcher-sync.md`](../design/policies/launcher-sync.md) keeps fixed product entries separate and reconciles trusted Runtime Apps from Core; exposure stays disabled until trust and online stability gates pass |
 | Public ESPocket publication path | BLOCKED | no official public route found |
 | Store runtime stability | PASS (OFFLINE + CURRENT 1/1 CACHED) / FAIL (PRIOR 2/2 + CURRENT 1/1 ONLINE) | current containment passed cached Store/Home but panicked/rebooted during explicit online Refresh |
 | Long-run package lifecycle stability | NOT TESTED | no compatible trusted Store flow; online Store is already device-failed before package lifecycle |
@@ -223,9 +223,9 @@ The Native App Store itself has no supported-system restriction and can be insta
 
 1. Consume an upstream HTTP/Store/HAL fix that serializes cancellation/timeouts with active ESP HTTP client operations, then rebuild and repeat the non-download Refresh validation. The current 1/1 containment image already failed with a symbolized TLS-handshake `LoadProhibited`; no further reproduction is required. Read-only upstream status is recorded in [`../upstream/status-2026-09-28.md`](../upstream/status-2026-09-28.md), and an unpublished Issue draft is retained at [`../upstream/issues/http-cancel-race.md`](../upstream/issues/http-cancel-race.md).
 2. Obtain an official BPK whose `systems` allows `espocket`, plus a supported publication/update route.
-3. Upstream Store/Core must enforce the common install and reboot-discovery trust contract defined in [`../design/package-trust.md`](../design/package-trust.md) before ESPocket can claim verified package distribution.
+3. Upstream Store/Core must enforce the common install and reboot-discovery trust contract defined in [`../design/policies/package-trust.md`](../design/policies/package-trust.md) before ESPocket can claim verified package distribution.
 4. Upstream Core must owner-scope `KeyboardClosed` delivery and/or unconditionally release Runtime resources after lifecycle stop failure before arbitrary downloaded Runtime code can be treated as isolated.
-5. Implement and device-validate [`../design/launcher-sync.md`](../design/launcher-sync.md) only after package trust and online HTTP stability pass; the current fixed Launcher remains the fail-closed behavior.
+5. Implement and device-validate [`../design/policies/launcher-sync.md`](../design/policies/launcher-sync.md) only after package trust and online HTTP stability pass; the current fixed Launcher remains the fail-closed behavior.
 
 ## Result
 

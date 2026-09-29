@@ -4,8 +4,9 @@
 
 ## 快速入口
 
-- [设计文档](design/README.md)：产品架构、交互规范、package trust 与 Launcher 同步策略。
-- [交互设计](design/interaction.md)：Home、Launcher、Quick Settings、App 导航与圆屏交互约束。
+- [设计文档](design/README.md)：产品约束、架构、交互契约与产品策略。
+- [架构图集](design/architecture/README.md)：系统上下文、分层、模块协作、生命周期、导航和设备能力。
+- [系统交互模型](design/product/interaction-model.md)：Home、Launcher、Quick Settings、App 导航与圆屏交互约束。
 - [Milestone 总览](milestones/README.md)：M1–M8 状态、验收文档与下一解锁条件。
 - [上游状态](upstream/README.md)：Brookesia 阻塞项、核查记录与待提交 Issue。
 
@@ -14,7 +15,7 @@
 ```text
 docs/
 ├── README.md                 # 文档入口与维护规则
-├── design/                   # 稳定设计、交互规范和产品政策
+├── design/                   # 产品、架构、交互契约和产品策略
 ├── milestones/               # 阶段规范、验收结果和原始证据
 │   └── evidence/             # 按阶段归档的不可变记录
 └── upstream/                 # 上游版本核查、Issue 草稿与附件
