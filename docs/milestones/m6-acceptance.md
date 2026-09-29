@@ -83,7 +83,7 @@ PWR → Watch Face
 | Resume fallback | 目标失效时只回 Watch Face | PASS（STATIC，2026-09-28） |
 | Touch while off | Screen Off 时页面动作不可被触摸触发 | PASS（STATIC，真机待验收） |
 | BOOT | 不产生日常导航动作 | PASS（STATIC，真机待验收） |
-| Build | 正常固件 clean build/link 成功 | PASS（2026-09-28） |
+| Build | 正常固件 clean build/link 成功 | PASS（2026-09-29，当前候选） |
 | Static checks | JSON、脚本或项目既有检查全部通过 | PASS（JSON parse + `git diff --check`） |
 
 ## Hardware Acceptance
@@ -126,3 +126,5 @@ PWR → Watch Face
 项目所有者已明确授权启动 M6–M8。实施遵守阶段依赖：当前仅 M6 正式进入；M7 等待 M6 `PASS`，M8 等待 M7 `PASS`。
 
 主机侧实现与构建记录见 [`evidence/m6/M6_HOST_BUILD_2026-09-28.txt`](evidence/m6/M6_HOST_BUILD_2026-09-28.txt)。该证据不替代本页规定的真机按键、显示和触摸验收，因此 M6 保持 `IN PROGRESS`。
+
+当前工作树候选重新完成隔离构建与 Shell 资源路径检查，见 [`evidence/m6/M6_M8_OFFLINE_BUILD_2026-09-29.txt`](evidence/m6/M6_M8_OFFLINE_BUILD_2026-09-29.txt)。真机执行顺序见[执行清单](hardware-acceptance-runbook.md)；回收 fallback 尚需可控触发方式，所有真机项仍为 `NOT TESTED`。

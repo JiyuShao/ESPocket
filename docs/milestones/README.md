@@ -12,7 +12,7 @@
 | M3 Runtime App Validation | `PASS` | [M3 验收](m3-acceptance.md) | 已完成；独立 Core `.bpk` file-install 门槛由项目所有者接受 |
 | M4 Device Capabilities | `BLOCKED` | [M4 验收](m4-acceptance.md) | 补齐设备检查并等待 playback-only 上游修复 |
 | M5 Application Ecosystem | `BLOCKED` | [M5 验收](m5-acceptance.md) | 解决 HTTP race、trust gate、兼容包与发布路径 |
-| M6 Home & Display State | `IN PROGRESS` | [M6 验收](m6-acceptance.md) | 实现并完成真机验收 |
+| M6 Home & Display State | `IN PROGRESS` | [M6 验收](m6-acceptance.md) | 完成真机验收 |
 | M7 Navigation Surfaces | `NOT ENTERED` | [M7 规范](m7-acceptance.md) | M6 通过 |
 | M8 App Interaction Contract | `NOT ENTERED` | [M8 规范](m8-acceptance.md) | Native 依赖 M7；Runtime 验证另依赖 M3 |
 
@@ -35,3 +35,5 @@
 - `m7-m8/`：导航 Surface、App 交互契约与 clean build 证据。
 
 跨阶段证据只保留一份，并由所有相关验收文档链接到同一路径。
+
+真机操作顺序、固定次数与原始记录模板见[真机验收执行清单](hardware-acceptance-runbook.md)。清单只供执行，不改变各阶段的验收门槛或当前状态。

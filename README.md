@@ -8,7 +8,7 @@ ESPocket 负责产品平台层；ESP-Brookesia 提供基础应用框架。V0.x �
 
 ## 当前阶段
 
-当前已实施至 **M5 — Application Ecosystem** 的可执行边界：
+当前已完成 M1–M3；M4、M5 仍受阻。**M6 — Home & Display State** 已完成主机侧实现，等待真机验收；M7、M8 的源码已提前开发，但按阶段依赖尚未进入验收。以下为当前固件装配入口：
 
 ```text
 app_main

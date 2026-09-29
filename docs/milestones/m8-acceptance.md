@@ -112,3 +112,5 @@
 `NOT ENTERED`
 
 M8 Native/Runtime 契约源码已按项目所有者授权提前开发，并通过 Toolkit、主机构建、staging 与静态检查；记录见 [`evidence/m7-m8/M7_M8_HOST_BUILD_2026-09-28.txt`](evidence/m7-m8/M7_M8_HOST_BUILD_2026-09-28.txt)。由于 M7 尚未 `PASS`，M8 仍保持 `NOT ENTERED`，所有真机和 lifecycle/heap 项保持 `NOT TESTED`。
+
+当前工作树固件重新隔离构建的记录见 [`evidence/m6/M6_M8_OFFLINE_BUILD_2026-09-29.txt`](evidence/m6/M6_M8_OFFLINE_BUILD_2026-09-29.txt)；Runtime Toolkit 与 staging 门槛沿用上方 2026-09-28 证据。回收与无效来源路径在真机执行前还需可控触发方式，详见[执行清单](hardware-acceptance-runbook.md)。

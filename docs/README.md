@@ -31,10 +31,12 @@ docs/
 | M3 | `PASS` | Runtime 集成与生命周期已验收；独立 `.bpk` file-install 门槛由项目所有者接受 |
 | M4 | `BLOCKED` | 部分设备能力未验收；Audio 受上游边界阻塞 |
 | M5 | `BLOCKED` | HTTP cancel race、package trust 与兼容发布路径 |
-| M6 | `IN PROGRESS` | Watch Face、PWR 与显示状态闭环实施中 |
+| M6 | `IN PROGRESS` | Watch Face、PWR 与显示状态主机侧实现完成；真机验收未执行 |
 | M7–M8 | `NOT ENTERED` | 源码已提前开发并通过主机侧门槛；按依赖顺序等待真机验收 |
 
 详细判定和证据入口见 [Milestone 总览](milestones/README.md)。
+
+真机返回后的执行顺序与记录模板见 [真机验收执行清单](milestones/hardware-acceptance-runbook.md)。
 
 ## 维护规则
 

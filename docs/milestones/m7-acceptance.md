@@ -69,7 +69,7 @@ Any Screen On Non-Home Surface → PWR → Watch Face
 | Gesture ownership | Edge Back 不占用普通横滑；上下滑仍可滚动 | PASS（STATIC，真机待验收） |
 | Existing services | Battery、Brightness、Wi-Fi、Settings 复用现有能力 | PASS（HOST BUILD + STATIC，真机待验收） |
 | No premature framework | 无通用 Card SDK、插件框架或编辑器 | PASS（STATIC） |
-| Build | 正常固件 clean build/link 成功 | PASS（2026-09-28，dependency-gated） |
+| Build | 正常固件 clean build/link 成功 | PASS（2026-09-29，dependency-gated） |
 | Static checks | JSON、脚本或项目既有检查全部通过 | PASS（JSON parse + `git diff --check`） |
 
 ## Hardware Acceptance
@@ -134,3 +134,5 @@ Watch Face
 `NOT ENTERED`
 
 M7 源码已按项目所有者授权提前开发，并通过主机构建与静态检查；记录见 [`evidence/m7-m8/M7_M8_HOST_BUILD_2026-09-28.txt`](evidence/m7-m8/M7_M8_HOST_BUILD_2026-09-28.txt)。由于 M6 尚未 `PASS`，M7 仍保持 `NOT ENTERED`，所有真机项保持 `NOT TESTED`。
+
+当前工作树固件已重新隔离构建，见 [`evidence/m6/M6_M8_OFFLINE_BUILD_2026-09-29.txt`](evidence/m6/M6_M8_OFFLINE_BUILD_2026-09-29.txt)；该记录不解除 M6 依赖或真机门槛。
