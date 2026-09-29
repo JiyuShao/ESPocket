@@ -1,13 +1,8 @@
 # ESPocket 系统交互设计规范
 
-## 文档状态
+> 文档类型：长期产品交互契约。实现状态和真机证据只由 [Milestone 总览](../../milestones/README.md)判定。
 
-本文是 ESPocket 的目标交互契约，适用于 Watch Face、Cards、Launcher、Quick Settings、Native App 和 Runtime App。
-
-- 目标模型：`Home → Watch Face`。
-- 当前实现：M6 源码已引入 `Home → Watch Face`、PWR Home/息屏/唤醒和自动息屏；M7 源码已提前加入固定 Cards、Quick Settings 与 Edge Back。上述路径尚未完成真机验收，M7 仍依赖 M6 `PASS` 才能正式进入。
-- 生效路径：M6 起逐步实现本规范；M1–M5 验收文档继续记录当时的实现与证据，未通过真机门槛的 M6 行为不得描述为已验收。
-- 本文中的“必须”“应该”“可以”分别表示强制契约、默认原则和可选能力；示例不自动构成交付范围。
+本文适用于 Watch Face、Cards、Launcher、Quick Settings、Native App 和 Runtime App。“必须”“应该”“可以”分别表示强制契约、默认原则和可选能力；示例不自动构成交付范围。
 
 本文只定义交互规则和页面关系，不定义手势阈值、识别优先级或算法。
 
@@ -57,7 +52,7 @@ Watch Face 是 Home 的固定目标，也是 Home Space 的中心锚点。
 | Edge Back | 无操作 |
 | PWR 短按 | 息屏 |
 
-点击表盘快捷操作、长按自定义、更换表盘、Card 排序管理、抬腕唤醒和轻触唤醒不属于 M6–M8 的基础契约。
+点击表盘快捷操作、长按自定义、更换表盘、Card 排序管理、抬腕唤醒和轻触唤醒不属于基础交互契约。
 
 ### 卡片（Cards）
 
@@ -83,7 +78,7 @@ Launcher 的唯一职责是找到并启动 App。它不是 Home。
 - 应采用适合圆屏的图标网格或蜂窝布局，而不是手机式长列表。
 - Edge Back 必须返回 Watch Face。
 - PWR 短按必须返回 Watch Face。
-- M6 可以继续复用当前固定入口 Launcher；动态 App 同步不属于 M6。
+- 固定入口与动态 App 的发现规则由 [App 发现与 Launcher 契约](application-discovery.md)定义。
 
 ## 快捷设置（Quick Settings）
 
@@ -94,7 +89,7 @@ Quick Settings 必须从 Watch Face 下滑进入，并区分两类操作：
 
 Edge Back 必须返回 Watch Face；PWR 短按必须返回 Watch Face。Quick Settings 不承载复杂配置流程。
 
-首个实现只要求复用已有能力验证 Brightness、Wi-Fi、Battery 状态和 Settings 入口。Bluetooth、Sound、Do Not Disturb、Lock、Music 和 Notifications 不由本规范承诺。
+基础能力使用 Brightness、Wi-Fi、Battery 状态和 Settings 入口验证本模型。Bluetooth、Sound、Do Not Disturb、Lock、Music 和 Notifications 需要各自的产品范围决定。
 
 ## App 导航
 
@@ -129,7 +124,7 @@ Card → App Root → Back → 原 Card
 Quick Settings → Settings → Back → Quick Settings
 ```
 
-如果 Launch Source 已失效或无法恢复，Back 必须降级到 Watch Face。第一阶段不支持任意 App-to-App 返回链；App A 打开 App B 时，不保证 `B → Back → A`。
+如果 Launch Source 已失效或无法恢复，Back 必须降级到 Watch Face。基础契约不支持任意 App-to-App 返回链；App A 打开 App B 时，不保证 `B → Back → A`。
 
 ### App 手势边界
 

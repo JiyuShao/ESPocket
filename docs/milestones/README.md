@@ -1,39 +1,34 @@
 # ESPocket Milestones
 
-本目录保存阶段规范与验收结果。已完成阶段记录实际结果；未开始阶段记录进入条件和固定验收门槛。
+本页是阶段状态的唯一摘要。每个 `acceptance.md` 定义固定门槛和当前判定；`records/` 保存可读历史，`evidence/` 保存不可变原始证据。
 
-## 状态总览
+## 当前状态
 
-| 阶段 | 状态 | 文档 | 下一条件 |
+| Stage | Status | Acceptance | Next gate |
 |---|---|---|---|
-| M0 Official Baseline | `WAIVED` | [M0 豁免决策](#m0-official-baseline-waiver) | 无；不得改写为 `PASS` |
-| M1 ESPocket System | `PASS` | [M1 验收](m1-acceptance.md) | 已完成并标记 `v0.1-system` |
-| M2 Native App Validation | `PASS` | [M2 验收](m2-acceptance.md) | 已完成 |
-| M3 Runtime App Validation | `PASS` | [M3 验收](m3-acceptance.md) | 已完成；独立 Core `.bpk` file-install 门槛由项目所有者接受 |
-| M4 Device Capabilities | `BLOCKED` | [M4 验收](m4-acceptance.md) | 补齐设备检查并等待 playback-only 上游修复 |
-| M5 Application Ecosystem | `BLOCKED` | [M5 验收](m5-acceptance.md) | 解决 HTTP race、trust gate、兼容包与发布路径 |
-| M6 Home & Display State | `IN PROGRESS` | [M6 验收](m6-acceptance.md) | 完成真机验收 |
-| M7 Navigation Surfaces | `NOT ENTERED` | [M7 规范](m7-acceptance.md) | M6 通过 |
-| M8 App Interaction Contract | `NOT ENTERED` | [M8 规范](m8-acceptance.md) | Native 依赖 M7；Runtime 验证另依赖 M3 |
+| M0 Official Baseline | `WAIVED` | [waiver](#m0-official-baseline-waiver) | 永远不改写为 `PASS` |
+| M1 ESPocket System | `PASS` | [M1](m1/acceptance.md) | completed; `v0.1-system` |
+| M2 Native App Validation | `PASS` | [M2](m2/acceptance.md) | completed |
+| M3 Runtime App Validation | `PASS` | [M3](m3/acceptance.md) | completed; file-install evidence exception accepted |
+| M4 Device Capabilities | `BLOCKED` | [M4](m4/acceptance.md) | Storage/Developer hardware checks and official playback-only Audio path |
+| M5 Application Ecosystem | `BLOCKED` | [M5](m5/acceptance.md) | HTTP fix, trust gate, compatible release and dynamic Launcher path |
+| M6 Home & Display State | `IN PROGRESS` | [M6](m6/acceptance.md) | hardware acceptance |
+| M7 Navigation Surfaces | `NOT ENTERED` | [M7](m7/acceptance.md) | M6 `PASS`; brightness OutputId path remains open |
+| M8 App Interaction Contract | `NOT ENTERED` | [M8](m8/acceptance.md) | M7 `PASS` and M8 Native/Runtime hardware evidence |
 
 ## M0 Official Baseline waiver
 
-- 状态：`WAIVED`
-- 日期：2026-09-25
-- 决策：项目所有者选择直接进入 M1。
-- 影响：官方基线风险被接受，并在 M1 中暴露和处理；M0 不得标记为 `PASS`。
+- Status: `WAIVED`
+- Date: 2026-09-25
+- Decision: 项目所有者选择直接进入 M1。
+- Historical effect: 官方基线风险由项目接受并在后续集成中处理；缺少当时替代方案比较，因此不回填 ADR。
 
-## 证据组织
+## 证据规则
 
-原始证据位于 [`evidence/`](evidence/README.md)，按验证对象分组：
+- 原始记录位于 [`evidence/`](evidence/README.md)，可以被多个阶段引用，但只保存一份。
+- 已被 acceptance 引用的证据文件不原地改写；修订使用新文件并记录替代关系。
+- `records/` 中的叙述可以重组，日期、状态、结果、失败、豁免、未验证项和 evidence identity 不得改变。
+- Host build、Preview 或静态检查不能替代明确要求的物理显示、触控、PWR 或串口证据。
+- 上游修复只有经过本项目独立构建和硬件验收后才改变 Milestone 状态。
 
-- `m2/`：Native lifecycle stress。
-- `m3-m5/`：Runtime、Settings、Store 共用的启动、内存和交互证据。
-- `m4/`：键盘、Wi-Fi 与设备能力证据。
-- `m5/`：在线 Store、HTTP containment 与崩溃诊断证据。
-- `m6/`：Home、PWR 与显示状态的主机侧实现证据。
-- `m7-m8/`：导航 Surface、App 交互契约与 clean build 证据。
-
-跨阶段证据只保留一份，并由所有相关验收文档链接到同一路径。
-
-真机操作顺序、固定次数与原始记录模板见[真机验收执行清单](hardware-acceptance-runbook.md)。清单只供执行，不改变各阶段的验收门槛或当前状态。
+真机执行流程见[硬件验收指南](../guides/hardware-acceptance.md)。实施计划、提出顺序与可执行工作见 [Local work index](../../.scratch/README.md)。

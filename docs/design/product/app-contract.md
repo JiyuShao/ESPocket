@@ -1,6 +1,8 @@
 # ESPocket App 交互契约
 
-本文是 Native、Runtime 与第三方 App 共用的最小交互契约。系统实现状态和真机证据由 M7/M8 验收文档判定。
+> 文档类型：长期产品契约。实现状态和真机证据只由 [Milestone 总览](../../milestones/README.md)判定。
+
+本文是 Native、Runtime 与第三方 App 共用的最小交互契约。
 
 ## 导航
 
@@ -23,6 +25,12 @@
 - 息屏期间忽略触摸，基础唤醒源只有 PWR。
 - 页面恢复是 best effort；目标失效或已回收时回 Watch Face，不自动重建旧页面栈。
 - App 不得依赖后台驻留。可靠计时、播放、连接或长期业务状态应交给系统能力或持久化业务状态。
+
+## AI Native Exposure Decision
+
+每个 App 能力在设计时必须明确是否注册 Context、Action 或 Event。注册发生在稳定产品语义上，并写明 Permission、Action Risk 和生命周期；不暴露或延后也必须形成明确结论。
+
+App 注册的语义能力只属于当前 Running Instance。App 停止、崩溃、重启或被回收时，旧句柄和订阅失效；需要跨 App 生命周期存在的能力由 Service 提供。产品 UI 与 Assistant 可以共用 Action，但必须按实际调用者分别授权。
 
 ## 页面指导
 

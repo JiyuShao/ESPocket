@@ -356,4 +356,38 @@ write("device-capabilities", 1200, 840, "ESPocket 设备能力映射", "调用�
   band(585, 760, 570, 54, "可降级能力", "Time · Wi-Fi · Battery unavailable → Shell continues", "framework"),
 ].join(""), "显示、PWR、电池、网络时间和 Runtime 存储能力从产品调用者到硬件的实际映射。"),
 
-console.log(`generated 9 architecture SVGs in ${OUT}`);
+// 横向目标架构：语义访问与既有 Owner 相交，不构成新的运行栈层级。
+write("ai-native-architecture", 1280, 770, "ESPocket AI Native 目标架构", "横向语义访问维度 × 现有状态与生命周期 Owner", [
+  band(40, 120, 1200, 62, "目标架构 · 尚未实现", "TARGET / NOT IMPLEMENTED · CAPABILITY-SPECIFIC INTERSECTIONS", "platform"),
+  band(40, 215, 270, 455, "请求者与逻辑入口", "INTENT / CALLER", "neutral"),
+  node(60, 275, 230, 85, "Assistant", ["统一逻辑入口", "不拥有目标状态"], "focus-product", "USER INTENT"),
+  node(60, 390, 230, 75, "产品 UI", ["共用语义 Action · 分别判权"], "product", "DIRECT USER ACTION"),
+  node(60, 495, 230, 75, "Runtime App 使用者", ["仅经已声明的 Service"], "platform", "THIRD-PARTY CALLER"),
+
+  band(340, 215, 395, 455, "AI Native 语义访问维度", "TARGET CONTRACTS · NOT A NEW MANAGER", "product"),
+  chip(360, 280, 165, "Context", "获准可见的状态", "product"),
+  chip(545, 280, 165, "Action", "请求真实 Owner 执行", "product"),
+  chip(360, 335, 165, "Event", "Owner 已发生的事实", "product"),
+  chip(545, 335, 165, "Permission", "每次访问都需检查", "product"),
+  node(360, 410, 350, 90, "身份与权限链", ["调用者 ∩ 产品授权 ∩ 框架准入", "执行前复核；拒绝即停止"], "focus-product", "EVERY ACCESS"),
+  node(360, 525, 350, 72, "Adapter / Facade / Bridge", ["按真实能力映射；不建第二套 Manager"], "product", "INTEGRATION SEAM"),
+
+  band(765, 215, 475, 455, "真实状态与生命周期 Owner", "CURRENT OWNERS · NO DUPLICATE STATE", "framework"),
+  node(790, 280, 420, 64, "System / Shell", ["PWR · Home · UI 与导航状态"], "product"),
+  node(790, 365, 420, 64, "Native App", ["只在一次 Running 实例内提供能力"], "product"),
+  node(790, 450, 420, 64, "Brookesia Service", ["跨 App 生命周期持续能力的 Owner"], "framework"),
+  node(790, 535, 420, 64, "Runtime App", ["BPK / Runtime · 一次 Running 实例"], "platform"),
+  chip(790, 615, 420, "Runtime：Service 声明 → HostBridge 准入", "", "framework"),
+
+  edge("M290 317H340", "", 0, 0, "strong"),
+  edge("M290 427H340", "", 0, 0, "direct"),
+  edge("M290 532H340", "", 0, 0, "direct"),
+  edge("M735 312H790", "", 0, 0, "safe"),
+  edge("M735 397H790", "", 0, 0, "safe"),
+  edge("M735 482H790", "", 0, 0, "safe"),
+  edge("M735 567H790", "", 0, 0, "safe"),
+  label(40, 715, "交点只为选定的真实能力建立：从 Owner 读 Context，向 Owner 交 Action，接收 Owner 的 Event。", "caption-strong"),
+  label(40, 739, "Permission 贯穿每次访问；Runtime 仍须遵守 Brookesia Service 声明与 HostBridge 边界。", "caption"),
+].join(""), "目标架构，尚未实现。Assistant 是统一逻辑入口；Context、Action、Event、Permission 横向连接现有 System、Shell、Native App、Brookesia Service 与 Runtime App Owner。每次访问检查权限，Runtime 调用遵守 Service manifest 声明和 HostBridge 准入，不建立第二套 Manager。"),
+
+console.log(`generated 10 architecture SVGs in ${OUT}`);

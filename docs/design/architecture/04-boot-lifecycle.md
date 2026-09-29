@@ -17,10 +17,15 @@
 
 Native 和 Runtime App 共享 System Core 的 App 状态机与恢复 hook。Runtime backend 的加载细节不同，但产品层不维护第二套导航流程。
 
+### AI Native capability 生命周期
+
+App 进入 Running 后才能建立属于该 Running Instance 的 Semantic Registration。停止、崩溃、重启或回收会先使旧 Context、Action、Event 句柄和订阅失效，再完成实例清理；重新启动产生新的注册身份。需要跨 App 生命周期持续存在的能力由 Service 提供。
+
+这一规则来自 [ADR-0008](../../adr/0008-app-ai-capabilities-follow-the-running-instance.md)，不要求 System Core 建立第二套 App 状态机。
+
 ## 源码锚点
 
 - firmware/main/app_main.cpp
 - firmware/components/espocket_system/src/system.cpp
 - firmware/components/shell_circular/src/circular_shell.cpp
 - firmware/managed_components/espressif__brookesia_system_core/src/app/manager.cpp
-

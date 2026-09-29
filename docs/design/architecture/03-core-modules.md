@@ -33,10 +33,22 @@
 
 ESPocket 只通过公开接口安装和驱动 App，不复制 App Manager、Runtime Manager、GUI Runtime、Timer 或 Package Manager。测试也应优先跨同一个公开 seam 验证行为。
 
+## AI Native 所有权
+
+AI Native 不成为图中的新深模块。每个现有模块在自己的边界作 Exposure Decision：
+
+| Owner | 可注册的产品语义 | 生命周期 |
+|---|---|---|
+| `espocket::System` | 跨模块系统 Context 与 Action | System 生命周期 |
+| `CircularShell` | Surface、导航和可见产品状态 | Shell 生命周期 |
+| Brookesia Service | 可跨 App 持续存在的设备或业务能力 | Service binding 生命周期 |
+| Native / Runtime App | App 自有 Context、Action 与 Event | 单次 Running Instance |
+
+Assistant 只消费这些注册关系，不接管模块状态。具体关系见 [AI Native 架构](07-ai-native.md)。
+
 ## 源码锚点
 
 - firmware/components/espocket_system/include/espocket/system.hpp
 - firmware/components/espocket_system/src/system.cpp
 - firmware/components/shell_circular/include/espocket/circular_shell.hpp
 - firmware/components/shell_circular/src/circular_shell.cpp
-

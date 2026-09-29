@@ -32,6 +32,10 @@
 
 Runtime 包的来源和信任策略不会改变这套运行期交互契约；未通过信任门的动态包不得进入可启动集合。
 
+## Assistant 与导航
+
+Assistant 发起的语义 Action 仍通过目标 Owner 和现有导航生命周期执行。Assistant 不能把 GUI 自动点击当作产品 Action，也不能凭 App prompt 合成 Home、Back 或用户授权。需要显示 UI 的 Action 必须明确其 Launch Source、PWR 行为和 Running Instance 失效规则。
+
 ## 源码锚点
 
 - firmware/components/shell_circular/include/espocket/circular_shell.hpp
