@@ -10,7 +10,7 @@
 - M4: `BLOCKED`，不阻止 M6 进入
 - M5: `BLOCKED`，不阻止 M6 进入
 
-本文定义 M6 的范围与 PASS 门槛。实现前后都必须遵守 [`../design/product/interaction-model.md`](../../design/product/interaction-model.md)。
+本文定义 M6 的范围与 PASS 门槛。实现前后都必须遵守[系统交互模型](../../design/product/03-interaction-model.md)。
 
 ## 目标
 
@@ -99,8 +99,8 @@ PWR → Watch Face
 | 路径 | 次数 | PASS 条件 | 状态 |
 |---|---:|---|---|
 | Cold boot → Watch Face | 5 | 每次都显示 Watch Face，无 Launcher 先成为 Home | NOT TESTED |
-| App → PWR Home → Watch Face → PWR Off → PWR Wake | 5 | 顺序和可见状态均正确 | NOT TESTED |
-| App → Auto Screen Off → PWR → Resume App | 5 | 恢复同一可见页面及导航位置 | NOT TESTED |
+| App → PWR Home → Watch Face → PWR Off → PWR Wake | 5 | 顺序和可见状态均正确 | 1/5 observed（2026-09-29）；4 次未测 |
+| App → Auto Screen Off → PWR → Resume App | 5 | 恢复同一可见页面及导航位置 | 物理冒烟 1 次；Wake 串口缺失，正式 0/5 |
 | Resume target reclaimed → PWR → Watch Face | 5 | 不自动重启 App，不出现空白或失效页面 | NOT TESTED |
 
 ### Required one-pass checks
@@ -111,7 +111,7 @@ PWR → Watch Face
 | Overlay + PWR | 临时 Overlay 存在时仍回 Watch Face，可放弃未提交输入 | NOT TESTED |
 | BOOT | 不触发 Back、Home、Shortcut 或 Recent Apps | NOT TESTED |
 | PWR long press | 仅表现为硬件固定开机/关机 | NOT TESTED |
-| Failure scan | 无 panic、watchdog、assert、deadlock、错误触摸执行或持续性资源下降 | NOT TESTED |
+| Failure scan | 无 panic、watchdog、assert、deadlock、错误触摸执行或持续性资源下降 | NOT PASS：本轮 Store 路径出现任务栈溢出 |
 
 ## Evidence Rules
 
@@ -127,6 +127,10 @@ PWR → Watch Face
 
 项目所有者已明确授权启动 M6–M8。实施遵守阶段依赖：当前仅 M6 正式进入；M7 等待 M6 `PASS`，M8 等待 M7 `PASS`。
 
-主机侧实现与构建记录见 [`evidence/m6/M6_HOST_BUILD_2026-09-28.txt`](../evidence/m6/M6_HOST_BUILD_2026-09-28.txt)。该证据不替代本页规定的真机按键、显示和触摸验收，因此 M6 保持 `IN PROGRESS`。
+主机侧实现与构建已经通过，但不能替代本页规定的真机按键、显示和触摸验收，因此 M6 保持 `IN PROGRESS`。
 
-当前工作树候选重新完成隔离构建与 Shell 资源路径检查，见 [`evidence/m6/M6_M8_OFFLINE_BUILD_2026-09-29.txt`](../evidence/m6/M6_M8_OFFLINE_BUILD_2026-09-29.txt)。真机执行顺序见[执行清单](../../guides/hardware-acceptance.md)；回收 fallback 尚需可控触发方式，所有真机项仍为 `NOT TESTED`。
+当前工作树候选重新完成隔离构建与 Shell 资源路径检查。真机执行顺序由本页 Hardware Acceptance 定义；回收 fallback 尚需可控触发方式。
+
+2026-09-29 的[真机快速冒烟记录](records/2026-09-29-quick-device-smoke.md)已验证一次 Native → PWR Home → Off → Wake 顺序，并记录 GPIO3 按键接线修复与 Store 栈溢出。它不满足固定重复次数及其余真机门槛，M6 继续保持 `IN PROGRESS`。
+
+同日的 [Native Detail 复测](records/2026-09-29-native-detail-followup.md)修复了按钮点击无反应，实机确认页面转换、Launcher Edge Back，以及 Detail 自动息屏后的同页恢复。由于 Wake 串口未落在采集窗口内，自动恢复不计入固定 5 次正式验收。

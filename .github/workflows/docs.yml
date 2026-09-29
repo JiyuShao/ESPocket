@@ -1,0 +1,33 @@
+name: Documentation
+
+on:
+  pull_request:
+    paths:
+      - ".scratch/**"
+      - "docs/**"
+      - "firmware/README.md"
+      - "scripts/docs/**"
+      - "CONTEXT.md"
+      - "AGENTS.md"
+      - "README.md"
+      - ".github/workflows/docs.yml"
+  push:
+    paths:
+      - ".scratch/**"
+      - "docs/**"
+      - "firmware/README.md"
+      - "scripts/docs/**"
+      - "CONTEXT.md"
+      - "AGENTS.md"
+      - "README.md"
+      - ".github/workflows/docs.yml"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: python3 scripts/docs/check.py

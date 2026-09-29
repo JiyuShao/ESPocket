@@ -1,21 +1,21 @@
-# ESPocket agent guide
+# ESPocket Agent 指南
 
-## Agent skills
+## Agent 工作入口
 
 ### Issue tracker
 
-Specs and tickets live as versioned Markdown under `.scratch/`. See `docs/agents/issue-tracker.md`.
+Spec 与 ticket 以版本化 Markdown 保存在 `.scratch/`。规则见 [issue tracker 指南](docs/agents/issue-tracker.md)。
 
 ### Triage labels
 
-Use the five canonical Matt triage roles. See `docs/agents/triage-labels.md`.
+使用五个规范 Matt triage role。定义见 [triage labels](docs/agents/triage-labels.md)。
 
 ### Domain docs
 
-This is a single-context repository: read `CONTEXT.md` and the relevant records in `docs/adr/` before changing a domain area. See `docs/agents/domain.md`.
+本仓库使用单一 context。修改某个领域前，先阅读 `CONTEXT.md` 和 `docs/adr/` 中的相关记录。读取顺序见 [domain docs](docs/agents/domain.md)。
 
-## Documentation workflow
+## 文档工作流
 
-Route each meaning to the authority named in `docs/README.md`. Keep implementation plans and executable work in `.scratch/`; keep status and evidence in `docs/milestones/`.
+按照 `docs/README.md` 将每类含义写入对应权威位置。实施计划和可执行工作写入 `.scratch/`；状态与证据写入 `docs/milestones/`。
 
-Run `python3 scripts/check-docs.py` after changing documentation.
+修改文档后运行 `python3 scripts/docs/check.py`。

@@ -1,11 +1,11 @@
-# 02 — Add a controllable reclaim fallback seam
+# 02 — 增加可控 reclaim fallback seam
 
-**What to build:** A default-off test path that invalidates the current resume target so hardware acceptance can prove fallback to Watch Face.
+**What to build:** 默认关闭的 test path，使当前 resume target 失效，让 hardware acceptance 能证明回退到 Watch Face。
 
-**Blocked by:** 01 — Implement Watch Face Home and Display State.
+**Blocked by:** 01 — 实现 Watch Face Home 与 Display State。
 
 **Status:** ready-for-agent
 
-- [ ] The test seam cannot activate in normal product use.
-- [ ] It invalidates the target without introducing a general memory manager.
-- [ ] The next wake reaches Watch Face without restarting the App.
+- [ ] Test seam 不会在普通产品使用中激活。
+- [ ] 使 target 失效时不引入通用 memory manager。
+- [ ] 下一次 wake 到达 Watch Face，不重启 App。

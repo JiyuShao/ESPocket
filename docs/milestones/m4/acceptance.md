@@ -26,10 +26,9 @@
 | Developer controls | `NOT TESTED` | 真机控制和返回路径 |
 | Sound/Volume | `BLOCKED` | 官方 playback-only `PlaybackIface` 路径，Codec Recorder 保持关闭 |
 
-## 证据索引
+## 验收记录
 
 - [2026-09-28 acceptance report](records/2026-09-28-acceptance-report.md) 保存完整依赖、构建、设备矩阵和阻塞分析。
-- [M4 raw evidence](../evidence/m4/) 保存键盘、Wi-Fi 和设备记录。
 - [Upstream status](../../upstream/status-2026-09-28.md) 保存 Audio playback-only 版本事实。
 
 ## 下一判定

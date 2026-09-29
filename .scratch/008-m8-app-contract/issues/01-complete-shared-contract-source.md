@@ -1,15 +1,15 @@
-# 01 — Complete the shared Native/Runtime contract source
+# 01 — 完成 Native/Runtime 共享契约源码
 
-**What to build:** Real Hello Native and Hello Runtime implement the same Root/Detail/Back and gesture contract under System Core.
+**What to build:** 真实 Hello Native 与 Hello Runtime 在 System Core 下实现相同 Root/Detail/Back 与 gesture 契约。
 
-**Blocked by:** M3 `PASS`; M7 source contract.
+**Blocked by:** M3 `PASS`；M7 source contract。
 
 **Status:** resolved
 
-- [x] Host build, Toolkit, staging and static checks pass.
-- [x] Both Apps expose the required Root/Detail paths.
-- [x] Product guidance documents the shared contract.
+- [x] Host build、Toolkit、staging 与 static check 通过。
+- [x] 两种 App 都提供必需 Root/Detail path。
+- [x] 产品文档记录共享契约。
 
 ## Resolution
 
-Source work was developed early; stage acceptance remains dependency-gated and physically unverified.
+源码工作已提前开发；阶段 acceptance 仍受依赖 gate 约束，且尚未完成真机验证。

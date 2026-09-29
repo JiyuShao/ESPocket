@@ -63,25 +63,42 @@ ELF SHA-256:       cc40c08b4da608962624f7dd4daa4e455a8a3e5efaefa149495a4fe7c8f77
 Panic ELF prefix:  cc40c08b4
 ```
 
-The symbolized crashing-task stack was:
+The sanitized symbolized crashing-task stack was generated from ELF SHA-256 `cc40c08b4da608962624f7dd4daa4e455a8a3e5efaefa149495a4fe7c8f770e1`. Local absolute prefixes were normalized to `ESP-IDF/`, `managed_components/`, and `toolchain/`; addresses, symbols, source-relative paths, line numbers, and inlining notes are unchanged:
 
 ```text
-mbedtls_ssl_handshake_step
-mbedtls_ssl_handshake
-esp_mbedtls_handshake
-esp_tls_handshake
-esp_tls_low_level_conn
-esp_tls_conn_new_sync
-ssl_connect
-esp_transport_connect
-esp_http_client_connect
-esp_http_client_open
-EspHttpTransaction::open
-Http::perform_once
-Http::perform_request
-Http::execute_request
-HTTP scheduler closure
-TaskScheduler / Boost.Asio / pthread / FreeRTOS
+0x423379e9: mbedtls_ssl_handshake_step at ESP-IDF/components/mbedtls/mbedtls/library/ssl_tls.c:4158
+ (inlined by) mbedtls_ssl_handshake_step at ESP-IDF/components/mbedtls/mbedtls/library/ssl_tls.c:4110
+0x42337a24: mbedtls_ssl_handshake at ESP-IDF/components/mbedtls/mbedtls/library/ssl_tls.c:4222
+ (inlined by) mbedtls_ssl_handshake at ESP-IDF/components/mbedtls/mbedtls/library/ssl_tls.c:4199
+0x4239c91d: esp_mbedtls_handshake at ESP-IDF/components/esp-tls/esp_tls_mbedtls.c:280
+0x4239bf79: esp_tls_handshake at ESP-IDF/components/esp-tls/esp_tls.c:130
+0x4239c192: esp_tls_low_level_conn at ESP-IDF/components/esp-tls/esp_tls.c:540
+0x4239c2c5: esp_tls_conn_new_sync at ESP-IDF/components/esp-tls/esp_tls.c:571
+0x4239d6dc: ssl_connect at ESP-IDF/components/tcp_transport/transport_ssl.c:118 (discriminator 1)
+0x423e98fd: esp_transport_connect at ESP-IDF/components/tcp_transport/transport.c:123
+0x42333e65: esp_http_client_connect at ESP-IDF/components/esp_http_client/esp_http_client.c:1686
+0x423348ca: esp_http_client_open at ESP-IDF/components/esp_http_client/esp_http_client.c:1868
+0x420cca67: esp_brookesia::hal::(anonymous namespace)::EspHttpTransaction::open(esp_brookesia::hal::network::HttpClientIface::Request const&, esp_brookesia::hal::network::HttpClientIface::Response&, unsigned long&) at managed_components/espressif__brookesia_hal_adaptor/src/network/http_client_impl.cpp:146
+0x42098f0f: esp_brookesia::service::http::Http::perform_once(std::shared_ptr<esp_brookesia::service::http::Http::RequestContext>, esp_brookesia::hal::network::HttpClientIface::Response&) at managed_components/espressif__brookesia_service_http/src/service_http.cpp:481 (discriminator 1)
+0x42099292: esp_brookesia::service::http::Http::perform_request(std::shared_ptr<esp_brookesia::service::http::Http::RequestContext>) at managed_components/espressif__brookesia_service_http/src/service_http.cpp:430 (discriminator 1)
+0x42099d55: esp_brookesia::service::http::Http::execute_request(std::shared_ptr<esp_brookesia::service::http::Http::RequestContext>) at managed_components/espressif__brookesia_service_http/src/service_http.cpp:409 (discriminator 1)
+0x42099e1b: esp_brookesia::service::http::Http::submit_request[abi:cxx11](esp_brookesia::hal::network::HttpClientIface::Request, std::shared_ptr<std::promise<esp_brookesia::hal::network::HttpClientIface::Response> >)::{lambda()#1}::operator()() const at managed_components/espressif__brookesia_service_http/src/service_http.cpp:378 (discriminator 1)
+0x42099e45: std::_Function_handler<void (), esp_brookesia::service::http::Http::submit_request[abi:cxx11](esp_brookesia::hal::network::HttpClientIface::Request, std::shared_ptr<std::promise<esp_brookesia::hal::network::HttpClientIface::Response> >)::{lambda()#1}>::_M_invoke(std::_Any_data const&) at toolchain/xtensa-esp-elf/include/c++/15.2.0/bits/invoke.h:63
+ (inlined by) __invoke_r<void, esp_brookesia::service::http::Http::submit_request(HttpRequest, std::shared_ptr<std::promise<esp_brookesia::hal::network::HttpClientIface::Response> >)::<lambda()>&> at toolchain/xtensa-esp-elf/include/c++/15.2.0/bits/invoke.h:113
+ (inlined by) _M_invoke at toolchain/xtensa-esp-elf/include/c++/15.2.0/bits/std_function.h:292
+0x420699c2: std::function<void ()>::operator()() const at toolchain/xtensa-esp-elf/include/c++/15.2.0/bits/std_function.h:593
+0x422db94f: esp_brookesia::lib_utils::TaskScheduler::Impl::post_internal(std::function<void ()>, unsigned long long*, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, bool)::{lambda()#1}::operator()() const at managed_components/espressif__brookesia_lib_utils/src/task_scheduler.cpp:301
+0x422dba1e: boost::asio::detail::executor_op<boost::asio::detail::binder0<esp_brookesia::lib_utils::TaskScheduler::Impl::post_internal(std::function<void ()>, unsigned long long*, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, bool)::{lambda()#1}>, std::allocator<void>, boost::asio::detail::scheduler_operation>::do_complete(void*, boost::asio::detail::scheduler_operation*, boost::system::error_code const&, unsigned int) at managed_components/espressif__esp-boost/src/boost/asio/detail/bind_handler.hpp:56
+ (inlined by) do_complete at managed_components/espressif__esp-boost/src/boost/asio/detail/executor_op.hpp:70
+0x422d5c09: boost::asio::detail::scheduler_operation::complete(void*, boost::system::error_code const&, unsigned int) at managed_components/espressif__esp-boost/src/boost/asio/detail/scheduler_operation.hpp:40
+ (inlined by) boost::asio::detail::scheduler::do_poll_one(boost::asio::detail::conditionally_enabled_mutex::scoped_lock&, boost::asio::detail::scheduler_thread_info&, boost::system::error_code const&) at managed_components/espressif__esp-boost/src/boost/asio/detail/impl/scheduler.ipp:641
+0x422d634a: boost::asio::detail::scheduler::poll(boost::system::error_code&) at managed_components/espressif__esp-boost/src/boost/asio/detail/impl/scheduler.ipp:275 (discriminator 2)
+0x422d6b6d: boost::asio::io_context::poll() at managed_components/espressif__esp-boost/src/boost/asio/impl/io_context.ipp:87
+0x422da61d: esp_brookesia::lib_utils::TaskScheduler::Impl::start(esp_brookesia::lib_utils::TaskSchedulerStartConfig const&)::{lambda()#2}::operator()() const at managed_components/espressif__brookesia_lib_utils/src/task_scheduler.cpp:182 (discriminator 1)
+0x422da696: boost::detail::thread_data<esp_brookesia::lib_utils::TaskScheduler::Impl::start(esp_brookesia::lib_utils::TaskSchedulerStartConfig const&)::{lambda()#2}>::run() at managed_components/espressif__esp-boost/src/boost/thread/detail/thread.hpp:120
+0x422f93c6: thread_proxy at managed_components/espressif__esp-boost/src/boost/thread/src/pthread/thread.cpp:177 (discriminator 1)
+0x42009db0: pthread_task_func at ESP-IDF/components/pthread/pthread.c:241
+0x423f525e: vPortTaskWrapper at ESP-IDF/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:143
 ```
 
 The device rebooted automatically. No matching App Store stop occurred before the panic.
@@ -184,17 +201,3 @@ A race regression should instead:
 6. reject panic, reboot, use-after-close, double completion, or a late success event.
 
 Repeated on-device stress remains useful supplemental coverage but is not a deterministic regression. The test should cover explicit cancellation, synchronous timeout, and stop/deinit bulk cancellation under both one-worker/one-request and multi-worker configurations. Merely reducing worker count is not sufficient because cancellation originates outside the active request worker.
-
-## Evidence
-
-Public-shareable repository evidence:
-
-- `docs/milestones/evidence/m5/M5_HTTP_SERIAL_CONTAINMENT_ONLINE_FAILURE_2026-09-27.txt`
-  - SHA-256: `83060cddcfaa729895d38f845cb7908585c22c39c3638ed13fe8b74be80f02e5`
-- `docs/upstream/issues/evidence/http-cancel-race-stack-sanitized.txt`
-  - SHA-256: `b70b88c444b3680071202ded7305f04a76894cdc2f5db49bd63b4649b359c150`
-  - Exact symbolized stack with only local absolute path prefixes replaced by `ESP-IDF/`, `managed_components/`, and `toolchain/`.
-- `docs/milestones/evidence/m5/M5_HTTP_SERIAL_CONTAINMENT_ONLINE_FAILURE_SUMMARY_2026-09-27.txt`
-  - SHA-256: `e1c5c5399d11681fda2c53f4c00bf8ca55e8a9474b8971ad7a199abc8826f24f`
-
-The public-shareable files exclude Wi-Fi credentials, SSID/BSSID values, MAC addresses, and local usernames or absolute build paths. The original internal symbolization evidence remains immutable for acceptance provenance and is not intended as a public attachment.

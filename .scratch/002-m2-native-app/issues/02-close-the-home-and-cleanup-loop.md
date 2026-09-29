@@ -1,15 +1,15 @@
-# 02 — Close the Home and cleanup loop
+# 02 — 闭合 Home 与 cleanup loop
 
-**What to build:** Home stops the foreground Native App in the Core task, restores Launcher and releases GUI and callback state.
+**What to build:** Home 在 Core task 中停止前台 Native App，恢复 Launcher，并释放 GUI 与 callback state。
 
-**Blocked by:** 01 — Deliver a visible Native App tracer bullet.
+**Blocked by:** 01 — 交付可见 Native App tracer bullet。
 
 **Status:** retrospective-resolved
 
-- [x] Display callback publishes intent without calling Core directly.
-- [x] System clears only the matching foreground generation.
-- [x] GUI unload and callback cleanup are observable.
+- [x] Display callback 发布 intent，不直接调用 Core。
+- [x] System 只清理匹配的 foreground generation。
+- [x] GUI unload 与 callback cleanup 可观察。
 
 ## Resolution
 
-Accepted after the final Home concurrency remediation; earlier images remain superseded.
+最终 Home concurrency 修复后已接受；更早 image 保持 superseded。

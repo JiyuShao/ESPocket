@@ -1,11 +1,11 @@
-# 03 — Run M7 navigation hardware acceptance
+# 03 — 执行 M7 navigation hardware acceptance
 
-**What to build:** Physical proof of Cards, Quick Settings, Back, direct Launch Source, gestures and real Wi-Fi/brightness effects.
+**What to build:** Cards、Quick Settings、Back、直接 Launch Source、gesture 与真实 Wi-Fi/brightness 效果的真机证明。
 
-**Blocked by:** M6 `PASS`; 02 — Close M7 source and build gates.
+**Blocked by:** M6 `PASS`；02 — 关闭 M7 source 与 build gate。
 
 **Status:** ready-for-human
 
-- [ ] Complete navigation loop passes five times.
-- [ ] Wi-Fi and brightness each change real state five times.
-- [ ] All one-pass source, gesture, Home and failure checks pass.
+- [ ] 完整导航闭环通过 5 次。
+- [ ] Wi-Fi 与 brightness 各自真实改变状态 5 次。
+- [ ] 所有单次 source、gesture、Home 与 failure 检查通过。

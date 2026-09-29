@@ -1,15 +1,15 @@
-# 01 — Reproduce the Platform Baseline
+# 01 — 复现 Platform Baseline
 
-**What to build:** A clean ESP-IDF/Brookesia/board configuration that produces the ESPocket firmware without relying on generated workspace state.
+**What to build:** 一套不依赖 workspace 生成状态、能够产出 ESPocket firmware 的 clean ESP-IDF/Brookesia/board configuration。
 
-**Blocked by:** None — historical first slice.
+**Blocked by:** None — 历史上的第一个 slice。
 
 **Status:** retrospective-resolved
 
-- [x] Exact platform and board identities are recorded.
-- [x] Dependencies resolve from declarations and lock data.
-- [x] A clean build completes after generated directories are removed.
+- [x] 记录准确的 platform 与 board identity。
+- [x] Dependency 能从声明和 lock data 解析。
+- [x] 删除生成目录后 clean build 完成。
 
 ## Resolution
 
-Reconstructed from the accepted M1 build and environment tables; exact intermediate work order is unknown.
+根据已接受的 M1 build 与 environment table 重建；中间工作的准确顺序未知。

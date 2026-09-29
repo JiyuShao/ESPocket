@@ -1,30 +1,31 @@
 # ADR-0004: Core owns the Runtime package trust gate
 
 - Status: `accepted`
-- Date: 2026-09-29
+- Recorded: 2026-09-29
+- Origin: 从既有 package trust 设计中提取；首次决策日期未知
 
 ## Context
 
-Runtime packages can arrive through more than one product entry and can be rediscovered after reboot. Validation in Store or after unpacking can be bypassed and cannot provide a single install truth.
+Runtime package 可以通过多个产品入口到达，也会在重启后被重新发现。只在 Store 或解包后验证可以被绕过，无法形成单一安装事实源。
 
 ## Decision
 
-Every remotely sourced Runtime package must pass one fail-closed trust gate at the Core-owned public install boundary before unpacking or activation. The gate covers artifact identity, release signature, member integrity, product compatibility, transactional activation and trusted reboot discovery.
+每个远程来源的 Runtime package 都必须在解包或激活前，通过 Core 持有的公开安装边界上的单一 fail-closed trust gate。该 gate 覆盖 artifact identity、release signature、member integrity、产品兼容性、事务式激活和可信的重启发现。
 
-Dynamic installation remains disabled while the public Core boundary cannot enforce the contract. ESPocket will not create a private installer to bypass that limitation.
+当公开 Core 边界无法执行该契约时，dynamic installation 保持禁用。ESPocket 不创建私有 Installer 绕过这一限制。
 
 ## Consequences
 
-- Store download success is not installation success.
-- Verification and unpacking share one immutable input.
-- Activation must either commit completely or preserve the previous trusted version.
-- A missing upstream seam can keep the application-ecosystem Milestone blocked.
+- Store 下载成功不等于安装成功。
+- Verification 与 unpacking 使用同一份不可变输入。
+- Activation 必须完整提交，或保留此前的可信版本。
+- 缺少上游 seam 可以继续阻塞 application-ecosystem Milestone。
 
 ## Alternatives rejected
 
-- Store-only validation.
-- A product wrapper around an otherwise permissive Core path.
-- Post-install verification.
-- A second ESPocket package manager or installer.
+- 只在 Store 中验证。
+- 在宽松的 Core path 外增加产品 wrapper。
+- 安装后验证。
+- 第二套 ESPocket package manager 或 Installer。
 
-See [Runtime package trust contract](../design/product/runtime-package-trust.md) and [M5 acceptance](../milestones/m5/acceptance.md).
+参见 [Runtime package trust 契约](../design/product/05-runtime-package-trust.md)和 [M5 验收](../milestones/m5/acceptance.md)。

@@ -1,15 +1,15 @@
-# 02 — Prove keyboard, Wi-Fi and status capabilities
+# 02 — 证明 keyboard、Wi-Fi 与 status capability
 
-**What to build:** Product keyboard behavior and real Wi-Fi, time, battery, brightness and device-state paths that work through official interfaces.
+**What to build:** 通过官方接口工作的产品 keyboard，以及真实 Wi-Fi、time、battery、brightness 与 device-state path。
 
-**Blocked by:** 01 — Integrate official Settings on the round target.
+**Blocked by:** 01 — 在圆形目标设备集成官方 Settings。
 
 **Status:** retrospective-resolved
 
-- [x] Keyboard provider opens and closes with confirmed on-screen semantics.
-- [x] Wi-Fi initializes, reconnects from NVS and reaches SNTP.
-- [x] Brightness, Time, Battery and Device info receive physical confirmation.
+- [x] Keyboard provider 按已确认的屏幕语义打开和关闭。
+- [x] Wi-Fi 完成初始化、从 NVS 重连并到达 SNTP。
+- [x] Brightness、Time、Battery 与 Device info 获得真机确认。
 
 ## Resolution
 
-Accepted evidence remains in the M4 record and raw evidence directories.
+已接受的观察、关键数值和判定保存在 M4 record；原始构建与串口日志不长期保存在源码树。

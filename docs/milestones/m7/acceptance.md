@@ -8,7 +8,7 @@
 - Dependency: M6 `PASS`
 - M4–M5 may remain `BLOCKED`, but their blockers remain release gates
 
-本文定义 M7 的范围与 PASS 门槛。实现必须遵守 [`../design/product/interaction-model.md`](../../design/product/interaction-model.md)。
+本文定义 M7 的范围与 PASS 门槛。实现必须遵守[系统交互模型](../../design/product/03-interaction-model.md)。
 
 ## 目标
 
@@ -135,8 +135,8 @@ Watch Face
 
 `NOT ENTERED`
 
-M7 源码已按项目所有者授权提前开发，并通过主机构建与静态检查；记录见 [`evidence/m7-m8/M7_M8_HOST_BUILD_2026-09-28.txt`](../evidence/m7-m8/M7_M8_HOST_BUILD_2026-09-28.txt)。由于 M6 尚未 `PASS`，M7 仍保持 `NOT ENTERED`，所有真机项保持 `NOT TESTED`。
+M7 源码已按项目所有者授权提前开发，并通过主机构建与静态检查。由于 M6 尚未 `PASS`，M7 仍保持 `NOT ENTERED`，所有真机项保持 `NOT TESTED`。
 
-当前工作树固件已重新隔离构建，见 [`evidence/m6/M6_M8_OFFLINE_BUILD_2026-09-29.txt`](../evidence/m6/M6_M8_OFFLINE_BUILD_2026-09-29.txt)；该记录不解除 M6 依赖或真机门槛。
+当前工作树固件已重新完成隔离构建；该结果不解除 M6 依赖或真机门槛。
 
 2026-09-29 本地源码复核发现，Shell Brightness 读写固定传 `OutputId = 0`（[`circular_shell.cpp`](../../../firmware/components/shell_circular/src/circular_shell.cpp)），而锁定版 Display Service 从 `1` 分配输出 ID，亮度函数按 ID 精确查找（[`display_lifecycle.cpp`](../../../firmware/managed_components/espressif__brookesia_service_display/src/display_lifecycle.cpp)、[`display_backlight.cpp`](../../../firmware/managed_components/espressif__brookesia_service_display/src/display_backlight.cpp)）。因此此前的主机构建和静态检查不能证明这条 M7 亮度路径可用；M7 的 Existing services 项保持 `OPEN`，真实变化仍为 `NOT TESTED`。M4 对官方 Settings App 的物理亮度验收不覆盖 Shell 按钮。当前未进入 M7，也未修改固件。

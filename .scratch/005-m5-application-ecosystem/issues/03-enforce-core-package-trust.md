@@ -1,25 +1,25 @@
-# 03 — Enforce the Core-owned package trust gate
+# 03 — 执行 Core 持有的 package trust gate
 
-**What to build:** One public install path that verifies a complete remote package, commits transactionally and revalidates trusted state after reboot.
+**What to build:** 一条公开 install path，对完整 remote package 执行验证和事务式提交，并在重启后重新验证 trusted state。
 
-**Blocked by:** Upstream Core/Store seam and a compatible signed package route.
+**Blocked by:** 上游 Core/Store seam 与兼容 signed package route。
 
 **Status:** needs-info
 
-- [ ] Signature, member integrity and compatibility fail closed before unpacking.
-- [ ] Update rollback and cleanup preserve the last trusted version.
-- [ ] Reboot discovery rejects packages without a valid receipt.
+- [ ] Signature、member integrity 与 compatibility 在 unpacking 前 fail closed。
+- [ ] Update rollback 与 cleanup 保留上一可信版本。
+- [ ] Reboot discovery 拒绝没有有效 receipt 的 package。
 
 ## Required transaction shape
 
-The public Core operation must lock or copy one immutable candidate, verify the optional source digest, release signature and signed members from those same bytes, validate compatibility, unpack into a new staging directory, prepare resources, write a pending receipt, atomically switch versions, validate the new App record, commit the receipt and only then remove the backup.
+公开 Core operation 必须锁定或复制一个不可变 candidate；基于同一字节验证可选 source digest、release signature 与 signed member；验证 compatibility；解包到新 staging directory；准备资源；写入 pending receipt；原子切换版本；验证新 App record；提交 receipt；最后才删除 backup。
 
-The receipt binds package/version identity, artifact and manifest digests, signing-key identity, policy version, committed members, Platform Baseline and transaction identity. Built-in packages use an explicit build allowlist rather than directory presence.
+Receipt 绑定 package/version identity、artifact 与 manifest digest、signing-key identity、policy version、committed member、Platform Baseline 与 transaction identity。Built-in package 使用显式 build allowlist，不以目录存在作为信任依据。
 
 ## Required matrix
 
-- [ ] Reject digest mismatch, missing signature half, unknown key, modified or extra member and incompatible system before activation.
-- [ ] Reject verify-to-unpack mutation and path escape.
-- [ ] Preserve the old App and private data on every injected update failure or power-loss state.
-- [ ] Remove receipt and matching cache on uninstall; clean orphan staging without deleting the committed version.
-- [ ] Route Store, USB and any developer installer through the same gate.
+- [ ] Activation 前拒绝 digest mismatch、缺半边 signature、unknown key、member 被修改或多出，以及 incompatible system。
+- [ ] 拒绝 verify-to-unpack mutation 与 path escape。
+- [ ] 每种注入的 update failure 或 power-loss state 都保留旧 App 与 private data。
+- [ ] Uninstall 时移除 receipt 与对应 cache；清理 orphan staging 时不删除 committed version。
+- [ ] Store、USB 与任何 developer installer 都通过同一 gate。

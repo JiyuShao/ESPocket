@@ -1,15 +1,15 @@
-# 01 — Build and stage Hello Runtime
+# 01 — 构建并 stage Hello Runtime
 
-**What to build:** A minimal official JavaScript Runtime package built with the pinned Toolkit and staged through the System Core helper into LittleFS.
+**What to build:** 使用锁定 Toolkit 构建的最小官方 JavaScript Runtime package，并通过 System Core helper stage 到 LittleFS。
 
 **Blocked by:** M2 `PASS`.
 
 **Status:** retrospective-resolved
 
-- [x] Runtime JS and QuickJS versions are locked and linked.
-- [x] Toolkit doctor/build and package integrity checks pass.
-- [x] The staged tree and LittleFS image contain the expected package.
+- [x] Runtime JS 与 QuickJS 版本已锁定并完成链接。
+- [x] Toolkit doctor/build 与 package integrity check 通过。
+- [x] Staged tree 与 LittleFS image 包含预期 package。
 
 ## Resolution
 
-Accepted by M3 build, Toolkit and staging evidence; the debug package is intentionally unsigned.
+M3 build、Toolkit 与 staging evidence 已接受；debug package 有意保持 unsigned。

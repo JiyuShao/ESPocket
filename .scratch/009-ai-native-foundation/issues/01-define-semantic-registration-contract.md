@@ -1,11 +1,11 @@
-# 01 — Define the Semantic Registration contract
+# 01 — 定义 Semantic Registration 契约
 
-**What to build:** A small product interface for Owner identity, Context, Action, Event, Permission, Action Risk and lifecycle without a global state manager.
+**What to build:** 一套小型产品接口，表达 Owner identity、Context、Action、Event、Permission、Action Risk 与 lifecycle，不引入全局 state manager。
 
-**Blocked by:** M8 contract acceptance for product sequencing.
+**Blocked by:** 产品推进顺序要求 M8 contract acceptance。
 
 **Status:** ready-for-agent
 
-- [ ] The interface expresses product semantics rather than arbitrary methods.
-- [ ] Registration and invalidation lifetimes are explicit.
-- [ ] The design contains an Exposure Decision for its own internal seams.
+- [ ] 接口表达产品语义，不暴露任意 method。
+- [ ] Registration 与 invalidation lifetime 明确。
+- [ ] 设计为自身内部 seam 作出 Exposure Decision。

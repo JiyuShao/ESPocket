@@ -9,7 +9,7 @@
 - Runtime validation dependency: M3 `PASS`
 - M8 cannot become `PASS` until both dependency branches and all required evidence pass
 
-本文定义 M8 的范围与 PASS 门槛。实现和 App 指导必须遵守 [`../design/product/interaction-model.md`](../../design/product/interaction-model.md)。
+本文定义 M8 的范围与 PASS 门槛。实现和 App 指导必须遵守[系统交互模型](../../design/product/03-interaction-model.md)。
 
 ## 目标
 
@@ -50,7 +50,7 @@
 | Display State | 两种执行模型遵守相同息屏、唤醒和 fallback 规则 | PASS（STATIC，真机待验收） |
 | Reclaim semantics | App 不依赖后台驻留；回收后重新启动进入 App Root | PASS（STATIC，真机待验收） |
 | Gesture ownership | App 保留 Tap、Scroll、普通横滑、Long Press；系统保留 Edge Back 与 PWR | PASS（STATIC，真机待验收） |
-| Guidance | 四类页面指导写入开发文档，但不建立模板框架 | PASS（[`../design/product/app-contract.md`](../../design/product/app-contract.md)） |
+| Guidance | 四类页面指导写入开发文档，但不建立模板框架 | PASS（[App 契约](../../design/product/04-app-contract.md)） |
 | Minimal Runtime sample | 只实现验证契约所需的最小 Root / Detail 路径 | PASS（Toolkit build + staging，真机待验收） |
 | Build | Native 与 Runtime 目标的 clean build/link/staging 成功 | PASS（2026-09-28，dependency-gated） |
 | Static checks | JSON、package、脚本或项目既有检查全部通过 | PASS（Toolkit validation + JSON parse + `git diff --check`） |
@@ -113,6 +113,6 @@
 
 `NOT ENTERED`
 
-M8 Native/Runtime 契约源码已按项目所有者授权提前开发，并通过 Toolkit、主机构建、staging 与静态检查；记录见 [`evidence/m7-m8/M7_M8_HOST_BUILD_2026-09-28.txt`](../evidence/m7-m8/M7_M8_HOST_BUILD_2026-09-28.txt)。由于 M7 尚未 `PASS`，M8 仍保持 `NOT ENTERED`，所有真机和 lifecycle/heap 项保持 `NOT TESTED`。
+M8 Native/Runtime 契约源码已按项目所有者授权提前开发，并通过 Toolkit、主机构建、staging 与静态检查。由于 M7 尚未 `PASS`，M8 仍保持 `NOT ENTERED`，所有真机和 lifecycle/heap 项保持 `NOT TESTED`。
 
-当前工作树固件重新隔离构建的记录见 [`evidence/m6/M6_M8_OFFLINE_BUILD_2026-09-29.txt`](../evidence/m6/M6_M8_OFFLINE_BUILD_2026-09-29.txt)；Runtime Toolkit 与 staging 门槛沿用上方 2026-09-28 证据。回收与无效来源路径在真机执行前还需可控触发方式，详见[执行清单](../../guides/hardware-acceptance.md)。
+当前工作树固件已重新完成隔离构建；Runtime Toolkit 与 staging 门槛沿用上方 2026-09-28 结果。回收与无效来源路径在按本页 Hardware Acceptance 执行前还需可控触发方式。

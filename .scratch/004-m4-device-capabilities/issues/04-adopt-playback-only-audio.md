@@ -1,11 +1,11 @@
-# 04 — Adopt an official playback-only Audio path
+# 04 — 采用官方 playback-only Audio path
 
-**What to build:** Sound and Volume through an upstream-supported `PlaybackIface` while Codec Recorder remains disabled.
+**What to build:** 通过上游支持的 `PlaybackIface` 提供 Sound 与 Volume，同时保持 Codec Recorder 禁用。
 
-**Blocked by:** Official Brookesia HAL/Audio capability change.
+**Blocked by:** 官方 Brookesia HAL/Audio capability 变更。
 
 **Status:** needs-info
 
-- [ ] A released or explicitly adopted upstream path provides playback without recorder.
-- [ ] Clean build and Settings Sound/Volume physical acceptance pass.
-- [ ] No managed-component patch or private Audio framework is introduced.
+- [ ] 已发布或明确采用的上游 path 能提供 playback 且不启用 recorder。
+- [ ] Clean build 与 Settings Sound/Volume 真机 acceptance 通过。
+- [ ] 不引入 managed-component patch 或私有 Audio framework。

@@ -19,10 +19,9 @@
 | Cleanup | GUI unload probe、Shell callback cleanup 和 App resource ownership 通过 |
 | Build | 最终 normal/stress 镜像和 LittleFS image 构建并烧录验证；早期镜像明确 superseded |
 
-## 证据索引
+## 验收记录
 
 - [2026-09-26 acceptance report](records/2026-09-26-acceptance-report.md) 保存镜像 identity、生命周期设计、物理检查和复现命令。
-- [M2 lifecycle raw record](../evidence/m2/M2_LIFECYCLE_2026-09-26.txt)，SHA-256 `543b0eaf8c0fa77e34200b77c4811ad64163afdd8469a66d3ca1960071a9c1ee`。
 
 ## 历史边界
 

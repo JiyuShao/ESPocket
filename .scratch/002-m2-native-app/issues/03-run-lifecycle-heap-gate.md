@@ -1,15 +1,15 @@
-# 03 — Run the Native lifecycle and heap gate
+# 03 — 执行 Native lifecycle 与 heap gate
 
-**What to build:** A default-off stress path and verifier that prove 50 complete Native lifecycle cycles without sustained heap loss.
+**What to build:** 默认关闭的 stress path 与 verifier，证明 50 轮完整 Native lifecycle 没有持续 heap loss。
 
-**Blocked by:** 02 — Close the Home and cleanup loop.
+**Blocked by:** 02 — 闭合 Home 与 cleanup loop。
 
 **Status:** retrospective-resolved
 
-- [x] 50/50 cycles reach Running and Stopped.
-- [x] GUI negative probe confirms unload.
-- [x] Four heap loss metrics remain within 1,024 bytes.
+- [x] 50/50 轮都到达 Running 与 Stopped。
+- [x] GUI negative probe 确认 unload。
+- [x] 四项 heap loss metric 均不超过 1,024 bytes。
 
 ## Resolution
 
-Accepted raw record is linked from M2 acceptance.
+已接受 raw record 由 M2 acceptance 链接。

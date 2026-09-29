@@ -1,28 +1,29 @@
 # ADR-0001: ESPocket is a product layer over Brookesia
 
 - Status: `accepted`
-- Date: 2026-09-29
+- Recorded: 2026-09-29
+- Origin: 从既有设计中提取；首次决策日期未知
 
 ## Context
 
-Brookesia already owns App, Runtime, GUI, Timer, Package, Service and HAL infrastructure. Recreating those facilities in ESPocket would split state and lifecycle ownership and make upstream upgrades harder.
+Brookesia 已经持有 App、Runtime、GUI、Timer、Package、Service 和 HAL 基础设施。在 ESPocket 中重建这些能力会拆分状态与生命周期所有权，并增加上游升级成本。
 
 ## Decision
 
-ESPocket composes product behavior through Brookesia public seams. It does not fork Core or create product-owned replacements for framework managers, package formats, installers or device abstractions.
+ESPocket 通过 Brookesia 的公开 seam 组合产品行为，不 fork Core，也不创建产品自有的 framework manager、包格式、Installer 或设备抽象替代品。
 
-Circular Shell uses a hidden Native `IApp` as its Brookesia carrier while remaining a system Shell in the product model. ESPocket will add a Shell abstraction only after a second real implementation proves the seam.
+Circular Shell 使用隐藏的 Native `IApp` 作为 Brookesia carrier，同时在产品模型中保持 system Shell 身份。只有第二个真实实现证明 seam 后，ESPocket 才增加 Shell 抽象。
 
 ## Consequences
 
-- Product policy belongs in `espocket::System`, Shell and focused adapters.
-- Framework gaps can block a Milestone rather than be bypassed with a second framework.
-- Managed components remain upstream-owned; compatibility code stays explicit and removable.
+- 产品策略位于 `espocket::System`、Shell 和聚焦的 Adapter 中。
+- Framework 缺口可以阻塞 Milestone，不能通过第二套 framework 绕过。
+- Managed components 继续由上游持有；兼容代码必须显式且可移除。
 
 ## Alternatives rejected
 
-- Fork Brookesia or patch managed components as the product baseline.
-- Copy framework managers into ESPocket.
-- Build a private installer, Runtime or Shell framework before a second implementation exists.
+- Fork Brookesia，或把 managed components patch 作为产品基线。
+- 将 framework manager 复制进 ESPocket。
+- 在第二个实现出现前构建私有 Installer、Runtime 或 Shell framework。
 
-See [product overview](../design/product/overview.md) and [layered architecture](../design/architecture/02-layered-architecture.md).
+参见[产品总览](../design/product/01-overview.md)和[分层架构](../design/architecture/02-layered-architecture.md)。

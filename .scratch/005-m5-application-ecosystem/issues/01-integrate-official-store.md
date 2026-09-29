@@ -1,15 +1,15 @@
-# 01 — Integrate the official Store
+# 01 — 集成官方 Store
 
-**What to build:** Official Store, HTTP, Storage and TLS resources that build, boot and complete an offline Store/Home lifecycle.
+**What to build:** 官方 Store、HTTP、Storage 与 TLS 资源，能够构建、启动，并完成 offline Store/Home lifecycle。
 
 **Blocked by:** M3 `PASS`.
 
 **Status:** retrospective-resolved
 
-- [x] Exact Store and HTTP dependencies resolve.
-- [x] Clean firmware and resources build.
-- [x] Offline Store startup and Home return pass.
+- [x] 准确的 Store 与 HTTP dependency 可解析。
+- [x] Clean firmware 与资源构建通过。
+- [x] Offline Store startup 与 Home return 通过。
 
 ## Resolution
 
-Accepted by M5 offline and cached evidence.
+M5 offline 与 cached evidence 已接受。

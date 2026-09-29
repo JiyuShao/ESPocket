@@ -1,15 +1,15 @@
-# 01 — Integrate official Settings on the round target
+# 01 — 在圆形目标设备集成官方 Settings
 
-**What to build:** Official Settings and required Services installed through ESPocket System with staged resources and a usable 466×466 layout.
+**What to build:** 通过 ESPocket System 安装官方 Settings 与必需 Service，stage 所需资源，并提供可用的 466×466 layout。
 
 **Blocked by:** M3 `PASS`.
 
 **Status:** retrospective-resolved
 
-- [x] Exact Settings and Audio dependencies resolve and build.
-- [x] Resources stage unchanged from upstream.
-- [x] Settings starts, renders and returns Home on hardware.
+- [x] 准确的 Settings 与 Audio dependency 可解析并构建。
+- [x] 资源按上游原样 stage。
+- [x] Settings 在真机上启动、render 并返回 Home。
 
 ## Resolution
 
-Accepted in M4; no private Settings framework or managed-component patch was introduced.
+M4 已接受；未引入私有 Settings framework 或 managed-component patch。

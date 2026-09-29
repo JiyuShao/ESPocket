@@ -1,15 +1,15 @@
-# 03 — Prove baseline boot stability
+# 03 — 证明 baseline 启动稳定性
 
-**What to build:** A reviewable M1 candidate that repeatedly reaches the product UI across cold and software reset paths.
+**What to build:** 一个可审查的 M1 candidate，能在冷启动与软件复位路径中重复到达产品 UI。
 
-**Blocked by:** 02 — Boot the Circular Shell through System Core.
+**Blocked by:** 02 — 通过 System Core 启动 Circular Shell。
 
 **Status:** retrospective-resolved
 
-- [x] Five cold boots pass.
-- [x] Ten EN/software resets pass.
-- [x] No panic, watchdog, assert or heap corruption is observed.
+- [x] 5 次冷启动通过。
+- [x] 10 次 EN/software reset 通过。
+- [x] 未观察到 panic、watchdog、assert 或 heap corruption。
 
 ## Resolution
 
-Accepted on 2026-09-25; timing and observations are preserved in the M1 record.
+已于 2026-09-25 接受；时间与观察保存在 M1 record 中。

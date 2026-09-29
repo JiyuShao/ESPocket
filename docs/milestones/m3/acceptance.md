@@ -7,7 +7,7 @@
 - Status: `PASS`
 - Date: 2026-09-28
 - Dependency: M2 `PASS`
-- Independent Core `.bpk` file-install evidence: `ACCEPTED BY PROJECT OWNER` without a new raw log
+- Independent Core `.bpk` file-install evidence: `ACCEPTED BY PROJECT OWNER` without an independently retained device capture
 
 ## 固定门槛
 
@@ -21,10 +21,9 @@
 | Coexistence | `Runtime → Native → Runtime` 及各自 start/stop 配对通过 |
 | Recovery baseline | System/Service worker stack canary 最终形成稳定配置和 clean physical pass |
 
-## 证据索引
+## 验收记录
 
 - [2026-09-28 acceptance report](records/2026-09-28-acceptance-report.md) 保存 lock、镜像、Toolkit、包 identity、设备恢复和内存计算。
-- [M3–M5 shared raw evidence](../evidence/m3-m5/) 保存 clean boot、canary 与物理生命周期记录。
 
 ## 历史边界
 

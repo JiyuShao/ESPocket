@@ -30,12 +30,11 @@
 | Dynamic Launcher | `BLOCKED` | 先通过 trust 和 online stability，再实现并真机验证 Core projection |
 | Package lifecycle | `NOT TESTED` | 当前没有兼容、可信、稳定的 Store flow |
 
-## 证据索引
+## 验收记录
 
 - [2026-09-28 acceptance report](records/2026-09-28-acceptance-report.md) 保存完整 Store、HTTP、包安全和分发矩阵。
-- [M5 raw evidence](../evidence/m5/) 保存 online crash、containment、symbolization 与摘要。
 - [HTTP race upstream draft](../../upstream/issues/http-cancel-race.md) 和 [upstream status](../../upstream/status-2026-09-28.md)保存上游事实。
-- [Runtime 包信任契约](../../design/product/runtime-package-trust.md)与 [App 发现契约](../../design/product/application-discovery.md)保存长期产品规则。
+- [Runtime 包信任契约](../../design/product/05-runtime-package-trust.md)与 [App 发现契约](../../design/product/06-application-discovery.md)保存长期产品规则。
 
 ## 下一判定
 

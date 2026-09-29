@@ -1,11 +1,11 @@
-# 03 — Verify Storage and Developer controls
+# 03 — 验证 Storage 与 Developer control
 
-**What to build:** Physical acceptance for the remaining official Settings capability pages.
+**What to build:** 为剩余官方 Settings capability page 完成真机 acceptance。
 
-**Blocked by:** 02 — Prove keyboard, Wi-Fi and status capabilities.
+**Blocked by:** 02 — 证明 keyboard、Wi-Fi 与 status capability。
 
 **Status:** ready-for-human
 
-- [ ] Storage visibility reflects real device state.
-- [ ] Developer/debug controls execute and return correctly.
-- [ ] Evidence is added without changing earlier accepted records.
+- [ ] Storage 可见信息反映真实设备状态。
+- [ ] Developer/debug control 正确执行并返回。
+- [ ] 增加新 evidence，不修改此前已接受记录。

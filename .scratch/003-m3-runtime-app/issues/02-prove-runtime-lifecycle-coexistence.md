@@ -1,15 +1,15 @@
-# 02 — Prove Runtime lifecycle and Native coexistence
+# 02 — 证明 Runtime lifecycle 与 Native 共存
 
-**What to build:** A clean image that discovers Hello Runtime and exercises its visible lifecycle alongside Hello Native.
+**What to build:** 一个能发现 Hello Runtime，并与 Hello Native 一起验证可见 lifecycle 的 clean image。
 
-**Blocked by:** 01 — Build and stage Hello Runtime.
+**Blocked by:** 01 — 构建并 stage Hello Runtime。
 
 **Status:** retrospective-resolved
 
-- [x] Core discovers Runtime on clean boot.
-- [x] Runtime renders and returns Home.
-- [x] `Runtime → Native → Runtime` has matching starts and stops.
+- [x] Core 在 clean boot 时发现 Runtime。
+- [x] Runtime 完成 render 并返回 Home。
+- [x] `Runtime → Native → Runtime` 的 start 与 stop 匹配。
 
 ## Resolution
 
-Accepted by the clean combined physical record.
+Clean combined physical record 已接受。

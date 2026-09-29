@@ -97,20 +97,20 @@ idf.py -C firmware \
 
 The accepted cumulative image and isolated diagnostic canaries were flashed under explicit authorization without whole-chip/NVS erase. The first accepted image repeatedly overflowed the 64 KiB System workers. A 128 KiB canary removed that failure but exposed the missing official JPEG decoder gate. After enabling `CONFIG_ESP_LVGL_ADAPTER_ENABLE_DECODER=y`, a repeated no-input 60-second boot completed with one ROM banner, no fatal signal, and all four product apps installed. A later 16 KiB Service Manager secondary-worker canary failed deterministically before GUI startup because its two internal-SRAM stacks left no contiguous 46,600-byte LVGL secondary display buffer; the same failure reproduced after reset. This is diagnostic evidence, not a Runtime lifecycle result.
 
-## Device Boot Recovery Evidence
+## Device Boot Recovery Observations
 
-| Evidence | SHA-256 | Observation |
-|---|---|---|
-| `evidence/m3-m5/M3_M5_DEVICE_64K_CORE_OVERFLOW_2026-09-26.txt` | `eebc79bba2035a86ecce3567dee3acb1e1027d005cdbcc8e753f35f66f50eda5` | 7 ROM banners, 6 reboots, 6 `System0/System2` stack overflows, 0 `ESPocket started` |
-| `evidence/m3-m5/M3_M5_CANARY_JPEG_FAILURE_2026-09-26.txt` | `3c12b224f9143c19029efa9c7493dcd203f9e76d4e651ca491c8fff8f6114836` | 128 KiB System workers removed the original overflow; Settings then failed because the official adapter decoder gate was disabled |
-| `evidence/m3-m5/M3_M5_CANARY_STORE_WORKER_OVERFLOW_2026-09-26.txt` | `0ef2be3a713703230c0e34935718bf0644508e94f9880bc3f4bd93322f89eebe` | JPEG-enabled canary reached `ESPocket started`; a later Store run overflowed the separate `SvcMgrSec0` worker and rebooted |
-| `evidence/m3-m5/M3_M5_CANARY_STABLE_BOOT_2026-09-26.txt` | `37f87b1c56fa3a02e5a6829e0512c1c7eecb0ad7e6aa0fbefed76f5f9a947ece` | repeated no-input 60-second boot: one ROM banner, all product apps installed, one `ESPocket started`, no app open, reboot, overflow, panic, WDT, assert, heap corruption, or startup failure |
-| `evidence/m3-m5/M3_M5_CANARY_16K_SECONDARY_INTERNAL_RAM_FAILURE_2026-09-26.txt` | `5b60f46ac629856b3357726556468c9c9bba48dfe731d0db573fc98afe3d2fc4` | 16 KiB × 2 internal secondary stacks caused deterministic 46,600-byte LVGL secondary-buffer allocation failure before app installation/startup |
-| `evidence/m3-m5/M3_M5_CANARY_16K_SECONDARY_INTERNAL_RAM_FAILURE_RETRY_2026-09-26.txt` | `10acc1ac439f6ac08e4548a164c6280aefe02c8689d29ecf24a9e3c496cdac23` | reset retry reproduced the same allocation failure at the same startup stage; no panic, overflow, or reboot loop |
-| `evidence/m3-m5/M3_M5_CANARY_12K_SECONDARY_STABLE_IDLE_2026-09-26.txt` | `06d920d5fa15a468752aeba4bff770b59153162b8964c5cc9d55ada1e94c431a` | 180-second unattended boot passed fail-closed validation with all product apps installed, no touch/Store-open event or fatal signal, and `SvcMgrSec0/1` minimum-free values of 7,300 / 7,296 bytes |
-| `evidence/m3-m5/M3_M5_CANARY_12K_SECONDARY_STORE_INTERACTION_2026-09-26.txt` | `61d5b9960f53279702430ea61e4b0b3496c301abb0c267b8ccbcb1b9a862f33d` | 240-second directed Store window captured one physical `pressed → Store open → released` sequence, no fatal/reboot signal, and final `SvcMgrSec0/1` minimum-free values of 7,300 / 3,600 bytes |
-| `evidence/m3-m5/M3_M5_CLEAN_12K_STABLE_BOOT_2026-09-26.txt` | `70beabca32097210587e72857d3a5908c65e6f777dedd54dad995a4929b1f095` | 90-second clean formal-image boot: all five apps installed, one `ESPocket started`, no Store autostart or fatal/reboot signal |
-| `evidence/m3-m5/M3_M5_CLEAN_COMBINED_PHYSICAL_2026-09-26.txt` | `8c7450759a10f404357acdae9a22db851d1039e8ed44f94c24ef5f79084a3020` | clean physical pass: Native 3/3, Runtime 2/2, Settings 1/1, Store 1/1 start/stop pairs; `Runtime → Native → Runtime` observed; no fatal/reboot signal |
+| Scenario | Observation |
+|---|---|
+| 64 KiB Core workers | 7 ROM banners, 6 reboots, 6 `System0/System2` stack overflows, 0 `ESPocket started` |
+| 128 KiB Core workers before JPEG gate | Original overflow removed; Settings then failed because the official adapter decoder gate was disabled |
+| JPEG-enabled Store canary | Reached `ESPocket started`; a later Store run overflowed the separate `SvcMgrSec0` worker and rebooted |
+| Repeated no-input 60-second boot | One ROM banner, all product apps installed, one `ESPocket started`, no app open, reboot, overflow, panic, WDT, assert, heap corruption, or startup failure |
+| 16 KiB × 2 secondary stacks | Deterministic 46,600-byte LVGL secondary-buffer allocation failure before app installation/startup |
+| 16 KiB reset retry | Same allocation failure reproduced at the same startup stage; no panic, overflow, or reboot loop |
+| 12 KiB unattended 180-second boot | All product apps installed, no touch/Store-open event or fatal signal, `SvcMgrSec0/1` minimum-free 7,300 / 7,296 bytes |
+| 12 KiB directed 240-second Store window | One physical `pressed → Store open → released` sequence, no fatal/reboot signal, final `SvcMgrSec0/1` minimum-free 7,300 / 3,600 bytes |
+| Clean 90-second formal-image boot | All five apps installed, one `ESPocket started`, no Store autostart or fatal/reboot signal |
+| Clean combined physical pass | Native 3/3, Runtime 2/2, Settings 1/1, Store 1/1 start/stop pairs; `Runtime → Native → Runtime`; no fatal/reboot signal |
 
 The stable 128 KiB canary reported minimum-free values of 55,648 / 126,600 / 88,632 bytes for `System0/1/2`. The maximum observed use was therefore 75,424 bytes. Applying the fixed policy
 

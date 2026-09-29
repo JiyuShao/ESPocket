@@ -1,11 +1,11 @@
-# 05 — Verify cancellation and result semantics
+# 05 — 验证 cancellation 与 result 语义
 
-**What to build:** The brightness tracer bullet distinguishes canceled-before-submit, committed, failed and uncertain outcomes across UI and Assistant callers.
+**What to build:** Brightness tracer bullet 在 UI 与 Assistant caller 中区分 canceled-before-submit、committed、failed 与 uncertain 结果。
 
-**Blocked by:** 04 — Enforce user-goal authorization.
+**Blocked by:** 04 — 执行 user-goal authorization。
 
 **Status:** ready-for-agent
 
-- [ ] PWR or caller cancellation prevents unsubmitted work.
-- [ ] Submitted work is observed rather than assumed rolled back.
-- [ ] Tests cover Event delivery and Owner failure.
+- [ ] PWR 或 caller cancellation 阻止尚未提交的工作。
+- [ ] 已提交工作通过观察确认，不假定已回滚。
+- [ ] 测试覆盖 Event delivery 与 Owner failure。

@@ -1,11 +1,11 @@
-# 02 — Close M7 source and build gates
+# 02 — 关闭 M7 source 与 build gate
 
-**What to build:** Cards, Quick Settings, Edge Back and direct Launch Source form one clean, buildable navigation loop with real capability bindings.
+**What to build:** Cards、Quick Settings、Edge Back 与直接 Launch Source 形成一套 clean、可构建且绑定真实 capability 的导航闭环。
 
-**Blocked by:** 01 — Fix brightness output identity.
+**Blocked by:** 01 — 修复 brightness output identity。
 
 **Status:** ready-for-agent
 
-- [ ] Existing host/static gates are rerun after the brightness fix.
-- [ ] Card and Quick Settings capability errors fail predictably.
-- [ ] No generic Card SDK or arbitrary history stack is added.
+- [ ] Brightness 修复后重新执行现有 host/static gate。
+- [ ] Card 与 Quick Settings capability error 以可预测方式失败。
+- [ ] 不增加通用 Card SDK 或任意 history stack。

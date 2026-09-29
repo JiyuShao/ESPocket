@@ -1,44 +1,48 @@
-# 导航与应用运行
+# 05 — 导航与应用运行
 
-这张图回答：Shell Surface、App 页面、Back、Home、息屏和唤醒如何组合。
+## 目的
 
-## 顶层 Surface
+定义 Shell Surface、App 页面、Back、Home、Screen Off 与 Wake 的组合方式，并明确导航状态由哪个 Module 拥有。
+
+## 支撑的产品要求
+
+- [INT-001–INT-016](../product/03-interaction-model.md)
+- [APP-001–APP-007、APP-010、APP-015](../product/04-app-contract.md)
+
+## 结构
 
 ![ESPocket 顶层导航 Surface](assets/navigation-surfaces.svg)
 
-当前 ShellSurface 枚举包含 WatchFace、BatteryCard、BrightnessCard、QuickSettings 和 Launcher。App 运行时不属于 ShellSurface；它由 System Core 作为前台可见 App 管理。
-
-## 导航职责
-
-| 决策 | 负责模块 |
-|---|---|
-| 手势是否达到阈值、属于哪个 Surface | CircularShell |
-| manifest ID 对应哪个已安装 App | System Core + espocket::System |
-| 记录直接 Launch Source | espocket::System |
-| Detail Back 返回 Root | App 的 main Screen Flow |
-| Root Back 停止 App 并恢复来源 | espocket::System |
-| PWR Home、息屏、唤醒 | espocket::System + PowerKeyMonitor |
-| 页面 GUI、Timer 与 action | AppContext |
-
-## 显示状态与导航正交
-
 ![ESPocket 显示状态](assets/display-state.svg)
-
-息屏不执行 Back 或 Home。系统保存可恢复的前台 App ID；唤醒时只有目标仍处于有效 Running 状态才恢复，否则降级到 Watch Face。
-
-## App 类型
 
 ![ESPocket 应用运行模型](assets/app-runtime.svg)
 
-Runtime 包的来源和信任策略不会改变这套运行期交互契约；未通过信任门的动态包不得进入可启动集合。
+## 架构不变量
 
-## Assistant 与导航
+| ID | Invariant |
+|---|---|
+| NAV-001 | Watch Face、Cards、Quick Settings 与 Launcher 是 Shell Surface；前台 App 由 System Core 管理。 |
+| NAV-002 | CircularShell 解释手势和可见 Surface，`espocket::System` 记录一个直接 Launch Source。 |
+| NAV-003 | App 的 Screen Flow 拥有 Root 与 Detail 内部导航；System Core 拥有 App 启停。 |
+| NAV-004 | Root Back 停止 App 并恢复直接 Launch Source；来源失效时恢复 Watch Face。 |
+| NAV-005 | PWR Home、Screen Off 与 Wake 由 `espocket::System` 编排，App 不得拦截。 |
+| NAV-006 | Display State 与导航正交；息屏不执行 Back 或 Home。 |
+| NAV-007 | Native 与 Runtime App 使用不同 Adapter 接入同一生命周期与导航 Seam。 |
 
-Assistant 发起的语义 Action 仍通过目标 Owner 和现有导航生命周期执行。Assistant 不能把 GUI 自动点击当作产品 Action，也不能凭 App prompt 合成 Home、Back 或用户授权。需要显示 UI 的 Action 必须明确其 Launch Source、PWR 行为和 Running Instance 失效规则。
+## AI Native
 
-## 源码锚点
+Assistant 调用 Home、Back、打开 Surface 或读取 Display State 时，仍通过目标 Owner 和同一导航生命周期执行。需要显示 UI 的 Action 必须定义 Launch Source、PWR 行为和 Running Instance 失效规则。
 
-- firmware/components/shell_circular/include/espocket/circular_shell.hpp
-- firmware/components/shell_circular/src/circular_shell.cpp
-- firmware/components/espocket_system/src/system.cpp
-- ../product/app-contract.md
+Exposure Decision：开放稳定导航语义，不开放 GUI 自动点击、坐标、手势注入、LVGL 对象或绕过授权的 App prompt。
+
+## Code Anchors
+
+- [circular_shell.hpp](../../../firmware/components/shell_circular/include/espocket/circular_shell.hpp)
+- [circular_shell.cpp](../../../firmware/components/shell_circular/src/circular_shell.cpp)
+- [system.cpp](../../../firmware/components/espocket_system/src/system.cpp)
+
+## 非目标
+
+- 定义手势识别算法、动画实现或 UI Widget 层级。
+- 建立任意长度的 App-to-App 返回历史。
+- 为 Runtime App 建立独立导航系统。
