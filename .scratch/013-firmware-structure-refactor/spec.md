@@ -144,3 +144,5 @@ firmware/
 - 2026-10-02：用户要求提交当前代码并开始本 Effort；固定基线 `43159fb`，先执行 01。基线已有真实 `espocket_navigation` 状态 Owner，结构调整保留其 component 边界，不另建 Navigator。
 
 - 2026-10-02：01 已完成，统一 host checks 与完整构建通过；结果见 [阶段记录](records/2026-10-02-host-checks.md)。下一执行 frontier 为 02 GUI 资源抽离。
+
+- 2026-10-02：02 已完成，GUI 资源与 manifest 比对一致，Host checks 和完整构建通过；见 [阶段记录](records/2026-10-02-gui-resources.md)。下一执行 frontier 为 03 Shell 拆分与 ShellHost。

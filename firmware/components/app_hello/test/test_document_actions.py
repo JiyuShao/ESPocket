@@ -12,12 +12,12 @@ from gui_actions import action_sets, validate_action_contract
 
 class DocumentActionsTest(unittest.TestCase):
     def test_each_action_has_one_document_owner(self):
-        owners, _, _ = action_sets(COMPONENT, 'circular_shell.cpp', 'CircularShell')
+        owners, _, _ = action_sets(COMPONENT, 'hello_app.cpp', 'HelloApp')
         self.assertEqual({action: nodes for action, nodes in owners.items()
                           if len(nodes) > 1}, {})
 
     def test_document_subscriptions_and_handlers_agree(self):
-        validate_action_contract(COMPONENT, 'circular_shell.cpp', 'CircularShell')
+        validate_action_contract(COMPONENT, 'hello_app.cpp', 'HelloApp')
 
 
 if __name__ == '__main__':

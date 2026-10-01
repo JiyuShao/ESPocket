@@ -1,6 +1,10 @@
+# Unique generated name avoids ESP-IDF basename symbol collisions.
+configure_file("${CMAKE_CURRENT_LIST_DIR}/resources/gui.json" "${CMAKE_CURRENT_BINARY_DIR}/shell_gui.json" COPYONLY)
+
 idf_component_register(
     SRCS "src/circular_shell.cpp"
     INCLUDE_DIRS "include"
+    EMBED_TXTFILES "${CMAKE_CURRENT_BINARY_DIR}/shell_gui.json"
     REQUIRES
         brookesia_system_core
         esp_lvgl_adapter
