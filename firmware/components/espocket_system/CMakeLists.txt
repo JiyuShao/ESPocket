@@ -1,5 +1,6 @@
 idf_component_register(
-    SRCS "src/system.cpp" "src/power_key_monitor.cpp" "src/settings_navigation_adapter.cpp"
+    SRCS "src/system.cpp" "src/system_lifecycle.cpp" "src/system_navigation.cpp"
+        "src/system_display.cpp" "src/system_power.cpp" "src/power_key_monitor.cpp" "src/settings_navigation_adapter.cpp"
     INCLUDE_DIRS "include"
     REQUIRES
         app_hello

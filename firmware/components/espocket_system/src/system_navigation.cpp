@@ -1,0 +1,149 @@
+#include "system_internal.hpp"
+
+namespace espocket {
+
+std::expected<void, std::string> System::launch_app(
+    std::string_view manifest_id,
+    ShellSurface source
+)
+{
+    auto apps = list_apps();
+    auto app = std::find_if(apps.begin(), apps.end(), [manifest_id](const auto &candidate) {
+        return candidate.manifest.id == manifest_id;
+    });
+    if (app == apps.end()) {
+        return std::unexpected("App is not installed: " + std::string(manifest_id));
+    }
+    launch_source_ = source;
+    lifecycle_restore_surface_ = source;
+    lifecycle_restore_pending_ = true;
+    auto result = start_app(app->app_id);
+    if (!result) {
+        restore_surface(source);
+        lifecycle_restore_pending_ = false;
+        return result;
+    }
+    return {};
+}
+
+void System::handle_back()
+{
+    if (stopping_.load(std::memory_order_acquire) || !shell_) {
+        return;
+    }
+    auto active = get_active_app();
+    if (!active.has_value() || active->app_id == shell_id_ || !active->manifest.visible) {
+        if (shell_->current_surface() != ShellSurface::WatchFace) {
+            restore_surface(ShellSurface::WatchFace);
+        }
+        return;
+    }
+
+    if (active->app_id == settings_id_ && settings_adapter_) {
+        auto result = settings_adapter_->request_back();
+        if (!result && result.error() != "at_root") {
+            ESP_LOGW(TAG, "Settings Back failed: %s", result.error().c_str());
+        }
+        return;
+    }
+    if (auto navigator = navigator_for(active->app_id)) {
+        if (!navigator->edge_back_enabled()) {
+            return;
+        }
+        auto result = navigator->request_back(
+            static_cast<uint64_t>(esp_timer_get_time() / 1000)
+        );
+        if (!result) {
+            ESP_LOGW(TAG, "App Page Back failed: %d", static_cast<int>(result.error()));
+        }
+    }
+}
+
+void System::handle_back_timeout()
+{
+    if (foreground_app_id_.load(std::memory_order_acquire) == settings_id_ && settings_adapter_) {
+        settings_adapter_->refresh();
+        return;
+    }
+    auto navigator = navigator_for(foreground_app_id_.load(std::memory_order_acquire));
+    if (!navigator) {
+        return;
+    }
+    const auto expired = navigator->expire_back(
+        static_cast<uint64_t>(esp_timer_get_time() / 1000)
+    );
+    if (expired) {
+        ESP_LOGW(TAG, "App Back confirmation timed out: %d", static_cast<int>(*expired));
+    }
+}
+
+void System::show_watch_face()
+{
+    if (!shell_) {
+        return;
+    }
+    auto result = shell_->show_watch_face();
+    if (!result) {
+        ESP_LOGW(TAG, "Failed to show Watch Face: %s", result.error().c_str());
+    } else {
+        ESP_LOGI(TAG, "M6 Home: Watch Face");
+    }
+}
+
+void System::restore_surface(ShellSurface surface)
+{
+    if (!shell_) {
+        return;
+    }
+    auto result = shell_->show_surface(surface);
+    if (!result) {
+        ESP_LOGW(TAG, "Failed to restore Shell surface: %s", result.error().c_str());
+        if (surface != ShellSurface::WatchFace) {
+            show_watch_face();
+        }
+    }
+}
+
+std::shared_ptr<PageNavigator> System::navigator_for(
+    esp_brookesia::system::core::AppId app_id
+) const
+{
+    const auto it = page_navigators_.find(app_id);
+    return it == page_navigators_.end() ? nullptr : it->second;
+}
+
+std::expected<PageSnapshot, std::string> System::foreground_page_snapshot() const
+{
+    const auto token = foreground_token_->load(std::memory_order_acquire);
+    const auto app_id = foreground_app_id_.load(std::memory_order_acquire);
+    if (token == 0 || app_id == esp_brookesia::system::core::INVALID_APP_ID) {
+        return std::unexpected("no_foreground_app");
+    }
+    std::expected<PageSnapshot, std::string> result = std::unexpected("page_adapter_unavailable");
+    if (app_id == settings_id_ && settings_adapter_) {
+        result = settings_adapter_->snapshot();
+    } else if (auto navigator = navigator_for(app_id)) {
+        auto page = navigator->snapshot();
+        result = page.page_id.empty() ? std::expected<PageSnapshot, std::string>(
+            std::unexpected("not_started")) : std::expected<PageSnapshot, std::string>(std::move(page));
+    }
+    if (foreground_token_->load(std::memory_order_acquire) != token ||
+            foreground_app_id_.load(std::memory_order_acquire) != app_id) {
+        return std::unexpected("foreground_changed");
+    }
+    return result;
+}
+
+void System::register_navigator(
+    esp_brookesia::system::core::AppId app_id,
+    std::shared_ptr<PageNavigator> navigator
+)
+{
+    navigator->set_availability_handler([this](bool default_visible, bool edge_enabled) {
+        default_back_visible_.store(default_visible, std::memory_order_release);
+        edge_back_enabled_.store(edge_enabled, std::memory_order_release);
+    });
+    page_navigators_.emplace(app_id, std::move(navigator));
+}
+
+} // namespace espocket

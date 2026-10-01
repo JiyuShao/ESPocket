@@ -46,20 +46,17 @@ struct ShellHost {
     std::function<ShellBackUiState()> back_ui;
     std::function<void()> expire_back;
     ShellDeveloperModeControl developer_mode;
+    std::function<void()> tick;
 };
 
 class CircularShell final : public esp_brookesia::system::core::IApp {
 public:
     using BackUiState = ShellBackUiState;
     using DeveloperModeControl = ShellDeveloperModeControl;
-    using PowerPressCountProvider = std::function<uint32_t()>;
-    using SystemHandler = std::function<void()>;
 
     explicit CircularShell(
         uint32_t display_output_id,
-        ShellHost host = {},
-        PowerPressCountProvider power_press_count_provider = {},
-        SystemHandler power_handler = {}
+        ShellHost host = {}
     );
 
     esp_brookesia::system::core::AppManifest get_manifest() const override;
@@ -139,8 +136,6 @@ private:
 
     uint32_t display_output_id_;
     ShellHost host_;
-    PowerPressCountProvider power_press_count_provider_;
-    SystemHandler power_handler_;
     std::shared_ptr<HomeGestureState> home_gesture_state_;
     std::shared_ptr<KeyboardState> keyboard_state_;
     std::shared_ptr<BackOverlayState> back_overlay_state_;
@@ -150,7 +145,6 @@ private:
         esp_brookesia::system::core::INVALID_TIMER_ID;
     esp_brookesia::system::core::TimerId status_timer_id_ =
         esp_brookesia::system::core::INVALID_TIMER_ID;
-    uint32_t last_power_press_count_ = 0;
     uint32_t last_activity_generation_ = 0;
     int64_t last_activity_us_ = 0;
     bool screen_timeout_latched_ = false;

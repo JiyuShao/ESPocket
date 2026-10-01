@@ -1,0 +1,151 @@
+#include "system_internal.hpp"
+
+namespace espocket {
+
+std::expected<void, std::string> System::on_app_started(
+    const esp_brookesia::system::core::AppInfo &app
+)
+{
+    if (stopping_.load(std::memory_order_acquire)) {
+        return std::unexpected("ESPocket System is stopping");
+    }
+    if (app.app_id == shell_id_ || !app.manifest.visible) {
+        return {};
+    }
+
+    if (auto navigator = navigator_for(app.app_id)) {
+        auto result = navigator->start();
+        if (!result) {
+            return std::unexpected("Failed to start App Page Navigator");
+        }
+    }
+
+    foreground_app_id_.store(app.app_id, std::memory_order_release);
+    do {
+        ++foreground_generation_;
+    } while (foreground_generation_ == 0);
+    foreground_token_->store(foreground_generation_, std::memory_order_release);
+    lifecycle_restore_pending_ = false;
+    return {};
+}
+
+void System::on_app_start_failed(
+    const esp_brookesia::system::core::AppInfo &app,
+    std::string_view reason
+)
+{
+    if (auto navigator = navigator_for(app.app_id)) {
+        navigator->stop();
+    }
+    ESP_LOGW(
+        TAG,
+        "App start failed: manifest=%s reason=%.*s",
+        app.manifest.id.c_str(),
+        static_cast<int>(reason.size()),
+        reason.data()
+    );
+    restore_home_after_lifecycle(app);
+}
+
+void System::on_app_stopped(const esp_brookesia::system::core::AppInfo &app)
+{
+    if (auto navigator = navigator_for(app.app_id)) {
+        navigator->stop();
+    }
+    restore_home_after_lifecycle(app);
+}
+
+void System::on_app_stop_failed(
+    const esp_brookesia::system::core::AppInfo &app,
+    std::string_view reason
+)
+{
+    if (auto navigator = navigator_for(app.app_id)) {
+        navigator->stop();
+    }
+    ESP_LOGW(
+        TAG,
+        "App stop failed: manifest=%s reason=%.*s",
+        app.manifest.id.c_str(),
+        static_cast<int>(reason.size()),
+        reason.data()
+    );
+    if (app.manifest.kind == esp_brookesia::system::core::AppKind::Runtime) {
+        runtime_stop_failed_.store(true, std::memory_order_release);
+        ESP_LOGE(TAG, "Keyboard input disabled after Runtime stop failure");
+    }
+    restore_home_after_lifecycle(app);
+}
+
+std::expected<void, std::string> System::on_show_app_keyboard(
+    esp_brookesia::system::core::AppId app_id,
+    esp_brookesia::system::core::KeyboardRequestId request_id,
+    const esp_brookesia::system::core::KeyboardRequestOptions &options
+)
+{
+    if (runtime_stop_failed_.load(std::memory_order_acquire)) {
+        return std::unexpected("Keyboard input is disabled until restart after Runtime stop failure");
+    }
+    auto app = get_app(app_id);
+    if (!app.has_value()) {
+        return std::unexpected("Keyboard owner app is not installed");
+    }
+    if (app->state != esp_brookesia::system::core::AppState::Running) {
+        return std::unexpected("Keyboard input requires a running owner app");
+    }
+    if (!shell_) {
+        return std::unexpected("Circular Shell is unavailable for keyboard input");
+    }
+    return shell_->show_keyboard(app_id, request_id, options);
+}
+
+void System::on_hide_app_keyboard(
+    esp_brookesia::system::core::AppId app_id,
+    esp_brookesia::system::core::KeyboardRequestId request_id
+)
+{
+    if (shell_) {
+        shell_->hide_keyboard(app_id, request_id);
+    }
+}
+
+void System::clear_foreground(
+    const esp_brookesia::system::core::AppInfo &app
+)
+{
+    auto expected = app.app_id;
+    if (!foreground_app_id_.compare_exchange_strong(
+                expected,
+                esp_brookesia::system::core::INVALID_APP_ID,
+                std::memory_order_acq_rel
+            )) {
+        return;
+    }
+    foreground_token_->store(0, std::memory_order_release);
+}
+
+void System::restore_home_after_lifecycle(
+    const esp_brookesia::system::core::AppInfo &app
+)
+{
+    clear_foreground(app);
+    if (stopping_.load(std::memory_order_acquire) || app.app_id == shell_id_ ||
+            !app.manifest.visible || !shell_) {
+        return;
+    }
+
+    auto active = get_active_app();
+    if (active.has_value() && active->app_id != shell_id_ && active->manifest.visible) {
+        return;
+    }
+
+    auto shell = get_app(shell_id_);
+    if (!shell.has_value() || shell->state != esp_brookesia::system::core::AppState::Running) {
+        return;
+    }
+    const auto surface = lifecycle_restore_pending_ ? lifecycle_restore_surface_ : ShellSurface::WatchFace;
+    lifecycle_restore_pending_ = false;
+    restore_surface(surface);
+}
+
+} // namespace espocket

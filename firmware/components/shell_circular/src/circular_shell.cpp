@@ -4,14 +4,10 @@ namespace espocket {
 
 CircularShell::CircularShell(
     uint32_t display_output_id,
-    ShellHost host,
-    PowerPressCountProvider power_press_count_provider,
-    SystemHandler power_handler
+    ShellHost host
 )
     : display_output_id_(display_output_id),
-      host_(std::move(host)),
-      power_press_count_provider_(std::move(power_press_count_provider)),
-      power_handler_(std::move(power_handler))
+      host_(std::move(host))
 {}
 
 esp_brookesia::system::core::AppManifest CircularShell::get_manifest() const
@@ -58,7 +54,6 @@ std::expected<void, std::string> CircularShell::on_start(
     }
 
     home_gesture_state_ = std::make_shared<HomeGestureState>();
-    last_power_press_count_ = power_press_count_provider_ ? power_press_count_provider_() : 0;
     last_activity_generation_ = 0;
     last_activity_us_ = esp_timer_get_time();
     screen_timeout_latched_ = false;
@@ -229,12 +224,8 @@ std::expected<void, std::string> CircularShell::on_timer(
                 host_.keyboard_result(app_id, request_id, confirmed, std::move(text));
             }
         }
-        if (power_press_count_provider_ && power_handler_) {
-            const auto count = power_press_count_provider_();
-            if (count != last_power_press_count_) {
-                last_power_press_count_ = count;
-                power_handler_();
-            }
+        if (host_.tick) {
+            host_.tick();
         }
         if (home_gesture_state_) {
             const auto activity = home_gesture_state_->activity_generation.load(std::memory_order_acquire);

@@ -59,6 +59,7 @@ protected:
 
 private:
     std::expected<void, std::string> start_display();
+    void poll_system_input();
     void handle_power_short_press();
     void handle_screen_timeout();
     void handle_back();

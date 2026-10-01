@@ -29,6 +29,8 @@ std::expected<void, std::string> PowerKeyMonitor::start()
         return {};
     }
 
+    pending_short_presses_.store(0, std::memory_order_release);
+
     const gpio_config_t config = {
         .pin_bit_mask = 1ULL << PWR_GPIO,
         .mode = GPIO_MODE_INPUT,
@@ -63,9 +65,9 @@ void PowerKeyMonitor::stop()
     }
 }
 
-uint32_t PowerKeyMonitor::short_press_count() const
+bool PowerKeyMonitor::take_short_press()
 {
-    return short_press_count_.load(std::memory_order_acquire);
+    return pending_short_presses_.exchange(0, std::memory_order_acq_rel) != 0;
 }
 
 void PowerKeyMonitor::task_entry(void *arg)
@@ -98,7 +100,7 @@ void PowerKeyMonitor::run()
                         (xTaskGetTickCount() - pressed_at) * portTICK_PERIOD_MS
                     );
                     if (duration_ms <= SHORT_PRESS_MAX_MS) {
-                        short_press_count_.fetch_add(1, std::memory_order_acq_rel);
+                        pending_short_presses_.fetch_add(1, std::memory_order_acq_rel);
                         ESP_LOGI(TAG, "PWR short press duration=%" PRIu32 "ms", duration_ms);
                     } else {
                         ESP_LOGI(TAG, "PWR long press left to hardware duration=%" PRIu32 "ms", duration_ms);

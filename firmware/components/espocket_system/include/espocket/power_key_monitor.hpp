@@ -20,7 +20,7 @@ public:
 
     std::expected<void, std::string> start();
     void stop();
-    uint32_t short_press_count() const;
+    bool take_short_press();
 
 private:
     static void task_entry(void *arg);
@@ -29,7 +29,7 @@ private:
 
     std::atomic<TaskHandle_t> task_ = nullptr;
     std::atomic_bool running_ = false;
-    std::atomic<uint32_t> short_press_count_ = 0;
+    std::atomic<uint32_t> pending_short_presses_ = 0;
 };
 
 } // namespace espocket

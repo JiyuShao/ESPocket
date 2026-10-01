@@ -148,3 +148,5 @@ firmware/
 - 2026-10-02：02 已完成，GUI 资源与 manifest 比对一致，Host checks 和完整构建通过；见 [阶段记录](records/2026-10-02-gui-resources.md)。下一执行 frontier 为 03 Shell 拆分与 ShellHost。
 
 - 2026-10-02：03 完成 Shell 拆分及 ShellHost，Host checks 和构建通过；见 [阶段记录](records/2026-10-02-shell-split.md)。
+
+- 2026-10-02：04 源码、Owner 断言及构建完成，真机 smoke 留到 05/06 最终镜像集中执行；[阶段记录](records/2026-10-02-system-split.md)。05 的纯目录整理先继续，不提前关闭 04 真机条件。
