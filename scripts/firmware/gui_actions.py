@@ -23,7 +23,8 @@ def action_sets(component: Path, source_name: str, class_name: str):
 
     visit(document)
     source = (component / 'src' / source_name).read_text()
-    constants = dict(re.findall(r'constexpr std::string_view (\w+) = "([^"]+)";', source))
+    constants_source = source + ''.join(path.read_text() for path in sorted((component / 'src').glob('*.hpp')))
+    constants = dict(re.findall(r'constexpr std::string_view (\w+) = "([^"]+)";', constants_source))
 
     def method(name):
         match = re.search(rf'{class_name}::{name}\(.*?\n\}}', source, re.DOTALL)

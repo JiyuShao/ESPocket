@@ -254,29 +254,24 @@ std::expected<void, std::string> System::on_init()
     power_key_monitor_ = std::make_unique<PowerKeyMonitor>();
     shell_ = std::make_shared<CircularShell>(
         display_output_id_,
-        [this]() {
-            return power_key_monitor_ ? power_key_monitor_->short_press_count() : 0;
-        },
-        [this]() {
+        ShellHost{
+        .display_on = [this]() {
             return display_on_.load(std::memory_order_acquire);
         },
-        [this]() {
+        .app_visible = [this]() {
             return foreground_app_id_.load(std::memory_order_acquire) !=
                    esp_brookesia::system::core::INVALID_APP_ID;
         },
-        [this]() {
-            handle_power_short_press();
-        },
-        [this]() {
+        .screen_timeout = [this]() {
             handle_screen_timeout();
         },
-        [this](std::string_view manifest_id, ShellSurface source) {
+        .launch_app = [this](std::string_view manifest_id, ShellSurface source) {
             return launch_app(manifest_id, source);
         },
-        [this]() {
+        .back = [this]() {
             handle_back();
         },
-        [this](
+        .keyboard_result = [this](
             esp_brookesia::system::core::AppId app_id,
             esp_brookesia::system::core::KeyboardRequestId request_id,
             bool confirmed,
@@ -292,7 +287,7 @@ std::expected<void, std::string> System::on_init()
                 ESP_LOGW(TAG, "Failed to complete keyboard request: %s", result.error().c_str());
             }
         },
-        [this]() {
+        .back_ui = [this]() {
             const auto foreground = foreground_app_id_.load(std::memory_order_acquire);
             if (foreground == settings_id_ && settings_adapter_) {
                 return CircularShell::BackUiState{
@@ -308,15 +303,17 @@ std::expected<void, std::string> System::on_init()
                                 edge_back_enabled_.load(std::memory_order_acquire),
             };
         },
-        [this]() {
+        .expire_back = [this]() {
             handle_back_timeout();
         },
-        CircularShell::DeveloperModeControl{
+        .developer_mode = CircularShell::DeveloperModeControl{
             .enabled = [mode = developer_mode_]() { return mode->enabled(); },
             .set_enabled = [adapter = test_adapter_.get()](bool enabled) {
                 return adapter->set_developer_mode(enabled);
             },
-        }
+        }},
+        [this]() { return power_key_monitor_ ? power_key_monitor_->short_press_count() : 0; },
+        [this]() { handle_power_short_press(); }
     );
     auto result = install_app(shell_);
     if (!result) {

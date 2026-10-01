@@ -25,45 +25,41 @@ enum class ShellSurface : uint8_t {
     Launcher,
 };
 
+struct ShellBackUiState {
+    bool default_visible = false;
+    bool edge_enabled = false;
+};
+
+struct ShellDeveloperModeControl {
+    std::function<bool()> enabled;
+    std::function<std::expected<void, std::string>(bool)> set_enabled;
+};
+
+struct ShellHost {
+    std::function<bool()> display_on;
+    std::function<bool()> app_visible;
+    std::function<void()> screen_timeout;
+    std::function<std::expected<void, std::string>(std::string_view, ShellSurface)> launch_app;
+    std::function<void()> back;
+    std::function<void(esp_brookesia::system::core::AppId,
+                       esp_brookesia::system::core::KeyboardRequestId, bool, std::string)> keyboard_result;
+    std::function<ShellBackUiState()> back_ui;
+    std::function<void()> expire_back;
+    ShellDeveloperModeControl developer_mode;
+};
+
 class CircularShell final : public esp_brookesia::system::core::IApp {
 public:
-    struct BackUiState {
-        bool default_visible = false;
-        bool edge_enabled = false;
-    };
-    struct DeveloperModeControl {
-        std::function<bool()> enabled;
-        std::function<std::expected<void, std::string>(bool)> set_enabled;
-    };
+    using BackUiState = ShellBackUiState;
+    using DeveloperModeControl = ShellDeveloperModeControl;
     using PowerPressCountProvider = std::function<uint32_t()>;
-    using DisplayOnProvider = std::function<bool()>;
-    using AppVisibleProvider = std::function<bool()>;
     using SystemHandler = std::function<void()>;
-    using BackUiProvider = std::function<BackUiState()>;
-    using AppLaunchHandler = std::function<std::expected<void, std::string>(
-                                 std::string_view,
-                                 ShellSurface
-                             )>;
-    using KeyboardResultHandler = std::function<void(
-                                      esp_brookesia::system::core::AppId,
-                                      esp_brookesia::system::core::KeyboardRequestId,
-                                      bool,
-                                      std::string
-                                  )>;
 
     explicit CircularShell(
         uint32_t display_output_id,
+        ShellHost host = {},
         PowerPressCountProvider power_press_count_provider = {},
-        DisplayOnProvider display_on_provider = {},
-        AppVisibleProvider app_visible_provider = {},
-        SystemHandler power_handler = {},
-        SystemHandler screen_timeout_handler = {},
-        AppLaunchHandler app_launch_handler = {},
-        SystemHandler back_handler = {},
-        KeyboardResultHandler keyboard_result_handler = {},
-        BackUiProvider back_ui_provider = {},
-        SystemHandler back_timeout_handler = {},
-        DeveloperModeControl developer_mode = {}
+        SystemHandler power_handler = {}
     );
 
     esp_brookesia::system::core::AppManifest get_manifest() const override;
@@ -142,17 +138,9 @@ private:
     void set_status_text(std::string_view path, std::string text);
 
     uint32_t display_output_id_;
+    ShellHost host_;
     PowerPressCountProvider power_press_count_provider_;
-    DisplayOnProvider display_on_provider_;
-    AppVisibleProvider app_visible_provider_;
     SystemHandler power_handler_;
-    SystemHandler screen_timeout_handler_;
-    AppLaunchHandler app_launch_handler_;
-    SystemHandler back_handler_;
-    BackUiProvider back_ui_provider_;
-    SystemHandler back_timeout_handler_;
-    KeyboardResultHandler keyboard_result_handler_;
-    DeveloperModeControl developer_mode_;
     std::shared_ptr<HomeGestureState> home_gesture_state_;
     std::shared_ptr<KeyboardState> keyboard_state_;
     std::shared_ptr<BackOverlayState> back_overlay_state_;

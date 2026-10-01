@@ -2,7 +2,8 @@
 configure_file("${CMAKE_CURRENT_LIST_DIR}/resources/gui.json" "${CMAKE_CURRENT_BINARY_DIR}/shell_gui.json" COPYONLY)
 
 idf_component_register(
-    SRCS "src/circular_shell.cpp"
+    SRCS "src/circular_shell.cpp" "src/shell_document.cpp"
+        "src/shell_navigation.cpp" "src/shell_keyboard.cpp" "src/shell_status.cpp"
     INCLUDE_DIRS "include"
     EMBED_TXTFILES "${CMAKE_CURRENT_BINARY_DIR}/shell_gui.json"
     REQUIRES

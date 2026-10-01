@@ -146,3 +146,5 @@ firmware/
 - 2026-10-02：01 已完成，统一 host checks 与完整构建通过；结果见 [阶段记录](records/2026-10-02-host-checks.md)。下一执行 frontier 为 02 GUI 资源抽离。
 
 - 2026-10-02：02 已完成，GUI 资源与 manifest 比对一致，Host checks 和完整构建通过；见 [阶段记录](records/2026-10-02-gui-resources.md)。下一执行 frontier 为 03 Shell 拆分与 ShellHost。
+
+- 2026-10-02：03 完成 Shell 拆分及 ShellHost，Host checks 和构建通过；见 [阶段记录](records/2026-10-02-shell-split.md)。
