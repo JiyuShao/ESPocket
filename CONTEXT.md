@@ -49,11 +49,22 @@ Circular Shell 的系统主界面，也是 Home 的固定目标和 Home Space �
 _Avoid_: Home page、Launcher
 
 **Home Space**：
-由 Watch Face 与其左右有序 Card 组成的系统一级内容空间。
+以 Watch Face 为中心，包含上方 Quick Settings、下方 Launcher 和左右内容 Card 的系统一级交互空间。
 
 **Card**：
-Home Space 中围绕单一主题提供一眼可读信息、少量即时操作或 App 入口的单页内容。
-_Avoid_: App、Detail page、generic UI card
+Home Space 左右序列中的一级页面位置，可由 Shell 内容或 App 占据；它描述在 Home Space 中的呈现角色，不改变 App 的安装身份。
+_Avoid_: generic UI card
+
+**App Card**：
+由 App 提供、占据 Card 位置的专门界面形态；与完整 App 页面属于同一 App，但在 Home Space 中受其导航规则约束。
+_Avoid_: App shortcut、完整 App 页面
+
+**App Page**：
+完整 App 内的一种页面类型，由 App 声明稳定身份；同一类型的不同内容实例仍属于同一 App Page。
+_Avoid_: App Card、页面实例
+
+**App Root**：
+App 导航任务的起点页面；它不提供 Back。
 
 **Launcher**：
 从 Watch Face 进入、用于查找并启动可用 App 或明确 Shell 内部目标的系统 Surface。
@@ -67,25 +78,17 @@ _Avoid_: Home
 _Avoid_: Back、Launcher、Home page
 
 **Back**：
-返回当前导航层级的 Parent 或直接 Launch Source 的页面级导航意图。
+返回 App 当前导航任务中的上一页面的页面级导航意图；App Root 不提供 Back。
 _Avoid_: Home
-
-**Launch Source**：
-App 当前导航任务的一个直接系统来源，不构成跨 App 历史链。
-_Avoid_: Recent Apps、navigation history
 
 **Display State**：
 与当前 Surface 和页面导航正交的屏幕点亮或熄灭状态。
 
 **Shell Surface**：
-任一时刻占据主要交互区域的顶层系统界面，包括 Home Space、Launcher 与 Quick Settings。
+任一时刻占据主要交互区域的顶层系统页面，包括 Watch Face、Card、Launcher 与 Quick Settings；这些页面共同构成 Home Space。
 
 **Shell Overlay**：
-覆盖当前 Surface 或 App 的临时系统交互层，不属于普通 Back 栈。
-
-**Status View**：
-Shell Overlay 中呈现时间、网络和电池状态的区域。
-_Avoid_: Status Bar
+由 Shell 覆盖当前 Surface 或 App 的系统控件或临时提示层，不属于普通 Back 栈。
 
 ## AI Native
 

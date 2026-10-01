@@ -12,8 +12,8 @@
 | M3 Runtime App Validation | `PASS` | [M3](m3/acceptance.md) | completed; file-install evidence exception accepted |
 | M4 Device Capabilities | `BLOCKED` | [M4](m4/acceptance.md) | Storage/Developer hardware checks and official playback-only Audio path |
 | M5 Application Ecosystem | `BLOCKED` | [M5](m5/acceptance.md) | HTTP fix, trust gate, compatible release and dynamic Launcher path |
-| M6 Home & Display State | `IN PROGRESS` | [M6](m6/acceptance.md) | hardware acceptance |
-| M7 Navigation Surfaces | `NOT ENTERED` | [M7](m7/acceptance.md) | M6 `PASS`; brightness OutputId path remains open |
+| M6 Home & Display State | `PASS` | [M6](m6/acceptance.md) | hardware acceptance complete |
+| M7 Navigation Surfaces | `IN PROGRESS` | [M7](m7/acceptance.md) | brightness OutputId path remains open |
 | M8 App Interaction Contract | `NOT ENTERED` | [M8](m8/acceptance.md) | M7 `PASS` and M8 Native/Runtime hardware evidence |
 
 ## M0 Official Baseline waiver

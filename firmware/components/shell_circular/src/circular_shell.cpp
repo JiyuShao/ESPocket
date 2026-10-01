@@ -22,6 +22,10 @@
 #include "lvgl.h"
 #include "sdkconfig.h"
 
+#ifndef CONFIG_ESPOCKET_M6_SCREEN_TIMEOUT_SECONDS
+#define CONFIG_ESPOCKET_M6_SCREEN_TIMEOUT_SECONDS 30
+#endif
+
 namespace espocket {
 namespace {
 
@@ -34,8 +38,11 @@ constexpr std::string_view APP_STORE_MANIFEST_ID = "brookesia.general.app_store"
 constexpr std::string_view OPEN_HELLO_NATIVE_ACTION = "shell.open_hello_native";
 constexpr std::string_view OPEN_HELLO_RUNTIME_ACTION = "shell.open_hello_runtime";
 constexpr std::string_view OPEN_SETTINGS_ACTION = "shell.open_settings";
+constexpr std::string_view OPEN_SETTINGS_CARD_ACTION = "shell.open_settings_card";
+constexpr std::string_view OPEN_SETTINGS_QUICK_ACTION = "shell.open_settings_quick";
 constexpr std::string_view OPEN_APP_STORE_ACTION = "shell.open_app_store";
 constexpr std::string_view STEP_BRIGHTNESS_ACTION = "shell.step_brightness";
+constexpr std::string_view STEP_BRIGHTNESS_QUICK_ACTION = "shell.step_brightness_quick";
 constexpr std::string_view TOGGLE_WIFI_ACTION = "shell.toggle_wifi";
 constexpr std::string_view PAGE_FLOW = "shell_pages";
 constexpr std::string_view WATCH_FACE_TIME_PATH = "/watch_face/time";
@@ -45,12 +52,11 @@ constexpr std::string_view BRIGHTNESS_CARD_PATH = "/brightness_card/value";
 constexpr std::string_view QUICK_BATTERY_PATH = "/quick_settings/battery";
 constexpr std::string_view QUICK_BRIGHTNESS_PATH = "/quick_settings/brightness_action/brightness";
 constexpr std::string_view QUICK_WIFI_PATH = "/quick_settings/wifi_action/wifi";
+constexpr std::string_view LAUNCHER_PULL_PATH = "/launcher/pull_hint";
 constexpr std::string_view HOME_INTENT_TIMER = "espocket.home_intent";
 constexpr int HOME_INTENT_INTERVAL_MS = 50;
 constexpr std::string_view STATUS_TIMER = "espocket.status";
 constexpr int STATUS_INTERVAL_MS = 30'000;
-constexpr std::string_view WIFI_PATH = "/overlay/status/wifi";
-constexpr std::string_view BATTERY_PATH = "/overlay/status/battery";
 constexpr int64_t SCREEN_TIMEOUT_US =
     static_cast<int64_t>(CONFIG_ESPOCKET_M6_SCREEN_TIMEOUT_SECONDS) * 1'000'000;
 
@@ -93,6 +99,30 @@ constexpr bool has_gesture_area(uint8_t value, DisplayHelper::TouchGestureArea a
 static_assert(gesture_exit_distance_px(466) == 93);
 static_assert(gesture_vertical_edge_px(466) == 37);
 static_assert(gesture_horizontal_edge_px(466) == 27);
+
+// PROTOTYPE: Brookesia exposes scroll commands but not a scroll-position query.
+// This recognizes the Shell-owned Launcher list by its four direct App buttons.
+lv_obj_t *find_launcher_view(lv_obj_t *root)
+{
+    if (root == nullptr) {
+        return nullptr;
+    }
+    if (lv_obj_has_flag(root, LV_OBJ_FLAG_SCROLLABLE) && lv_obj_get_height(root) >= 400) {
+        uint32_t app_buttons = 0;
+        for (uint32_t index = 0; index < lv_obj_get_child_count(root); ++index) {
+            app_buttons += lv_obj_check_type(lv_obj_get_child(root, index), &lv_button_class) ? 1U : 0U;
+        }
+        if (app_buttons == 4) {
+            return root;
+        }
+    }
+    for (uint32_t index = 0; index < lv_obj_get_child_count(root); ++index) {
+        if (auto *found = find_launcher_view(lv_obj_get_child(root, index)); found != nullptr) {
+            return found;
+        }
+    }
+    return nullptr;
+}
 
 class LvglLock {
 public:
@@ -217,13 +247,7 @@ constexpr std::string_view SHELL_JSON = R"json({
           "style": { "bgColor": "#2dd4bf", "radius": "2dp", "padding": 0 },
           "placement": { "width": "38dp", "height": "4dp" }
         },
-        {
-          "type": "label",
-          "id": "launcher_hint",
-          "labelProps": { "text": "APPS" },
-          "style": { "textColor": "#64748b", "fontSize": "14sp", "textAlign": "center" },
-          "placement": { "width": "160dp", "height": "22dp" }
-        }
+        { "type": "label", "id": "space", "labelProps": { "text": " " }, "placement": { "width": "160dp", "height": "22dp" } }
       ]
     },
     {
@@ -235,7 +259,7 @@ constexpr std::string_view SHELL_JSON = R"json({
       "children": [
         { "type": "label", "id": "title", "labelProps": { "text": "Battery" }, "style": { "textColor": "#9ae6b4", "fontSize": "28sp" }, "placement": { "width": "250dp", "height": "40dp" } },
         { "type": "label", "id": "value", "labelProps": { "text": "Battery: ?" }, "style": { "textColor": "#ffffff", "fontSize": "40sp", "textAlign": "center" }, "placement": { "width": "300dp", "height": "58dp" } },
-        { "type": "label", "id": "hint", "labelProps": { "text": "Read only · swipe left for Home" }, "style": { "textColor": "#86a89b", "fontSize": "15sp", "textAlign": "center" }, "placement": { "width": "300dp", "height": "26dp" } }
+        { "type": "label", "id": "hint", "labelProps": { "text": "‹  Home" }, "style": { "textColor": "#86a89b", "fontSize": "15sp", "textAlign": "center" }, "placement": { "width": "300dp", "height": "26dp" } }
       ]
     },
     {
@@ -248,7 +272,8 @@ constexpr std::string_view SHELL_JSON = R"json({
         { "type": "label", "id": "title", "labelProps": { "text": "Brightness" }, "style": { "textColor": "#fbd38d", "fontSize": "28sp" }, "placement": { "width": "250dp", "height": "40dp" } },
         { "type": "label", "id": "value", "labelProps": { "text": "Brightness: ?" }, "style": { "textColor": "#ffffff", "fontSize": "28sp", "textAlign": "center" }, "placement": { "width": "300dp", "height": "44dp" } },
         { "type": "button", "id": "step", "events": [ { "type": "clicked", "action": "shell.step_brightness" } ], "style": { "bgColor": "#c47c14", "radius": "26dp" }, "placement": { "width": "220dp", "height": "58dp" }, "children": [ { "type": "label", "id": "label", "labelProps": { "text": "Increase 20%" }, "style": { "textColor": "#ffffff", "fontSize": "18sp" }, "placement": { "mode": "relative", "align": "center" } } ] },
-        { "type": "button", "id": "settings", "events": [ { "type": "clicked", "action": "shell.open_settings" } ], "style": { "bgColor": "#725018", "radius": "22dp" }, "placement": { "width": "180dp", "height": "46dp" }, "children": [ { "type": "label", "id": "label", "labelProps": { "text": "Display Settings" }, "style": { "textColor": "#ffffff", "fontSize": "16sp" }, "placement": { "mode": "relative", "align": "center" } } ] }
+        { "type": "button", "id": "settings", "events": [ { "type": "clicked", "action": "shell.open_settings_card" } ], "style": { "bgColor": "#725018", "radius": "22dp" }, "placement": { "width": "180dp", "height": "46dp" }, "children": [ { "type": "label", "id": "label", "labelProps": { "text": "Display Settings" }, "style": { "textColor": "#ffffff", "fontSize": "16sp" }, "placement": { "mode": "relative", "align": "center" } } ] },
+        { "type": "label", "id": "hint", "labelProps": { "text": "Home  ›" }, "style": { "textColor": "#a98b60", "fontSize": "15sp", "textAlign": "center" }, "placement": { "width": "260dp", "height": "26dp" } }
       ]
     },
     {
@@ -260,24 +285,33 @@ constexpr std::string_view SHELL_JSON = R"json({
       "children": [
         { "type": "label", "id": "title", "labelProps": { "text": "Quick Settings" }, "style": { "textColor": "#ffffff", "fontSize": "26sp" }, "placement": { "width": "280dp", "height": "38dp" } },
         { "type": "label", "id": "battery", "labelProps": { "text": "Battery: ?" }, "style": { "textColor": "#aeb9c8", "fontSize": "17sp" }, "placement": { "width": "250dp", "height": "26dp" } },
-        { "type": "button", "id": "brightness_action", "events": [ { "type": "clicked", "action": "shell.step_brightness" } ], "style": { "bgColor": "#b7791f", "radius": "24dp" }, "placement": { "width": "230dp", "height": "52dp" }, "children": [ { "type": "label", "id": "brightness", "labelProps": { "text": "Brightness: ?" }, "style": { "textColor": "#ffffff", "fontSize": "17sp" }, "placement": { "mode": "relative", "align": "center" } } ] },
+        { "type": "button", "id": "brightness_action", "events": [ { "type": "clicked", "action": "shell.step_brightness_quick" } ], "style": { "bgColor": "#b7791f", "radius": "24dp" }, "placement": { "width": "230dp", "height": "52dp" }, "children": [ { "type": "label", "id": "brightness", "labelProps": { "text": "Brightness: ?" }, "style": { "textColor": "#ffffff", "fontSize": "17sp" }, "placement": { "mode": "relative", "align": "center" } } ] },
         { "type": "button", "id": "wifi_action", "events": [ { "type": "clicked", "action": "shell.toggle_wifi" } ], "style": { "bgColor": "#2563a9", "radius": "24dp" }, "placement": { "width": "230dp", "height": "52dp" }, "children": [ { "type": "label", "id": "wifi", "labelProps": { "text": "Wi-Fi: ?" }, "style": { "textColor": "#ffffff", "fontSize": "17sp" }, "placement": { "mode": "relative", "align": "center" } } ] },
-        { "type": "button", "id": "settings", "events": [ { "type": "clicked", "action": "shell.open_settings" } ], "style": { "bgColor": "#277b65", "radius": "24dp" }, "placement": { "width": "230dp", "height": "52dp" }, "children": [ { "type": "label", "id": "label", "labelProps": { "text": "Open Settings" }, "style": { "textColor": "#ffffff", "fontSize": "17sp" }, "placement": { "mode": "relative", "align": "center" } } ] }
+        { "type": "button", "id": "settings", "events": [ { "type": "clicked", "action": "shell.open_settings_quick" } ], "style": { "bgColor": "#277b65", "radius": "24dp" }, "placement": { "width": "230dp", "height": "52dp" }, "children": [ { "type": "label", "id": "label", "labelProps": { "text": "Open Settings" }, "style": { "textColor": "#ffffff", "fontSize": "17sp" }, "placement": { "mode": "relative", "align": "center" } } ] },
+        { "type": "label", "id": "hint", "labelProps": { "text": "↑  Home" }, "style": { "textColor": "#94a3b8", "fontSize": "15sp", "textAlign": "center" }, "placement": { "width": "230dp", "height": "24dp" } }
       ]
     },
     {
       "type": "viewScreen",
       "id": "launcher",
-      "commonProps": { "scrollable": false },
+      "commonProps": { "scrollable": true },
       "style": { "bgColor": "#070a10", "padding": 0 },
       "layout": {
         "type": "flex",
         "flexFlow": "column",
-        "mainAlign": "center",
+        "mainAlign": "start",
         "crossAlign": "center",
-        "gap": "8dp"
+        "gap": "16dp"
       },
       "children": [
+        {
+          "type": "label",
+          "id": "pull_hint",
+          "bindings": { "placement.height": "pullHeight" },
+          "labelProps": { "text": "↓  Pull for Home" },
+          "style": { "textColor": "#64748b", "fontSize": "16sp", "textAlign": "center" },
+          "placement": { "width": "260dp", "height": "28dp" }
+        },
         {
           "type": "label",
           "id": "title",
@@ -286,64 +320,38 @@ constexpr std::string_view SHELL_JSON = R"json({
           "placement": { "width": "220dp", "height": "44dp" }
         },
         {
-          "type": "label",
-          "id": "caption",
-          "labelProps": { "text": "ESPocket" },
-          "style": { "textColor": "#64748b", "fontSize": "15sp", "textAlign": "center" },
-          "placement": { "width": "220dp", "height": "22dp" }
+          "type": "button",
+          "id": "hello_native",
+          "events": [ { "type": "clicked", "action": "shell.open_hello_native" } ],
+          "style": { "bgColor": "#1d4ed8", "radius": "30dp" },
+          "placement": { "width": "290dp", "height": "96dp" },
+          "children": [ { "type": "label", "id": "label", "labelProps": { "text": "Native" }, "style": { "textColor": "#ffffff", "fontSize": "21sp" }, "placement": { "mode": "relative", "align": "center" } } ]
         },
         {
-          "type": "container",
-          "id": "app_row_primary",
-          "commonProps": { "scrollable": false },
-          "layout": { "type": "flex", "flexFlow": "row", "mainAlign": "spaceBetween", "crossAlign": "center" },
-          "style": { "padding": 0 },
-          "placement": { "width": "294dp", "height": "90dp" },
-          "children": [
-            {
-              "type": "button",
-              "id": "hello_native",
-              "events": [ { "type": "clicked", "action": "shell.open_hello_native" } ],
-              "style": { "bgColor": "#1d4ed8", "radius": "30dp" },
-              "placement": { "width": "142dp", "height": "90dp" },
-              "children": [ { "type": "label", "id": "label", "labelProps": { "text": "Native" }, "style": { "textColor": "#ffffff", "fontSize": "18sp" }, "placement": { "mode": "relative", "align": "center" } } ]
-            },
-            {
-              "type": "button",
-              "id": "hello_runtime",
-              "events": [ { "type": "clicked", "action": "shell.open_hello_runtime" } ],
-              "style": { "bgColor": "#6d28d9", "radius": "30dp" },
-              "placement": { "width": "142dp", "height": "90dp" },
-              "children": [ { "type": "label", "id": "label", "labelProps": { "text": "Runtime" }, "style": { "textColor": "#ffffff", "fontSize": "18sp" }, "placement": { "mode": "relative", "align": "center" } } ]
-            }
-          ]
+          "type": "button",
+          "id": "hello_runtime",
+          "events": [ { "type": "clicked", "action": "shell.open_hello_runtime" } ],
+          "style": { "bgColor": "#6d28d9", "radius": "30dp" },
+          "placement": { "width": "290dp", "height": "96dp" },
+          "children": [ { "type": "label", "id": "label", "labelProps": { "text": "Runtime" }, "style": { "textColor": "#ffffff", "fontSize": "21sp" }, "placement": { "mode": "relative", "align": "center" } } ]
         },
         {
-          "type": "container",
-          "id": "app_row_system",
-          "commonProps": { "scrollable": false },
-          "layout": { "type": "flex", "flexFlow": "row", "mainAlign": "spaceBetween", "crossAlign": "center" },
-          "style": { "padding": 0 },
-          "placement": { "width": "294dp", "height": "90dp" },
-          "children": [
-            {
-              "type": "button",
-              "id": "settings",
-              "events": [ { "type": "clicked", "action": "shell.open_settings" } ],
-              "style": { "bgColor": "#0f766e", "radius": "30dp" },
-              "placement": { "width": "142dp", "height": "90dp" },
-              "children": [ { "type": "label", "id": "label", "labelProps": { "text": "Settings" }, "style": { "textColor": "#ffffff", "fontSize": "17sp" }, "placement": { "mode": "relative", "align": "center" } } ]
-            },
-            {
-              "type": "button",
-              "id": "app_store",
-              "events": [ { "type": "clicked", "action": "shell.open_app_store" } ],
-              "style": { "bgColor": "#9a5a16", "radius": "30dp" },
-              "placement": { "width": "142dp", "height": "90dp" },
-              "children": [ { "type": "label", "id": "label", "labelProps": { "text": "Store" }, "style": { "textColor": "#ffffff", "fontSize": "18sp" }, "placement": { "mode": "relative", "align": "center" } } ]
-            }
-          ]
-        }
+          "type": "button",
+          "id": "settings",
+          "events": [ { "type": "clicked", "action": "shell.open_settings" } ],
+          "style": { "bgColor": "#0f766e", "radius": "30dp" },
+          "placement": { "width": "290dp", "height": "96dp" },
+          "children": [ { "type": "label", "id": "label", "labelProps": { "text": "Settings" }, "style": { "textColor": "#ffffff", "fontSize": "21sp" }, "placement": { "mode": "relative", "align": "center" } } ]
+        },
+        {
+          "type": "button",
+          "id": "app_store",
+          "events": [ { "type": "clicked", "action": "shell.open_app_store" } ],
+          "style": { "bgColor": "#9a5a16", "radius": "30dp" },
+          "placement": { "width": "290dp", "height": "96dp" },
+          "children": [ { "type": "label", "id": "label", "labelProps": { "text": "Store" }, "style": { "textColor": "#ffffff", "fontSize": "21sp" }, "placement": { "mode": "relative", "align": "center" } } ]
+        },
+        { "type": "label", "id": "bottom_space", "labelProps": { "text": " " }, "placement": { "width": "160dp", "height": "44dp" } }
       ]
     },
     {
@@ -358,50 +366,7 @@ constexpr std::string_view SHELL_JSON = R"json({
         "height": "${env.heightDp}"
       },
       "style": { "padding": 0 },
-      "children": [
-        {
-          "type": "container",
-          "id": "status",
-          "commonProps": { "clickable": false, "scrollable": false },
-          "style": { "bgColor": "#111827", "radius": "21dp", "padding": 0 },
-          "placement": {
-            "mode": "absolute",
-            "x": "113dp",
-            "y": "42dp",
-            "width": "240dp",
-            "height": "42dp"
-          },
-          "children": [
-            {
-              "type": "label",
-              "id": "wifi",
-              "labelProps": { "text": "Wi-Fi: ?" },
-              "style": { "textColor": "#94a3b8", "fontSize": "15sp", "textAlign": "left" },
-              "placement": { "mode": "absolute", "x": "14dp", "y": "10dp", "width": "112dp", "height": "22dp" }
-            },
-            {
-              "type": "label",
-              "id": "battery",
-              "labelProps": { "text": "Bat: ?" },
-              "style": { "textColor": "#94a3b8", "fontSize": "15sp", "textAlign": "right" },
-              "placement": { "mode": "absolute", "x": "126dp", "y": "10dp", "width": "100dp", "height": "22dp" }
-            }
-          ]
-        },
-        {
-          "type": "container",
-          "id": "home_indicator",
-          "commonProps": { "clickable": false, "scrollable": false },
-          "style": { "bgColor": "#e6ebf2", "radius": "3dp", "padding": 0 },
-          "placement": {
-            "mode": "absolute",
-            "x": "201dp",
-            "y": "439dp",
-            "width": "64dp",
-            "height": "6dp"
-          }
-        }
-      ]
+      "children": []
     },
     {
       "type": "screenFlow",
@@ -440,7 +405,13 @@ struct CircularShell::KeyboardState {
     std::string text;
 };
 
+struct CircularShell::BackOverlayState {
+    lv_obj_t *button = nullptr;
+    std::atomic_bool clicked = false;
+};
+
 CircularShell::CircularShell(
+    uint32_t display_output_id,
     PowerPressCountProvider power_press_count_provider,
     DisplayOnProvider display_on_provider,
     AppVisibleProvider app_visible_provider,
@@ -448,15 +419,20 @@ CircularShell::CircularShell(
     SystemHandler screen_timeout_handler,
     AppLaunchHandler app_launch_handler,
     SystemHandler back_handler,
-    KeyboardResultHandler keyboard_result_handler
+    KeyboardResultHandler keyboard_result_handler,
+    BackUiProvider back_ui_provider,
+    SystemHandler back_timeout_handler
 )
-    : power_press_count_provider_(std::move(power_press_count_provider)),
+    : display_output_id_(display_output_id),
+      power_press_count_provider_(std::move(power_press_count_provider)),
       display_on_provider_(std::move(display_on_provider)),
       app_visible_provider_(std::move(app_visible_provider)),
       power_handler_(std::move(power_handler)),
       screen_timeout_handler_(std::move(screen_timeout_handler)),
       app_launch_handler_(std::move(app_launch_handler)),
       back_handler_(std::move(back_handler)),
+      back_ui_provider_(std::move(back_ui_provider)),
+      back_timeout_handler_(std::move(back_timeout_handler)),
       keyboard_result_handler_(std::move(keyboard_result_handler))
 {}
 
@@ -501,13 +477,17 @@ std::expected<void, std::string> CircularShell::on_start(
 {
     context_ = &context;
     keyboard_state_ = std::make_shared<KeyboardState>();
+    back_overlay_state_ = std::make_shared<BackOverlayState>();
 
     for (const auto action : {
              OPEN_HELLO_NATIVE_ACTION,
              OPEN_HELLO_RUNTIME_ACTION,
              OPEN_SETTINGS_ACTION,
+             OPEN_SETTINGS_CARD_ACTION,
+             OPEN_SETTINGS_QUICK_ACTION,
              OPEN_APP_STORE_ACTION,
              STEP_BRIGHTNESS_ACTION,
+             STEP_BRIGHTNESS_QUICK_ACTION,
              TOGGLE_WIFI_ACTION,
          }) {
         auto action_result = context.gui().subscribe_action(action);
@@ -573,6 +553,7 @@ std::expected<void, std::string> CircularShell::on_stop(
             hide_keyboard(app_id, request_id);
         }
     }
+    sync_default_back(false);
     gesture_connection_.disconnect();
     if (home_intent_timer_id_ != esp_brookesia::system::core::INVALID_TIMER_ID) {
         (void)context.timer().stop(home_intent_timer_id_);
@@ -583,6 +564,7 @@ std::expected<void, std::string> CircularShell::on_stop(
     display_binding_.release();
     context_ = nullptr;
     keyboard_state_.reset();
+    back_overlay_state_.reset();
     callback_state_.reset();
     return {};
 }
@@ -593,19 +575,26 @@ std::expected<void, std::string> CircularShell::on_action(
 )
 {
     (void)context;
+    // PROTOTYPE: a completed pull must not also open the touched list row.
+    if (current_surface() == ShellSurface::Launcher && home_gesture_state_ &&
+            home_gesture_state_->launcher_pull_distance.load(std::memory_order_acquire) >=
+                home_gesture_state_->launcher_return_threshold.load(std::memory_order_acquire)) {
+        return {};
+    }
     if (action == OPEN_HELLO_NATIVE_ACTION) {
         return open_app(HELLO_NATIVE_MANIFEST_ID, "Hello Native");
     }
     if (action == OPEN_HELLO_RUNTIME_ACTION) {
         return open_app(HELLO_RUNTIME_MANIFEST_ID, "Hello Runtime");
     }
-    if (action == OPEN_SETTINGS_ACTION) {
+    if (action == OPEN_SETTINGS_ACTION || action == OPEN_SETTINGS_CARD_ACTION ||
+        action == OPEN_SETTINGS_QUICK_ACTION) {
         return open_app(SETTINGS_MANIFEST_ID, "Settings");
     }
     if (action == OPEN_APP_STORE_ACTION) {
         return open_app(APP_STORE_MANIFEST_ID, "App Store");
     }
-    if (action == STEP_BRIGHTNESS_ACTION) {
+    if (action == STEP_BRIGHTNESS_ACTION || action == STEP_BRIGHTNESS_QUICK_ACTION) {
         return step_brightness();
     }
     if (action == TOGGLE_WIFI_ACTION) {
@@ -622,6 +611,26 @@ std::expected<void, std::string> CircularShell::on_timer(
 {
     (void)context;
     if (timer_id == home_intent_timer_id_ && name == HOME_INTENT_TIMER) {
+        if (back_timeout_handler_) {
+            back_timeout_handler_();
+        }
+        if (back_overlay_state_) {
+            const bool clicked = back_overlay_state_->clicked.exchange(
+                                     false, std::memory_order_acq_rel
+                                 );
+            if (clicked && back_handler_) {
+                back_handler_();
+            }
+            bool keyboard_active = false;
+            if (keyboard_state_) {
+                std::lock_guard lock(keyboard_state_->mutex);
+                keyboard_active = keyboard_state_->request_id !=
+                                  esp_brookesia::system::core::INVALID_KEYBOARD_REQUEST_ID;
+            }
+            const bool visible = back_ui_provider_ && back_ui_provider_().default_visible &&
+                                 !keyboard_active;
+            sync_default_back(visible);
+        }
         if (keyboard_state_ && keyboard_result_handler_) {
             esp_brookesia::system::core::AppId app_id =
                 esp_brookesia::system::core::INVALID_APP_ID;
@@ -657,6 +666,46 @@ std::expected<void, std::string> CircularShell::on_timer(
                 last_activity_generation_ = activity;
                 last_activity_us_ = esp_timer_get_time();
                 screen_timeout_latched_ = false;
+            }
+            if (current_surface() == ShellSurface::Launcher &&
+                    (!app_visible_provider_ || !app_visible_provider_())) {
+                {
+                    LvglLock lock;
+                    if (lock) {
+                        if (auto *launcher = find_launcher_view(lv_screen_active()); launcher != nullptr) {
+                            home_gesture_state_->launcher_scroll_top.store(
+                                lv_obj_get_scroll_top(launcher), std::memory_order_release
+                            );
+                        }
+                    }
+                }
+                const int32_t pull = home_gesture_state_->launcher_pull_distance.load(
+                                         std::memory_order_acquire
+                                     );
+                const int32_t threshold = home_gesture_state_->launcher_return_threshold.load(
+                                              std::memory_order_acquire
+                                          );
+                const uint8_t visual = pull <= 0 ? 0 : (pull >= threshold ? 2 : 1);
+                if (visual != launcher_pull_visual_) {
+                    launcher_pull_visual_ = visual;
+                    set_status_text(
+                        LAUNCHER_PULL_PATH,
+                        visual == 2 ? "↓  Release for Home" :
+                        visual == 1 ? "↓  Keep pulling" : "↓  Pull for Home"
+                    );
+                }
+                const int32_t height = 28 + std::min<int32_t>(32, pull / 3);
+                if (height != launcher_pull_height_ && context_ != nullptr) {
+                    launcher_pull_height_ = height;
+                    auto result = context_->gui().set_binding_value(
+                                      LAUNCHER_PULL_PATH,
+                                      "pullHeight",
+                                      std::to_string(height) + "dp"
+                                  );
+                    if (!result) {
+                        ESP_LOGW(SHELL_TAG, "Launcher pull feedback failed: %s", result.error().c_str());
+                    }
+                }
             }
             const auto intent = static_cast<GestureIntent>(
                                     home_gesture_state_->pending_gesture.exchange(
@@ -709,6 +758,54 @@ std::expected<void, std::string> CircularShell::on_timer(
     return {};
 }
 
+void CircularShell::sync_default_back(bool visible)
+{
+    if (!back_overlay_state_ || visible == (back_overlay_state_->button != nullptr)) {
+        return;
+    }
+    LvglLock lock;
+    if (!lock) {
+        ESP_LOGW(SHELL_TAG, "Failed to lock LVGL for default Back");
+        return;
+    }
+    if (!visible) {
+        if (lv_obj_is_valid(back_overlay_state_->button)) {
+            lv_obj_delete(back_overlay_state_->button);
+        }
+        back_overlay_state_->button = nullptr;
+        back_overlay_state_->clicked.store(false, std::memory_order_release);
+        return;
+    }
+    auto *button = lv_button_create(lv_layer_top());
+    if (button == nullptr) {
+        ESP_LOGW(SHELL_TAG, "Failed to create default Back button");
+        return;
+    }
+    lv_obj_set_size(button, 98, 52);
+    lv_obj_align(button, LV_ALIGN_TOP_MID, -78, 26);
+    lv_obj_set_style_bg_color(button, lv_color_hex(0x34465f), 0);
+    lv_obj_set_style_radius(button, 24, 0);
+    auto *label = lv_label_create(button);
+    if (label == nullptr) {
+        lv_obj_delete(button);
+        return;
+    }
+    lv_label_set_text(label, "< Back");
+    lv_obj_set_style_text_color(label, lv_color_hex(0xffffff), 0);
+    lv_obj_set_style_text_font(label, &lv_font_montserrat_18, 0);
+    lv_obj_center(label);
+    lv_obj_add_event_cb(
+        button,
+        [](lv_event_t *event) {
+            auto *state = static_cast<BackOverlayState *>(lv_event_get_user_data(event));
+            state->clicked.store(true, std::memory_order_release);
+        },
+        LV_EVENT_CLICKED,
+        back_overlay_state_.get()
+    );
+    back_overlay_state_->button = button;
+}
+
 std::expected<void, std::string> CircularShell::configure_home_gesture()
 {
     if (!DisplayHelper::is_available()) {
@@ -739,6 +836,7 @@ std::expected<void, std::string> CircularShell::configure_home_gesture()
     config.threshold.horizontal_edge = gesture_horizontal_edge_px(output->width);
     config.threshold.vertical_edge = gesture_vertical_edge_px(output->height);
     const auto exit_distance_px = gesture_exit_distance_px(static_cast<int32_t>(output->height));
+    home_gesture_state_->launcher_return_threshold.store(exit_distance_px, std::memory_order_release);
     auto config_result = display.set_touch_gesture_config(output->id, config);
     if (!config_result) {
         return std::unexpected("Failed to configure Home gesture: " + config_result.error());
@@ -749,11 +847,18 @@ std::expected<void, std::string> CircularShell::configure_home_gesture()
     [exit_distance_px,
      state = home_gesture_state_,
      display_on_provider = display_on_provider_,
-     app_visible_provider = app_visible_provider_](
+     app_visible_provider = app_visible_provider_,
+     back_ui_provider = back_ui_provider_](
         const std::string &, const DisplayService::TouchGestureInfo &info
     ) {
         if (info.event_type == DisplayHelper::TouchGestureEventType::Press) {
             state->consumed.store(false, std::memory_order_release);
+            state->launcher_pull_distance.store(0, std::memory_order_release);
+            state->launcher_press_started_at_top.store(
+                state->surface.load(std::memory_order_acquire) == ShellSurface::Launcher &&
+                    state->launcher_scroll_top.load(std::memory_order_acquire) <= 1,
+                std::memory_order_release
+            );
             if (display_on_provider && !display_on_provider()) {
                 return;
             }
@@ -761,12 +866,34 @@ std::expected<void, std::string> CircularShell::configure_home_gesture()
             return;
         }
         if (info.event_type == DisplayHelper::TouchGestureEventType::Release) {
-            state->consumed.store(false, std::memory_order_release);
+            if ((!app_visible_provider || !app_visible_provider()) &&
+                    state->surface.load(std::memory_order_acquire) == ShellSurface::Launcher &&
+                    state->launcher_press_started_at_top.load(std::memory_order_acquire) &&
+                    state->launcher_pull_distance.load(std::memory_order_acquire) >= exit_distance_px) {
+                state->pending_gesture.store(
+                    static_cast<uint8_t>(GestureIntent::WatchFace), std::memory_order_release
+                );
+            } else {
+                state->launcher_pull_distance.store(0, std::memory_order_release);
+            }
             return;
         }
         if (info.event_type != DisplayHelper::TouchGestureEventType::Pressing ||
-                (display_on_provider && !display_on_provider()) ||
-                info.distance_px < exit_distance_px) {
+                (display_on_provider && !display_on_provider())) {
+            return;
+        }
+
+        const bool app_visible = app_visible_provider && app_visible_provider();
+        const auto surface = state->surface.load(std::memory_order_acquire);
+        if (!app_visible && surface == ShellSurface::Launcher &&
+                state->launcher_press_started_at_top.load(std::memory_order_acquire) &&
+                info.direction == DisplayHelper::TouchGestureDirection::Down) {
+            state->launcher_pull_distance.store(
+                std::max(0, info.stop_y - info.start_y), std::memory_order_release
+            );
+            return; // Launcher commits Home on release only.
+        }
+        if (info.distance_px < exit_distance_px) {
             return;
         }
 
@@ -776,10 +903,10 @@ std::expected<void, std::string> CircularShell::configure_home_gesture()
              info.direction == DisplayHelper::TouchGestureDirection::Right) ||
             (has_gesture_area(info.start_area, DisplayHelper::TouchGestureArea::RightEdge) &&
              info.direction == DisplayHelper::TouchGestureDirection::Left);
-        if (edge_back) {
+        if (app_visible && edge_back && back_ui_provider && back_ui_provider().edge_enabled) {
             intent = GestureIntent::Back;
-        } else if (!app_visible_provider || !app_visible_provider()) {
-            switch (state->surface.load(std::memory_order_acquire)) {
+        } else if (!app_visible) {
+            switch (surface) {
             case ShellSurface::WatchFace:
                 if (info.direction == DisplayHelper::TouchGestureDirection::Up) {
                     intent = GestureIntent::Launcher;
@@ -802,6 +929,10 @@ std::expected<void, std::string> CircularShell::configure_home_gesture()
                 }
                 break;
             case ShellSurface::QuickSettings:
+                if (info.direction == DisplayHelper::TouchGestureDirection::Up) {
+                    intent = GestureIntent::WatchFace;
+                }
+                break;
             case ShellSurface::Launcher:
                 break;
             }
@@ -884,6 +1015,13 @@ std::expected<void, std::string> CircularShell::show_surface(ShellSurface surfac
     if (result && home_gesture_state_) {
         home_gesture_state_->surface.store(surface, std::memory_order_release);
         home_gesture_state_->activity_generation.fetch_add(1, std::memory_order_acq_rel);
+        if (surface == ShellSurface::Launcher) {
+            home_gesture_state_->launcher_scroll_top.store(100000, std::memory_order_release);
+            home_gesture_state_->launcher_pull_distance.store(0, std::memory_order_release);
+            (void)context_->gui().scroll_to("/launcher", 0, 0, false);
+        } else {
+            home_gesture_state_->launcher_pull_distance.store(0, std::memory_order_release);
+        }
     }
     return result;
 }
@@ -1091,8 +1229,6 @@ void CircularShell::start_status()
 {
     set_status_text(WATCH_FACE_TIME_PATH, "--:--");
     set_status_text(WATCH_FACE_DATE_PATH, "Waiting for sync");
-    set_status_text(WIFI_PATH, "Wi-Fi: ?");
-    set_status_text(BATTERY_PATH, "Bat: ?");
 
     auto &manager = esp_brookesia::service::ServiceManager::get_instance();
 
@@ -1110,14 +1246,11 @@ void CircularShell::start_status()
                     ESP_LOGW(SHELL_TAG, "Wi-Fi reported unexpected event: %s", event.c_str());
                 }
                 if (event == "Connected") {
-                    state->owner->set_status_text(WIFI_PATH, "Wi-Fi: linked");
                     state->owner->set_status_text(QUICK_WIFI_PATH, "Wi-Fi: linked (tap to stop)");
                 } else if (event == "Deinited" || event == "Inited" || event == "Stopped" ||
                            event == "Started" || event == "Disconnected") {
-                    state->owner->set_status_text(WIFI_PATH, "Wi-Fi: no link");
                     state->owner->set_status_text(QUICK_WIFI_PATH, "Wi-Fi: off/unlinked (tap)");
                 } else {
-                    state->owner->set_status_text(WIFI_PATH, "Wi-Fi: ?");
                     state->owner->set_status_text(QUICK_WIFI_PATH, "Wi-Fi: ?");
                 }
             }
@@ -1139,7 +1272,6 @@ void CircularShell::start_status()
                 }
                 auto item = items.find("State");
                 if (item == items.end() || !std::holds_alternative<boost::json::object>(item->second)) {
-                    callback_state->owner->set_status_text(BATTERY_PATH, "Bat: ?");
                     callback_state->owner->set_status_text(BATTERY_CARD_PATH, "Battery: ?");
                     callback_state->owner->set_status_text(QUICK_BATTERY_PATH, "Battery: ?");
                     return;
@@ -1147,16 +1279,11 @@ void CircularShell::start_status()
                 DeviceHelper::PowerBatteryState state;
                 if (!BROOKESIA_DESCRIBE_FROM_JSON(std::get<boost::json::object>(item->second), state) ||
                         !state.is_present || !state.percentage.has_value()) {
-                    callback_state->owner->set_status_text(BATTERY_PATH, "Bat: ?");
                     callback_state->owner->set_status_text(BATTERY_CARD_PATH, "Battery: ?");
                     callback_state->owner->set_status_text(QUICK_BATTERY_PATH, "Battery: ?");
                     return;
                 }
                 const auto text = "Battery: " + std::to_string(*state.percentage) + "%";
-                callback_state->owner->set_status_text(
-                    BATTERY_PATH,
-                    "Bat: " + std::to_string(*state.percentage) + "%"
-                );
                 callback_state->owner->set_status_text(BATTERY_CARD_PATH, text);
                 callback_state->owner->set_status_text(QUICK_BATTERY_PATH, text);
             }
@@ -1250,24 +1377,19 @@ void CircularShell::refresh_clock()
 void CircularShell::refresh_wifi()
 {
     if (!wifi_binding_.is_valid()) {
-        set_status_text(WIFI_PATH, "Wi-Fi: ?");
         set_status_text(QUICK_WIFI_PATH, "Wi-Fi: ?");
         return;
     }
     auto state = WifiHelper::call_function_sync<std::string>(WifiHelper::FunctionId::GetGeneralState);
     if (!state) {
-        set_status_text(WIFI_PATH, "Wi-Fi: ?");
         set_status_text(QUICK_WIFI_PATH, "Wi-Fi: ?");
     } else if (*state == "Connected") {
-        set_status_text(WIFI_PATH, "Wi-Fi: linked");
         set_status_text(QUICK_WIFI_PATH, "Wi-Fi: linked (tap to stop)");
     } else if (*state == "Idle" || *state == "Initing" || *state == "Inited" || *state == "Deiniting" ||
                *state == "Starting" || *state == "Started" || *state == "Stopping" ||
                *state == "Connecting" || *state == "Disconnecting") {
-        set_status_text(WIFI_PATH, "Wi-Fi: no link");
         set_status_text(QUICK_WIFI_PATH, "Wi-Fi: off/unlinked (tap)");
     } else {
-        set_status_text(WIFI_PATH, "Wi-Fi: ?");
         set_status_text(QUICK_WIFI_PATH, "Wi-Fi: ?");
     }
 }
@@ -1275,7 +1397,6 @@ void CircularShell::refresh_wifi()
 void CircularShell::refresh_battery()
 {
     if (!device_binding_.is_valid()) {
-        set_status_text(BATTERY_PATH, "Bat: ?");
         set_status_text(BATTERY_CARD_PATH, "Battery: ?");
         set_status_text(QUICK_BATTERY_PATH, "Battery: ?");
         return;
@@ -1286,12 +1407,10 @@ void CircularShell::refresh_battery()
     DeviceHelper::PowerBatteryState state;
     if (!value || !BROOKESIA_DESCRIBE_FROM_JSON(*value, state) || !state.is_present ||
             !state.percentage.has_value()) {
-        set_status_text(BATTERY_PATH, "Bat: ?");
         set_status_text(BATTERY_CARD_PATH, "Battery: ?");
         set_status_text(QUICK_BATTERY_PATH, "Battery: ?");
         return;
     }
-    set_status_text(BATTERY_PATH, "Bat: " + std::to_string(*state.percentage) + "%");
     const auto text = "Battery: " + std::to_string(*state.percentage) + "%";
     set_status_text(BATTERY_CARD_PATH, text);
     set_status_text(QUICK_BATTERY_PATH, text);
@@ -1299,9 +1418,14 @@ void CircularShell::refresh_battery()
 
 void CircularShell::refresh_brightness()
 {
+    if (display_output_id_ == 0) {
+        set_status_text(BRIGHTNESS_CARD_PATH, "Brightness: ?");
+        set_status_text(QUICK_BRIGHTNESS_PATH, "Brightness: ?");
+        return;
+    }
     auto value = DisplayHelper::call_function_sync<double>(
                      DisplayHelper::FunctionId::GetBacklightBrightness,
-                     0.0
+                     static_cast<double>(display_output_id_)
                  );
     const auto text = value ?
                       "Brightness: " + std::to_string(static_cast<int>(*value)) + "%" :
@@ -1312,9 +1436,12 @@ void CircularShell::refresh_brightness()
 
 std::expected<void, std::string> CircularShell::step_brightness()
 {
+    if (display_output_id_ == 0) {
+        return std::unexpected("Display output is unavailable for brightness");
+    }
     auto current = DisplayHelper::call_function_sync<double>(
                        DisplayHelper::FunctionId::GetBacklightBrightness,
-                       0.0
+                       static_cast<double>(display_output_id_)
                    );
     if (!current) {
         return std::unexpected("Failed to read brightness: " + current.error());
@@ -1322,7 +1449,7 @@ std::expected<void, std::string> CircularShell::step_brightness()
     const double next = *current >= 100.0 ? 20.0 : std::min(100.0, *current + 20.0);
     auto result = DisplayHelper::call_function_sync<void>(
                       DisplayHelper::FunctionId::SetBacklightBrightness,
-                      0.0,
+                      static_cast<double>(display_output_id_),
                       next
                   );
     if (!result) {

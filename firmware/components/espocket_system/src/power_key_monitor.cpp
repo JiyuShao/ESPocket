@@ -2,7 +2,7 @@
 
 #include <cinttypes>
 
-#include "esp_board_manager.h"
+#include "driver/gpio.h"
 #include "esp_err.h"
 #include "esp_log.h"
 
@@ -10,11 +10,8 @@ namespace espocket {
 namespace {
 
 constexpr char TAG[] = "ESPocket.PowerKey";
-constexpr char I2C_PERIPHERAL[] = "i2c_master";
-constexpr uint16_t TCA9554_ADDRESS = 0x20;
-constexpr uint8_t TCA9554_INPUT_REGISTER = 0x00;
-constexpr uint8_t TCA9554_CONFIG_REGISTER = 0x03;
-constexpr uint8_t PWR_MASK = 1U << 4;
+// On the 1.75C board, the PWR key's SYS_OUT signal is wired to GPIO3.
+constexpr gpio_num_t PWR_GPIO = GPIO_NUM_3;
 constexpr uint32_t POLL_MS = 40;
 constexpr uint32_t DEBOUNCE_SAMPLES = 2;
 constexpr uint32_t SHORT_PRESS_MAX_MS = 1000;
@@ -32,54 +29,26 @@ std::expected<void, std::string> PowerKeyMonitor::start()
         return {};
     }
 
-    void *bus = nullptr;
-    auto result = esp_board_manager_get_periph_handle(I2C_PERIPHERAL, &bus);
-    if (result != ESP_OK || bus == nullptr) {
-        running_.store(false, std::memory_order_release);
-        return std::unexpected("Board Manager I2C bus is unavailable");
-    }
-
-    const i2c_device_config_t config = {
-        .dev_addr_length = I2C_ADDR_BIT_LEN_7,
-        .device_address = TCA9554_ADDRESS,
-        .scl_speed_hz = 400000,
-        .scl_wait_us = 0,
-        .flags = {.disable_ack_check = false},
+    const gpio_config_t config = {
+        .pin_bit_mask = 1ULL << PWR_GPIO,
+        .mode = GPIO_MODE_INPUT,
+        .pull_up_en = GPIO_PULLUP_DISABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type = GPIO_INTR_DISABLE,
     };
-    result = i2c_master_bus_add_device(
-                 static_cast<i2c_master_bus_handle_t>(bus),
-                 &config,
-                 &device_
-             );
+    const auto result = gpio_config(&config);
     if (result != ESP_OK) {
         running_.store(false, std::memory_order_release);
-        return std::unexpected("Failed to attach TCA9554: " + std::string(esp_err_to_name(result)));
-    }
-
-    uint8_t direction = 0;
-    result = i2c_master_transmit_receive(
-                 device_, &TCA9554_CONFIG_REGISTER, 1, &direction, 1, 50
-             );
-    if (result == ESP_OK) {
-        const uint8_t write[] = {TCA9554_CONFIG_REGISTER, static_cast<uint8_t>(direction | PWR_MASK)};
-        result = i2c_master_transmit(device_, write, sizeof(write), 50);
-    }
-    if (result != ESP_OK) {
-        i2c_master_bus_rm_device(device_);
-        device_ = nullptr;
-        running_.store(false, std::memory_order_release);
-        return std::unexpected("Failed to configure PWR EXIO4: " + std::string(esp_err_to_name(result)));
+        return std::unexpected("Failed to configure PWR GPIO3: " + std::string(esp_err_to_name(result)));
     }
 
     TaskHandle_t task = nullptr;
     if (xTaskCreate(task_entry, "ESPocketPwr", 3072, this, 5, &task) != pdPASS) {
-        i2c_master_bus_rm_device(device_);
-        device_ = nullptr;
         running_.store(false, std::memory_order_release);
         return std::unexpected("Failed to create PWR monitor task");
     }
     task_.store(task, std::memory_order_release);
-    ESP_LOGI(TAG, "PWR monitor ready on TCA9554 EXIO4; BOOT remains reserved");
+    ESP_LOGI(TAG, "PWR monitor ready on GPIO3; BOOT remains reserved");
     return {};
 }
 
@@ -91,10 +60,6 @@ void PowerKeyMonitor::stop()
         for (int i = 0; i < 100 && task_.load(std::memory_order_acquire) != nullptr; ++i) {
             vTaskDelay(pdMS_TO_TICKS(10));
         }
-    }
-    if (device_ != nullptr && task_.load(std::memory_order_acquire) == nullptr) {
-        (void)i2c_master_bus_rm_device(device_);
-        device_ = nullptr;
     }
 }
 
@@ -150,15 +115,7 @@ void PowerKeyMonitor::run()
 
 bool PowerKeyMonitor::read_pressed(bool &pressed)
 {
-    uint8_t level = 0;
-    const auto result = i2c_master_transmit_receive(
-                            device_, &TCA9554_INPUT_REGISTER, 1, &level, 1, 50
-                        );
-    if (result != ESP_OK) {
-        ESP_LOGW(TAG, "PWR EXIO4 read failed: %s", esp_err_to_name(result));
-        return false;
-    }
-    pressed = (level & PWR_MASK) != 0;
+    pressed = gpio_get_level(PWR_GPIO) != 0;
     return true;
 }
 

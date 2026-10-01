@@ -18,9 +18,14 @@
 #endif
 #include "brookesia/service_helper/media/display.hpp"
 #include "brookesia/service_manager/helper/base.hpp"
+#if CONFIG_ESPOCKET_M6_RESOURCE_TRACE
+#include "esp_heap_caps.h"
+#endif
 #include "esp_log.h"
+#include "esp_timer.h"
 #include "espocket/circular_shell.hpp"
 #include "espocket/hello_app.hpp"
+#include "espocket/page_navigator.hpp"
 #include "espocket/power_key_monitor.hpp"
 
 namespace espocket {
@@ -169,10 +174,32 @@ esp_brookesia::system::core::SystemInfo System::on_get_system_info() const
 
 std::expected<void, std::string> System::on_init()
 {
-    auto hello_result = install_app(std::make_shared<HelloApp>());
+    auto hello = std::make_shared<HelloApp>();
+    auto declaration = hello->get_page_declaration();
+    if (declaration.app_id != hello->get_manifest().id) {
+        return std::unexpected("Hello Native Page declaration App ID does not match its manifest");
+    }
+    auto navigator = PageNavigator::create(
+        std::move(declaration),
+        [weak_hello = std::weak_ptr<HelloApp>(hello)](std::string_view from, std::string_view to) {
+            auto app = weak_hello.lock();
+            return app && app->present_page(from, to);
+        }
+    );
+    if (!navigator) {
+        return std::unexpected("Invalid Hello Native Page declaration");
+    }
+    hello_navigator_ = std::make_shared<PageNavigator>(std::move(*navigator));
+    hello_navigator_->set_availability_handler([this](bool default_visible, bool edge_enabled) {
+        default_back_visible_.store(default_visible, std::memory_order_release);
+        edge_back_enabled_.store(edge_enabled, std::memory_order_release);
+    });
+    hello->set_navigator(hello_navigator_);
+    auto hello_result = install_app(hello);
     if (!hello_result) {
         return std::unexpected("Failed to install Hello Native: " + hello_result.error());
     }
+    hello_id_ = *hello_result;
     ESP_LOGI(TAG, "Hello Native installed");
 
     auto settings_result = install_app(
@@ -201,6 +228,7 @@ std::expected<void, std::string> System::on_init()
 
     power_key_monitor_ = std::make_unique<PowerKeyMonitor>();
     shell_ = std::make_shared<CircularShell>(
+        display_output_id_,
         [this]() {
             return power_key_monitor_ ? power_key_monitor_->short_press_count() : 0;
         },
@@ -238,6 +266,19 @@ std::expected<void, std::string> System::on_init()
             if (!result) {
                 ESP_LOGW(TAG, "Failed to complete keyboard request: %s", result.error().c_str());
             }
+        },
+        [this]() {
+            const bool hello_foreground = foreground_app_id_.load(std::memory_order_acquire) ==
+                                          hello_id_;
+            return CircularShell::BackUiState{
+                .default_visible = hello_foreground &&
+                                   default_back_visible_.load(std::memory_order_acquire),
+                .edge_enabled = hello_foreground &&
+                                edge_back_enabled_.load(std::memory_order_acquire),
+            };
+        },
+        [this]() {
+            handle_back_timeout();
         }
     );
     auto result = install_app(shell_);
@@ -301,6 +342,13 @@ std::expected<void, std::string> System::on_app_started(
         return {};
     }
 
+    if (app.manifest.id == "espocket.app.hello" && hello_navigator_) {
+        auto result = hello_navigator_->start();
+        if (!result) {
+            return std::unexpected("Failed to start Hello Native Page Navigator");
+        }
+    }
+
     foreground_app_id_.store(app.app_id, std::memory_order_release);
     do {
         ++foreground_generation_;
@@ -315,6 +363,9 @@ void System::on_app_start_failed(
     std::string_view reason
 )
 {
+    if (app.manifest.id == "espocket.app.hello" && hello_navigator_) {
+        hello_navigator_->stop();
+    }
     ESP_LOGW(
         TAG,
         "App start failed: manifest=%s reason=%.*s",
@@ -327,6 +378,9 @@ void System::on_app_start_failed(
 
 void System::on_app_stopped(const esp_brookesia::system::core::AppInfo &app)
 {
+    if (app.manifest.id == "espocket.app.hello" && hello_navigator_) {
+        hello_navigator_->stop();
+    }
     restore_home_after_lifecycle(app);
 }
 
@@ -335,6 +389,9 @@ void System::on_app_stop_failed(
     std::string_view reason
 )
 {
+    if (app.manifest.id == "espocket.app.hello" && hello_navigator_) {
+        hello_navigator_->stop();
+    }
     ESP_LOGW(
         TAG,
         "App stop failed: manifest=%s reason=%.*s",
@@ -422,6 +479,20 @@ void System::handle_power_short_press()
         return;
     }
 
+#if CONFIG_ESPOCKET_M6_RESOURCE_TRACE
+    static uint32_t resource_sample = 0;
+    ++resource_sample;
+    ESP_LOGI(
+        TAG,
+        "M6_RESOURCE sample=%" PRIu32 " internal_free=%zu psram_free=%zu internal_largest=%zu psram_largest=%zu",
+        resource_sample,
+        heap_caps_get_free_size(MALLOC_CAP_INTERNAL),
+        heap_caps_get_free_size(MALLOC_CAP_SPIRAM),
+        heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL),
+        heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM)
+    );
+#endif
+
     auto result = set_display_on(false);
     if (!result) {
         ESP_LOGW(TAG, "PWR screen-off failed: %s", result.error().c_str());
@@ -465,21 +536,29 @@ void System::handle_back()
         return;
     }
 
-    const auto state = gui_get_screen_flow_state(active->app_id, "main");
-    if (state.has_value() && *state == "detail") {
-        auto result = gui_trigger_screen_flow(active->app_id, "main", "back_root");
-        if (!result) {
-            ESP_LOGW(TAG, "App Detail Back failed: %s", result.error().c_str());
+    if (active->manifest.id == "espocket.app.hello" && hello_navigator_) {
+        if (!hello_navigator_->edge_back_enabled()) {
+            return;
         }
+        auto result = hello_navigator_->request_back(
+            static_cast<uint64_t>(esp_timer_get_time() / 1000)
+        );
+        if (!result) {
+            ESP_LOGW(TAG, "App Page Back failed: %d", static_cast<int>(result.error()));
+        }
+    }
+}
+
+void System::handle_back_timeout()
+{
+    if (!hello_navigator_) {
         return;
     }
-
-    lifecycle_restore_surface_ = launch_source_;
-    lifecycle_restore_pending_ = true;
-    auto result = stop_app(active->app_id);
-    if (!result) {
-        lifecycle_restore_pending_ = false;
-        ESP_LOGW(TAG, "App Root Back failed: %s", result.error().c_str());
+    const auto expired = hello_navigator_->expire_back(
+        static_cast<uint64_t>(esp_timer_get_time() / 1000)
+    );
+    if (expired) {
+        ESP_LOGW(TAG, "App Back confirmation timed out: %d", static_cast<int>(*expired));
     }
 }
 
@@ -492,7 +571,20 @@ void System::handle_screen_timeout()
     auto result = set_display_on(false);
     if (!result) {
         ESP_LOGW(TAG, "Automatic screen-off failed: %s", result.error().c_str());
+        return;
     }
+
+#if CONFIG_ESPOCKET_M6_RECLAIM_ON_TIMEOUT_TEST
+    if (resume_app_id_ != esp_brookesia::system::core::INVALID_APP_ID) {
+        const auto target = resume_app_id_;
+        auto stop_result = stop_app(target);
+        if (!stop_result) {
+            ESP_LOGE(TAG, "M6_RECLAIM_TEST failed to stop App: %s", stop_result.error().c_str());
+        } else {
+            ESP_LOGI(TAG, "M6_RECLAIM_TEST stopped resume target app_id=%" PRIu32, target);
+        }
+    }
+#endif
 }
 
 std::expected<void, std::string> System::set_display_on(bool on)

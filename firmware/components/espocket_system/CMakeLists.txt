@@ -3,6 +3,7 @@ idf_component_register(
     INCLUDE_DIRS "include"
     REQUIRES
         app_hello
+        espocket_navigation
         shell_circular
         brookesia_app_settings
         brookesia_app_store
@@ -11,7 +12,7 @@ idf_component_register(
         brookesia_service_display
         brookesia_service_helper
         brookesia_service_manager
-    PRIV_REQUIRES brookesia_lib_utils esp_board_manager esp_driver_i2c
+    PRIV_REQUIRES brookesia_lib_utils esp_driver_gpio esp_timer
 )
 
 target_compile_features(${COMPONENT_LIB} PUBLIC cxx_std_23)

@@ -239,23 +239,23 @@ write("boot-lifecycle", 1200, 770, "ESPocket 启动生命周期", "从 app_main 
 ].join(""), "ServiceManager 和 DisplaySource 先于 System Core 初始化；应用安装完成后，System::start 启动 CircularShell 与 PowerKeyMonitor。"),
 
 // 04b · App 生命周期：Native 与 Runtime 共用同一状态机。
-write("app-lifecycle", 1200, 690, "ESPocket App 生命周期", "Shell 发起、System Core 执行、产品宿主恢复来源", [
+write("app-lifecycle", 1200, 690, "ESPocket App 生命周期", "Shell 发起、System Core 执行、PWR Home 返回表盘", [
   lane(120, "CircularShell", "product", 118, 620), lane(360, "espocket::System", "product", 118, 620), lane(620, "System Core", "framework", 118, 620), lane(870, "App instance", "neutral", 118, 620), lane(1080, "CircularShell", "product", 118, 620),
-  step(48, 140, 144, 1, "选择 App", "capture source", "product"),
+  step(48, 140, 144, 1, "选择 App", "root or target", "product"),
   step(288, 220, 144, 2, "launch_app", "manifest → app_id", "product"),
   step(548, 300, 144, 3, "start_app", "state + GUI / runtime", "framework"),
   step(798, 380, 144, 4, "on_start", "Native or Runtime"),
-  step(548, 460, 144, 5, "stop_app", "Back / Home", "framework"),
+  step(548, 460, 144, 5, "stop_app", "PWR Home", "framework"),
   step(288, 540, 144, 6, "lifecycle hook", "clear foreground", "product"),
-  step(1008, 540, 144, 7, "restore_surface", "source or Watch Face", "product"),
+  step(1008, 540, 144, 7, "show Watch Face", "clear Page stack", "product"),
   edge("M192 174H240V254H288", "", 0, 0, "strong"),
   edge("M432 254H488V334H548", "", 0, 0, "strong"),
   edge("M692 334H742V414H798", "", 0, 0, "safe"),
   edge("M798 414H742V494H692", "", 0, 0, "event"),
   edge("M548 494H490V574H432", "", 0, 0, "event"),
-  edge("M432 574H1008", "restore launch source", 660, 565, "strong"),
-  label(48, 655, "Native 与 Runtime 的加载实现不同，但状态机、前台跟踪与恢复 hook 相同。", "caption-strong"),
-].join(""), "App 从 Shell 回调进入 espocket::System，再由 System Core 统一启动或停止，最终恢复原 Shell Surface。"),
+  edge("M432 574H1008", "PWR Home", 660, 565, "strong"),
+  label(48, 655, "Native 与 Runtime 的加载实现不同，但状态机、前台跟踪与 Home 相同。", "caption-strong"),
+].join(""), "App 从 Shell 回调进入 espocket::System，再由 System Core 统一启动或停止；PWR Home 返回 Watch Face。"),
 
 // 05a · Shell Surface：只画 Shell 内 Surface 与 App 边界。
 write("navigation-surfaces", 1200, 720, "ESPocket 顶层导航 Surface", "Watch Face 是 Home 锚点；前台 App 不属于 ShellSurface", [
@@ -264,7 +264,7 @@ write("navigation-surfaces", 1200, 720, "ESPocket 顶层导航 Surface", "Watch 
   label(600, 334, "Watch Face", "state-title", "middle"),
   label(600, 354, "HOME ANCHOR", "state-detail", "middle"),
   `<rect class="state product" x="475" y="145" width="250" height="72" rx="4"/>`,
-  label(600, 176, "Quick Settings", "state-title", "middle"), label(600, 196, "下滑进入 · Back 返回", "state-detail", "middle"),
+  label(600, 176, "Quick Settings", "state-title", "middle"), label(600, 196, "下滑进入 · 上滑返回", "state-detail", "middle"),
   `<rect class="state product" x="475" y="493" width="250" height="72" rx="4"/>`,
   label(600, 524, "Launcher", "state-title", "middle"), label(600, 544, "上滑进入 · 选择 App", "state-detail", "middle"),
   `<rect class="state product" x="120" y="306" width="235" height="72" rx="4"/>`,
@@ -272,14 +272,14 @@ write("navigation-surfaces", 1200, 720, "ESPocket 顶层导航 Surface", "Watch 
   `<rect class="state product" x="845" y="306" width="235" height="72" rx="4"/>`,
   label(962, 337, "Brightness Card", "state-title", "middle"), label(962, 357, "水平滑动", "state-detail", "middle"),
   band(780, 480, 350, 145, "Foreground App", "NOT A SHELL SURFACE", "neutral"),
-  chip(805, 528, 140, "App Root", "Root Back → stop", "neutral"),
+  chip(805, 528, 140, "App Root", "no Back", "neutral"),
   chip(965, 528, 140, "App Detail", "Edge Back → Root", "neutral"),
   edge("M600 250V217", "swipe down", 612, 240, "direct"),
   edge("M600 434V493", "swipe up", 612, 470, "direct"),
   edge("M508 342H355", "horizontal", 397, 332, "direct"),
   edge("M692 342H845", "horizontal", 721, 332, "direct"),
   edge("M725 529H780", "launch", 733, 519, "strong"),
-  edge("M955 480V430H692", "Root Back → source", 802, 421, "event"),
+  edge("M955 480V430H692", "PWR Home", 802, 421, "event"),
   label(120, 636, "PWR Home", "caption-strong"), label(190, 636, "任何非 Home 状态最终回到 Watch Face", "caption"),
   label(120, 660, "Screen Off", "caption-strong"), label(190, 660, "与导航状态正交，不执行 Back", "caption"),
 ].join(""), "CircularShell 的五个 Surface 围绕 Watch Face；App Root 和 Detail 由 System Core 管理，不属于 ShellSurface。"),
@@ -308,8 +308,8 @@ write("display-state", 1200, 520, "ESPocket 显示状态", "PWR 是 Home 与显�
 
 // 05c · 应用运行模型：同一接口，两类 Adapter。
 write("app-runtime", 1200, 650, "ESPocket 应用运行模型", "Native 与 Runtime 使用不同 Adapter，跨越同一个 System Core seam", [
-  node(55, 235, 210, 100, "Launch Source", ["Launcher · Card", "Quick Settings"], "product", "SHELL"),
-  node(325, 220, 250, 130, "espocket::System", ["manifest → app_id", "source · foreground · restore"], "focus-product", "PRODUCT POLICY"),
+  node(55, 235, 210, 100, "Home Space", ["Launcher · Card", "Quick Settings"], "product", "SHELL"),
+  node(325, 220, 250, 130, "espocket::System", ["manifest → app_id", "Page stack · Home"], "focus-product", "PRODUCT POLICY"),
   node(635, 195, 300, 180, "System Core", ["single AppState machine"], "focus-framework", "RUNTIME SEAM"),
   chip(660, 255, 120, "App Manager", "lifecycle", "framework"),
   chip(790, 255, 120, "AppContext", "GUI · Timer", "framework"),
@@ -328,7 +328,7 @@ write("app-runtime", 1200, 650, "ESPocket 应用运行模型", "Native 与 Runti
   edge("M985 470H945V360H935", "", 0, 0, "event"),
   band(325, 430, 610, 102, "共同契约", "SAME PRODUCT BEHAVIOR", "framework"),
   chip(350, 475, 170, "统一生命周期", "Installed → Running → Stopped", "framework"),
-  chip(535, 475, 170, "统一导航", "Back · Home · restore", "framework"),
+  chip(535, 475, 170, "统一导航", "Page · Back · Home", "framework"),
   chip(720, 475, 190, "统一 GUI / Keyboard", "AppContext interface", "framework"),
   edge("M785 375V430", "shared contract", 797, 420, "safe"),
   label(325, 575, "包信任决定 Runtime 是否可安装；安装后不再维护第二套产品导航。", "caption-strong"),
@@ -393,4 +393,21 @@ write("ai-native-architecture", 1280, 770, "ESPocket AI Native 架构", "横向�
   label(40, 739, "Permission 贯穿每次访问；Runtime 仍须遵守 Brookesia Service 声明与 HostBridge 边界。", "caption"),
 ].join(""), "Assistant 是统一逻辑入口；Context、Action、Event、Permission 横向连接 System、Shell、Native App、Brookesia Service 与 Runtime App Owner。每次访问检查权限，Runtime 调用遵守 Service manifest 声明和 HostBridge 准入，不建立第二套 Manager。"),
 
-console.log(`generated 10 architecture SVGs in ${OUT}`);
+// 08 · 测试入口：开发者模式只控制准入，状态仍来自真实 Owner。
+write("interaction-test-seam", 1200, 620, "ESPocket 交互自动化 Seam", "USB 刺激与只读快照穿过同一产品 Owner", [
+  node(45, 190, 210, 100, "Host Test Driver", ["case · wait · assert", "evidence type"], "neutral", "USB CLIENT"),
+  node(330, 165, 250, 150, "ESPocket Test Adapter", ["developer mode gate", "stimulus · snapshot · release"], "focus-product", "PRODUCT SEAM"),
+  node(650, 145, 210, 82, "Display / Shell", ["touch · Home Space"], "product", "INPUT OWNER"),
+  node(650, 255, 210, 82, "System", ["PWR · display · app"], "product", "SYSTEM OWNER"),
+  node(650, 365, 210, 82, "App Navigator", ["Page ID · Back state"], "product", "PAGE OWNER"),
+  node(930, 255, 220, 82, "Native / Runtime App", ["content · Back decision"], "framework", "APP OWNER"),
+  edge("M255 240H330", "USB protocol", 268, 230, "strong"),
+  edge("M580 205H615V186H650", "touch", 592, 176, "safe"),
+  edge("M580 240H650", "PWR", 604, 230, "safe"),
+  edge("M580 275H615V406H650", "", 0, 0, "event"),
+  edge("M860 296H930", "App events", 869, 286, "direct"),
+  edge("M930 385H895V406H860", "Back / Page", 883, 375, "event"),
+  band(45, 500, 1105, 68, "证据边界", "SYNTHETIC INPUT ≠ PHYSICAL INPUT ≠ VISUAL PROOF", "platform"),
+].join(""), "主机经 USB Test Adapter 在开发者模式准入后驱动 Display、Shell 和 System，并从 App Navigator 读取 Page 状态；合成输入与物理、视觉证据分开。"),
+
+console.log(`generated 11 architecture SVGs in ${OUT}`);

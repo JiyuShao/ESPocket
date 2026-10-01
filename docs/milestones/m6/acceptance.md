@@ -4,7 +4,7 @@
 
 ## 状态
 
-- M6: `IN PROGRESS`（2026-09-28）
+- M6: `PASS`（2026-10-02）
 - Dependency: M2 `PASS`
 - M3: `PASS`
 - M4: `BLOCKED`，不阻止 M6 进入
@@ -64,7 +64,7 @@ PWR → Watch Face
 
 - Cards。
 - Quick Settings。
-- Edge Back 与 Launch Source。
+- App Page Back 与 Edge Back。
 - 动态 Launcher 或 M5 Launcher sync。
 - Watch Face 点击快捷操作、长按自定义或更换表盘。
 - Card 编辑。
@@ -80,12 +80,12 @@ PWR → Watch Face
 | Interaction contract | 实现与主交互规范一致 | PASS（STATIC，2026-09-28） |
 | Current-vs-target wording | 文档和 UI 不把 M1–M5 的 Launcher Home 误称为 Watch Face 实现 | PASS（STATIC，2026-09-28） |
 | Existing Launcher reuse | 使用当前固定入口 Launcher；不把动态同步带入 M6 | PASS（STATIC，2026-09-28） |
-| PWR integration | 短按只执行已定义的 Home/Off/Wake；长按不被系统层重定义 | PASS（HOST BUILD + STATIC，真机待验收） |
+| PWR integration | 短按只执行已定义的 Home/Off/Wake；长按不被系统层重定义 | PASS（HOST BUILD + 真机，2026-10-01） |
 | Display/navigation separation | 息屏不清空或改写有效导航位置 | PASS（STATIC，2026-09-28） |
 | Resume fallback | 目标失效时只回 Watch Face | PASS（STATIC，2026-09-28） |
-| Touch while off | Screen Off 时页面动作不可被触摸触发 | PASS（STATIC，真机待验收） |
-| BOOT | 不产生日常导航动作 | PASS（STATIC，真机待验收） |
-| Build | 正常固件 clean build/link 成功 | PASS（2026-09-29，当前候选） |
+| Touch while off | Screen Off 时页面动作不可被触摸触发 | PASS（STATIC + 真机，2026-10-01） |
+| BOOT | 不产生日常导航动作 | PASS（STATIC + 真机，2026-10-01） |
+| Build | 正常固件 clean build/link 成功 | PASS（2026-10-01，测试开关关闭的隔离构建；[记录](records/2026-10-01-reclaim-test-image.md)） |
 | Static checks | JSON、脚本或项目既有检查全部通过 | PASS（JSON parse + `git diff --check`） |
 
 ## Hardware Acceptance
@@ -98,20 +98,20 @@ PWR → Watch Face
 
 | 路径 | 次数 | PASS 条件 | 状态 |
 |---|---:|---|---|
-| Cold boot → Watch Face | 5 | 每次都显示 Watch Face，无 Launcher 先成为 Home | NOT TESTED |
-| App → PWR Home → Watch Face → PWR Off → PWR Wake | 5 | 顺序和可见状态均正确 | 1/5 observed（2026-09-29）；4 次未测 |
-| App → Auto Screen Off → PWR → Resume App | 5 | 恢复同一可见页面及导航位置 | 物理冒烟 1 次；Wake 串口缺失，正式 0/5 |
-| Resume target reclaimed → PWR → Watch Face | 5 | 不自动重启 App，不出现空白或失效页面 | NOT TESTED |
+| Cold boot → Watch Face | 5 | 每次都显示 Watch Face，无 Launcher 先成为 Home | 5/5 PASS（2026-10-01；[逐次记录](records/2026-10-01-cold-boot.md)） |
+| App → PWR Home → Watch Face → PWR Off → PWR Wake | 5 | 顺序和可见状态均正确 | 5/5 PASS（2026-10-01，普通镜像；[逐次记录](records/2026-10-01-pwr-sequence-followup.md)） |
+| App → Auto Screen Off → PWR → Resume App | 5 | 恢复同一可见页面及导航位置 | 5/5 PASS（2026-10-01，普通镜像 Native Detail；[记录](records/2026-10-01-reclaim-test-image.md)） |
+| Resume target reclaimed → PWR → Watch Face | 5 | 不自动重启 App，不出现空白或失效页面 | 5/5 PASS（2026-10-01，测试镜像；[记录](records/2026-10-01-reclaim-test-image.md)） |
 
 ### Required one-pass checks
 
 | 检查项 | PASS 条件 | 状态 |
 |---|---|---|
-| Screen Off touch | 触摸不触发当前页面操作 | NOT TESTED |
-| Overlay + PWR | 临时 Overlay 存在时仍回 Watch Face，可放弃未提交输入 | NOT TESTED |
-| BOOT | 不触发 Back、Home、Shortcut 或 Recent Apps | NOT TESTED |
-| PWR long press | 仅表现为硬件固定开机/关机 | NOT TESTED |
-| Failure scan | 无 panic、watchdog、assert、deadlock、错误触摸执行或持续性资源下降 | NOT PASS：本轮 Store 路径出现任务栈溢出 |
+| Screen Off touch | 触摸不触发当前页面操作 | PASS（2026-10-01，Native Detail；[记录](records/2026-10-01-one-pass-checks.md)） |
+| Overlay + PWR | 临时 Overlay 存在时仍回 Watch Face，可放弃未提交输入 | PASS（2026-10-01，Settings 密码键盘；[记录](records/2026-10-01-one-pass-checks.md)） |
+| BOOT | 不触发 Back、Home、Shortcut 或 Recent Apps | PASS（2026-10-01，两键对照；[记录](records/2026-10-01-one-pass-checks.md)） |
+| PWR long press | 仅表现为硬件固定开机/关机 | PASS（2026-10-01，硬件关机及 PWR 重新上电；[记录](records/2026-10-01-one-pass-checks.md)） |
+| Failure scan | 无 panic、watchdog、assert、deadlock、错误触摸执行或持续性资源下降 | PASS（2026-10-02）：固定路径和单项检查无 fatal signal；同状态资源样本覆盖第 2–10 检查点、四项未持续下降；离线 Store 定向复测未复现旧栈溢出（[资源记录](records/2026-10-02-resource-trend.md)、[Store 复测](records/2026-10-01-store-failure-rescan.md)） |
 
 ## Evidence Rules
 
@@ -121,16 +121,27 @@ PWR → Watch Face
 - 页面身份与导航位置需要恢复；输入焦点、键盘、弹窗和进行中的触摸不属于恢复保证。
 - 任一必须项缺少证据时不得标记 M6 `PASS`。
 
+### Reclaim fallback 测试镜像
+
+仅用于 `Resume target reclaimed` 路径。`firmware/sdkconfig.defaults.m6-reclaim` 开启 `CONFIG_ESPOCKET_M6_RECLAIM_ON_TIMEOUT_TEST`；普通固件默认关闭。测试镜像在 App 自动息屏后经 System Core 停止该 App，保留失效的 resume target，随后用 PWR Wake 验证表盘回退。该入口不模拟通用内存管理器。
+
+```bash
+source "$HOME/.espressif/v6.0.1/esp-idf/export.sh"
+RECLAIM_BUILD="$PWD/firmware/build/m6-reclaim"
+idf.py -C firmware -B "$RECLAIM_BUILD" -D SDKCONFIG="$RECLAIM_BUILD/sdkconfig" \
+  -D 'SDKCONFIG_DEFAULTS=components/gen_bmgr_codes/board_manager.defaults;sdkconfig.defaults;sdkconfig.defaults.m6-reclaim' build
+```
+
+验收时需记录镜像 hash、`M6_RECLAIM_TEST` 串口事件和每次屏幕实见结果；普通 App 自动息屏恢复路径仍使用关闭该开关的候选镜像。
+
+### 资源趋势诊断镜像
+
+`firmware/sdkconfig.defaults.m6-resource` 开启默认关闭的 `CONFIG_ESPOCKET_M6_RESOURCE_TRACE`。它仅在表盘亮屏、PWR 即将息屏时打印同状态 internal/PSRAM free 与 largest block。独立构建、App 分区刷写、真机循环、采样限制与普通镜像恢复见[资源趋势记录](records/2026-10-02-resource-trend.md)。诊断镜像不作为普通固件交付。
+
 ## Result
 
-`IN PROGRESS`（2026-09-28）
+`PASS`（2026-10-02）。四条固定路径各 5/5、四项单项真机检查以及 failure scan 均达到本页门槛；真机显示观察、串口与镜像身份分别记录在上表链接中。资源诊断后已刷回普通镜像并由用户确认表盘正常。
 
-项目所有者已明确授权启动 M6–M8。实施遵守阶段依赖：当前仅 M6 正式进入；M7 等待 M6 `PASS`，M8 等待 M7 `PASS`。
+早期[快速冒烟](records/2026-09-29-quick-device-smoke.md)中的 GPIO3 接线与 Store 栈溢出、[Native Detail 修复](records/2026-09-29-native-detail-followup.md)以及首次[不完整的 PWR 补测](records/2026-10-01-pwr-sequence-followup.md)保留为历史证据；正式判定使用后续固定五轮与定向复测，不将额外成功次数用于稀释失败。
 
-主机侧实现与构建已经通过，但不能替代本页规定的真机按键、显示和触摸验收，因此 M6 保持 `IN PROGRESS`。
-
-当前工作树候选重新完成隔离构建与 Shell 资源路径检查。真机执行顺序由本页 Hardware Acceptance 定义；回收 fallback 尚需可控触发方式。
-
-2026-09-29 的[真机快速冒烟记录](records/2026-09-29-quick-device-smoke.md)已验证一次 Native → PWR Home → Off → Wake 顺序，并记录 GPIO3 按键接线修复与 Store 栈溢出。它不满足固定重复次数及其余真机门槛，M6 继续保持 `IN PROGRESS`。
-
-同日的 [Native Detail 复测](records/2026-09-29-native-detail-followup.md)修复了按钮点击无反应，实机确认页面转换、Launcher Edge Back，以及 Detail 自动息屏后的同页恢复。由于 Wake 串口未落在采集窗口内，自动恢复不计入固定 5 次正式验收。
+离线 Store 仍缺可见提示弹窗；在线 Store HTTP/TLS 稳定性属于独立的 M5 阶段门槛，M5 继续 `BLOCKED`。M6 `PASS` 解除 M7 的进入依赖，不解除 M4–M5 的发布门槛。

@@ -2,7 +2,7 @@
 
 Sequence: 007
 
-Status: planned
+Status: active
 Blocked by: M6 `PASS` for stage acceptance.
 
 ## Problem Statement
@@ -11,20 +11,21 @@ M6 建立 Home 与 Display State 后，ESPocket 需要一套以手表为中心�
 
 ## Solution
 
-实现真实 Surface content、Edge Back 与一个直接 Launch Source，同时保留 App horizontal gesture，并让 PWR Home 到达 Watch Face。
+实现真实 Surface content、App 子页面默认可见 Back 与 Edge Back，Root 无 Back，同时保留 App horizontal gesture，并让 PWR Home 到达 Watch Face。Home Space 的反向滑动按[交互模型](../../docs/design/product/03-interaction-model.md)执行。
 
 ## User Stories
 
 1. 作为用户，我希望 Watch Face 两侧具有稳定、不循环的 Cards 边界。
 2. 作为用户，我希望 Quick Settings 改变真实设备状态。
-3. 作为用户，我希望 Back 返回直接启动 App 的 Surface。
+3. 作为用户，我希望子页面 Back 回到上一 Page，App Root 靠 PWR Home 回表盘。
 4. 作为 App，我希望普通 horizontal swipe 不被误判为 Edge Back。
 5. 作为测试者，我希望 brightness 与 Wi-Fi 变化在真机上得到证明。
 
 ## Implementation Decisions
 
-- Cards 保持 single-page content，不变成 nested App。
-- 只保存一个直接 Launch Source；来源失效时回退到 Watch Face。
+- 当前固定 Cards 保持单页内容；未来 App Card 可由同一 App 提供专门界面，遵循 [ADR-0011](../../docs/adr/0011-app-root-has-no-back.md)。
+- ESPocket 默认在 App 子页面提供可见 Back 与 Edge Back；Root 无 Back。App 可同时关闭默认入口，但多级 App 必须自带可见 Back。
+- PWR Home 从 App 回 Watch Face；不通过 Root Back 恢复启动来源。
 - Battery、Brightness、Wi-Fi 与 Settings 提供最小真实内容。
 - Brightness 使用当前选中的真实 Display output，不使用固定 ID。
 
@@ -36,7 +37,7 @@ M6 建立 Home 与 Display State 后，ESPocket 需要一套以手表为中心�
 
 ## Out of Scope
 
-Runtime App 契约验证、通用 Card SDK、Card editor、任意 App-to-App history 与 dynamic Launcher。
+Runtime App 契约验证、App Card 注册与动态配置、任意 App-to-App history 与 dynamic Launcher。
 
 ## Tickets
 
@@ -47,3 +48,7 @@ Runtime App 契约验证、通用 Card SDK、Card editor、任意 App-to-App his
 ## Further Notes
 
 固定 acceptance gate 见 [M7 acceptance](../../docs/milestones/m7/acceptance.md)。
+
+## Comments
+
+- 2026-10-01：原方案要求「实现真实 Surface content、Edge Back 与一个直接 Launch Source」，并让「Back 返回直接启动 App 的 Surface」；原决定还包括「Cards 保持 single-page content，不变成 nested App」及「只保存一个直接 Launch Source」。经 [ADR-0011](../../docs/adr/0011-app-root-has-no-back.md) 决策，App Root 改为无 Back，子页面使用 Page 栈；当前固定 Card 仍保持单页，App Card 留待后续。上文为当前待实施范围，原方案保存在此作为决策历史。

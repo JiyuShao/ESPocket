@@ -27,10 +27,15 @@ enum class ShellSurface : uint8_t {
 
 class CircularShell final : public esp_brookesia::system::core::IApp {
 public:
+    struct BackUiState {
+        bool default_visible = false;
+        bool edge_enabled = false;
+    };
     using PowerPressCountProvider = std::function<uint32_t()>;
     using DisplayOnProvider = std::function<bool()>;
     using AppVisibleProvider = std::function<bool()>;
     using SystemHandler = std::function<void()>;
+    using BackUiProvider = std::function<BackUiState()>;
     using AppLaunchHandler = std::function<std::expected<void, std::string>(
                                  std::string_view,
                                  ShellSurface
@@ -43,6 +48,7 @@ public:
                                   )>;
 
     explicit CircularShell(
+        uint32_t display_output_id,
         PowerPressCountProvider power_press_count_provider = {},
         DisplayOnProvider display_on_provider = {},
         AppVisibleProvider app_visible_provider = {},
@@ -50,7 +56,9 @@ public:
         SystemHandler screen_timeout_handler = {},
         AppLaunchHandler app_launch_handler = {},
         SystemHandler back_handler = {},
-        KeyboardResultHandler keyboard_result_handler = {}
+        KeyboardResultHandler keyboard_result_handler = {},
+        BackUiProvider back_ui_provider = {},
+        SystemHandler back_timeout_handler = {}
     );
 
     esp_brookesia::system::core::AppManifest get_manifest() const override;
@@ -99,15 +107,22 @@ private:
         std::atomic<ShellSurface> surface = ShellSurface::WatchFace;
         std::atomic<uint8_t> pending_gesture = 0;
         std::atomic<uint32_t> activity_generation = 0;
+        // PROTOTYPE: Launcher pull-to-Home arbitration; Card support will use a separate contract.
+        std::atomic<int32_t> launcher_scroll_top = 100000;
+        std::atomic<int32_t> launcher_pull_distance = 0;
+        std::atomic<int32_t> launcher_return_threshold = 100000;
+        std::atomic_bool launcher_press_started_at_top = false;
     };
 
     struct KeyboardState;
+    struct BackOverlayState;
 
     std::expected<void, std::string> configure_home_gesture();
     std::expected<void, std::string> open_app(
         std::string_view manifest_id,
         std::string_view display_name
     );
+    void sync_default_back(bool visible);
 
     void start_status();
     void stop_status();
@@ -120,6 +135,7 @@ private:
     std::expected<void, std::string> toggle_wifi();
     void set_status_text(std::string_view path, std::string text);
 
+    uint32_t display_output_id_;
     PowerPressCountProvider power_press_count_provider_;
     DisplayOnProvider display_on_provider_;
     AppVisibleProvider app_visible_provider_;
@@ -127,9 +143,12 @@ private:
     SystemHandler screen_timeout_handler_;
     AppLaunchHandler app_launch_handler_;
     SystemHandler back_handler_;
+    BackUiProvider back_ui_provider_;
+    SystemHandler back_timeout_handler_;
     KeyboardResultHandler keyboard_result_handler_;
     std::shared_ptr<HomeGestureState> home_gesture_state_;
     std::shared_ptr<KeyboardState> keyboard_state_;
+    std::shared_ptr<BackOverlayState> back_overlay_state_;
     std::shared_ptr<CallbackState> callback_state_;
     esp_brookesia::system::core::AppContext *context_ = nullptr;
     esp_brookesia::system::core::TimerId home_intent_timer_id_ =
@@ -140,6 +159,8 @@ private:
     uint32_t last_activity_generation_ = 0;
     int64_t last_activity_us_ = 0;
     bool screen_timeout_latched_ = false;
+    uint8_t launcher_pull_visual_ = 0;
+    int32_t launcher_pull_height_ = 28;
 
     esp_brookesia::service::ServiceBinding display_binding_;
     esp_brookesia::service::ServiceBinding wifi_binding_;

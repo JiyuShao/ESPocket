@@ -14,6 +14,7 @@ namespace espocket {
 
 class CircularShell;
 class PowerKeyMonitor;
+class PageNavigator;
 enum class ShellSurface : uint8_t;
 
 class System final : public esp_brookesia::system::core::System {
@@ -55,6 +56,7 @@ private:
     void handle_power_short_press();
     void handle_screen_timeout();
     void handle_back();
+    void handle_back_timeout();
     std::expected<void, std::string> launch_app(std::string_view manifest_id, ShellSurface source);
     std::expected<void, std::string> set_display_on(bool on);
     void show_watch_face();
@@ -64,10 +66,14 @@ private:
 
     esp_brookesia::service::ServiceBinding display_binding_;
     std::shared_ptr<CircularShell> shell_;
+    std::shared_ptr<PageNavigator> hello_navigator_;
     std::unique_ptr<PowerKeyMonitor> power_key_monitor_;
     std::shared_ptr<std::atomic<uint64_t>> foreground_token_ =
         std::make_shared<std::atomic<uint64_t>>(0);
     esp_brookesia::system::core::AppId shell_id_ = esp_brookesia::system::core::INVALID_APP_ID;
+    esp_brookesia::system::core::AppId hello_id_ = esp_brookesia::system::core::INVALID_APP_ID;
+    std::atomic_bool default_back_visible_ = false;
+    std::atomic_bool edge_back_enabled_ = false;
     std::atomic<esp_brookesia::system::core::AppId> foreground_app_id_{
         esp_brookesia::system::core::INVALID_APP_ID
     };

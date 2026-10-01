@@ -7,7 +7,7 @@ ADR 记录替代方案代价显著、需要长期保持可追溯的 ESPocket 决
 | ADR | Status | Decision |
 |---|---|---|
 | [0001](0001-espocket-is-a-product-layer-over-brookesia.md) | accepted | ESPocket 保持为 Brookesia 之上的产品层。 |
-| [0002](0002-watch-face-is-the-only-home.md) | accepted | Watch Face 是唯一 Home。 |
+| [0002](0002-watch-face-is-the-only-home.md) | superseded by 0011 | Watch Face 是唯一 Home；旧 Root Back 决定已替换。 |
 | [0003](0003-native-and-runtime-share-the-system-core-contract.md) | accepted | Native 与 Runtime App 共享一套产品 lifecycle 契约。 |
 | [0004](0004-core-owns-the-runtime-package-trust-gate.md) | accepted | Core 持有单一 fail-closed Runtime package trust gate。 |
 | [0005](0005-launcher-projects-core-committed-app-state.md) | accepted | Launcher 投影 Core committed App state。 |
@@ -15,5 +15,7 @@ ADR 记录替代方案代价显著、需要长期保持可追溯的 ESPocket 决
 | [0007](0007-ai-authority-comes-from-user-goals.md) | accepted | AI authority 来源于已确认用户目标。 |
 | [0008](0008-app-ai-capabilities-follow-the-running-instance.md) | accepted | App AI capability 跟随一个 Running Instance。 |
 | [0009](0009-ai-native-is-a-foundational-design-dimension.md) | accepted | AI Native 是底层设计维度。 |
+| [0010](0010-app-cards-are-app-surfaces-in-home-space.md) | superseded by 0011 | App Card 是同一 App 在 Home Space 的专门形态；旧 Root Back 决定已替换。 |
+| [0011](0011-app-root-has-no-back.md) | accepted | App Root 无 Back；ESPocket 保存 App 页面栈。 |
 
 决策变更时新增 superseding ADR，并让新旧记录相互链接。不得静默改写已接受 ADR 的决定。

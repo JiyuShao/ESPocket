@@ -1,0 +1,3 @@
+# Use with the normal sdkconfig.defaults in a separate test build.
+# This image stops the visible App after automatic screen-off to verify wake fallback.
+CONFIG_ESPOCKET_M6_RECLAIM_ON_TIMEOUT_TEST=y

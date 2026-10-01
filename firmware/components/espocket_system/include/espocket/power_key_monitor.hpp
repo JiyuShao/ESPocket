@@ -5,7 +5,6 @@
 #include <expected>
 #include <string>
 
-#include "driver/i2c_master.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
@@ -28,7 +27,6 @@ private:
     void run();
     bool read_pressed(bool &pressed);
 
-    i2c_master_dev_handle_t device_ = nullptr;
     std::atomic<TaskHandle_t> task_ = nullptr;
     std::atomic_bool running_ = false;
     std::atomic<uint32_t> short_press_count_ = 0;

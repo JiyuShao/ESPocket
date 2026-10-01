@@ -18,10 +18,11 @@
 ## Scope
 
 - Native 与 Runtime App 使用一致的 Root / Detail / Back 模型。
-- App Root Back 返回一个直接 Launch Source；来源失效时回 Watch Face。
+- App 声明唯一 Root 与稳定 Page ID；Root 无 Back，子页面 Back 返回 ESPocket Page 栈上一页。
+- App 决定页面转移，ESPocket 保存唯一栈；默认 Back 与 Edge Back 在子页面可用。
 - PWR Home、息屏、唤醒和回收降级对两种执行模型一致。
 - App 可以使用 Tap、Scroll、普通横滑和 Long Press。
-- 系统保留 PWR Home 与 Edge Back。
+- 系统保留 PWR Home；App 可整体关闭默认可见 Back 与 Edge Back，但多级 App 必须自带可见 Back。
 - Home 后 App 不得假设仍在内存。
 - 系统资源不足时可以回收后台 App。
 - 持续业务若需可靠存在，使用系统服务或持久化业务状态，而不是页面驻留。
@@ -43,13 +44,13 @@
 
 | 检查项 | PASS 条件 | 状态 |
 |---|---|---|
-| Canonical contract | Native、Runtime 与第三方指导使用相同术语和行为 | PASS（STATIC，dependency-gated） |
-| Root / Detail | 两种执行模型都能验证 Root → Detail → Back → Root | PASS（HOST BUILD + STATIC，真机待验收） |
-| Launch Source | Root Back 返回一个直接来源；失效时回 Watch Face | PASS（STATIC，真机待验收） |
+| Canonical contract | Native、Runtime 与第三方指导使用相同术语和行为 | OPEN（新开发 API 待绑定实现） |
+| Root / Detail | 两种执行模型都能验证 Root → Detail → Back → Root，且 Root 无 Back | OPEN（新契约待实现与真机验收） |
+| App Page Navigator | 安装时声明 Root/Page；ESPocket 唯一栈；Root 无 Back | OPEN（新契约待实现） |
 | Home | 任意 App 页面 PWR 短按都回 Watch Face | PASS（STATIC，真机待验收） |
 | Display State | 两种执行模型遵守相同息屏、唤醒和 fallback 规则 | PASS（STATIC，真机待验收） |
 | Reclaim semantics | App 不依赖后台驻留；回收后重新启动进入 App Root | PASS（STATIC，真机待验收） |
-| Gesture ownership | App 保留 Tap、Scroll、普通横滑、Long Press；系统保留 Edge Back 与 PWR | PASS（STATIC，真机待验收） |
+| Gesture ownership | App 保留 Tap、Scroll、普通横滑、Long Press；系统默认子页面 Edge Back 与 PWR | OPEN（新契约待实现与真机验收） |
 | Guidance | 四类页面指导写入开发文档，但不建立模板框架 | PASS（[App 契约](../../design/product/04-app-contract.md)） |
 | Minimal Runtime sample | 只实现验证契约所需的最小 Root / Detail 路径 | PASS（Toolkit build + staging，真机待验收） |
 | Build | Native 与 Runtime 目标的 clean build/link/staging 成功 | PASS（2026-09-28，dependency-gated） |
@@ -65,8 +66,8 @@
 
 | 执行模型 / 路径 | 次数 | PASS 条件 | 状态 |
 |---|---:|---|---|
-| Native Root → Detail → Back → Root → Back → Launch Source → PWR Home | 5 | 每轮导航和来源恢复均正确 | NOT TESTED |
-| Runtime Root → Detail → Back → Root → Back → Launch Source → PWR Home | 5 | 每轮导航和来源恢复均正确 | NOT TESTED |
+| Native Root → Detail → Back → Root → PWR Home | 5 | 子页面 Back、Root 无 Back 与 PWR Home 均正确 | NOT TESTED |
+| Runtime Root → Detail → Back → Root → PWR Home | 5 | 子页面 Back、Root 无 Back 与 PWR Home 均正确 | NOT TESTED |
 | Native background reclaim → relaunch | 5 | 从 App Root 启动，不恢复失效页面 | NOT TESTED |
 | Runtime background reclaim → relaunch | 5 | 从 App Root 启动，不恢复失效页面 | NOT TESTED |
 
@@ -78,8 +79,9 @@
 | Runtime App Screen Off / Wake | 未回收时恢复页面；回收时降级 Watch Face | NOT TESTED |
 | Native normal horizontal swipe | 不误触发 Edge Back | NOT TESTED |
 | Runtime normal horizontal swipe | 不误触发 Edge Back | NOT TESTED |
-| Invalid Launch Source | 两种执行模型都降级 Watch Face | NOT TESTED |
-| Failure scan | 无 panic、watchdog、assert、deadlock、错误来源恢复或持续性资源下降 | NOT TESTED |
+| Root Back attempt | 两种执行模型都保持 Root 且无默认 Back | NOT TESTED |
+| Deferred Back | 重复请求不重复提交；超时取消；PWR 可立即回表盘 | NOT TESTED |
+| Failure scan | 无 panic、watchdog、assert、deadlock、错误 Back 或持续性资源下降 | NOT TESTED |
 
 ## Lifecycle / Heap Evidence
 
@@ -104,7 +106,7 @@
 
 ## Evidence Rules
 
-- 每次固定循环必须标识执行模型、attempt 编号、Launch Source 与最终目标。
+- 每次固定循环必须标识执行模型、attempt 编号、Page ID 与最终目标。
 - Runtime 路径必须使用真实 Runtime App，不能用 Native mock 替代。
 - Preview、host 测试或串口状态打印不能替代物理显示、触摸和 PWR 观察。
 - Runtime 路径未通过或任一必须项缺少证据时，M8 不得标记 `PASS`。
@@ -113,6 +115,6 @@
 
 `NOT ENTERED`
 
-M8 Native/Runtime 契约源码已按项目所有者授权提前开发，并通过 Toolkit、主机构建、staging 与静态检查。由于 M7 尚未 `PASS`，M8 仍保持 `NOT ENTERED`，所有真机和 lifecycle/heap 项保持 `NOT TESTED`。
+M8 既有 Native/Runtime 契约源码已按项目所有者授权提前开发，并通过 Toolkit、主机构建、staging 与静态检查。2026-10-01 的 [ADR-0011](../../adr/0011-app-root-has-no-back.md) 替换了旧 Root Back 行为；此前静态结果不证明新 Navigator、Root 无 Back 或待决 Back。由于 M7 尚未 `PASS`，M8 仍保持 `NOT ENTERED`，相关新 gate 为 `OPEN`，所有真机和 lifecycle/heap 项保持 `NOT TESTED`。
 
-当前工作树固件已重新完成隔离构建；Runtime Toolkit 与 staging 门槛沿用上方 2026-09-28 结果。回收与无效来源路径在按本页 Hardware Acceptance 执行前还需可控触发方式。
+既有工作树固件曾完成隔离构建；Runtime Toolkit 与 staging 门槛沿用上方 2026-09-28 结果。回收、待决 Back 与 Root 无 Back 路径在按本页 Hardware Acceptance 执行前仍需可控触发方式。

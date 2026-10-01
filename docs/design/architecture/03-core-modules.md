@@ -16,7 +16,7 @@
 
 ### `espocket::System`
 
-它的 Interface 保持为系统初始化、启动、停止和少量产品操作；Implementation 集中处理 Service 与显示装配、App 安装、前台跟踪、Launch Source、Home、PWR 和显示恢复。删除该 Module 会让这些规则重新散落到入口、Shell 和 App，因此它承担真实 Depth。
+它的 Interface 保持为系统初始化、启动、停止和少量产品操作；Implementation 集中处理 Service 与显示装配、App 安装、前台跟踪、App 导航、Home、PWR 和显示恢复。删除该 Module 会让这些规则重新散落到入口、Shell 和 App，因此它承担真实 Depth。
 
 ### `CircularShell`
 

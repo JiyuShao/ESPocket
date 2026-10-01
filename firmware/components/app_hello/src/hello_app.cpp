@@ -3,12 +3,17 @@
 #include <string>
 
 #include "esp_log.h"
+#include "espocket/page_navigator.hpp"
 
 namespace espocket {
 namespace {
 
 constexpr char TAG[] = "ESPocket.Hello";
 constexpr std::string_view INCREMENT_ACTION = "hello.increment";
+constexpr std::string_view OPEN_DETAIL_ACTION = "hello.open_detail";
+constexpr std::string_view MAIN_FLOW = "main";
+constexpr std::string_view OPEN_DETAIL_TRANSITION = "open_detail";
+constexpr std::string_view BACK_ROOT_TRANSITION = "back_root";
 constexpr std::string_view COUNTER_PATH = "/root/counter";
 constexpr std::string_view HELLO_JSON = R"json({
   "version": "0.1.0",
@@ -59,7 +64,7 @@ constexpr std::string_view HELLO_JSON = R"json({
         {
           "type": "button",
           "id": "detail",
-          "events": [ { "type": "clicked", "action": "open_detail" } ],
+          "events": [ { "type": "clicked", "action": "hello.open_detail" } ],
           "style": { "bgColor": "#334155", "radius": "24dp" },
           "placement": { "width": "190dp", "height": "54dp" },
           "children": [
@@ -99,6 +104,44 @@ constexpr std::string_view HELLO_JSON = R"json({
 })json";
 
 } // namespace
+
+PageDeclaration HelloApp::get_page_declaration() const
+{
+    return {
+        .app_id = "espocket.app.hello",
+        .root_page_id = "root",
+        .page_ids = {"root", "detail"},
+        .cards = {},
+    };
+}
+
+void HelloApp::set_navigator(std::weak_ptr<PageNavigator> navigator)
+{
+    navigator_ = std::move(navigator);
+}
+
+bool HelloApp::present_page(std::string_view from, std::string_view to)
+{
+    if (context_ == nullptr) {
+        return false;
+    }
+    if (from.empty() && to == "root") {
+        return true; // Brookesia loads the flow at its declared initial screen.
+    }
+    const auto transition = from == "root" && to == "detail"
+                                ? OPEN_DETAIL_TRANSITION
+                                : from == "detail" && to == "root"
+                                      ? BACK_ROOT_TRANSITION
+                                      : std::string_view{};
+    if (transition.empty()) {
+        return false;
+    }
+    auto result = context_->gui().trigger_screen_flow(MAIN_FLOW, transition);
+    if (!result) {
+        ESP_LOGW(TAG, "Page presentation failed: %s", result.error().c_str());
+    }
+    return result.has_value();
+}
 
 esp_brookesia::system::core::AppManifest HelloApp::get_manifest() const
 {
@@ -140,12 +183,17 @@ std::expected<void, std::string> HelloApp::on_start(
     if (!action_result) {
         return std::unexpected("Failed to subscribe increment action: " + action_result.error());
     }
+    action_result = context.gui().subscribe_action(OPEN_DETAIL_ACTION);
+    if (!action_result) {
+        return std::unexpected("Failed to subscribe Detail action: " + action_result.error());
+    }
 
     auto text_result = context.gui().set_text(COUNTER_PATH, "Counter: 0");
     if (!text_result) {
         return std::unexpected("Failed to reset counter text: " + text_result.error());
     }
 
+    context_ = &context;
     ESP_LOGI(TAG, "Hello Native started");
     return {};
 }
@@ -155,6 +203,7 @@ std::expected<void, std::string> HelloApp::on_stop(
 )
 {
     (void)context;
+    context_ = nullptr;
     count_ = 0;
     ESP_LOGI(TAG, "Hello Native stopped");
     return {};
@@ -165,6 +214,17 @@ std::expected<void, std::string> HelloApp::on_action(
     std::string_view action
 )
 {
+    if (action == OPEN_DETAIL_ACTION) {
+        auto navigator = navigator_.lock();
+        if (!navigator) {
+            return std::unexpected("App Navigator is unavailable");
+        }
+        auto result = navigator->push("detail");
+        if (!result) {
+            return std::unexpected("Failed to navigate to Detail");
+        }
+        return {};
+    }
     if (action != INCREMENT_ACTION) {
         return {};
     }

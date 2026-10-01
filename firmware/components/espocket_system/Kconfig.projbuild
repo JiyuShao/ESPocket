@@ -16,4 +16,21 @@ menu "ESPocket"
             Turn the display off after this many seconds without touch input.
             Set to 0 for the global Never setting. Apps cannot override it.
 
+    config ESPOCKET_M6_RECLAIM_ON_TIMEOUT_TEST
+        bool "M6 test: stop the foreground App after automatic screen-off"
+        default n
+        help
+            Test firmware only. After automatic screen-off with a visible App,
+            stop that App through System Core to invalidate the saved resume
+            target. The next PWR wake must show Watch Face without restarting
+            the App. Leave disabled in normal interactive firmware.
+
+    config ESPOCKET_M6_RESOURCE_TRACE
+        bool "M6 test: log heap at Watch Face before PWR screen-off"
+        default n
+        help
+            Test firmware only. Emit internal and PSRAM free/largest heap
+            metrics at a repeatable Watch Face checkpoint after each App Home
+            transition. Leave disabled in normal interactive firmware.
+
 endmenu

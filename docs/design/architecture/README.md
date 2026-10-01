@@ -11,6 +11,7 @@
 | [05 — 导航与应用运行](05-navigation-runtime.md) | Surface、App、Back、Home 和 Display State 怎样组合？ |
 | [06 — 设备能力](06-device-capabilities.md) | 产品能力如何到达 Framework Interface、Adapter 和硬件？ |
 | [07 — AI Native](07-ai-native.md) | 语义访问怎样注册到真实 Owner，并维持授权与生命周期？ |
+| [08 — 交互自动化 Seam](08-interaction-test-seam.md) | 开发者模式下的测试命令如何驱动真实 Owner 并界定证据？ |
 
 ## 维护规则
 

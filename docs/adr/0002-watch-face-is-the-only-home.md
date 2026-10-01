@@ -1,8 +1,10 @@
 # ADR-0002: Watch Face is the only Home
 
-- Status: `accepted`
+- Status: `superseded`
 - Recorded: 2026-09-29
 - Origin: 从既有设计中提取；首次决策日期未知
+
+本记录由 [ADR-0011](0011-app-root-has-no-back.md) 取代；Watch Face 仍是唯一 Home，Root Back 与 Launch Source 的旧决定不再适用。
 
 ## Context
 

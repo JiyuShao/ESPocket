@@ -18,6 +18,10 @@ Sequence 负责追溯提出顺序；执行顺序由 ticket 编号、`Blocked by`
 | 008 | [M8 App Contract](008-m8-app-contract/spec.md) | 按 Milestone 提出顺序回填 |
 | 009 | [AI Native foundation](009-ai-native-foundation/spec.md) | 既有 AI Native 设计 Effort |
 | 010 | [文档重组](010-docs-reorganization/spec.md) | 本次文档迁移 Effort |
+| 011 | [Home Space gesture hardware prototype](011-home-space-gesture-prototype/spec.md) | User-confirmed grill-with-docs interaction model on 2026-09-30 |
+| 012 | [真机交互自动化开发契约](012-test-automation-contract/spec.md) | 2026-09-30 user request for ownership, protocol, API and development documentation |
+| 013 | [Firmware structure refactor](013-firmware-structure-refactor/spec.md) | 2026-10-01 user-confirmed grill-with-docs code-structure review |
+| 014 | [App Page、Card 与 Back 开发契约](014-app-navigation-card-contract/spec.md) | 2026-10-01 user-confirmed grill-with-docs design session |
 
 Milestone 状态仍以 [`docs/milestones/README.md`](../docs/milestones/README.md) 为权威。
 

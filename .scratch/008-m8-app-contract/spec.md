@@ -7,11 +7,11 @@ Blocked by: M7 `PASS`.
 
 ## Problem Statement
 
-Native navigation model 必须成为 Native、Runtime 与 third-party App 共用的稳定契约，并覆盖 reclaim 与 invalid-source 行为。
+Native navigation model 必须成为 Native、Runtime 与 third-party App 共用的稳定契约，并覆盖 reclaim、Root 无 Back 与待决 Back 行为。
 
 ## Solution
 
-在同一产品契约下，使用真实 Native 与 Runtime App 验证 Root/Detail/Back、直接 Launch Source、Home、Screen Off、wake、reclaim 与 gesture ownership。
+在同一产品契约下，使用真实 Native 与 Runtime App 验证 Root/Detail/Back、ESPocket Page 栈、Home、Screen Off、wake、reclaim 与 gesture ownership。
 
 ## User Stories
 
@@ -24,7 +24,8 @@ Native navigation model 必须成为 Native、Runtime 与 third-party App 共用
 ## Implementation Decisions
 
 - 两种模型共享 System Core lifecycle 与产品导航语义。
-- App task 保存一个直接 Launch Source。
+- App 安装时声明 Root 与全部 Page 类型，ESPocket 保存唯一 Page 栈；Root 无 Back。
+- App 可暂缓普通 Back，PWR Home 不受其阻塞。
 - 需要可靠长期存在的工作归 Service 或持久化 business state。
 - App 提供的 AI Native capability 遵循同一 Running Instance lifetime。
 
@@ -47,3 +48,7 @@ Native navigation model 必须成为 Native、Runtime 与 third-party App 共用
 ## Further Notes
 
 固定 acceptance gate 见 [M8 acceptance](../../docs/milestones/m8/acceptance.md)。
+
+## Comments
+
+- 2026-10-01：原问题与方案包括 `invalid-source` 行为、直接 Launch Source 验证，原实施决定为「App task 保存一个直接 Launch Source」。经 [ADR-0011](../../docs/adr/0011-app-root-has-no-back.md) 决策，Root 无 Back，ESPocket 保存 App Page 栈，首版不提供跨 App 返回；待决 Back 加入验收。上文为当前待实施范围，原方案保存在此作为决策历史。

@@ -9,6 +9,7 @@
 | 产品必须怎样表现 | [产品设计](design/product/README.md) |
 | 当前或目标结构怎样组织 | [架构视图](design/architecture/README.md) |
 | 当前要做什么、如何拆票 | [`.scratch/`](../.scratch/) |
+| App 开发 API 与测试协议 | [开发契约](development/README.md) |
 | 阶段是否通过、门槛与证据索引在哪里 | [Milestones](milestones/README.md) |
 | 某个上游版本实际提供什么 | [Upstream Tracking](upstream/README.md) |
 | 如何构建 firmware | [Firmware README](../firmware/README.md) |

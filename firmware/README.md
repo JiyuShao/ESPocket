@@ -31,6 +31,18 @@ Board Manager 生成的 defaults 必须与同一 checkout 一起使用。切换�
 idf.py -C firmware build
 ```
 
+## 测试
+
+只约束一个组件的测试放在该组件的 `tests/`；跨组件测试放在 `firmware/tests/`。测试可以执行组件行为，也可以分析源码或资源，只要它对稳定约束做出可重复的断言。
+
+这是当前目录约定；[固件结构重构计划](../.scratch/013-firmware-structure-refactor/spec.md)将统一迁至 ESP-IDF 的 `test/` 目录。迁移完成前，现有命令继续使用 `tests/`。
+
+例如，Shell 文档的结构测试运行方式为：
+
+```bash
+python3 -m unittest discover -s firmware/components/shell_circular/tests -p 'test_*.py'
+```
+
 ## 文件职责
 
 | Path | Role |

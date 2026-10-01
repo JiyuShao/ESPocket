@@ -2,7 +2,7 @@
 
 Sequence: 006
 
-Status: active
+Status: resolved
 Blocked by: M2 `PASS`.
 
 ## Problem Statement
