@@ -6,7 +6,8 @@
 
 #include "espocket/developer_mode.hpp"
 #include "espocket/test_protocol.hpp"
-#include "espocket/power_input_queue.hpp"
+#include "espocket/test_input_queue.hpp"
+#include "espocket/touch_input_sequence.hpp"
 
 void require(bool condition, std::string_view message)
 {
@@ -109,7 +110,7 @@ int main()
     release.set_value();
     require(reading.get().ok, "original snapshot must complete after concurrent rejection");
 
-    espocket::PowerInputQueue power;
+    espocket::TestInputQueue power;
     uint64_t now_ms = 10;
     int executions = 0;
     espocket::TestProtocol stimulated(mode, "image-power", [&]()
@@ -128,9 +129,9 @@ int main()
                 !power.busy() && !power.execute_pending([&] { ++executions; }),
             "release should idempotently cancel a pending stimulus without executing it");
     require(stimulated.dispatch(1, "stimulus.powerShort").ok &&
-                !power.expire(now_ms + espocket::PowerInputQueue::TIMEOUT_MS - 1),
+                !power.expire(now_ms + espocket::TestInputQueue::TIMEOUT_MS - 1),
             "pending input should remain available before its deadline");
-    require(power.expire(now_ms + espocket::PowerInputQueue::TIMEOUT_MS) && !power.busy() &&
+    require(power.expire(now_ms + espocket::TestInputQueue::TIMEOUT_MS) && !power.busy() &&
                 !power.execute_pending([&] { ++executions; }),
             "expired stimulus must not execute late");
     require(stimulated.dispatch(1, "stimulus.powerShort").ok &&
@@ -150,7 +151,8 @@ int main()
     });
     power_entered.get_future().wait();
     require(stimulated.dispatch(1, "release").ok && power.busy() &&
-                stimulated.dispatch(1, "stimulus.powerShort").error_code == "busy",
+                stimulated.dispatch(1, "stimulus.powerShort").error_code == "busy" &&
+                power.reserve_touch().error() == "busy",
             "release must not admit overlapping input while an Owner command is executing");
     power_release.set_value();
     require(executing.get() && !power.busy() && executions == 2,
@@ -159,4 +161,83 @@ int main()
                 stimulated.dispatch(1, "stimulus.powerShort").error_code == "developer_mode_off" &&
                 !power.busy(),
             "disabled gate must prevent input from entering the queue");
+
+    std::vector<espocket::TouchInputStep> delivered;
+    int cleanups = 0;
+    bool cancelled = false;
+    bool fail_cleanup = false;
+    bool fail_sink = false;
+    espocket::TouchInputSequence touch(power,
+        [&](const espocket::TouchInputStep &step, bool first) -> std::expected<void, std::string> {
+            require(first == delivered.empty(), "only the first point begins the gesture");
+            if (fail_sink) { return std::unexpected("sink_failed"); }
+            delivered.push_back(step);
+            return {};
+        }, [&](bool abort) -> std::expected<void, std::string> {
+            ++cleanups;
+            cancelled = abort;
+            require(power.busy(), "cleanup must complete before the shared slot becomes free");
+            if (fail_cleanup) { return std::unexpected("cleanup_failed"); }
+            return {};
+        });
+    const std::vector<espocket::TouchInputStep> swipe{
+        {20, 100, 0, true}, {100, 100, 80, true}, {160, 100, 160, false},
+    };
+    auto invalid = swipe;
+    invalid[1].x = 466;
+    require(touch.start(invalid, 466, 466, 100).error() == "bad_request" &&
+                !power.busy() && delivered.empty(),
+            "out-of-bounds traces must not reserve or inject input");
+    invalid = swipe;
+    invalid[1].pressed = false;
+    require(touch.start(invalid, 466, 466, 100).error() == "bad_request",
+            "a trace cannot start a second gesture after an intermediate release");
+    invalid = swipe;
+    invalid[1].elapsed_ms = 20;
+    require(touch.start(invalid, 466, 466, 100).error() == "bad_request",
+            "point spacing must allow the actual input pipeline to observe transitions");
+    require(power.enqueue(100).has_value() &&
+                touch.start(swipe, 466, 466, 100).error() == "busy",
+            "touch cannot overlap a queued PWR");
+    power.cancel_pending();
+    require(touch.start(swipe, 466, 466, 100).has_value() && delivered.empty() &&
+                power.enqueue(100).error() == "busy" &&
+                touch.start(swipe, 466, 466, 100).error() == "busy",
+            "accepted touch reserves the common slot without running the sink immediately");
+    power.cancel_pending();
+    require(power.busy() && !power.execute_pending([] {}),
+            "PWR cancellation and polling must not accidentally release a touch lease");
+    require(touch.tick(100).has_value() && delivered.size() == 1 &&
+                touch.tick(179).has_value() && delivered.size() == 1,
+            "first press is delivered once and the next point respects its interval");
+    require(touch.tick(200).has_value() && delivered.size() == 2 &&
+                touch.tick(260).has_value() && delivered.size() == 2,
+            "delayed worker tick must not catch up multiple points or shorten the next hold");
+    require(touch.tick(280).has_value() && delivered.size() == 3 &&
+                !delivered.back().pressed && power.busy() && cleanups == 0,
+            "normal release must remain observable before the override is removed");
+    require(touch.tick(319).has_value() && power.busy() &&
+                touch.tick(320).has_value() && !power.busy() && !cancelled && cleanups == 1,
+            "normal finish removes the override after a release hold, without aborting the gesture");
+    require(touch.cancel().has_value() && cleanups == 1,
+            "repeated cleanup after completion must be idempotent");
+    delivered.clear();
+    require(touch.start(swipe, 466, 466, 1000).has_value() && touch.tick(1000).has_value(),
+            "cancel fixture should deliver an initial press");
+    fail_cleanup = true;
+    require(touch.cancel().error() == "cleanup_failed" && cancelled && touch.active() &&
+                power.enqueue(1100).error() == "busy",
+            "failed override cleanup must retain occupancy and report failure");
+    fail_cleanup = false;
+    require(touch.tick(1100).has_value() && !power.busy() && cancelled && delivered.size() == 1,
+            "cleanup retry must not send normal release or finish a cancelled navigation");
+    delivered.clear();
+    require(touch.start(swipe, 466, 466, 2000).has_value() &&
+                touch.tick(2661).error() == "timeout" && !power.busy() && cancelled && delivered.empty(),
+            "expired trace must abort without injecting late points");
+    require(touch.start(swipe, 466, 466, 3000).has_value(), "sink failure fixture should reserve");
+    fail_sink = true;
+    require(touch.tick(3000).error() == "sink_failed" && !power.busy() && cancelled,
+            "sink failure must cancel and free the slot only after cleanup");
+
 }

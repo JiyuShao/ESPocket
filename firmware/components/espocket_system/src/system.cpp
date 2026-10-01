@@ -64,7 +64,7 @@ std::expected<void, std::string> System::on_init()
         ESP_LOGW(TAG, "Developer mode disabled after storage read failure: %s",
                  restored.error().c_str());
     }
-    test_power_input_ = std::make_unique<PowerInputQueue>();
+    test_power_input_ = std::make_unique<TestInputQueue>();
     test_adapter_ = std::make_unique<InteractionTestAdapter>(
         developer_mode_, [this]() { return read_test_snapshot(); },
         [this]() -> std::expected<void, std::string> {

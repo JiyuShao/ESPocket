@@ -61,6 +61,12 @@
 - 17 项 host tests、M2 parser、Markdown 与完整固件构建通过；源码/镜像证据见 [012 PWR 记录](../../012-test-automation-contract/records/2026-10-02-power-input.md)。未刷写，不新增硬件通过项。
 - 012/02 仍开放触摸轨迹/LVGL 注入、跨输入占用与触摸异常释放；后续应统一触摸与 PWR 槽位，不能让两个刺激交错。USB 物理连接 API 无法发现主机仅关闭串口，Driver 需显式 release。
 
+## 第七轮自动执行
+
+- 012/02 增加真实触摸序列组件，与 PWR 共用互斥输入槽位；调度时不挤压 press/release，异常取消与正常完成分开，清理失败保持 busy 并可重试。范围与组件证据见 [012 序列记录](../../012-test-automation-contract/records/2026-10-02-touch-sequence.md)。
+- 17 项 host tests、M2 parser、Markdown 与 ESP-IDF 完整构建通过，未刷写。
+- 该组件尚未接 USB/Display/Shell，不开放 touch capability，不提前关闭 012/02；下一步接 raw 轨迹与 Owner sink，并处理取消不提交 Launcher 返回。
+
 ## 晨间最小介入
 
 先回复已发出的单次 013 smoke 结果：Native Detail Edge Back；自动息屏唤醒保留 Detail；PWR Home/息屏/亮屏回表盘；Quick Settings 上滑、Launcher 顶部下拉返回。遇到异常停在该步即可。无需重做此前十轮资源验证。

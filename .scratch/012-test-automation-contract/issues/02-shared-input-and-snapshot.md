@@ -14,6 +14,8 @@
 
 ## Comments
 
+- 2026-10-02（夜间，序列组件）：触摸调度组件与 PWR 复用同一 `TestInputQueue`，真实 C++ 用例覆盖混合输入 busy、延迟调度、期限取消及清理失败保留占用。USB/Display/Shell 接入尚未完成，整项触摸与异常清理条件仍不勾选。见 [序列组件证据](../records/2026-10-02-touch-sequence.md)。
+
 - 2026-10-02（夜间，PWR 排队）：USB 仅入队，System 输入任务消费并调用原有 PWR 语义入口；排队/执行占用、重复 release、期限取消及执行中取消的主机行为用例通过，固件构建通过。未刷写；触摸与跨输入共同占用仍开放，不提前关闭整票。详见 [PWR 证据](../records/2026-10-02-power-input.md)。
 
 - 2026-10-02（夜间，共享仲裁）：Shell 硬件订阅与内部合成入口共同调用实际 `process_shell_gesture`，保留方向、阈值、App Edge Back、Launcher 顶部拉动/松手提交和 activity 语义。组件行为用例已通过；USB 轨迹和 LVGL 注入仍未实现，不提前勾选整项合成触摸条件。记录见 [共享仲裁证据](../records/2026-10-02-shared-shell-gesture.md)。

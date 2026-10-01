@@ -45,6 +45,8 @@ Wi-Fi 测试通道、任意 App Action、应用安装、设置修改、物理执
 
 ## Further Notes
 
+- [2026-10-02 触摸序列组件](records/2026-10-02-touch-sequence.md)
+
 - [2026-10-02 PWR 排队源码](records/2026-10-02-power-input.md)
 
 - [2026-10-02 只读快照源码](records/2026-10-02-readonly-snapshot.md)

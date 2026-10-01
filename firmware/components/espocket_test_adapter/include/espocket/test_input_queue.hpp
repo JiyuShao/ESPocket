@@ -8,7 +8,7 @@
 
 namespace espocket {
 
-class PowerInputQueue {
+class TestInputQueue {
 public:
     static constexpr uint64_t TIMEOUT_MS = 1'000;
     std::expected<void, std::string> enqueue(uint64_t now_ms);
@@ -16,9 +16,11 @@ public:
     bool expire(uint64_t now_ms);
     void cancel_pending();
     bool busy() const;
+    std::expected<void, std::string> reserve_touch();
+    void finish_touch();
 
 private:
-    enum class State { Idle, Pending, Executing };
+    enum class State { Idle, Pending, Executing, Touch };
     void finish();
     mutable std::mutex mutex_;
     State state_ = State::Idle;
