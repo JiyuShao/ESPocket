@@ -14,4 +14,6 @@
 
 ## Comments
 
+- 2026-10-02（夜间，共享仲裁）：Shell 硬件订阅与内部合成入口共同调用实际 `process_shell_gesture`，保留方向、阈值、App Edge Back、Launcher 顶部拉动/松手提交和 activity 语义。组件行为用例已通过；USB 轨迹和 LVGL 注入仍未实现，不提前勾选整项合成触摸条件。记录见 [共享仲裁证据](../records/2026-10-02-shared-shell-gesture.md)。
+
 - 2026-10-02（夜间）：先完成只读 snapshot 的源码与组件 slice。System 读取实际 Shell Surface、显示与前台 token，Page 来自共同 Navigator 或明确的 Settings 例外；状态变化/未适配页面明确失败。协议仅为成功样本分配 seq，不序列化私有页面参数。新增主机用例覆盖模式准入、能力公布、实时 Owner 读取、失败不报 Root/成功序号及重叠调用 busy。源码未刷写，触摸/PWR、序列占用和 release 清理仍开放。证据见 [夜间记录](../../013-firmware-structure-refactor/records/2026-10-02-overnight-frontier.md)。

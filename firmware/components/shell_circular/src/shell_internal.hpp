@@ -65,16 +65,6 @@ constexpr int STATUS_INTERVAL_MS = 30'000;
 constexpr int64_t SCREEN_TIMEOUT_US =
     static_cast<int64_t>(CONFIG_ESPOCKET_M6_SCREEN_TIMEOUT_SECONDS) * 1'000'000;
 
-enum class GestureIntent : uint8_t {
-    None,
-    WatchFace,
-    BatteryCard,
-    BrightnessCard,
-    QuickSettings,
-    Launcher,
-    Back,
-};
-
 using DisplayHelper = esp_brookesia::service::helper::Display;
 using DisplayService = esp_brookesia::service::Display;
 using DeviceHelper = esp_brookesia::service::helper::Device;

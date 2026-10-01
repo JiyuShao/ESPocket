@@ -88,112 +88,35 @@ std::expected<void, std::string> CircularShell::configure_home_gesture()
 
     gesture_connection_ = display.connect_touch_gesture(
                               output->name,
-    [exit_distance_px,
-     state = home_gesture_state_,
+    [state = home_gesture_state_,
      display_on_provider = host_.display_on,
      app_visible_provider = host_.app_visible,
      back_ui_provider = host_.back_ui](
         const std::string &, const DisplayService::TouchGestureInfo &info
     ) {
-        if (info.event_type == DisplayHelper::TouchGestureEventType::Press) {
-            state->consumed.store(false, std::memory_order_release);
-            state->launcher_pull_distance.store(0, std::memory_order_release);
-            state->launcher_press_started_at_top.store(
-                state->surface.load(std::memory_order_acquire) == ShellSurface::Launcher &&
-                    state->launcher_scroll_top.load(std::memory_order_acquire) <= 1,
-                std::memory_order_release
-            );
-            if (display_on_provider && !display_on_provider()) {
-                return;
-            }
-            state->activity_generation.fetch_add(1, std::memory_order_acq_rel);
-            return;
+        ShellGestureEvent event;
+        switch (info.event_type) {
+        case DisplayHelper::TouchGestureEventType::Press: event.phase = ShellGesturePhase::Press; break;
+        case DisplayHelper::TouchGestureEventType::Pressing: event.phase = ShellGesturePhase::Pressing; break;
+        case DisplayHelper::TouchGestureEventType::Release: event.phase = ShellGesturePhase::Release; break;
         }
-        if (info.event_type == DisplayHelper::TouchGestureEventType::Release) {
-            if ((!app_visible_provider || !app_visible_provider()) &&
-                    state->surface.load(std::memory_order_acquire) == ShellSurface::Launcher &&
-                    state->launcher_press_started_at_top.load(std::memory_order_acquire) &&
-                    state->launcher_pull_distance.load(std::memory_order_acquire) >= exit_distance_px) {
-                state->pending_gesture.store(
-                    static_cast<uint8_t>(GestureIntent::WatchFace), std::memory_order_release
-                );
-            } else {
-                state->launcher_pull_distance.store(0, std::memory_order_release);
-            }
-            return;
+        switch (info.direction) {
+        case DisplayHelper::TouchGestureDirection::None: event.direction = ShellGestureDirection::None; break;
+        case DisplayHelper::TouchGestureDirection::Up: event.direction = ShellGestureDirection::Up; break;
+        case DisplayHelper::TouchGestureDirection::Down: event.direction = ShellGestureDirection::Down; break;
+        case DisplayHelper::TouchGestureDirection::Left: event.direction = ShellGestureDirection::Left; break;
+        case DisplayHelper::TouchGestureDirection::Right: event.direction = ShellGestureDirection::Right; break;
         }
-        if (info.event_type != DisplayHelper::TouchGestureEventType::Pressing ||
-                (display_on_provider && !display_on_provider())) {
-            return;
-        }
-
-        const bool app_visible = app_visible_provider && app_visible_provider();
-        const auto surface = state->surface.load(std::memory_order_acquire);
-        if (!app_visible && surface == ShellSurface::Launcher &&
-                state->launcher_press_started_at_top.load(std::memory_order_acquire) &&
-                info.direction == DisplayHelper::TouchGestureDirection::Down) {
-            state->launcher_pull_distance.store(
-                std::max(0, info.stop_y - info.start_y), std::memory_order_release
-            );
-            return; // Launcher commits Home on release only.
-        }
-        if (info.distance_px < exit_distance_px) {
-            return;
-        }
-
-        GestureIntent intent = GestureIntent::None;
-        const bool edge_back =
-            (has_gesture_area(info.start_area, DisplayHelper::TouchGestureArea::LeftEdge) &&
-             info.direction == DisplayHelper::TouchGestureDirection::Right) ||
-            (has_gesture_area(info.start_area, DisplayHelper::TouchGestureArea::RightEdge) &&
-             info.direction == DisplayHelper::TouchGestureDirection::Left);
-        if (app_visible && edge_back && back_ui_provider && back_ui_provider().edge_enabled) {
-            intent = GestureIntent::Back;
-        } else if (!app_visible) {
-            switch (surface) {
-            case ShellSurface::WatchFace:
-                if (info.direction == DisplayHelper::TouchGestureDirection::Up) {
-                    intent = GestureIntent::Launcher;
-                } else if (info.direction == DisplayHelper::TouchGestureDirection::Down) {
-                    intent = GestureIntent::QuickSettings;
-                } else if (info.direction == DisplayHelper::TouchGestureDirection::Right) {
-                    intent = GestureIntent::BatteryCard;
-                } else if (info.direction == DisplayHelper::TouchGestureDirection::Left) {
-                    intent = GestureIntent::BrightnessCard;
-                }
-                break;
-            case ShellSurface::BatteryCard:
-                if (info.direction == DisplayHelper::TouchGestureDirection::Left) {
-                    intent = GestureIntent::WatchFace;
-                }
-                break;
-            case ShellSurface::BrightnessCard:
-                if (info.direction == DisplayHelper::TouchGestureDirection::Right) {
-                    intent = GestureIntent::WatchFace;
-                }
-                break;
-            case ShellSurface::QuickSettings:
-                if (info.direction == DisplayHelper::TouchGestureDirection::Up) {
-                    intent = GestureIntent::WatchFace;
-                }
-                break;
-            case ShellSurface::Launcher:
-                break;
-            }
-        }
-        if (intent == GestureIntent::None) {
-            return;
-        }
-
-        bool expected = false;
-        if (!state->consumed.compare_exchange_strong(
-                    expected,
-                    true,
-                    std::memory_order_acq_rel
-                )) {
-            return;
-        }
-        state->pending_gesture.store(static_cast<uint8_t>(intent), std::memory_order_release);
+        event.left_edge = has_gesture_area(info.start_area, DisplayHelper::TouchGestureArea::LeftEdge);
+        event.right_edge = has_gesture_area(info.start_area, DisplayHelper::TouchGestureArea::RightEdge);
+        event.start_y = info.start_y;
+        event.stop_y = info.stop_y;
+        event.distance_px = info.distance_px;
+        process_shell_gesture(*state, event, {
+            .display_on = !display_on_provider || display_on_provider(),
+            .app_visible = app_visible_provider && app_visible_provider(),
+            .edge_back_enabled = back_ui_provider && back_ui_provider().edge_enabled,
+        });
     }
                           );
     if (!gesture_connection_.connected()) {
@@ -207,6 +130,19 @@ std::expected<void, std::string> CircularShell::configure_home_gesture()
         exit_distance_px,
         config.threshold.vertical_edge
     );
+    return {};
+}
+
+std::expected<void, std::string> CircularShell::handle_gesture(const ShellGestureEvent &event)
+{
+    if (!home_gesture_state_) {
+        return std::unexpected("Shell gesture input is unavailable");
+    }
+    process_shell_gesture(*home_gesture_state_, event, {
+        .display_on = !host_.display_on || host_.display_on(),
+        .app_visible = host_.app_visible && host_.app_visible(),
+        .edge_back_enabled = host_.back_ui && host_.back_ui().edge_enabled,
+    });
     return {};
 }
 

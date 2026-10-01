@@ -13,16 +13,9 @@
 #include "brookesia/service_manager/event/registry.hpp"
 #include "brookesia/service_manager/service/manager.hpp"
 #include "brookesia/system_core.hpp"
+#include "espocket/shell_gesture.hpp"
 
 namespace espocket {
-
-enum class ShellSurface : uint8_t {
-    WatchFace,
-    BatteryCard,
-    BrightnessCard,
-    QuickSettings,
-    Launcher,
-};
 
 struct ShellBackUiState {
     bool default_visible = false;
@@ -81,6 +74,7 @@ public:
     std::expected<void, std::string> show_launcher();
     std::expected<void, std::string> show_surface(ShellSurface surface);
     ShellSurface current_surface() const;
+    std::expected<void, std::string> handle_gesture(const ShellGestureEvent &event);
     bool is_watch_face() const;
     std::expected<void, std::string> set_display_on(bool on);
     std::expected<void, std::string> show_keyboard(
@@ -99,17 +93,7 @@ private:
         CircularShell *owner = nullptr;
     };
 
-    struct HomeGestureState {
-        std::atomic_bool consumed = false;
-        std::atomic<ShellSurface> surface = ShellSurface::WatchFace;
-        std::atomic<uint8_t> pending_gesture = 0;
-        std::atomic<uint32_t> activity_generation = 0;
-        // PROTOTYPE: Launcher pull-to-Home arbitration; Card support will use a separate contract.
-        std::atomic<int32_t> launcher_scroll_top = 100000;
-        std::atomic<int32_t> launcher_pull_distance = 0;
-        std::atomic<int32_t> launcher_return_threshold = 100000;
-        std::atomic_bool launcher_press_started_at_top = false;
-    };
+    using HomeGestureState = ShellGestureState;
 
     struct KeyboardState;
     struct BackOverlayState;

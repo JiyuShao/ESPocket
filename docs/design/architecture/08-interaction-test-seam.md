@@ -29,6 +29,8 @@
 
 锁定版 Display Service 的 `inject_touch()` 影响 LVGL 输入快照，但其手势识别仍读取硬件快照。因此测试用合成触摸驱动 Shell 手势时，需要 ESPocket 的共用输入处理入口；仅调用 `inject_touch()` 不足以证明 Shell 手势路径。合成 PWR 证明 System 语义，不证明 GPIO 电气链路。
 
+CircularShell 的硬件手势订阅把 Brookesia 事件转换为 `ShellGestureEvent`，与内部 `handle_gesture` 输入入口共同调用 `process_shell_gesture`。该仲裁模块只更新 Shell 自己的输入状态和 pending intent；Surface/Back 的执行继续在原 App callback task。它不依赖 LVGL 对象，也不为 Test Adapter 建立第二套导航状态。此共享入口已实现；USB 原始轨迹、LVGL 注入、占用与取消仍按 012/02 实施，尚未作为 USB capability 公布。
+
 ## 架构不变量
 
 | ID | Invariant |
