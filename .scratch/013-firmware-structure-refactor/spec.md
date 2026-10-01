@@ -2,14 +2,14 @@
 
 Sequence: 013
 
-Status: planned
-Blocked by: Current Home Space, PWR, and test-automation work must be stabilized and committed first
+Status: active
+Blocked by: None — baseline committed as 43159fb
 
 ## Problem Statement
 
 ESPocket 的 ESP-IDF 工程已有清晰的 System、Shell、Native App 与 Runtime App 产品边界，但 `system.cpp` 和 `circular_shell.cpp` 正同时承载生命周期、导航、显示、输入、GUI 文档、状态刷新与阶段验证。Native 与 Runtime 资源目录的命名也未直接表达执行模型。继续堆叠会增加人和 AI 定位 Owner、评估影响范围及编写局部测试的成本。
 
-本 Effort 在不改变产品行为的前提下收敛源码、资源、测试和构建依赖的职责。当前 Home Space、PWR 与测试自动化工作尚在其他 agent 中收口，因此本 Effort 只记录设计，在该行为基线完成并提交前不实施重构。
+本 Effort 在不改变产品行为的前提下收敛源码、资源、测试和构建依赖的职责。Home Space、PWR 与测试自动化的当前实现已固定于提交 `43159fb`，本 Effort 从该基线开始实施；尚未完成的产品功能与验收继续由各自 Effort 持有。
 
 ## Solution
 
@@ -138,3 +138,9 @@ firmware/
 - [ADR-0009：AI Native 是基础设计维度](../../docs/adr/0009-ai-native-is-a-foundational-design-dimension.md)
 
 待并行中的领域文档工作完成后，将 `Reference App` 同步到 `CONTEXT.md`：它是随产品可见交付、用于持续验证共同 App contract 的 App；不再需要时明确删除。
+
+## Execution Notes
+
+- 2026-10-02：用户要求提交当前代码并开始本 Effort；固定基线 `43159fb`，先执行 01。基线已有真实 `espocket_navigation` 状态 Owner，结构调整保留其 component 边界，不另建 Navigator。
+
+- 2026-10-02：01 已完成，统一 host checks 与完整构建通过；结果见 [阶段记录](records/2026-10-02-host-checks.md)。下一执行 frontier 为 02 GUI 资源抽离。

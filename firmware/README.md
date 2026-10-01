@@ -33,20 +33,26 @@ idf.py -C firmware build
 
 ## 测试
 
-只约束一个组件的测试放在该组件的 `tests/`；跨组件测试放在 `firmware/tests/`。测试可以执行组件行为，也可以分析源码或资源，只要它对稳定约束做出可重复的断言。
+只约束一个组件的测试放在该组件的 `test/`；跨组件测试放在 `firmware/test/`。测试可以执行组件行为，也可以分析源码或资源，只要它对稳定约束做出可重复的断言。
 
-这是当前目录约定；[固件结构重构计划](../.scratch/013-firmware-structure-refactor/spec.md)将统一迁至 ESP-IDF 的 `test/` 目录。迁移完成前，现有命令继续使用 `tests/`。
+无需硬件的统一检查入口：
+
+```bash
+python3 scripts/check.py
+```
+
+它只检查工作区，不自动格式化、修复或写入构建产物。C++ 行为测试在临时目录编译，需要支持 C++23 的 `clang++`；Settings 兼容检查需要先按锁定版本物化 managed components。默认不运行 Chrome；显式加 `--diagrams` 才运行架构图检查。完整 ESP-IDF build、烧录与真机验收独立执行。
 
 例如，Shell 文档的结构测试运行方式为：
 
 ```bash
-python3 -m unittest discover -s firmware/components/shell_circular/tests -p 'test_*.py'
+python3 -m unittest discover -s firmware/components/shell_circular/test -p 'test_*.py'
 ```
 
 官方 Settings 导航适配绑定锁定版本。依赖升级前运行：
 
 ```bash
-python3 -m unittest discover -s firmware/components/espocket_system/tests -p 'test_*.py'
+python3 -m unittest discover -s firmware/components/espocket_system/test -p 'test_*.py'
 ```
 
 该测试检查锁定组件、页面资源与 Back 路由，并在主机执行 Adapter 委托和错误行为（需要支持 C++23 的 `clang++`）。固件 CMake 配置也会自动运行资源兼容检查，不匹配会阻止构建。升级时同次审查 manifest／lock、Adapter 映射和兼容测试，再按上文重新生成配置、完整构建并完成必要真机验收。生成的 `managed_components/` 改动不提交。

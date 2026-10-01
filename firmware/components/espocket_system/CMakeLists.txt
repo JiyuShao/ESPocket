@@ -20,7 +20,7 @@ target_compile_features(${COMPONENT_LIB} PUBLIC cxx_std_23)
 
 # Reject dependency upgrades that no longer match the Settings compatibility map.
 execute_process(
-    COMMAND "${PYTHON}" "${CMAKE_CURRENT_LIST_DIR}/tests/test_settings_adapter.py"
+    COMMAND "${PYTHON}" "${CMAKE_CURRENT_LIST_DIR}/test/test_settings_adapter.py"
         SettingsCompatibility.test_locked_resources_match_adapter
     RESULT_VARIABLE settings_compatibility_result
     OUTPUT_VARIABLE settings_compatibility_output

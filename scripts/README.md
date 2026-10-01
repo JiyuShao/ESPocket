@@ -1,5 +1,7 @@
 # 仓库脚本
 
+无需硬件的统一验证入口是 `python3 scripts/check.py`。默认运行 Markdown、离线 parser 与各 Owner 的 host tests；`--diagrams` 显式增加 Node／Chrome 图检查。编译和测试生成物只放入临时目录，固件构建与真机验收独立执行。
+
 仓库自有自动化统一放在 `scripts/`，按责任分组；生成结果仍写回其所属的产品或文档目录。
 
 | 目录 | 责任 | 主要入口 |
