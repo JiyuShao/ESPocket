@@ -234,6 +234,41 @@ int main()
                 back->snapshot().page_id == "root",
             "current task approval should pop exactly one Page");
 
+    bool permit_return = false;
+    auto failed_return = PageNavigator::create(
+        PageDeclaration{
+            .app_id = "app.failed-return",
+            .root_page_id = "root",
+            .page_ids = {"root", "detail"},
+        },
+        [&](std::string_view from, std::string_view to) {
+            return from.empty() || to != "root" || permit_return;
+        }
+    );
+    require(failed_return && failed_return->start() && failed_return->push("detail"),
+            "failed return fixture should open Detail");
+    bool return_visible = false;
+    bool return_edge = false;
+    failed_return->set_availability_handler([&](bool visible, bool edge) {
+        return_visible = visible;
+        return_edge = edge;
+    });
+    failed_return->set_back_handler([](const auto &, uint64_t) { return BackDecision::Defer; });
+    auto return_request = failed_return->request_back(1150);
+    require(return_request && return_request->has_value() && !return_visible && !return_edge,
+            "deferred return should disable both framework entry points");
+    auto rejected_return = failed_return->complete_back(return_request->value(), true);
+    require(!rejected_return && rejected_return.error() == NavigationError::PresentationFailed &&
+                failed_return->snapshot().page_id == "detail" &&
+                !failed_return->snapshot().back_pending && return_visible && return_edge,
+            "failed approved return must restore Back controls and preserve Detail");
+    permit_return = true;
+    auto retried_return = failed_return->request_back(1151);
+    require(retried_return && retried_return->has_value() &&
+                failed_return->complete_back(retried_return->value(), true) &&
+                failed_return->snapshot().page_id == "root" && !return_visible && !return_edge,
+            "a new request should return successfully after presentation recovers");
+
     auto missing_owned_control = PageNavigator::create(
         PageDeclaration{
             .app_id = "app.owned",

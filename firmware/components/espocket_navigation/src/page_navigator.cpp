@@ -270,7 +270,11 @@ std::expected<void, NavigationError> PageNavigator::complete_back(uint64_t token
         publish_availability();
         return {};
     }
-    return pop();
+    auto result = pop();
+    if (!result) {
+        publish_availability();
+    }
+    return result;
 }
 
 std::optional<NavigationError> PageNavigator::expire_back(uint64_t now_ms)

@@ -1,0 +1,31 @@
+# 夜间执行与晨间介入
+
+- 日期：2026-10-02
+- 授权：用户要求完成 013 后检查剩余 issues，尽可能自动执行，醒来后统一介入。
+- 结构重构提交基线：`e765c54`。013/01、02、03、05 已完成；04、06 的源码和构建完成，集中真机 smoke 尚未收到结果。
+
+## 执行顺序
+
+本记录只汇总执行选择；状态和 acceptance 仍以各 ticket 为准。不把未完成的硬件门槛用于阻塞本来独立的源码工作，也不把源码检查算成硬件通过。
+
+1. [014/01 Navigator](../../014-app-navigation-card-contract/issues/01-page-declaration-navigator.md)：审计已实现的声明、生命周期和 Settings/Store 接入；剩余重点是 App 更新后的稳定 ID 处理与相应验证。
+2. [014/02 Back](../../014-app-navigation-card-contract/issues/02-back-dispatch.md)：复核待决、失败、超时及旧 token；补具体缺口。待决样例的语言绑定归 014/04。
+3. 01、02 条件满足后，可推进 [014/03 Card](../../014-app-navigation-card-contract/issues/03-card-registry-lifecycle.md)、[014/04 Native/Runtime](../../014-app-navigation-card-contract/issues/04-samples-api-finalization.md) 和 [012/02 输入/快照](../../012-test-automation-contract/issues/02-shared-input-and-snapshot.md)；优先形成可自动验证的完整 slice。
+4. 012/02 后推进 [012/03 Driver](../../012-test-automation-contract/issues/03-host-driver-evidence.md)，让后续重复路径由 USB 执行；合成输入报告不得冒充 GPIO、触控硬件或视觉证据。
+5. [007/02 源码门槛](../../007-m7-navigation/issues/02-close-navigation-source-gates.md) 依赖 014 的 Native 路径，可在上述证据充分后复核；008 的源代码工作遵守其 Spec 与 ticket 依赖。
+
+009 的 Spec 等待 008/03 真机验收，不因个别 ticket 显示 ready-for-agent 就跳过。004/04、005 的信任/Store/键盘/发布事项缺少上游或发布条件，不能通过产品层复制 Owner 或修改 managed_components 绕过。
+
+## 已执行
+
+- 审计 014/02 发现：待决 Back 获得允许后，如果 Presenter 拒绝返回，pending 已清除但可见 Back 与 Edge Back 的发布状态仍保持关闭。
+- 修复 `complete_back` 在失败路径重新发布同一 Navigator 的可用状态；当前 Page 不变，失败 token 不复用。新增真实 C++ 行为用例验证失败后两个入口恢复、重新请求能返回 Root。
+- `python3 scripts/check.py` 通过：15 项 unittest、M2 parser、Markdown。
+- ESP-IDF 6.0.1 构建/链接及分区大小检查通过；BIN SHA-256 `11855b9d3408fad94158e50ebfbc6bcdb5219fac27c3aa9cc1d7bd2cef080373`，ELF SHA-256 `218e8b9def9c58a80f1668e35fb2925bee6848ce608aa4240cf17edb7184dcae`。App 大小 `0x5d1250`，分区剩余 43%。日志 `/private/tmp/espocket-night-navigation-build.log`。
+- 没有刷写此修复，设备保持 013 最终镜像，USB identity 仍应为 `e8bbe74ff`；构建目录中的新 ELF 已不同于设备镜像，不能直接以它判定当前设备身份。
+
+## 晨间最小介入
+
+先回复已发出的单次 013 smoke 结果：Native Detail Edge Back；自动息屏唤醒保留 Detail；PWR Home/息屏/亮屏回表盘；Quick Settings 上滑、Launcher 顶部下拉返回。遇到异常停在该步即可。无需重做此前十轮资源验证。
+
+后续新增硬件条件统一积累在此处，避免每完成一小段源码就要求用户重复操作。夜间只做必要构建、主机检查和本地提交，不 push；续跑安排在当前 chat，至工具本地时间 2026-10-02 09:00。

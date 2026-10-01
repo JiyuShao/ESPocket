@@ -154,3 +154,5 @@ firmware/
 - 2026-10-02：05 完成目录、依赖、Kconfig、版本与 LittleFS build 输入收敛；Host checks、完整重编译通过，见 [阶段记录](records/2026-10-02-layout-build.md)。
 
 - 2026-10-02：06 的 CI 与文档收尾、最终自动验证完成；已刷入重构镜像并核对 USB identity，04/06 等待一次集中 smoke 结果，见 [最终验证记录](records/2026-10-02-final-verification.md)。
+
+- 2026-10-02：用户授权睡眠期间继续检查与执行剩余 issues。04/06 人工条件保留，独立源码 frontier 与晨间最小介入见 [夜间执行记录](records/2026-10-02-overnight-frontier.md)。

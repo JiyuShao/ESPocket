@@ -13,6 +13,8 @@
 
 ## Comments
 
+- 2026-10-02（夜间）：修复待决 Back 被允许但页面呈现失败后，默认 Back 与 Edge Back 未恢复的状态发布漏洞。真实 C++ 接口测试覆盖失败保留 Detail、清除 pending、恢复入口和下一次请求成功；统一 host 检查通过。证据与后续执行顺序见 [夜间记录](../../013-firmware-structure-refactor/records/2026-10-02-overnight-frontier.md)。本票仍按 01 的依赖及未完成条件保持开放。
+
 - 2026-10-02：官方 Settings 按 [ADR-0012](../../../docs/adr/0012-official-settings-keeps-its-navigation-owner.md) 的例外统一其自带按钮与 Edge Back，不叠加 Overlay，不复制栈，也不提供 ESPocket 待决 token；已实施 Root／未知页 guard 和回调委托，证据见 [适配记录](../records/2026-10-02-settings-adapter.md)。官方真实业务清理仍需真机检查。
 
 - 2026-10-02：已实施 Navigator Back 请求状态机、呈现模式声明和 Shell 默认可见 Back。主机接口测试与整机构建通过；真机确认 Native Detail 默认 Back、Edge Back、Root 无 Back 与 PWR Home。暂缓 Back 样例仍待后续接入，证据见 [M7 记录](../records/2026-10-02-default-back-prototype.md)。
