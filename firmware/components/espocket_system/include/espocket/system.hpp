@@ -11,6 +11,7 @@
 #include "brookesia/service_manager/service/manager.hpp"
 #include "brookesia/system_core.hpp"
 #include "espocket/page_navigator.hpp"
+#include "espocket/native_page_installation.hpp"
 
 namespace espocket {
 
@@ -28,6 +29,11 @@ public:
     ~System() override;
     std::expected<void, std::string> init();
     std::expected<PageSnapshot, std::string> foreground_page_snapshot() const;
+    std::expected<InstalledPageApp, std::string> install_navigated_app(
+        std::shared_ptr<esp_brookesia::system::core::IApp> app,
+        PageDeclaration declaration,
+        PageNavigator::Presenter presenter
+    );
 
 protected:
     esp_brookesia::system::core::SystemInfo on_get_system_info() const override;
@@ -35,6 +41,9 @@ protected:
     std::expected<void, std::string> on_start() override;
     void on_stop() override;
     void on_deinit() override;
+    std::expected<void, std::string> on_app_uninstalled(
+        const esp_brookesia::system::core::AppInfo &app
+    ) override;
     std::expected<void, std::string> on_app_started(
         const esp_brookesia::system::core::AppInfo &app
     ) override;
@@ -81,6 +90,7 @@ private:
     std::shared_ptr<SettingsNavigationAdapter> settings_adapter_;
     esp_brookesia::system::core::AppId settings_id_ = esp_brookesia::system::core::INVALID_APP_ID;
     std::unordered_map<esp_brookesia::system::core::AppId, std::shared_ptr<PageNavigator>> page_navigators_;
+    mutable std::mutex page_navigators_mutex_;
     std::shared_ptr<DeveloperMode> developer_mode_;
     std::unique_ptr<InteractionTestAdapter> test_adapter_;
     std::unique_ptr<PowerKeyMonitor> power_key_monitor_;

@@ -25,6 +25,8 @@ App 级 Back 呈现声明有两种模式：`framework` 为默认；`appOwned` �
 
 Native 核心提供 `update_declaration(PageDeclaration)`：仅在 Navigator 已停止、无页面任务时更新，运行中返回 `DeclarationInUse`。App ID 与 Root Page ID 保持稳定，否则返回 `IdentityMismatch`；新声明仍按安装规则完整校验，失败保留旧声明。Page/Card 列表可重排、新增或移除，保留的 ID 不按数组位置重新编号；页面语义是否仍相同由 App 作者保证。更新后不恢复旧栈或待决 Back，下一次启动从同一 Root 开始；旧 Card 不存在时保持既有 Root 降级和诊断。此入口不负责软件包安装、Card 配置删除或替换 Presenter，分别由安装 Adapter、Card Registry 和对应语言绑定承担；Runtime 安装接入仍待 014/04，不能把组件测试算作软件包更新验收。
 
+Native 产品装配使用 `System::install_navigated_app(app, declaration, presenter)`，返回 `InstalledPageApp` 中的 Core App ID 与共享 Navigator。身份与声明先校验，通过后才调用 Core 的真实安装入口；Core 安装失败时透传错误、不发布注册。App 保存 Navigator 的弱引用，页面适配器由 App 实现。System 按 Core App ID 处理开始、停止、失败和卸载；卸载清空旧栈、token、注册与系统 UI 回调。安装入口在系统初始化或 Core 管理操作的串行调用上下文执行，不从原始 GUI 输入回调或任意并发线程调用；注册表的锁不表示 Core 安装接口支持任意并发。`install_native_page_app` 是此入口的底层 Core 边界，App 作者使用 System 入口，以保证注册和生命周期连接。
+
 ## Page 导航
 
 普通 App 由 ESPocket 保存唯一 App Page 栈。App 通过以下语义操作决定转移；操作成功后，显示页面、Back 能力和测试快照从同一栈计算。App 不另存一份供框架使用的导航栈。官方 Settings 的限定适配例外见下节；它不提供这组栈操作。

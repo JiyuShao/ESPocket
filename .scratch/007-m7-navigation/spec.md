@@ -24,7 +24,7 @@ Home 与 Display State 建立后，ESPocket 需要一套以手表为中心、贯
 ## Implementation Decisions
 
 - 当前固定 Cards 保持单页内容；未来 App Card 可由同一 App 提供专门界面，遵循 [ADR-0011](../../docs/adr/0011-app-root-has-no-back.md)。
-- ESPocket 默认在 App 子页面提供可见 Back 与 Edge Back；Root 无 Back。App 可同时关闭默认入口，但多级 App 必须自带可见 Back。
+- ESPocket 默认在 App 子页面提供可见 Back 与 Edge Back；Root 无 Back。App 可同时接管默认入口并定制返回 UI/手势，不要求可见按钮；按 ADR-0013 使用统一 Back 语义。
 - PWR Home 从 App 回 Watch Face；不通过 Root Back 恢复启动来源。
 - Battery、Brightness、Wi-Fi 与 Settings 提供最小真实内容。
 - Brightness 使用当前选中的真实 Display output，不使用固定 ID。
@@ -58,3 +58,5 @@ Runtime App 契约验证、App Card 注册与动态配置、任意 App-to-App hi
 - [2026-10-02-brightness-output-id](records/2026-10-02-brightness-output-id.md)
 - [2026-10-02-source-gate-progress](records/2026-10-02-source-gate-progress.md)
 - [2026-10-02-two-navigation-loops](records/2026-10-02-two-navigation-loops.md)
+
+- 2026-10-02：按已接受的 [ADR-0013](../../docs/adr/0013-app-controls-back-presentation.md) 修正此前残留的多级 App 必须有可见 Back 描述；不改变 Root、导航事实或硬件验收门槛。

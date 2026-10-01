@@ -67,33 +67,23 @@ std::expected<void, std::string> System::on_init()
     test_adapter_ = std::make_unique<InteractionTestAdapter>(developer_mode_);
 
     auto hello = std::make_shared<HelloApp>();
-    auto declaration = hello->get_page_declaration();
-    if (declaration.app_id != hello->get_manifest().id) {
-        return std::unexpected("Hello Native Page declaration App ID does not match its manifest");
-    }
-    auto navigator = PageNavigator::create(
-        std::move(declaration),
+    auto hello_result = install_navigated_app(
+        hello, hello->get_page_declaration(),
         [weak_hello = std::weak_ptr<HelloApp>(hello)](std::string_view from, std::string_view to) {
             auto app = weak_hello.lock();
             return app && app->present_page(from, to);
         }
     );
-    if (!navigator) {
-        return std::unexpected("Invalid Hello Native Page declaration");
+    if (!hello_result) {
+        return std::unexpected("Failed to install Hello Native: " + hello_result.error());
     }
-    auto hello_navigator = std::make_shared<PageNavigator>(std::move(*navigator));
-    hello_navigator->set_diagnostic_handler([](NavigationError error, std::string_view target) {
+    hello_result->navigator->set_diagnostic_handler([](NavigationError error, std::string_view target) {
         if (error == NavigationError::TargetUnavailable) {
             ESP_LOGW(TAG, "App Card target unavailable: %.*s", static_cast<int>(target.size()),
                      target.data());
         }
     });
-    hello->set_navigator(hello_navigator);
-    auto hello_result = install_app(hello);
-    if (!hello_result) {
-        return std::unexpected("Failed to install Hello Native: " + hello_result.error());
-    }
-    register_navigator(*hello_result, std::move(hello_navigator));
+    hello->set_navigator(hello_result->navigator);
     ESP_LOGI(TAG, "Hello Native installed");
 
     settings_adapter_ = std::make_shared<SettingsNavigationAdapter>(
@@ -110,8 +100,8 @@ std::expected<void, std::string> System::on_init()
 
     auto store = std::make_shared<esp_brookesia::app::app_store::AppStoreApp>();
     const auto store_manifest = store->get_manifest();
-    auto store_navigator = PageNavigator::create(
-        PageDeclaration{
+    auto store_result = install_navigated_app(
+        store, PageDeclaration{
             .app_id = store_manifest.id,
             .root_page_id = "store.root",
             .page_ids = {"store.root"},
@@ -121,16 +111,9 @@ std::expected<void, std::string> System::on_init()
         },
         [](std::string_view, std::string_view) { return true; }
     );
-    if (!store_navigator) {
-        return std::unexpected("Invalid App Store Root Page declaration");
-    }
-    auto store_result = install_app(store);
     if (!store_result) {
-        return std::unexpected(
-            "Failed to install App Store: " + store_result.error()
-        );
+        return std::unexpected("Failed to install App Store: " + store_result.error());
     }
-    register_navigator(*store_result, std::make_shared<PageNavigator>(std::move(*store_navigator)));
     ESP_LOGI(TAG, "App Store installed");
 
     power_key_monitor_ = std::make_unique<PowerKeyMonitor>();
@@ -288,7 +271,15 @@ void System::on_deinit()
     shell_.reset();
     settings_adapter_.reset();
     settings_id_ = esp_brookesia::system::core::INVALID_APP_ID;
-    page_navigators_.clear();
+    decltype(page_navigators_) retired_navigators;
+    {
+        std::lock_guard lock(page_navigators_mutex_);
+        retired_navigators = std::move(page_navigators_);
+    }
+    for (const auto &[app_id, navigator] : retired_navigators) {
+        navigator->stop();
+        navigator->set_availability_handler({});
+    }
     power_key_monitor_.reset();
     shell_id_ = esp_brookesia::system::core::INVALID_APP_ID;
     foreground_app_id_.store(

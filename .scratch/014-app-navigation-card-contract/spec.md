@@ -68,3 +68,5 @@ Blocked by: [006/03 Home 与显示真机验收](../006-m6-home-display/issues/03
 - [2026-10-02-default-back-prototype](records/2026-10-02-default-back-prototype.md)
 - [2026-10-02-page-navigator-source](records/2026-10-02-page-navigator-source.md)
 - [2026-10-02 Settings Adapter](records/2026-10-02-settings-adapter.md)
+
+- 2026-10-02：01–02 的共同核心、Native 安装/卸载和 Back 组件条件完成；记录见 [Native 安装收尾](records/2026-10-02-native-installation.md)。03 Card 与 04 语言绑定成为可执行 frontier，硬件 gates 保留。

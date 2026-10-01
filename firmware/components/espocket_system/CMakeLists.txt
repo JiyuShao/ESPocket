@@ -1,6 +1,7 @@
 idf_component_register(
     SRCS "src/system.cpp" "src/system_lifecycle.cpp" "src/system_navigation.cpp"
         "src/system_display.cpp" "src/system_power.cpp" "src/power_key_monitor.cpp" "src/settings_navigation_adapter.cpp"
+        "src/native_page_installation.cpp"
     INCLUDE_DIRS "include"
     REQUIRES brookesia_system_core brookesia_service_manager espocket_navigation freertos
     PRIV_REQUIRES

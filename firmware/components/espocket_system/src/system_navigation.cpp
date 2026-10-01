@@ -108,8 +108,24 @@ std::shared_ptr<PageNavigator> System::navigator_for(
     esp_brookesia::system::core::AppId app_id
 ) const
 {
+    std::lock_guard lock(page_navigators_mutex_);
     const auto it = page_navigators_.find(app_id);
     return it == page_navigators_.end() ? nullptr : it->second;
+}
+
+std::expected<InstalledPageApp, std::string> System::install_navigated_app(
+    std::shared_ptr<esp_brookesia::system::core::IApp> app,
+    PageDeclaration declaration,
+    PageNavigator::Presenter presenter
+)
+{
+    auto installed = install_native_page_app(*this, std::move(app), std::move(declaration),
+                                             std::move(presenter));
+    if (!installed) {
+        return installed;
+    }
+    register_navigator(installed->app_id, installed->navigator);
+    return installed;
 }
 
 std::expected<PageSnapshot, std::string> System::foreground_page_snapshot() const
@@ -139,10 +155,14 @@ void System::register_navigator(
     std::shared_ptr<PageNavigator> navigator
 )
 {
-    navigator->set_availability_handler([this](bool default_visible, bool edge_enabled) {
+    navigator->set_availability_handler([this, app_id](bool default_visible, bool edge_enabled) {
+        if (foreground_app_id_.load(std::memory_order_acquire) != app_id) {
+            return;
+        }
         default_back_visible_.store(default_visible, std::memory_order_release);
         edge_back_enabled_.store(edge_enabled, std::memory_order_release);
     });
+    std::lock_guard lock(page_navigators_mutex_);
     page_navigators_.emplace(app_id, std::move(navigator));
 }
 

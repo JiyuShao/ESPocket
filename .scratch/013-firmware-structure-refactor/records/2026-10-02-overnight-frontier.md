@@ -32,6 +32,15 @@
 - 已逐项勾选 014/01 的既有可证明源码条件，未改变依赖或验收范围。
 - 最终公开头文件与依赖组件重编译、完整链接、镜像生成及大小检查通过。BIN SHA-256 `8e2b455c1a994e7daaa701c7c3fb1e5958e55988b3226786aad39b8846ff226f`；ELF SHA-256 `a917f46fa2358dcb8fc763ae717661da339056df99f4889b182e433e62838db6`；日志 `/private/tmp/espocket-night-declaration-final-build.log`。未刷写，没有新增硬件通过项。
 
+## 第三轮自动执行
+
+- 014/01 Native 安装收敛到 `System::install_navigated_app`，Hello/Store 复用同一声明校验与 Core 安装边界。加入真实生产源码的主机测试，验证无效声明不安装、上游失败透传、同一 Navigator 连接与停止后 token 失效。
+- Core 卸载回调移除注册并停止旧 Navigator、解除系统回调；deinit 也逐个停止和解除。注册表读写加锁，非前台 App 不覆盖当前 Back UI，前台切换初始化该 App 的 Back 状态。
+- 014/01–02 的共同核心/Native 与组件条件已完成；详见 [收尾记录](../../014-app-navigation-card-contract/records/2026-10-02-native-installation.md)。16 项主机测试、M2 parser、Markdown 通过。最终固件构建结果在提交前追加，未刷写。
+- 下一 frontier 按 Sequence 先复核 007/02 源码门槛，再推进已解除 Navigator 依赖的 012/02 USB 输入/快照；014/03 Card 和 014/04 语言绑定也可独立实施。008 的 Spec-level blocker 与硬件依赖继续有效。
+- 最终固件完整构建/链接与分区检查通过，App 大小 `0x5d17b0`、分区剩余 43%；BIN SHA-256 `9ba683489fa105d5087f37c86f8b9612063d1329e7cb18082fa259c4e2aeb19e`，ELF SHA-256 `6ac76887992e1cd5edbf0dfbc20cc9104ef7f271fdebf6ee23c5f3af0652e1da`，日志 `/private/tmp/espocket-night-installation-final-build.log`。设备仍是 013 `e8bbe74ff`，未刷写。
+- 同时修正 007 Spec 残留的强制可见 Back 文案，与已接受 ADR-0013 对齐；没有重新开启产品决策或改变硬件验收范围。
+
 ## 晨间最小介入
 
 先回复已发出的单次 013 smoke 结果：Native Detail Edge Back；自动息屏唤醒保留 Detail；PWR Home/息屏/亮屏回表盘；Quick Settings 上滑、Launcher 顶部下拉返回。遇到异常停在该步即可。无需重做此前十轮资源验证。

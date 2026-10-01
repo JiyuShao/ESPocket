@@ -2,6 +2,27 @@
 
 namespace espocket {
 
+std::expected<void, std::string> System::on_app_uninstalled(
+    const esp_brookesia::system::core::AppInfo &app
+)
+{
+    std::shared_ptr<PageNavigator> removed;
+    {
+        std::lock_guard lock(page_navigators_mutex_);
+        const auto it = page_navigators_.find(app.app_id);
+        if (it != page_navigators_.end()) {
+            removed = std::move(it->second);
+            page_navigators_.erase(it);
+        }
+    }
+    if (removed) {
+        removed->stop();
+        removed->set_availability_handler({});
+    }
+    clear_foreground(app);
+    return {};
+}
+
 std::expected<void, std::string> System::on_app_started(
     const esp_brookesia::system::core::AppInfo &app
 )
@@ -25,6 +46,11 @@ std::expected<void, std::string> System::on_app_started(
         ++foreground_generation_;
     } while (foreground_generation_ == 0);
     foreground_token_->store(foreground_generation_, std::memory_order_release);
+    const auto navigator = navigator_for(app.app_id);
+    default_back_visible_.store(navigator && navigator->show_default_back(),
+                               std::memory_order_release);
+    edge_back_enabled_.store(navigator && navigator->edge_back_enabled(),
+                            std::memory_order_release);
     lifecycle_restore_pending_ = false;
     return {};
 }
