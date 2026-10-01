@@ -150,3 +150,5 @@ firmware/
 - 2026-10-02：03 完成 Shell 拆分及 ShellHost，Host checks 和构建通过；见 [阶段记录](records/2026-10-02-shell-split.md)。
 
 - 2026-10-02：04 源码、Owner 断言及构建完成，真机 smoke 留到 05/06 最终镜像集中执行；[阶段记录](records/2026-10-02-system-split.md)。05 的纯目录整理先继续，不提前关闭 04 真机条件。
+
+- 2026-10-02：05 完成目录、依赖、Kconfig、版本与 LittleFS build 输入收敛；Host checks、完整重编译通过，见 [阶段记录](records/2026-10-02-layout-build.md)。

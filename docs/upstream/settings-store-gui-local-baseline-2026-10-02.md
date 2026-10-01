@@ -11,7 +11,7 @@
 | 组件 | 已核对事实 | 源码 |
 |---|---|---|
 | ESPocket System | 选择 Brookesia GUI LVGL Backend。 | [`system.cpp`](../../firmware/components/espocket_system/src/system.cpp) |
-| Circular Shell 与 Hello Native | 都提供 Brookesia `AppGuiDescriptor`，使用 JSON GUI 文档和 Screen Flow。 | [`circular_shell.cpp`](../../firmware/components/shell_circular/src/circular_shell.cpp)、[`hello_app.cpp`](../../firmware/components/app_hello/src/hello_app.cpp) |
+| Circular Shell 与 Hello Native | 都提供 Brookesia `AppGuiDescriptor`，使用 JSON GUI 文档和 Screen Flow。 | [`circular_shell.cpp`](../../firmware/components/shell_circular/src/circular_shell.cpp)、[`hello_app.cpp`](../../firmware/native_apps/hello/src/hello_app.cpp) |
 | 官方 Settings | 提供 Brookesia GUI 资源与 `settings_content` Screen Flow；该 Flow 的初始屏为 `settings_home`，包含多个设置页面。Settings 的 `current_page_`、页面动作和 `settings.header.back` 处理在组件内部。 | [`settings_app.cpp`](../../firmware/managed_components/espressif__brookesia_app_settings/src/settings_app.cpp)、[`content.json`](../../firmware/managed_components/espressif__brookesia_app_settings/package/res/flows/content.json)、[`lifecycle.ipp`](../../firmware/managed_components/espressif__brookesia_app_settings/src/app/lifecycle.ipp) |
 | 官方 Store | 也提供 Brookesia GUI；当前 `app_store` Screen Flow 只有一屏。Store／Installed／Local 标签、列表翻页和弹窗是这屏内的状态。 | [`app_store.json`](../../firmware/managed_components/espressif__brookesia_app_store/package/res/flows/app_store.json)、[`catalog.ipp`](../../firmware/managed_components/espressif__brookesia_app_store/src/screen/catalog.ipp) |
 

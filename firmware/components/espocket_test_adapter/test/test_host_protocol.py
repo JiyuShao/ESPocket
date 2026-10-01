@@ -1,6 +1,7 @@
 """Execute USB protocol and Developer Mode contracts without hardware."""
 
 from pathlib import Path
+import os
 import subprocess
 import tempfile
 import unittest
@@ -13,7 +14,7 @@ class ProtocolHostTest(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix='espocket-protocol-test-') as directory:
             binary = Path(directory) / 'test'
             subprocess.run([
-                'clang++', '-std=c++23', '-pthread', '-I', str(COMPONENT / 'include'),
+                os.environ.get('CXX', 'clang++'), '-std=c++23', '-pthread', '-I', str(COMPONENT / 'include'),
                 str(COMPONENT / 'src/developer_mode.cpp'),
                 str(COMPONENT / 'src/test_protocol.cpp'),
                 str(COMPONENT / 'test/test_test_protocol.cpp'), '-o', str(binary),

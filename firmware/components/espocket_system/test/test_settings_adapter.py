@@ -3,6 +3,7 @@
 import json
 from pathlib import Path
 import re
+import os
 import subprocess
 import tempfile
 import unittest
@@ -54,7 +55,7 @@ class SettingsCompatibility(unittest.TestCase):
             (temp / "test.cpp").write_text(TEST)
             binary = temp / "test"
             subprocess.run([
-                "clang++", "-std=c++23", "-pthread", "-I", str(temp),
+                os.environ.get("CXX", "clang++"), "-std=c++23", "-pthread", "-I", str(temp),
                 "-I", str(COMPONENT / "include"), "-I",
                 str(ROOT / "firmware/components/espocket_navigation/include"),
                 str(COMPONENT / "src/settings_navigation_adapter.cpp"),

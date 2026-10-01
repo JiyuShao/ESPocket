@@ -10,7 +10,6 @@
 #include <string_view>
 
 #include "brookesia/lib_utils/signal.hpp"
-#include "brookesia/service_helper/media/display.hpp"
 #include "brookesia/service_manager/event/registry.hpp"
 #include "brookesia/service_manager/service/manager.hpp"
 #include "brookesia/system_core.hpp"

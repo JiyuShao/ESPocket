@@ -15,6 +15,7 @@
 #include "boost/json/object.hpp"
 #include "brookesia/lib_utils/describe_helpers.hpp"
 #include "brookesia/service_display/service_display.hpp"
+#include "brookesia/service_helper/media/display.hpp"
 #include "brookesia/service_helper/network/sntp.hpp"
 #include "brookesia/service_helper/network/wifi.hpp"
 #include "brookesia/service_helper/system/device.hpp"

@@ -13,7 +13,7 @@ from gui_actions import validate_action_contract
 
 class GuiActionCheckerTest(unittest.TestCase):
     def test_missing_and_extra_declarations_subscriptions_and_handlers(self):
-        component = ROOT / 'firmware/components/app_hello'
+        component = ROOT / 'firmware/native_apps/hello'
         original = (component / 'src/hello_app.cpp').read_text()
         document = json.loads((component / 'resources/gui.json').read_text())
         with tempfile.TemporaryDirectory(prefix='espocket-gui-contract-') as directory:

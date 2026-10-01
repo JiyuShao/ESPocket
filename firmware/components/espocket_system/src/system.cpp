@@ -53,7 +53,7 @@ esp_brookesia::system::core::SystemInfo System::on_get_system_info() const
 {
     return {
         .name = "ESPocket",
-        .version = "0.3.0",
+        .version = esp_app_get_description()->version,
     };
 }
 

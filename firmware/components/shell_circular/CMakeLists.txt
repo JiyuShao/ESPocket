@@ -6,17 +6,10 @@ idf_component_register(
         "src/shell_navigation.cpp" "src/shell_keyboard.cpp" "src/shell_status.cpp"
     INCLUDE_DIRS "include"
     EMBED_TXTFILES "${CMAKE_CURRENT_BINARY_DIR}/shell_gui.json"
-    REQUIRES
-        brookesia_system_core
-        esp_lvgl_adapter
-        lvgl
-        brookesia_service_display
-        brookesia_service_device
-        brookesia_service_wifi
-        brookesia_service_sntp
-        brookesia_service_helper
-        brookesia_service_manager
-        esp_timer
+    REQUIRES brookesia_system_core brookesia_service_manager brookesia_lib_utils
+    PRIV_REQUIRES
+        esp_lvgl_adapter lvgl brookesia_service_display brookesia_service_device
+        brookesia_service_wifi brookesia_service_sntp brookesia_service_helper esp_timer
 )
 
 target_compile_features(${COMPONENT_LIB} PUBLIC cxx_std_23)

@@ -33,7 +33,7 @@ idf.py -C firmware build
 
 ## 测试
 
-只约束一个组件的测试放在该组件的 `test/`；跨组件测试放在 `firmware/test/`。测试可以执行组件行为，也可以分析源码或资源，只要它对稳定约束做出可重复的断言。
+只约束一个组件或 Native App 的测试放在该 Owner 的 `test/`；跨组件测试放在 `firmware/test/`。测试可以执行组件行为，也可以分析源码或资源，只要它对稳定约束做出可重复的断言。
 
 无需硬件的统一检查入口：
 
@@ -41,7 +41,7 @@ idf.py -C firmware build
 python3 scripts/check.py
 ```
 
-它只检查工作区，不自动格式化、修复或写入构建产物。C++ 行为测试在临时目录编译，需要支持 C++23 的 `clang++`；Settings 兼容检查需要先按锁定版本物化 managed components。默认不运行 Chrome；显式加 `--diagrams` 才运行架构图检查。完整 ESP-IDF build、烧录与真机验收独立执行。
+它只检查工作区，不自动格式化、修复或写入构建产物。C++ 行为测试在临时目录编译，需要支持 C++23 的 host 编译器（默认 `clang++`，可用 `CXX` 指定）；Settings 兼容检查需要先按锁定版本物化 managed components。默认不运行 Chrome；显式加 `--diagrams` 才运行架构图检查。完整 ESP-IDF build、烧录与真机验收独立执行。
 
 例如，Shell 文档的结构测试运行方式为：
 
@@ -55,7 +55,7 @@ python3 -m unittest discover -s firmware/components/shell_circular/test -p 'test
 python3 -m unittest discover -s firmware/components/espocket_system/test -p 'test_*.py'
 ```
 
-该测试检查锁定组件、页面资源与 Back 路由，并在主机执行 Adapter 委托和错误行为（需要支持 C++23 的 `clang++`）。固件 CMake 配置也会自动运行资源兼容检查，不匹配会阻止构建。升级时同次审查 manifest／lock、Adapter 映射和兼容测试，再按上文重新生成配置、完整构建并完成必要真机验收。生成的 `managed_components/` 改动不提交。
+该测试检查锁定组件、页面资源与 Back 路由，并在主机执行 Adapter 委托和错误行为（需要支持 C++23 的 host 编译器（默认 `clang++`，可用 `CXX` 指定））。固件 CMake 配置也会自动运行资源兼容检查，不匹配会阻止构建。升级时同次审查 manifest／lock、Adapter 映射和兼容测试，再按上文重新生成配置、完整构建并完成必要真机验收。生成的 `managed_components/` 改动不提交。
 
 ## GUI 资源
 
@@ -74,3 +74,13 @@ Circular Shell 与 Hello Native 各自以 `resources/gui.json` 为唯一 GUI 文
 | `build/` | 构建输出，不纳入版本控制 |
 
 任务专属的构建、烧录和真机步骤由 [.scratch](../.scratch/README.md) 中的对应 ticket 定义，证据保存在同一 Effort 的 records。
+
+## 源码与生成目录
+
+- `components/` 保存 ESPocket System、Circular Shell、导航和测试 Adapter 等系统 component。
+- `native_apps/<app>/` 保存自有 Native App，顶层 CMake 通过 `EXTRA_COMPONENT_DIRS` 发现；每个 App 自有 CMakeLists，System 显式安装。
+- `runtime_apps/<app>/` 保存 Runtime App 源码及工具配置；两种 Reference App 为 `native_apps/hello/` 与 `runtime_apps/hello/`，manifest ID 不随目录变化。
+- LittleFS 镜像输入位于当前 build tree 的 `littlefs-root/`（默认 `firmware/build/littlefs-root/`）。System 的 `project_include.cmake` 通过 Brookesia 公开路径配置接口在资源 staging 前指定该路径；设备挂载仍为 `/littlefs`，App 根仍为 `/littlefs/apps`。
+- `managed_components/`、`components/gen_bmgr_codes/`、本地 `sdkconfig` 与 `sdkconfig.old` 保持工具约定位置并忽略。Runtime App 的 `build/`、`dist/`、`node_modules/` 也忽略；禁止提交这些生成物或重新建立旧的 `firmware/littlefs/` 输入目录。
+- Component 的公开头文件依赖列入 `REQUIRES`，实现依赖列入 `PRIV_REQUIRES`。System 配置位于自有 `Kconfig`，固件版本由顶层 `PROJECT_VER` 注入 SystemInfo；App manifest 版本仍由 App 自有。
+- `compat/` 是显式、可移除的兼容 seam；每个文件记录影响版本、上游问题和删除条件。当前 attributes 告警豁免只作用于 `brookesia_hal_custom`；另一处 IDF/Picolibc 属性拼写兼容只应用到上游一个 display 翻译单元，不放宽告警。

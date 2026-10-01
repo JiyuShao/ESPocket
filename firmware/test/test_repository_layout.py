@@ -15,7 +15,7 @@ def generated_paths(paths):
         if not parts or parts[0] != 'firmware':
             continue
         generated = (
-            parts[:2] in [('firmware', 'build'), ('firmware', 'managed_components')]
+            parts[:2] in [('firmware', 'build'), ('firmware', 'managed_components'), ('firmware', 'littlefs')]
             or parts[:3] == ('firmware', 'components', 'gen_bmgr_codes')
             or name in ['firmware/sdkconfig', 'firmware/sdkconfig.old']
             or (len(parts) >= 4 and parts[1] in ['apps', 'runtime_apps', 'native_apps']
@@ -47,11 +47,27 @@ class RepositoryLayoutTest(unittest.TestCase):
                   'firmware/runtime_apps/hello/package.json']
         self.assertEqual(generated_paths(generated + source), generated)
 
+    def test_build_inputs_and_warning_scope(self):
+        cmake = (ROOT / 'firmware/CMakeLists.txt').read_text()
+        self.assertNotIn('idf_build_set_property(COMPILE_OPTIONS', cmake)
+        self.assertEqual(cmake.count('-Wno-error=attributes'), 1)
+        self.assertIn('${brookesia_hal_custom_lib} PRIVATE', cmake)
+        main = (ROOT / 'firmware/main/CMakeLists.txt').read_text()
+        self.assertIn('${CMAKE_BINARY_DIR}/littlefs-root', main)
+        paths = (ROOT / 'firmware/components/espocket_system/project_include.cmake').read_text()
+        self.assertIn('brookesia_system_core_set_esp_runtime_paths(', paths)
+        self.assertIn('INTERNAL_ROOT "/littlefs"', paths)
+
     def test_tests_live_with_their_owner(self):
-        for directory in (ROOT / 'firmware/components').iterdir():
+        for directory in [*(ROOT / 'firmware/components').iterdir(),
+                          *(ROOT / 'firmware/native_apps').iterdir()]:
             self.assertFalse((directory / 'tests').exists(),
                              f'{directory.name}: use test/ instead of tests/')
         self.assertFalse((ROOT / 'firmware/tests').exists())
+        self.assertFalse((ROOT / 'firmware/components/app_hello').exists())
+        self.assertFalse((ROOT / 'firmware/apps').exists())
+        self.assertFalse((ROOT / 'firmware/littlefs').exists())
+        self.assertFalse((ROOT / 'firmware/components/espocket_system/Kconfig.projbuild').exists())
 
 
 if __name__ == '__main__':

@@ -23,6 +23,7 @@
 #if CONFIG_ESPOCKET_M6_RESOURCE_TRACE
 #include "esp_heap_caps.h"
 #endif
+#include "esp_app_desc.h"
 #include "esp_log.h"
 #include "esp_timer.h"
 #include "espocket/circular_shell.hpp"
