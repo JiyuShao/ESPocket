@@ -1,6 +1,7 @@
 #pragma once
 
 #include <expected>
+#include <cstdint>
 #include <functional>
 #include <memory>
 #include <mutex>
@@ -23,6 +24,8 @@ enum class NavigationError {
     BackCancelled,
     BackTimeout,
     StaleRequest,
+    DeclarationInUse,
+    IdentityMismatch,
 };
 
 enum class BackDecision {
@@ -76,6 +79,7 @@ public:
     std::expected<void, NavigationError> pop();
     std::expected<void, NavigationError> replace(std::string_view page_id);
     std::expected<void, NavigationError> reset_to_root();
+    std::expected<void, NavigationError> update_declaration(PageDeclaration declaration);
     void set_back_handler(BackHandler handler);
     void set_availability_handler(AvailabilityHandler handler);
     void set_diagnostic_handler(DiagnosticHandler handler);

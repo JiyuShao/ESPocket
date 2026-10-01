@@ -112,6 +112,98 @@ int main()
     require(!bad_card && bad_card.error() == NavigationError::InvalidDeclaration,
             "Card target must reference a declared Page");
 
+    for (const auto &invalid_declaration : std::vector<PageDeclaration>{
+             {.app_id = "app.invalid", .root_page_id = "", .page_ids = {"detail"}},
+             {.app_id = "app.invalid", .root_page_id = "root", .page_ids = {"detail"}},
+             {.app_id = "app.invalid", .root_page_id = "root", .page_ids = {"root", ""}},
+             {.app_id = "app.invalid", .root_page_id = "root", .page_ids = {"root"},
+              .cards = {{"duplicate", "root"}, {"duplicate", "root"}}},
+         }) {
+        auto invalid_install = PageNavigator::create(
+            invalid_declaration,
+            [](std::string_view, std::string_view) { return true; }
+        );
+        require(!invalid_install && invalid_install.error() == NavigationError::InvalidDeclaration,
+                "missing Root, empty Page and duplicate Card identity must fail validation");
+    }
+
+    auto updating = PageNavigator::create(
+        PageDeclaration{
+            .app_id = "app.updating",
+            .root_page_id = "root",
+            .page_ids = {"root", "old-detail"},
+            .cards = {{"stable-card", "old-detail"}, {"removed-card", "old-detail"}},
+        },
+        [](std::string_view, std::string_view) { return true; }
+    );
+    require(updating && updating->start() && updating->push("old-detail"),
+            "update fixture should open the old declaration");
+    updating->set_back_handler([](const auto &, uint64_t) { return BackDecision::Defer; });
+    auto old_request = updating->request_back(10);
+    require(old_request && old_request->has_value(), "old version should have a pending request");
+    const PageDeclaration replacement{
+        .app_id = "app.updating",
+        .root_page_id = "root",
+        .page_ids = {"new-detail", "root"},
+        .cards = {{"stable-card", "new-detail"}},
+    };
+    auto in_use = updating->update_declaration(replacement);
+    require(!in_use && in_use.error() == NavigationError::DeclarationInUse &&
+                updating->snapshot().page_id == "old-detail" && updating->snapshot().back_pending,
+            "active update must preserve the old task including pending Back");
+    updating->stop();
+    auto changed_identity = replacement;
+    changed_identity.app_id = "another-app";
+    auto identity_error = updating->update_declaration(changed_identity);
+    require(!identity_error && identity_error.error() == NavigationError::IdentityMismatch,
+            "update cannot change App identity");
+    changed_identity = replacement;
+    changed_identity.root_page_id = "new-detail";
+    identity_error = updating->update_declaration(changed_identity);
+    require(!identity_error && identity_error.error() == NavigationError::IdentityMismatch,
+            "update cannot change stable Root identity");
+    auto invalid_update = replacement;
+    invalid_update.cards.front().target_page_id = "missing";
+    auto invalid_update_result = updating->update_declaration(invalid_update);
+    require(!invalid_update_result &&
+                invalid_update_result.error() == NavigationError::InvalidDeclaration,
+            "invalid new Card target must fail update validation");
+    require(updating->start_from_card("removed-card") &&
+                updating->snapshot().page_id == "old-detail",
+            "rejected updates must leave the previous declaration usable");
+    updating->stop();
+    require(updating->update_declaration(replacement).has_value() &&
+                updating->snapshot().app_id == "app.updating" &&
+                updating->snapshot().page_id.empty(),
+            "valid stopped update must keep identity without restoring a task");
+    require(updating->start_from_card("stable-card") &&
+                updating->snapshot().page_id == "new-detail",
+            "stable Card ID should open its updated declared target");
+    auto removed_page = updating->push("old-detail");
+    require(!removed_page && removed_page.error() == NavigationError::UnknownPage &&
+                updating->snapshot().page_id == "new-detail",
+            "deleted Page must not be navigable in the new declaration");
+    auto new_request = updating->request_back(20);
+    require(new_request && new_request->has_value() &&
+                new_request->value() != old_request->value(),
+            "declaration update must not reuse a pending token");
+    auto old_completion = updating->complete_back(old_request->value(), true);
+    require(!old_completion && old_completion.error() == NavigationError::StaleRequest &&
+                updating->snapshot().page_id == "new-detail" &&
+                updating->snapshot().back_pending,
+            "old version approval must not change the new task");
+    updating->stop();
+    int removed_card_reports = 0;
+    updating->set_diagnostic_handler([&](NavigationError error, std::string_view target) {
+        require(error == NavigationError::TargetUnavailable && target == "removed-card",
+                "removed Card must report its stable identity");
+        ++removed_card_reports;
+    });
+    auto removed_card = updating->start_from_card("removed-card");
+    require(!removed_card && removed_card.error() == NavigationError::TargetUnavailable &&
+                updating->snapshot().page_id == "root" && removed_card_reports == 1,
+            "removed Card must fall back to the unchanged Root after update");
+
     auto failed_presentation = PageNavigator::create(
         PageDeclaration{
             .app_id = "espocket.app.hello",

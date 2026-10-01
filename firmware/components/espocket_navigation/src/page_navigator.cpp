@@ -188,6 +188,25 @@ std::expected<void, NavigationError> PageNavigator::reset_to_root()
     return {};
 }
 
+std::expected<void, NavigationError> PageNavigator::update_declaration(PageDeclaration declaration)
+{
+    std::lock_guard lock(*mutex_);
+    if (!stack_.empty()) {
+        return std::unexpected(NavigationError::DeclarationInUse);
+    }
+    if (declaration.app_id != declaration_.app_id ||
+            declaration.root_page_id != declaration_.root_page_id) {
+        return std::unexpected(NavigationError::IdentityMismatch);
+    }
+    auto validated = create(std::move(declaration), presenter_);
+    if (!validated) {
+        return std::unexpected(validated.error());
+    }
+    declaration_ = std::move(validated->declaration_);
+    publish_availability();
+    return {};
+}
+
 void PageNavigator::set_back_handler(BackHandler handler)
 {
     std::lock_guard lock(*mutex_);

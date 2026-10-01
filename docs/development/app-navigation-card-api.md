@@ -23,6 +23,8 @@ App 级 Back 呈现声明有两种模式：`framework` 为默认；`appOwned` �
 
 第一版 C++ 声明使用 `BackPresentation::Framework` 或 `BackPresentation::AppOwned`。App 自行放置 ESPocket 标准 Back 控件时声明 `uses_standard_back_control=true`，避免 Shell 再叠加控件；`AppOwned` 不要求声明可见控件；`uses_standard_back_control` 是 App 的呈现承诺；完整 App API 与控件注册机制仍待定版。
 
+Native 核心提供 `update_declaration(PageDeclaration)`：仅在 Navigator 已停止、无页面任务时更新，运行中返回 `DeclarationInUse`。App ID 与 Root Page ID 保持稳定，否则返回 `IdentityMismatch`；新声明仍按安装规则完整校验，失败保留旧声明。Page/Card 列表可重排、新增或移除，保留的 ID 不按数组位置重新编号；页面语义是否仍相同由 App 作者保证。更新后不恢复旧栈或待决 Back，下一次启动从同一 Root 开始；旧 Card 不存在时保持既有 Root 降级和诊断。此入口不负责软件包安装、Card 配置删除或替换 Presenter，分别由安装 Adapter、Card Registry 和对应语言绑定承担；Runtime 安装接入仍待 014/04，不能把组件测试算作软件包更新验收。
+
 ## Page 导航
 
 普通 App 由 ESPocket 保存唯一 App Page 栈。App 通过以下语义操作决定转移；操作成功后，显示页面、Back 能力和测试快照从同一栈计算。App 不另存一份供框架使用的导航栈。官方 Settings 的限定适配例外见下节；它不提供这组栈操作。

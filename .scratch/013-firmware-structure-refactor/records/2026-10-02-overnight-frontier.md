@@ -24,6 +24,14 @@
 - ESP-IDF 6.0.1 构建/链接及分区大小检查通过；BIN SHA-256 `11855b9d3408fad94158e50ebfbc6bcdb5219fac27c3aa9cc1d7bd2cef080373`，ELF SHA-256 `218e8b9def9c58a80f1668e35fb2925bee6848ce608aa4240cf17edb7184dcae`。App 大小 `0x5d1250`，分区剩余 43%。日志 `/private/tmp/espocket-night-navigation-build.log`。
 - 没有刷写此修复，设备保持 013 最终镜像，USB identity 仍应为 `e8bbe74ff`；构建目录中的新 ELF 已不同于设备镜像，不能直接以它判定当前设备身份。
 
+## 第二轮自动执行
+
+- 014/01 新增停止态 `update_declaration`：运行中拒绝；App/Root ID 不可变；新 Page/Card 声明完整校验后才替换旧声明。重排不改变身份，删除的 Card 打开时回 Root 并诊断，旧 Back token 不影响新任务。
+- 实际 C++ 用例覆盖新增/删除、稳定 ID 与目标更新、无 Root、空 Page、重复 Card、失败原子性和迟到 token；统一 15 项 host tests、M2 parser、Markdown 通过。
+- 这只是执行模型无关核心更新入口，没有新增软件包安装机制。014/01 仍开放：下一源码步骤是把通用 App 声明注册/更新与 Core 安装、卸载的生命周期连接起来；不得用这个组件测试宣称 Runtime 包更新通过。Runtime 语言绑定仍属于 014/04。
+- 已逐项勾选 014/01 的既有可证明源码条件，未改变依赖或验收范围。
+- 最终公开头文件与依赖组件重编译、完整链接、镜像生成及大小检查通过。BIN SHA-256 `8e2b455c1a994e7daaa701c7c3fb1e5958e55988b3226786aad39b8846ff226f`；ELF SHA-256 `a917f46fa2358dcb8fc763ae717661da339056df99f4889b182e433e62838db6`；日志 `/private/tmp/espocket-night-declaration-final-build.log`。未刷写，没有新增硬件通过项。
+
 ## 晨间最小介入
 
 先回复已发出的单次 013 smoke 结果：Native Detail Edge Back；自动息屏唤醒保留 Detail；PWR Home/息屏/亮屏回表盘；Quick Settings 上滑、Launcher 顶部下拉返回。遇到异常停在该步即可。无需重做此前十轮资源验证。

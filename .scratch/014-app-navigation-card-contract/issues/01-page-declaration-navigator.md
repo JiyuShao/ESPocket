@@ -7,13 +7,15 @@
 **Status:** ready-for-agent
 
 - [ ] 无 Root、重复 ID 或 Card 指向未声明 Page 时安装校验失败；声明身份在 App 更新后稳定。
-- [ ] Root 不可 pop，运行时未知 Page 不修改原栈；Card 目标运行时失效降级 Root 并记录错误。
+- [x] Root 不可 pop，运行时未知 Page 不修改原栈；Card 目标运行时失效降级 Root 并记录错误。
 - [ ] PWR Home 后再打开从 Root 开始，息屏唤醒保留有效 Page，实例失效清除旧栈。
-- [ ] Navigator 从同一状态给出当前 `pageId`、`canBack`、`backPending`，不暴露参数或整条栈。
-- [ ] Navigator 接口不依赖 Native GUI 实现细节；Native Adapter 对操作和错误使用该接口，Runtime Adapter 留给 ticket 04。
-- [ ] Hello 与 Store 接入共同 Navigator，官方 Settings 按明确适配例外读取真实 Page；移除示例专用页面名分支，声明与实例生命周期使用同一事实源。
+- [x] Navigator 从同一状态给出当前 `pageId`、`canBack`、`backPending`，不暴露参数或整条栈。
+- [x] Navigator 接口不依赖 Native GUI 实现细节；Native Adapter 对操作和错误使用该接口，Runtime Adapter 留给 ticket 04。
+- [x] Hello 与 Store 接入共同 Navigator，官方 Settings 按明确适配例外读取真实 Page；移除示例专用页面名分支，声明与实例生命周期使用同一事实源。
 
 ## Comments
+
+- 2026-10-02（夜间）：补充 `update_declaration` 的停止态原子更新与稳定 App/Root 身份校验；真实 C++ 用例覆盖更新拒绝不改旧声明、保留 Card ID 更新目标、删除 Page/Card、Root 降级和跨版本迟到 token。已完成项按主机行为测试、System/Native 源码与既有 Settings 记录勾选；不把组件更新入口视为已接入通用安装/卸载更新生命周期，第一项仍保留开放。PWR/唤醒此前 Native 样机已确认，当前结构重构的集中 smoke 仍归 013/04、06。详见 [夜间记录](../../013-firmware-structure-refactor/records/2026-10-02-overnight-frontier.md)。
 
 - 2026-10-02：用户确认 [ADR-0012](../../../docs/adr/0012-official-settings-keeps-its-navigation-owner.md) 的 Settings 限定例外，最后一项从「全部接入共同 Navigator」改为普通 Native App 用 Navigator、官方 Settings 适配真实页面。Settings Adapter 源码与主机／资源兼容测试已完成，整包及真机结果见 [适配记录](../records/2026-10-02-settings-adapter.md)；本 ticket 仍保留未完成的更新迁移及验收条件。
 
