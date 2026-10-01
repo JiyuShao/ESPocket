@@ -6,8 +6,23 @@ void System::poll_system_input()
 {
     // Keep product commands on the existing serialized App callback task.
     // Only System consumes hardware events; Shell supplies a generic tick.
-    if (!stopping_.load(std::memory_order_acquire) && power_key_monitor_ &&
-            power_key_monitor_->take_short_press()) {
+    if (stopping_.load(std::memory_order_acquire)) {
+        return;
+    }
+    const bool hardware_press = power_key_monitor_ && power_key_monitor_->take_short_press();
+    bool synthetic_press = false;
+    if (test_power_input_) {
+        if (!developer_mode_ || !developer_mode_->enabled()) {
+            test_power_input_->cancel_pending();
+        } else if (test_power_input_->expire(static_cast<uint64_t>(esp_timer_get_time() / 1000))) {
+            ESP_LOGW(TAG, "Synthetic PWR expired before Owner execution");
+        } else {
+            synthetic_press = test_power_input_->execute_pending([this]() {
+                handle_power_short_press();
+            });
+        }
+    }
+    if (hardware_press && !synthetic_press) {
         handle_power_short_press();
     }
 }

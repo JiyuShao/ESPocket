@@ -58,8 +58,11 @@ struct InteractionTestAdapter::ModeRequest {
 };
 
 InteractionTestAdapter::InteractionTestAdapter(std::shared_ptr<DeveloperMode> mode,
-                                             TestProtocol::SnapshotReader snapshot_reader)
-    : mode_(std::move(mode)), snapshot_reader_(std::move(snapshot_reader))
+                                             TestProtocol::SnapshotReader snapshot_reader,
+                                             TestProtocol::Command power_short,
+                                             TestProtocol::Command release)
+    : mode_(std::move(mode)), snapshot_reader_(std::move(snapshot_reader)),
+      power_short_(std::move(power_short)), release_(std::move(release))
 {}
 
 InteractionTestAdapter::~InteractionTestAdapter()
@@ -84,7 +87,8 @@ std::expected<void, std::string> InteractionTestAdapter::start()
     }
     std::array<char, 65> image_sha{};
     esp_app_get_elf_sha256(image_sha.data(), image_sha.size());
-    protocol_ = std::make_unique<TestProtocol>(*mode_, std::string(image_sha.data()), snapshot_reader_);
+    protocol_ = std::make_unique<TestProtocol>(*mode_, std::string(image_sha.data()), snapshot_reader_,
+                                              power_short_, release_);
     running_.store(true, std::memory_order_release);
     driver_ready_.store(false, std::memory_order_release);
     const auto created = xTaskCreate(task_entry, "espocket_test_usb", 4096, this, 3, &task_);
@@ -186,6 +190,7 @@ void InteractionTestAdapter::run()
     line.reserve(256);
     std::array<uint8_t, 256> buffer{};
     bool discarding_oversized_line = false;
+    bool was_connected = false;
     while (running_.load(std::memory_order_acquire)) {
         std::shared_ptr<ModeRequest> mode_request;
         {
@@ -204,6 +209,15 @@ void InteractionTestAdapter::run()
             vTaskDelay(pdMS_TO_TICKS(20));
             continue;
         }
+        const bool connected = usb_serial_jtag_is_connected();
+        if (was_connected && !connected) {
+            line.clear();
+            discarding_oversized_line = false;
+        }
+        if ((was_connected && !connected) || !mode_->enabled()) {
+            if (release_) { (void)release_(); }
+        }
+        was_connected = connected;
         const int count = usb_serial_jtag_read_bytes(buffer.data(), buffer.size(), pdMS_TO_TICKS(20));
         for (int i = 0; i < count; ++i) {
             const char ch = static_cast<char>(buffer[static_cast<size_t>(i)]);
@@ -229,6 +243,7 @@ void InteractionTestAdapter::run()
             }
         }
     }
+    if (release_) { (void)release_(); }
 }
 
 void InteractionTestAdapter::handle_line(std::string_view line)
@@ -265,8 +280,9 @@ void InteractionTestAdapter::handle_line(std::string_view line)
                 {"seq", state.seq}, {"surface", state.surface}, {"display", state.display},
                 {"foregroundAppId", state.foreground_app_id}, {"pageId", state.page_id},
                 {"canBack", state.can_back}, {"backPending", state.back_pending},
+                {"inputBusy", state.input_busy},
             };
-        } else {
+        } else if (!reply.image_identity.empty()) {
             response["image_identity"] = reply.image_identity;
             boost::json::array capabilities;
             for (const auto &capability : reply.capabilities) {
@@ -300,6 +316,7 @@ void InteractionTestAdapter::send_line(std::string_view line)
         );
         if (count <= 0) {
             ESP_LOGW(TAG, "USB Test Adapter response write failed");
+            if (release_) { (void)release_(); }
             return;
         }
         written += static_cast<size_t>(count);

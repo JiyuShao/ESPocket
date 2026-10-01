@@ -6,6 +6,7 @@
 
 #include "espocket/developer_mode.hpp"
 #include "espocket/test_protocol.hpp"
+#include "espocket/power_input_queue.hpp"
 
 void require(bool condition, std::string_view message)
 {
@@ -107,4 +108,55 @@ int main()
             "concurrent dispatch must be rejected without entering the Owner again");
     release.set_value();
     require(reading.get().ok, "original snapshot must complete after concurrent rejection");
+
+    espocket::PowerInputQueue power;
+    uint64_t now_ms = 10;
+    int executions = 0;
+    espocket::TestProtocol stimulated(mode, "image-power", [&]()
+        -> std::expected<espocket::TestSnapshot, std::string> {
+        return espocket::TestSnapshot{.input_busy = power.busy()};
+    }, [&] { return power.enqueue(now_ms); }, [&]() -> std::expected<void, std::string> {
+        power.cancel_pending();
+        return {};
+    });
+    require(stimulated.dispatch(1, "stimulus.powerShort").ok && power.busy() && executions == 0,
+            "USB stimulus should queue without executing the Owner on the transport thread");
+    require(stimulated.dispatch(1, "stimulus.powerShort").error_code == "busy" &&
+                stimulated.dispatch(1, "snapshot").snapshot->input_busy,
+            "queued stimulus must reject another sequence and remain observable");
+    require(stimulated.dispatch(1, "release").ok && stimulated.dispatch(1, "release").ok &&
+                !power.busy() && !power.execute_pending([&] { ++executions; }),
+            "release should idempotently cancel a pending stimulus without executing it");
+    require(stimulated.dispatch(1, "stimulus.powerShort").ok &&
+                !power.expire(now_ms + espocket::PowerInputQueue::TIMEOUT_MS - 1),
+            "pending input should remain available before its deadline");
+    require(power.expire(now_ms + espocket::PowerInputQueue::TIMEOUT_MS) && !power.busy() &&
+                !power.execute_pending([&] { ++executions; }),
+            "expired stimulus must not execute late");
+    require(stimulated.dispatch(1, "stimulus.powerShort").ok &&
+                power.execute_pending([&] { ++executions; }) && executions == 1 && !power.busy(),
+            "Owner should consume exactly one queued PWR and free its slot");
+
+    std::promise<void> power_entered;
+    std::promise<void> power_release;
+    auto power_released = power_release.get_future();
+    require(stimulated.dispatch(1, "stimulus.powerShort").ok, "concurrent fixture should queue");
+    auto executing = std::async(std::launch::async, [&] {
+        return power.execute_pending([&] {
+            power_entered.set_value();
+            power_released.wait();
+            ++executions;
+        });
+    });
+    power_entered.get_future().wait();
+    require(stimulated.dispatch(1, "release").ok && power.busy() &&
+                stimulated.dispatch(1, "stimulus.powerShort").error_code == "busy",
+            "release must not admit overlapping input while an Owner command is executing");
+    power_release.set_value();
+    require(executing.get() && !power.busy() && executions == 2,
+            "already executing input finishes once and releases its slot");
+    require(mode.set_enabled(false).has_value() &&
+                stimulated.dispatch(1, "stimulus.powerShort").error_code == "developer_mode_off" &&
+                !power.busy(),
+            "disabled gate must prevent input from entering the queue");
 }

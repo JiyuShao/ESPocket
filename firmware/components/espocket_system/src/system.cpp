@@ -64,9 +64,21 @@ std::expected<void, std::string> System::on_init()
         ESP_LOGW(TAG, "Developer mode disabled after storage read failure: %s",
                  restored.error().c_str());
     }
-    test_adapter_ = std::make_unique<InteractionTestAdapter>(developer_mode_, [this]() {
-        return read_test_snapshot();
-    });
+    test_power_input_ = std::make_unique<PowerInputQueue>();
+    test_adapter_ = std::make_unique<InteractionTestAdapter>(
+        developer_mode_, [this]() { return read_test_snapshot(); },
+        [this]() -> std::expected<void, std::string> {
+            if (stopping_.load(std::memory_order_acquire) || !test_power_input_ ||
+                    !developer_mode_->enabled()) {
+                return std::unexpected("invalid_state");
+            }
+            return test_power_input_->enqueue(static_cast<uint64_t>(esp_timer_get_time() / 1000));
+        },
+        [this]() -> std::expected<void, std::string> {
+            if (test_power_input_) { test_power_input_->cancel_pending(); }
+            return {};
+        }
+    );
 
     auto hello = std::make_shared<HelloApp>();
     auto hello_result = install_navigated_app(
@@ -195,6 +207,7 @@ std::expected<void, std::string> System::on_init()
 std::expected<void, std::string> System::on_start()
 {
     stopping_.store(false, std::memory_order_release);
+    if (test_power_input_) { test_power_input_->cancel_pending(); }
     foreground_app_id_.store(
         esp_brookesia::system::core::INVALID_APP_ID,
         std::memory_order_release
@@ -283,6 +296,7 @@ void System::on_deinit()
         navigator->set_availability_handler({});
     }
     power_key_monitor_.reset();
+    test_power_input_.reset();
     shell_id_ = esp_brookesia::system::core::INVALID_APP_ID;
     foreground_app_id_.store(
         esp_brookesia::system::core::INVALID_APP_ID,

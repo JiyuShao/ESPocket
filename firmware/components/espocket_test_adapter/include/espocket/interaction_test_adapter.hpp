@@ -19,7 +19,9 @@ namespace espocket {
 class InteractionTestAdapter {
 public:
     explicit InteractionTestAdapter(std::shared_ptr<DeveloperMode> mode,
-                                    TestProtocol::SnapshotReader snapshot_reader = {});
+                                    TestProtocol::SnapshotReader snapshot_reader = {},
+                                    TestProtocol::Command power_short = {},
+                                    TestProtocol::Command release = {});
     ~InteractionTestAdapter();
 
     std::expected<void, std::string> start();
@@ -37,6 +39,8 @@ private:
     std::shared_ptr<DeveloperMode> mode_;
     std::unique_ptr<TestProtocol> protocol_;
     TestProtocol::SnapshotReader snapshot_reader_;
+    TestProtocol::Command power_short_;
+    TestProtocol::Command release_;
     std::atomic_bool running_ = false;
     std::atomic_bool driver_ready_ = false;
     std::mutex mode_request_mutex_;

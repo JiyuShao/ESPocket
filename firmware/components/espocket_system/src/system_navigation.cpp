@@ -12,6 +12,7 @@ std::expected<TestSnapshot, std::string> System::read_test_snapshot() const
     const auto display = display_on_.load(std::memory_order_acquire);
     TestSnapshot snapshot;
     snapshot.display = display;
+    snapshot.input_busy = test_power_input_ && test_power_input_->busy();
     switch (surface) {
     case ShellSurface::WatchFace: snapshot.surface = "watch_face"; break;
     case ShellSurface::Launcher: snapshot.surface = "launcher"; break;

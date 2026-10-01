@@ -30,6 +30,7 @@
 #include "espocket/developer_mode.hpp"
 #include "espocket/hello_app.hpp"
 #include "espocket/interaction_test_adapter.hpp"
+#include "espocket/power_input_queue.hpp"
 #include "espocket/page_navigator.hpp"
 #include "espocket/settings_navigation_adapter.hpp"
 #include "espocket/power_key_monitor.hpp"

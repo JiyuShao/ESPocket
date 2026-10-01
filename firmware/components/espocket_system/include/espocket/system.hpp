@@ -17,6 +17,7 @@ namespace espocket {
 
 class CircularShell;
 class PowerKeyMonitor;
+class PowerInputQueue;
 class PageNavigator;
 class DeveloperMode;
 class InteractionTestAdapter;
@@ -96,6 +97,7 @@ private:
     std::shared_ptr<DeveloperMode> developer_mode_;
     std::unique_ptr<InteractionTestAdapter> test_adapter_;
     std::unique_ptr<PowerKeyMonitor> power_key_monitor_;
+    std::unique_ptr<PowerInputQueue> test_power_input_;
     std::shared_ptr<std::atomic<uint64_t>> foreground_token_ =
         std::make_shared<std::atomic<uint64_t>>(0);
     esp_brookesia::system::core::AppId shell_id_ = esp_brookesia::system::core::INVALID_APP_ID;

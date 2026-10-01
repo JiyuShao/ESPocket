@@ -55,6 +55,12 @@
 - 17 项 host tests、M2 parser、Markdown 与 ESP-IDF 完整构建通过。Xtensa 的 int32_t 模板推导失败已显式指定类型修复；规则、覆盖矩阵、镜像 identity 和未刷写边界见 [012 共享手势证据](../../012-test-automation-contract/records/2026-10-02-shared-shell-gesture.md)。
 - 下一 slice 接输入占用、原始轨迹/LVGL 注入与 System PWR 排队。取消路径应清掉未消费 intent 和 Launcher pull 状态，再解除注入；正常 Release 与异常取消不能混用。设备仍保留 013 identity，不新增物理/视觉通过项。
 
+## 第六轮自动执行
+
+- 012/02 完成 USB 合成 PWR 排队：System 原有输入任务消费，复用物理 PWR 语义；排队与执行期间 busy，重复 release 取消待执行输入，1000 ms 期限阻止迟到执行。快照增加 inputBusy。
+- 17 项 host tests、M2 parser、Markdown 与完整固件构建通过；源码/镜像证据见 [012 PWR 记录](../../012-test-automation-contract/records/2026-10-02-power-input.md)。未刷写，不新增硬件通过项。
+- 012/02 仍开放触摸轨迹/LVGL 注入、跨输入占用与触摸异常释放；后续应统一触摸与 PWR 槽位，不能让两个刺激交错。USB 物理连接 API 无法发现主机仅关闭串口，Driver 需显式 release。
+
 ## 晨间最小介入
 
 先回复已发出的单次 013 smoke 结果：Native Detail Edge Back；自动息屏唤醒保留 Detail；PWR Home/息屏/亮屏回表盘；Quick Settings 上滑、Launcher 顶部下拉返回。遇到异常停在该步即可。无需重做此前十轮资源验证。

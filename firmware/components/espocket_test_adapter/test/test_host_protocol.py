@@ -17,6 +17,7 @@ class ProtocolHostTest(unittest.TestCase):
                 os.environ.get('CXX', 'clang++'), '-std=c++23', '-pthread', '-I', str(COMPONENT / 'include'),
                 str(COMPONENT / 'src/developer_mode.cpp'),
                 str(COMPONENT / 'src/test_protocol.cpp'),
+                str(COMPONENT / 'src/power_input_queue.cpp'),
                 str(COMPONENT / 'test/test_test_protocol.cpp'), '-o', str(binary),
             ], check=True)
             subprocess.run([str(binary)], check=True)

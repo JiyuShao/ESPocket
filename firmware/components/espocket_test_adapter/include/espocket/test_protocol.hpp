@@ -20,6 +20,7 @@ struct TestSnapshot {
     std::string page_id;
     bool can_back = false;
     bool back_pending = false;
+    bool input_busy = false;
 };
 
 struct TestReply {
@@ -34,8 +35,10 @@ class TestProtocol {
 public:
     static constexpr uint32_t VERSION = 1;
     using SnapshotReader = std::function<std::expected<TestSnapshot, std::string>()>;
+    using Command = std::function<std::expected<void, std::string>()>;
 
-    TestProtocol(DeveloperMode &mode, std::string image_identity, SnapshotReader snapshot_reader = {});
+    TestProtocol(DeveloperMode &mode, std::string image_identity, SnapshotReader snapshot_reader = {},
+                 Command power_short = {}, Command release = {});
     TestReply dispatch(uint32_t version, std::string_view operation);
 
 private:
@@ -44,6 +47,8 @@ private:
     std::mutex dispatch_mutex_;
     SnapshotReader snapshot_reader_;
     uint64_t snapshot_seq_ = 0;
+    Command power_short_;
+    Command release_;
 };
 
 } // namespace espocket
