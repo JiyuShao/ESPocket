@@ -73,6 +73,13 @@
 - 主机组件用例与源码检查通过；最终固件构建和身份见 [012 Owner 记录](../../012-test-automation-contract/records/2026-10-02-touch-owner.md)。未刷写，不新增设备、物理或视觉 PASS。
 - 012/02 源码/组件门槛完成，012/03 依赖解除；下一步用真实 USB Driver 等待快照和保存失败证据，不能以投递 ACK 代替输入效果。设备仍保留 013 smoke 镜像；Driver 的新能力设备验证应与早晨统一镜像安排协调。
 
+## 第九轮自动执行
+
+- 012/03 Driver 源码、466px 输入 profile 与错误/清理/快照主机用例完成；30 项 host unittest、M2 parser、Markdown 与固件增量构建通过。见 [Driver 证据](../../012-test-automation-contract/records/2026-10-02-host-driver.md)。
+- 自动套件已编排 Launcher/Card、子页 Back、Root 无 Back、PWR Home/息屏/唤醒；坐标尚未设备验证，最后设备条件保持未勾选，012/03 ready-for-human。
+- 没有刷写或执行新能力，设备仍为 013 identity；早晨收到单次 smoke 后，统一安排新镜像的一次 Driver 验证。每次失败保留原 attempt，合成路径不冒充物理或视觉证据。
+- 012 的可自动源码 frontier 暂告一段落；继续评估 014/03 Card 注册/lifecycle 与 014/04 Runtime 绑定的独立源码条件，不跳过 008/009 的 Spec blocker。
+
 ## 晨间最小介入
 
 先回复已发出的单次 013 smoke 结果：Native Detail Edge Back；自动息屏唤醒保留 Detail；PWR Home/息屏/亮屏回表盘；Quick Settings 上滑、Launcher 顶部下拉返回。遇到异常停在该步即可。无需重做此前十轮资源验证。

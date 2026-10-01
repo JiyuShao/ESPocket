@@ -1,0 +1,74 @@
+{
+  "name": "Circular Shell 466px / Hello Native",
+  "calibration": "source-derived; device paths not yet verified",
+  "width": 466,
+  "height": 466,
+  "up": [
+    [
+      233,
+      400
+    ],
+    [
+      233,
+      150
+    ]
+  ],
+  "down": [
+    [
+      233,
+      110
+    ],
+    [
+      233,
+      350
+    ]
+  ],
+  "left": [
+    [
+      350,
+      233
+    ],
+    [
+      130,
+      233
+    ]
+  ],
+  "right": [
+    [
+      130,
+      180
+    ],
+    [
+      350,
+      180
+    ]
+  ],
+  "launcher_pull": [
+    [
+      233,
+      60
+    ],
+    [
+      233,
+      270
+    ]
+  ],
+  "native_tap": [
+    233,
+    152
+  ],
+  "detail_tap": [
+    233,
+    337
+  ],
+  "edge_back": [
+    [
+      10,
+      233
+    ],
+    [
+      210,
+      233
+    ]
+  ]
+}

@@ -75,6 +75,28 @@ Home Space 的 `surface` 至少能区分 Watch Face、Launcher、Quick Settings 
 
 协议至少区分：`developer_mode_off`、`bad_request`、`unsupported`、`busy`、`invalid_state`、`timeout` 和 `internal`。前五项不可被自动重试成成功。每次失败先 `release`，再采集最终 `snapshot` 和串口日志；再次运行作为新 attempt，保留原失败证据。设备重启、App 停止或导航任务替换后，旧刺激和旧 Back token 不得继续作用于新任务。
 
+## 主机 Driver
+
+[interaction_driver.py](../../scripts/firmware/interaction_driver.py) 是首版可执行 USB Driver；需要 `pyserial`（可使用 ESP-IDF 的 Python 环境）。必须先刷入支持上述能力的准确镜像并在设备开启开发者模式，不能把源码能力当作旧镜像能力。Driver 不自动刷写、重启设备或开启模式。
+
+```bash
+python scripts/firmware/interaction_driver.py \
+  --port /dev/cu.usbmodem101 \
+  --device-id <inventory-board-id> \
+  --expected-image <exact-hello-image-identity> \
+  --output /private/tmp/espocket-interaction
+```
+
+设备 ID 来自操作者的设备清单，报告明确标注该来源，不把串口路径冒充唯一设备 identity。`--expected-image` 必填且严格比对设备 hello；不匹配或缺少能力时，在任何刺激前失败，仍尝试 release 和最终 snapshot。
+
+默认 [466px profile](../../scripts/firmware/interaction-profile-466.json) 的坐标依据当前 GUI 资源推导，标记为尚未经过设备路径验证。它只包含输入轨迹与控件点击位置，不重实现导航状态。其他布局可通过 `--profile` 指定同形 JSON。Driver 通过真实 Owner 快照验证 Launcher、Card、Quick Settings、Native Root/Detail、Back 与 PWR，点击坐标不构成视觉验收。
+
+每次 CLI 调用创建新的 UUID attempt 目录，包含 `report.json` 和 `serial.log`；不覆盖既往失败。报告保存期望/实际镜像、协议版本、设备 ID、profile、步骤、递增快照、清理结果和 `synthetic-input` 证据类型。串口日志保存 TX、RX 与普通设备日志。无自动重试；再次执行是新的 attempt。
+
+刺激响应不判 PASS：Driver 等待至少两个新序号、匹配预期且 inputBusy=false 的快照；Root 无 Back 还逐样本检查一个有限观察窗口。错误响应、序号倒退/停滞、panic、输入 tick/清理错误都使 attempt 失败。成功或失败均先 release，再取最终快照，并收集短窗口尾部日志；不能把 final snapshot 忙碌或清理失败记成 PASS。观察窗口与轮询间隔用于采样，不以固定 sleep 代替 Owner 断言。
+
+主机测试使用可控协议响应验证 Driver 行为，不把假 transport 的输出保存为设备 PASS。源码、主机和设备条件见 [012/03](../../.scratch/012-test-automation-contract/issues/03-host-driver-evidence.md)。
+
 ## 验收边界
 
 | 证据类型 | 可证明 | 不能单独证明 |

@@ -57,6 +57,10 @@ python3 -m unittest discover -s firmware/components/espocket_system/test -p 'tes
 
 该测试检查锁定组件、页面资源与 Back 路由，并在主机执行 Adapter 委托和错误行为（需要支持 C++23 的 host 编译器（默认 `clang++`，可用 `CXX` 指定））。固件 CMake 配置也会自动运行资源兼容检查，不匹配会阻止构建。升级时同次审查 manifest／lock、Adapter 映射和兼容测试，再按上文重新生成配置、完整构建并完成必要真机验收。生成的 `managed_components/` 改动不提交。
 
+## USB 合成输入回归
+
+启用设备开发者模式并刷入具有 touch/PWR/snapshot/release capability 的固件后，使用 [interaction_driver.py](../scripts/firmware/interaction_driver.py) 执行单次自动路径。它不自动刷写、重启或开启模式；需要 `pyserial`，可使用 ESP-IDF Python 环境。必须显式指定设备清单 ID 和期望镜像 identity。CLI、466px profile 与报告格式见 [交互测试协议](../docs/development/interaction-test-protocol.md)。输出仅证明 `synthetic-input`，不能满足 GPIO、触摸硬件或视觉条件。
+
 ## GUI 资源
 
 Circular Shell 与 Hello Native 各自以 `resources/gui.json` 为唯一 GUI 文档源码。CMake 在构建目录生成 `shell_gui.json`／`hello_gui.json` 副本，再用 `EMBED_TXTFILES` 嵌入；不同文件名避免 ESP-IDF 按 basename 生成的符号重名。生成副本不编辑、不提交，资源变化会触发重新配置与嵌入。
