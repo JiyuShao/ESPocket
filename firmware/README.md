@@ -43,6 +43,14 @@ idf.py -C firmware build
 python3 -m unittest discover -s firmware/components/shell_circular/tests -p 'test_*.py'
 ```
 
+官方 Settings 导航适配绑定锁定版本。依赖升级前运行：
+
+```bash
+python3 -m unittest discover -s firmware/components/espocket_system/tests -p 'test_*.py'
+```
+
+该测试检查锁定组件、页面资源与 Back 路由，并在主机执行 Adapter 委托和错误行为（需要支持 C++23 的 `clang++`）。固件 CMake 配置也会自动运行资源兼容检查，不匹配会阻止构建。升级时同次审查 manifest／lock、Adapter 映射和兼容测试，再按上文重新生成配置、完整构建并完成必要真机验收。生成的 `managed_components/` 改动不提交。
+
 ## 文件职责
 
 | Path | Role |
@@ -53,4 +61,4 @@ python3 -m unittest discover -s firmware/components/shell_circular/tests -p 'tes
 | `components/gen_bmgr_codes/` | Board Manager 生成，不纳入版本控制 |
 | `build/` | 构建输出，不纳入版本控制 |
 
-阶段专属的构建、烧录和真机步骤由对应 Milestone acceptance 定义。
+任务专属的构建、烧录和真机步骤由 [.scratch](../.scratch/README.md) 中的对应 ticket 定义，证据保存在同一 Effort 的 records。

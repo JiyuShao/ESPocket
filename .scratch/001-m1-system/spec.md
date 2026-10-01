@@ -1,4 +1,4 @@
-# M1 — ESPocket System
+# ESPocket System
 
 Sequence: 001
 
@@ -47,6 +47,27 @@ Native App 验证、Runtime package、设备 capability、Store distribution，�
 - [02 — 通过 System Core 启动 Circular Shell](issues/02-boot-circular-shell.md)
 - [03 — 证明 baseline 启动稳定性](issues/03-prove-boot-stability.md)
 
-## Further Notes
+## 已接受结果
 
-历史判定与证据索引见 [M1 acceptance](../../docs/milestones/m1/acceptance.md)。
+| Gate | Accepted result |
+|---|---|
+| Platform Baseline | ESP-IDF 6.0.1、ESP32-S3、Waveshare 1.75C selector 与解析后的 Brookesia v0.8 组件完成构建 |
+| Clean reproduction | 删除生成目录后重新解析 37 项依赖、生成板配置并完整构建通过 |
+| Hardware smoke | Launcher、最终圆屏 UI、触控、Home gesture 和降级状态均由项目所有者确认 |
+| Cold boot | 5/5 到达 `ESPocket started` |
+| EN/software reset | 10/10 到达 `ESPocket started`，无 panic、watchdog、assert 或 heap corruption |
+| Fatal diagnostics | Storage/Display 启动失败保留串口诊断并停止启动，没有自动重启 |
+
+M0 官方基线风险由项目所有者明确豁免。该事实保持 `WAIVED`，不能被后续成功构建改写成 `PASS`。
+
+## 历史基线豁免
+
+- 日期：2026-09-25。
+- 项目所有者选择跳过官方基线（旧称 M0），直接开发 ESPocket System。
+- 已接受判定保持 `WAIVED`，不能被后续成功构建改写为 `PASS`。
+- 官方基线风险由项目接受并在后续集成处理；当时替代方案比较缺失，因此不回填 ADR。
+- 首个 release marker：`v0.1-system`。
+
+## 记录
+
+- [2026-09-25-acceptance-report](records/2026-09-25-acceptance-report.md)

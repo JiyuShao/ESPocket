@@ -2,7 +2,7 @@
 
 **What to build:** 可信 dynamic App 根据完整 Core snapshot 在 Launcher 中出现和消失，同时固定 entry 保持稳定。
 
-**Blocked by:** 02 — 诊断并采用 online stability fix；03 — 执行 Core 持有的 package trust gate。
+**Blocked by:** [03 Core package trust](03-enforce-core-package-trust.md)；[06 在线 Store 修复复验](06-adopt-online-store-stability-fix.md)；[07 Runtime keyboard isolation](07-isolate-runtime-keyboard-results.md)。
 
 **Status:** needs-info
 

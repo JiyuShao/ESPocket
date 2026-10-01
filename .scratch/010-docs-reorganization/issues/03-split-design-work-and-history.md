@@ -24,3 +24,7 @@
 ## Resolution
 
 已将每类含义移动到 `docs/README.md` 定义的权威位置，M1–M5 report 保留在 `records/`，并在拆分 evidence 目录时保持所有 raw Milestone evidence 字节不变。
+
+## 后续文档归属
+
+2026-10-02：本票记录的阶段文档路径属于当时的迁移历史。当前状态、验收和 records 已由 [08](08-unify-task-acceptance-records.md) 统一到本地 tracker，现行规则见 [文档入口](../../../docs/README.md)。

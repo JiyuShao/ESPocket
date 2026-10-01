@@ -3,6 +3,7 @@
 #include <chrono>
 #include <future>
 #include <iostream>
+#include <string>
 #include <string_view>
 
 #include "espocket/page_navigator.hpp"
@@ -66,11 +67,21 @@ int main()
             "Back at Root must fail without leaving App");
 
     navigator.stop();
+    int target_diagnostics = 0;
+    std::string reported_card;
+    navigator.set_diagnostic_handler([&](NavigationError error, std::string_view card_id) {
+        require(error == NavigationError::TargetUnavailable,
+                "missing Card should report target_unavailable");
+        ++target_diagnostics;
+        reported_card = card_id;
+    });
     auto missing_card = navigator.start_from_card("removed-card");
     require(!missing_card && missing_card.error() == NavigationError::TargetUnavailable,
             "removed Card target should report a diagnostic error");
     require(navigator.snapshot().page_id == "root" && !navigator.snapshot().can_back,
             "removed Card target must fall back to Root");
+    require(target_diagnostics == 1 && reported_card == "removed-card",
+            "missing Card diagnostic should identify the requested Card");
 
     navigator.stop();
     require(navigator.snapshot().page_id.empty(), "stopped task must not expose a stale Page");
@@ -133,6 +144,30 @@ int main()
             "Card target should expose child Page Back");
     require(card->pop().has_value() && card->snapshot().page_id == "root",
             "Card target Back should return to App Root");
+
+    auto unavailable_card_page = PageNavigator::create(
+        PageDeclaration{
+            .app_id = "app.card",
+            .root_page_id = "root",
+            .page_ids = {"root", "detail"},
+            .cards = {{"detail-card", "detail"}},
+        },
+        [](std::string_view, std::string_view to) { return to == "root"; }
+    );
+    require(unavailable_card_page.has_value(), "Card target can become unavailable at runtime");
+    int unavailable_reports = 0;
+    unavailable_card_page->set_diagnostic_handler(
+        [&](NavigationError error, std::string_view target) {
+            require(error == NavigationError::TargetUnavailable && target == "detail-card",
+                    "failed Card target should identify its Card");
+            ++unavailable_reports;
+        }
+    );
+    auto unavailable_open = unavailable_card_page->start_from_card("detail-card");
+    require(!unavailable_open && unavailable_open.error() == NavigationError::TargetUnavailable &&
+                unavailable_card_page->snapshot().page_id == "root" &&
+                unavailable_reports == 1,
+            "unavailable target Page must open Root and report once");
 
     auto back = PageNavigator::create(
         PageDeclaration{
@@ -208,9 +243,15 @@ int main()
         },
         [](std::string_view, std::string_view) { return true; }
     );
-    require(!missing_owned_control &&
-                missing_owned_control.error() == NavigationError::InvalidDeclaration,
-            "multi-Page appOwned declaration must provide a visible Back control");
+    require(missing_owned_control && missing_owned_control->start() &&
+                missing_owned_control->push("detail"),
+            "multi-Page appOwned declaration may use gestures without visible Back");
+    require(!missing_owned_control->show_default_back() &&
+                !missing_owned_control->edge_back_enabled(),
+            "custom gestures must not receive framework Back entry points");
+    require(missing_owned_control->request_back(0).has_value() &&
+                missing_owned_control->snapshot().page_id == "root",
+            "custom Back must use the same navigation request");
 
     auto owned = PageNavigator::create(
         PageDeclaration{
@@ -218,12 +259,11 @@ int main()
             .root_page_id = "root",
             .page_ids = {"root", "detail"},
             .back_presentation = BackPresentation::AppOwned,
-            .has_app_owned_back_control = true,
         },
         [](std::string_view, std::string_view) { return true; }
     );
     require(owned && owned->start() && owned->push("detail"),
-            "multi-Page appOwned declaration should install with visible Back");
+            "multi-Page appOwned declaration should install");
     require(!owned->show_default_back() && !owned->edge_back_enabled(),
             "appOwned must disable both framework Back entry points");
 

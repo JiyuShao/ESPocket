@@ -12,4 +12,4 @@
 
 ## Resolution
 
-M3 于 2026-09-28 通过，acceptance 中明确记录 evidence exception。
+2026-09-28 已接受 worker baseline；独立 Core file-install 缺少单独保留的设备采集，其 evidence exception 由项目所有者接受，见[历史报告](../records/2026-09-28-acceptance-report.md)。

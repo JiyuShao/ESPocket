@@ -2,7 +2,7 @@
 
 **What to build:** 一套小型产品接口，表达 Owner identity、Context、Action、Event、Permission、Action Risk 与 lifecycle，不引入全局 state manager。
 
-**Blocked by:** 产品推进顺序要求 M8 contract acceptance。
+**Blocked by:** [008/03 App 交互真机验收](../../008-m8-app-contract/issues/03-run-app-contract-hardware-acceptance.md)。
 
 **Status:** ready-for-agent
 

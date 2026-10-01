@@ -26,4 +26,4 @@ Catalog entry、下载请求、文件系统残留和安装事件，都不能证�
 - 持久化 Launcher index。
 - 将增量 event state 作为唯一事实源。
 
-参见 [App 发现契约](../design/product/06-application-discovery.md)和 [M5 验收](../milestones/m5/acceptance.md)。
+参见 [App 发现契约](../design/product/06-application-discovery.md)和 [应用生态任务与结果](../../.scratch/005-m5-application-ecosystem/spec.md)。

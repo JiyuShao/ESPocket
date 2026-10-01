@@ -52,7 +52,7 @@
 - [system.cpp](../../../firmware/components/espocket_system/src/system.cpp)
 - [power_key_monitor.cpp](../../../firmware/components/espocket_system/src/power_key_monitor.cpp)
 - [circular_shell.cpp](../../../firmware/components/shell_circular/src/circular_shell.cpp)
-- [Board Manager generated interface](../../../firmware/components/gen_bmgr_codes/)
+- [Board Manager generated interface](../../../firmware/components/gen_bmgr_codes)
 - [idf_component.yml](../../../firmware/main/idf_component.yml)
 - [Waveshare 1.75C schematic](https://files.waveshare.com/wiki/ESP32-S3-Touch-AMOLED-1.75C/ESP32-S3-Touch-AMOLED-1.75C-schematic.pdf)
 

@@ -11,7 +11,7 @@ ESPocket 文档混合了 glossary、产品契约、架构理由、实施计划�
 
 ## Solution
 
-采用 Matt 风格的 glossary、ADR、本地 Spec 与 ticket 职责，同时保留长期产品设计、架构视图、Milestone acceptance、历史 records、upstream research 与操作指南。
+采用 Matt 风格的 glossary、ADR、本地 Spec 与 ticket 职责；长期产品、架构、上游核查与操作指南各有权威位置，工作状态与历史 records 统一归入本地 tracker。
 
 ## User Stories
 
@@ -26,7 +26,7 @@ ESPocket 文档混合了 glossary、产品契约、架构理由、实施计划�
 - 保留一个纯根 glossary 与全系统 ADR 目录。
 - 在 `.scratch/` 下使用版本化本地 Markdown Spec，并让每个 ticket 独立成文件。
 - 保留同时面向人和 Agent 的产品与架构文档。
-- 当前状态只保存在 Milestone summary 与 acceptance 文件。
+- 当前范围与整体状态由 Spec 持有；具体依赖、验收与完成结果由 ticket 持有，历史事实保存在同一 Effort 的 records。
 - 将 M1–M5 长报告移到 `records/`，并把影响判定的 raw evidence 提炼为长期事实。
 - 融合 AI Native 产品与架构设计，消除独立语义孤岛。
 
@@ -38,7 +38,7 @@ ESPocket 文档混合了 glossary、产品契约、架构理由、实施计划�
 
 ## Out of Scope
 
-修改 firmware 行为、改写已接受的历史事实，或宣称未验证的 Milestone 结果。
+修改 firmware 行为、改写已接受的历史事实，或宣称未验证的验收结果。
 
 ## Tickets
 
@@ -49,7 +49,12 @@ ESPocket 文档混合了 glossary、产品契约、架构理由、实施计划�
 - [05 — 整理文档语义与自动化](issues/05-refine-document-semantics-and-automation.md)
 - [06 — 纯化产品文档与证据边界](issues/06-purify-product-and-evidence-boundaries.md)
 - [07 — 收敛产品、架构与 Firmware 文档](issues/07-converge-product-architecture-and-firmware-docs.md)
+- [08 — 统一任务、验收与历史记录](issues/08-unify-task-acceptance-records.md)
 
 ## Further Notes
 
 迁移路径与已完成 slice 记录在本目录的 resolved tickets 中。
+
+## Comments
+
+- 2026-10-02：项目所有者要求取消独立 milestone 管理层，取代此前“summary/acceptance 持有当前状态”的文档安排。迁移细节见 ticket 08；旧票保留当时的已接受工作与迁移路径。

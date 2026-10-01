@@ -3,7 +3,7 @@
 Sequence: 014
 
 Status: active
-Blocked by: M6 `PASS` for firmware integration; M7 source gate depends on the Page Navigator and Back dispatch work in this effort.
+Blocked by: [006/03 Home 与显示真机验收](../006-m6-home-display/issues/03-run-hardware-acceptance.md)（已完成）；实现顺序见各 ticket。
 
 ## Problem Statement
 
@@ -24,7 +24,8 @@ Blocked by: M6 `PASS` for firmware integration; M7 source gate depends on the Pa
 
 - App 安装时声明唯一 Root 和全部 Page 类型；同一 App 可声明多个 Card ID，每个 ID 最多配置一次。
 - ESPocket 持有 Page 栈，App 调用 push/pop/replace/resetToRoot。Card 目标失效时打开 Root 并记录错误。
-- Root 无 Back；子页面默认有可见 Back 与 Edge Back。App 可整体禁用两个默认入口，多级 App 必须自带可见 Back。
+- 官方 Settings 按 [ADR-0012](../../docs/adr/0012-official-settings-keeps-its-navigation-owner.md) 保留真实 Screen Flow，ESPocket 仅适配 Page 快照与 Back，不复制第二份栈；深度定制留待明确需求另行决策。
+- Root 无 Back；子页面默认有可见 Back 与 Edge Back。App 可接管两个默认入口，自行定制返回 UI 与手势，不要求可见按钮；自定义入口使用同一 Back 语义。
 - App 可以暂缓普通 Back，自行显示确认；框架拒绝重复请求，超时取消。PWR Home、停止和崩溃使待决 token 失效。
 - PWR Home 后再次打开 App 从 Root 开始；息屏可恢复有效 Page；首版不提供跨 App 返回。
 - Card UI 的可见、暂停和再次请求数据由框架处理；长期业务数据在 App 持久状态或 Service 中。
@@ -32,8 +33,8 @@ Blocked by: M6 `PASS` for firmware integration; M7 source gate depends on the Pa
 ## Testing Decisions
 
 - 声明校验、栈操作、Back 待决/超时/失效和 Card 配置迁移应有组件级测试。
-- Native 与 Runtime 样例必须覆盖相同 Page/Back 语义；真实触控与可见控件仍按阶段门槛真机验证。
-- 修改不能把 M7/M8 未验收的路径标记为已通过。
+- Native 与 Runtime 绑定及组件条件归 ticket 04，Card 样例归 ticket 05；真实触控、PWR、恢复与回收归 008/03，系统 Surface 路径归 007/03。
+- 组件或构建结果不能代替未完成的真机证据。
 
 ## Out of Scope
 
@@ -44,7 +45,8 @@ Blocked by: M6 `PASS` for firmware integration; M7 source gate depends on the Pa
 - [01 — 声明与 App Page Navigator](issues/01-page-declaration-navigator.md)
 - [02 — 默认 Back 与待决分发](issues/02-back-dispatch.md)
 - [03 — App Card 注册与生命周期](issues/03-card-registry-lifecycle.md)
-- [04 — Native/Runtime 样例与开发 API 定版](issues/04-samples-api-finalization.md)
+- [04 — Native/Runtime 导航绑定与开发 API 定版](issues/04-samples-api-finalization.md)
+- [05 — App Card 样例与开发 API 定版](issues/05-card-samples-api-finalization.md)
 
 ## Further Notes
 
@@ -52,9 +54,17 @@ Blocked by: M6 `PASS` for firmware integration; M7 source gate depends on the Pa
 - [App 产品契约](../../docs/design/product/04-app-contract.md)
 - [导航架构](../../docs/design/architecture/05-navigation-runtime.md)
 - [开发 API](../../docs/development/app-navigation-card-api.md)
-- [M7 验收](../../docs/milestones/m7/acceptance.md)
-- [M8 验收](../../docs/milestones/m8/acceptance.md)
+- [系统导航验收](../007-m7-navigation/issues/03-run-navigation-hardware-acceptance.md)
+- [App 交互验收](../008-m8-app-contract/issues/03-run-app-contract-hardware-acceptance.md)
 
 ## Comments
 
 - 2026-10-02：原阻塞边为「M7 source gate for firmware integration」，但 M7 source gate 同时要求本 effort 的默认 Back 和唯一 Page 栈，构成循环依赖。M6 已 `PASS`，因此先实施 tickets 01–02 支撑 M7 的 Native 导航；App Card 与 Native/Runtime 全量绑定仍按后续 tickets 和阶段门槛验收。
+
+- 2026-10-02：任务状态统一迁至本地 tracker。Navigator 与 Native 接入归 01，Back 分发归 02，Card 生命周期归 03，导航语言绑定归 04，Card 样例/API 归新票 05；真实系统导航和 App lifecycle 证据分别由 007/03、008/03 持有。
+
+## 记录
+
+- [2026-10-02-default-back-prototype](records/2026-10-02-default-back-prototype.md)
+- [2026-10-02-page-navigator-source](records/2026-10-02-page-navigator-source.md)
+- [2026-10-02 Settings Adapter](records/2026-10-02-settings-adapter.md)

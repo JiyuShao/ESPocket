@@ -2,7 +2,7 @@
 
 **What to build:** Brightness Context、Action 与 Event 通过 Brookesia 公开接口使用真实 selected Display output。
 
-**Blocked by:** 01 — 定义 registration contract；M7 brightness output identity fix。
+**Blocked by:** [01 Semantic Registration](01-define-semantic-registration-contract.md)；[007/01 brightness output identity](../../007-m7-navigation/issues/01-fix-brightness-output-identity.md)（已完成）。
 
 **Status:** ready-for-agent
 

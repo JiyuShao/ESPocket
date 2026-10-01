@@ -16,6 +16,7 @@ Spec 与 ticket 以版本化 Markdown 保存在 `.scratch/`。规则见 [issue t
 
 ## 文档工作流
 
-按照 `docs/README.md` 将每类含义写入对应权威位置。实施计划和可执行工作写入 `.scratch/`；状态与证据写入 `docs/milestones/`。
+按照 `docs/README.md` 将每类含义写入对应权威位置。工作范围与状态写入 `.scratch/<effort>/spec.md`；可执行工作、依赖与验收条件写入 `issues/`；有日期的证据与历史结果写入同一 Effort 的 `records/`。
 
-修改文档后运行 `python3 scripts/docs/check.py`。
+修改文档后运行 `python3 scripts/docs/check.py --markdown`。
+修改架构 SVG、图生成器或图布局检查器后，另运行 `python3 scripts/docs/check.py --diagrams`；CI 使用 `--all` 执行完整检查。

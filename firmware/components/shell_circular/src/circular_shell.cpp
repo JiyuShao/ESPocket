@@ -44,6 +44,7 @@ constexpr std::string_view OPEN_APP_STORE_ACTION = "shell.open_app_store";
 constexpr std::string_view STEP_BRIGHTNESS_ACTION = "shell.step_brightness";
 constexpr std::string_view STEP_BRIGHTNESS_QUICK_ACTION = "shell.step_brightness_quick";
 constexpr std::string_view TOGGLE_WIFI_ACTION = "shell.toggle_wifi";
+constexpr std::string_view TOGGLE_DEVELOPER_MODE_ACTION = "shell.toggle_developer_mode";
 constexpr std::string_view PAGE_FLOW = "shell_pages";
 constexpr std::string_view WATCH_FACE_TIME_PATH = "/watch_face/time";
 constexpr std::string_view WATCH_FACE_DATE_PATH = "/watch_face/date";
@@ -52,6 +53,7 @@ constexpr std::string_view BRIGHTNESS_CARD_PATH = "/brightness_card/value";
 constexpr std::string_view QUICK_BATTERY_PATH = "/quick_settings/battery";
 constexpr std::string_view QUICK_BRIGHTNESS_PATH = "/quick_settings/brightness_action/brightness";
 constexpr std::string_view QUICK_WIFI_PATH = "/quick_settings/wifi_action/wifi";
+constexpr std::string_view QUICK_DEVELOPER_MODE_PATH = "/quick_settings/developer_mode_action/label";
 constexpr std::string_view LAUNCHER_PULL_PATH = "/launcher/pull_hint";
 constexpr std::string_view HOME_INTENT_TIMER = "espocket.home_intent";
 constexpr int HOME_INTENT_INTERVAL_MS = 50;
@@ -287,6 +289,7 @@ constexpr std::string_view SHELL_JSON = R"json({
         { "type": "label", "id": "battery", "labelProps": { "text": "Battery: ?" }, "style": { "textColor": "#aeb9c8", "fontSize": "17sp" }, "placement": { "width": "250dp", "height": "26dp" } },
         { "type": "button", "id": "brightness_action", "events": [ { "type": "clicked", "action": "shell.step_brightness_quick" } ], "style": { "bgColor": "#b7791f", "radius": "24dp" }, "placement": { "width": "230dp", "height": "52dp" }, "children": [ { "type": "label", "id": "brightness", "labelProps": { "text": "Brightness: ?" }, "style": { "textColor": "#ffffff", "fontSize": "17sp" }, "placement": { "mode": "relative", "align": "center" } } ] },
         { "type": "button", "id": "wifi_action", "events": [ { "type": "clicked", "action": "shell.toggle_wifi" } ], "style": { "bgColor": "#2563a9", "radius": "24dp" }, "placement": { "width": "230dp", "height": "52dp" }, "children": [ { "type": "label", "id": "wifi", "labelProps": { "text": "Wi-Fi: ?" }, "style": { "textColor": "#ffffff", "fontSize": "17sp" }, "placement": { "mode": "relative", "align": "center" } } ] },
+        { "type": "button", "id": "developer_mode_action", "events": [ { "type": "clicked", "action": "shell.toggle_developer_mode" } ], "style": { "bgColor": "#374151", "radius": "24dp" }, "placement": { "width": "230dp", "height": "48dp" }, "children": [ { "type": "label", "id": "label", "labelProps": { "text": "Developer Mode: Off" }, "style": { "textColor": "#ffffff", "fontSize": "16sp" }, "placement": { "mode": "relative", "align": "center" } } ] },
         { "type": "button", "id": "settings", "events": [ { "type": "clicked", "action": "shell.open_settings_quick" } ], "style": { "bgColor": "#277b65", "radius": "24dp" }, "placement": { "width": "230dp", "height": "52dp" }, "children": [ { "type": "label", "id": "label", "labelProps": { "text": "Open Settings" }, "style": { "textColor": "#ffffff", "fontSize": "17sp" }, "placement": { "mode": "relative", "align": "center" } } ] },
         { "type": "label", "id": "hint", "labelProps": { "text": "↑  Home" }, "style": { "textColor": "#94a3b8", "fontSize": "15sp", "textAlign": "center" }, "placement": { "width": "230dp", "height": "24dp" } }
       ]
@@ -421,7 +424,8 @@ CircularShell::CircularShell(
     SystemHandler back_handler,
     KeyboardResultHandler keyboard_result_handler,
     BackUiProvider back_ui_provider,
-    SystemHandler back_timeout_handler
+    SystemHandler back_timeout_handler,
+    DeveloperModeControl developer_mode
 )
     : display_output_id_(display_output_id),
       power_press_count_provider_(std::move(power_press_count_provider)),
@@ -433,7 +437,8 @@ CircularShell::CircularShell(
       back_handler_(std::move(back_handler)),
       back_ui_provider_(std::move(back_ui_provider)),
       back_timeout_handler_(std::move(back_timeout_handler)),
-      keyboard_result_handler_(std::move(keyboard_result_handler))
+      keyboard_result_handler_(std::move(keyboard_result_handler)),
+      developer_mode_(std::move(developer_mode))
 {}
 
 esp_brookesia::system::core::AppManifest CircularShell::get_manifest() const
@@ -489,6 +494,7 @@ std::expected<void, std::string> CircularShell::on_start(
              STEP_BRIGHTNESS_ACTION,
              STEP_BRIGHTNESS_QUICK_ACTION,
              TOGGLE_WIFI_ACTION,
+             TOGGLE_DEVELOPER_MODE_ACTION,
          }) {
         auto action_result = context.gui().subscribe_action(action);
         if (!action_result) {
@@ -595,10 +601,27 @@ std::expected<void, std::string> CircularShell::on_action(
         return open_app(APP_STORE_MANIFEST_ID, "App Store");
     }
     if (action == STEP_BRIGHTNESS_ACTION || action == STEP_BRIGHTNESS_QUICK_ACTION) {
-        return step_brightness();
+        auto result = step_brightness();
+        if (!result) {
+            set_status_text(BRIGHTNESS_CARD_PATH, "Brightness: unavailable");
+            set_status_text(QUICK_BRIGHTNESS_PATH, "Brightness: unavailable");
+        }
+        return result;
     }
     if (action == TOGGLE_WIFI_ACTION) {
-        return toggle_wifi();
+        auto result = toggle_wifi();
+        if (!result) {
+            set_status_text(QUICK_WIFI_PATH, "Wi-Fi: unavailable");
+        }
+        return result;
+    }
+    if (action == TOGGLE_DEVELOPER_MODE_ACTION) {
+        if (!developer_mode_.enabled || !developer_mode_.set_enabled) {
+            return std::unexpected("Developer mode control is unavailable");
+        }
+        auto result = developer_mode_.set_enabled(!developer_mode_.enabled());
+        refresh_developer_mode();
+        return result;
     }
     return {};
 }
@@ -1357,6 +1380,16 @@ void CircularShell::refresh_status()
     refresh_wifi();
     refresh_battery();
     refresh_brightness();
+    refresh_developer_mode();
+}
+
+void CircularShell::refresh_developer_mode()
+{
+    set_status_text(
+        QUICK_DEVELOPER_MODE_PATH,
+        developer_mode_.enabled && developer_mode_.enabled() ?
+            "Developer Mode: On" : "Developer Mode: Off"
+    );
 }
 
 void CircularShell::refresh_clock()

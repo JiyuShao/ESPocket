@@ -2,7 +2,7 @@
 
 **What to build:** ESPocket 管理 App Card 的注册、Home Space 配置、可见生命周期和目标 Page 打开；App 提供内容、轻量操作及数据来源。
 
-**Blocked by:** 01、02；App Card 机制不并入 M7 真机手势样机。
+**Blocked by:** [01 Page Navigator](01-page-declaration-navigator.md)；[02 Back 分发](02-back-dispatch.md)。
 
 **Status:** ready-for-agent
 

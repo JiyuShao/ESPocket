@@ -3,7 +3,7 @@
 Sequence: 009
 
 Status: planned
-Blocked by: M8 contract acceptance for product sequencing.
+Blocked by: [008/03 App 交互真机验收](../008-m8-app-contract/issues/03-run-app-contract-hardware-acceptance.md)，作为产品实现顺序约束。
 
 ## Problem Statement
 
@@ -39,7 +39,7 @@ ESPocket 需要让 AI access 成为产品与架构设计的一部分，同时不
 
 ## Out of Scope
 
-选择 model provider、XiaoZhi/ESP-Claw 集成、全局 AI Manager、GUI automation，以及 M5 trust 通过前的 remote Runtime AI capability exposure。
+选择 model provider、XiaoZhi/ESP-Claw 集成、全局 AI Manager、GUI automation，以及 package trust 与 Runtime isolation 票关闭前的 remote Runtime AI capability exposure。
 
 ## Tickets
 

@@ -12,4 +12,4 @@
 
 ## Resolution
 
-已接受 raw record 由 M2 acceptance 链接。
+50/50 和四项 heap loss 为 0 的已接受结果见[历史报告](../records/2026-09-26-acceptance-report.md)。

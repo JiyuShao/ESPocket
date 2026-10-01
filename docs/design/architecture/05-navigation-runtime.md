@@ -7,7 +7,7 @@
 ## 支撑的产品要求
 
 - [INT-001–INT-004、INT-006–INT-008、INT-017–INT-020、INT-022–INT-025](../product/03-interaction-model.md)
-- [APP-003–APP-006、APP-010、APP-016–APP-017、APP-019–APP-028](../product/04-app-contract.md)
+- [APP-003–APP-006、APP-010、APP-016–APP-017、APP-019–APP-029](../product/04-app-contract.md)
 
 ## 结构
 
@@ -28,14 +28,18 @@ ESPocket 的导航接口包含声明、转移和观察三部分：App 安装时�
 | NAV-006 | Display State 与导航正交；息屏不执行 Back 或 Home。 |
 | NAV-007 | Native 与 Runtime App 使用不同 Adapter 接入同一生命周期与导航 Seam。 |
 | NAV-008 | CircularShell 拥有 Home Space Surface、Card 位置与横滑；完整 App 的普通触控归 App。 |
-| NAV-009 | App 决定 Page 转移，ESPocket 拥有唯一 App Page 栈和当前 Page 快照；App 不向系统复制第二份栈。 |
+| NAV-009 | 普通 App 决定 Page 转移，ESPocket 拥有唯一 App Page 栈和当前 Page 快照；官方 Settings 的明确适配例外从其真实 Screen Flow 提供快照，Back 委托官方 App，禁止复制第二份栈。 |
 | NAV-010 | App Root 是栈底，不提供可见默认 Back 或 Edge Back；子页面的 Back 请求通过统一分发入口到达 App 和导航栈。 |
 | NAV-011 | App 可以暂缓、允许或取消普通 Back；一个导航任务最多有一个待决 Back，请求超时取消并报告错误。PWR Home、App 停止或崩溃使待决 token 失效。 |
-| NAV-012 | App 可整体关闭默认可见 Back 与 Edge Back；其自带 Back 必须调用同一 Back 请求入口。使用 ESPocket 标准 Back 控件的页面不再叠加 Overlay Back。 |
+| NAV-012 | App 可接管默认可见 Back 与 Edge Back，自行决定返回 UI 与手势，也可不显示按钮；自定义入口必须调用同一 Back 请求入口。使用 ESPocket 标准 Back 控件的页面不再叠加 Overlay Back。 |
 | NAV-013 | Card 目标 Page 由 App 声明；ESPocket 校验目标，构造以 Root 为底的导航任务。目标失效降级到 Root 并记录错误。 |
 | NAV-014 | PWR Home 清除当前 App 导航任务并显示 Watch Face；下次启动从 Root 开始。息屏保留有效任务，唤醒时尽力恢复。 |
 
 旧不变量的替代关系：NAV-002 → NAV-008、NAV-009；NAV-003 → NAV-009、NAV-010；NAV-004 → NAV-010、NAV-014。旧 ID 保留在 Git 历史中，不再表示当前结构。
+
+## 官方 Settings 适配
+
+官方 Settings 使用组合式 IApp Adapter 转发官方回调；其自带可见 Back 不叠加系统控件，Edge Back 与按钮均委托官方 Back 动作。适配只开放统一 Page 观察与 Back，绑定锁定版页面映射，不为 Settings 提供通用 push/pop。未知屏或 Flow 不可读取时报告错误、关闭适配 Back；原 App 和 PWR Home 仍可使用。选择理由见 [ADR-0012](../../adr/0012-official-settings-keeps-its-navigation-owner.md)。
 
 ## App Card 与生命周期
 
@@ -53,6 +57,7 @@ Exposure Decision：开放稳定导航语义，不开放 GUI 坐标点击、原�
 
 - [System](../../../firmware/components/espocket_system/include/espocket/system.hpp)
 - [System implementation](../../../firmware/components/espocket_system/src/system.cpp)
+- [Settings Navigation Adapter](../../../firmware/components/espocket_system/include/espocket/settings_navigation_adapter.hpp)
 - [CircularShell](../../../firmware/components/shell_circular/include/espocket/circular_shell.hpp)
 - [Brookesia GUI runtime](../../../firmware/managed_components/espressif__brookesia_gui_interface/src/runtime.cpp)
 

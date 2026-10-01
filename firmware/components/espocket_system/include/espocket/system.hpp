@@ -6,15 +6,20 @@
 #include <memory>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 
 #include "brookesia/service_manager/service/manager.hpp"
 #include "brookesia/system_core.hpp"
+#include "espocket/page_navigator.hpp"
 
 namespace espocket {
 
 class CircularShell;
 class PowerKeyMonitor;
 class PageNavigator;
+class DeveloperMode;
+class InteractionTestAdapter;
+class SettingsNavigationAdapter;
 enum class ShellSurface : uint8_t;
 
 class System final : public esp_brookesia::system::core::System {
@@ -22,6 +27,7 @@ public:
     System();
     ~System() override;
     std::expected<void, std::string> init();
+    std::expected<PageSnapshot, std::string> foreground_page_snapshot() const;
 
 protected:
     esp_brookesia::system::core::SystemInfo on_get_system_info() const override;
@@ -63,15 +69,23 @@ private:
     void restore_surface(ShellSurface surface);
     void clear_foreground(const esp_brookesia::system::core::AppInfo &app);
     void restore_home_after_lifecycle(const esp_brookesia::system::core::AppInfo &app);
+    std::shared_ptr<PageNavigator> navigator_for(esp_brookesia::system::core::AppId app_id) const;
+    void register_navigator(
+        esp_brookesia::system::core::AppId app_id,
+        std::shared_ptr<PageNavigator> navigator
+    );
 
     esp_brookesia::service::ServiceBinding display_binding_;
     std::shared_ptr<CircularShell> shell_;
-    std::shared_ptr<PageNavigator> hello_navigator_;
+    std::shared_ptr<SettingsNavigationAdapter> settings_adapter_;
+    esp_brookesia::system::core::AppId settings_id_ = esp_brookesia::system::core::INVALID_APP_ID;
+    std::unordered_map<esp_brookesia::system::core::AppId, std::shared_ptr<PageNavigator>> page_navigators_;
+    std::shared_ptr<DeveloperMode> developer_mode_;
+    std::unique_ptr<InteractionTestAdapter> test_adapter_;
     std::unique_ptr<PowerKeyMonitor> power_key_monitor_;
     std::shared_ptr<std::atomic<uint64_t>> foreground_token_ =
         std::make_shared<std::atomic<uint64_t>>(0);
     esp_brookesia::system::core::AppId shell_id_ = esp_brookesia::system::core::INVALID_APP_ID;
-    esp_brookesia::system::core::AppId hello_id_ = esp_brookesia::system::core::INVALID_APP_ID;
     std::atomic_bool default_back_visible_ = false;
     std::atomic_bool edge_back_enabled_ = false;
     std::atomic<esp_brookesia::system::core::AppId> foreground_app_id_{

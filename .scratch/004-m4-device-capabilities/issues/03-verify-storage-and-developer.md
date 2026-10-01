@@ -6,6 +6,6 @@
 
 **Status:** ready-for-human
 
-- [ ] Storage 可见信息反映真实设备状态。
-- [ ] Developer/debug control 正确执行并返回。
+- [ ] 真机读取 Storage 信息并核对实际设备状态；记录页面可见结果、必要的串口证据和镜像 identity。
+- [ ] 真机执行 Developer/debug control，核对实际控制效果、返回路径和 PWR Home；记录未验证项。
 - [ ] 增加新 evidence，不修改此前已接受记录。

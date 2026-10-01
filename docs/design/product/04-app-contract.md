@@ -24,9 +24,10 @@
 | APP-010 | Native App 与 Runtime App 必须对相同输入和生命周期事件给出相同的产品语义。 |
 | APP-021 | 每个 App 必须声明唯一 Root 和稳定的 Page 类型 ID；Root 不提供 Back，子页面 Back 返回 App 页面栈中的上一页面。 |
 | APP-022 | App 决定 Page 转移，ESPocket 保存导航栈并提供 push、pop、replace 和回 Root 操作；首版不提供跨 App 返回链。 |
-| APP-023 | ESPocket 默认在子页面提供可见 Back 与 Edge Back；App 可整体关闭两者，但多级 App 必须自带调用同一 Back 语义的可见控件。App 使用 ESPocket 标准 Back 控件时不得再叠加第二个可见 Back。 |
+| APP-023 | ESPocket 默认在子页面提供可见 Back 与 Edge Back；所有 App 可定制返回 UI 与手势（包括边缘或上下滑动），也可不显示可见 Back；接管默认入口后，自定义入口必须调用同一 Back 语义。App 使用 ESPocket 标准 Back 控件时不得再叠加第二个可见 Back。 |
 | APP-024 | App 可以暂缓普通 Back 并自行显示确认；待决时重复 Back 不得重复提交，超时取消并报告错误，PWR Home 始终可立即离开。 |
 | APP-025 | PWR Home 后再次打开 App 必须从 Root 开始；未被回收的 App 在息屏唤醒时尽力恢复原 Page。 |
+| APP-029 | 系统明确适配的预装 App 可以保留已有导航事实源，向系统提供同一 Page 与 Back 语义；不得复制第二份栈，未知页面必须报告不可用，Root 无 Back 与 PWR Home 规则仍适用。 |
 
 旧要求的替代关系：APP-001 → APP-021、APP-023；APP-002 → APP-022；APP-007 → APP-023。旧 ID 保留在 Git 历史中，不再表示当前产品要求。
 

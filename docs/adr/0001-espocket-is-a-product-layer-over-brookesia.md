@@ -17,7 +17,7 @@ Circular Shell 使用隐藏的 Native `IApp` 作为 Brookesia carrier，同时�
 ## Consequences
 
 - 产品策略位于 `espocket::System`、Shell 和聚焦的 Adapter 中。
-- Framework 缺口可以阻塞 Milestone，不能通过第二套 framework 绕过。
+- Framework 缺口可以阻塞产品工作，不能通过第二套 framework 绕过。
 - Managed components 继续由上游持有；兼容代码必须显式且可移除。
 
 ## Alternatives rejected

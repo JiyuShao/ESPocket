@@ -48,6 +48,8 @@ Exposure Decision：测试协议是本地开发能力，不注册为 Assistant �
 
 ## Code Anchors
 
+- [ESPocket Test Adapter](../../../firmware/components/espocket_test_adapter/include/espocket/interaction_test_adapter.hpp)：产品层 USB Serial/JTAG 入口与版本化协议；Native 和 Runtime 共用这一入口。
+- [DeveloperMode](../../../firmware/components/espocket_test_adapter/include/espocket/developer_mode.hpp)：设备端持久准入开关。
 - [CircularShell](../../../firmware/components/shell_circular/include/espocket/circular_shell.hpp)
 - [System](../../../firmware/components/espocket_system/include/espocket/system.hpp)
 - [Display Service](../../../firmware/managed_components/espressif__brookesia_service_display/include/brookesia/service_display/service_display.hpp)

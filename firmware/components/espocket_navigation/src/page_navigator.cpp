@@ -27,10 +27,6 @@ std::expected<PageNavigator, NavigationError> PageNavigator::create(
     if (!pages.contains(declaration.root_page_id)) {
         return std::unexpected(NavigationError::InvalidDeclaration);
     }
-    if (declaration.back_presentation == BackPresentation::AppOwned &&
-            pages.size() > 1 && !declaration.has_app_owned_back_control) {
-        return std::unexpected(NavigationError::InvalidDeclaration);
-    }
     std::unordered_set<std::string_view> cards;
     for (const auto &card : declaration.cards) {
         if (card.card_id.empty() || !cards.insert(card.card_id).second ||
@@ -76,7 +72,7 @@ std::expected<void, NavigationError> PageNavigator::start()
 
 std::expected<void, NavigationError> PageNavigator::start_from_card(std::string_view card_id)
 {
-    std::lock_guard lock(*mutex_);
+    std::unique_lock lock(*mutex_);
     auto started = start();
     if (!started) {
         return started;
@@ -85,12 +81,26 @@ std::expected<void, NavigationError> PageNavigator::start_from_card(std::string_
         return candidate.card_id == card_id;
     });
     if (card == declaration_.cards.end()) {
+        auto diagnostic = diagnostic_handler_;
+        lock.unlock();
+        if (diagnostic) {
+            diagnostic(NavigationError::TargetUnavailable, card_id);
+        }
         return std::unexpected(NavigationError::TargetUnavailable);
     }
     if (card->target_page_id.empty() || card->target_page_id == declaration_.root_page_id) {
         return {};
     }
-    return push(card->target_page_id);
+    auto opened = push(card->target_page_id);
+    if (!opened) {
+        auto diagnostic = diagnostic_handler_;
+        lock.unlock();
+        if (diagnostic) {
+            diagnostic(NavigationError::TargetUnavailable, card_id);
+        }
+        return std::unexpected(NavigationError::TargetUnavailable);
+    }
+    return {};
 }
 
 std::expected<void, NavigationError> PageNavigator::push(std::string_view page_id)
@@ -189,6 +199,12 @@ void PageNavigator::set_availability_handler(AvailabilityHandler handler)
     std::lock_guard lock(*mutex_);
     availability_handler_ = std::move(handler);
     publish_availability();
+}
+
+void PageNavigator::set_diagnostic_handler(DiagnosticHandler handler)
+{
+    std::lock_guard lock(*mutex_);
+    diagnostic_handler_ = std::move(handler);
 }
 
 std::expected<std::optional<uint64_t>, NavigationError> PageNavigator::request_back(

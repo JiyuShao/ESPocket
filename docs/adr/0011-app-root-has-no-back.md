@@ -10,6 +10,10 @@
 
 ## Decision
 
+[ADR-0013](0013-app-controls-back-presentation.md) 后续明确所有 App 可定制返回 UI 与手势，不要求可见 Back；Root 与导航事实所有权不变。
+
+[ADR-0012](0012-official-settings-keeps-its-navigation-owner.md) 后续限定修订了官方 Settings 的导航栈所有权；本记录的 Root 无 Back 与 Home 决定继续有效。
+
 Watch Face 继续是唯一 Home。App 声明唯一 Root 和稳定的 Page 类型 ID；App 决定页面转移，ESPocket 保存 App 内导航栈并统一处理 Back。Root 没有可见默认 Back，也不响应 Edge Back；子页面 Back 返回栈中上一页面。App 可以暂缓普通 Back 以确认未保存内容，但不能阻止 PWR Home。
 
 App Card 仍是同一 App 在 Home Space 的专门呈现形态。Card 可打开 App Root 或声明的目标 Page；目标 Page 的栈以 Root 为底。离开 App 的系统入口是 PWR Home，直接返回 Watch Face，不恢复启动来源。首版不提供跨 App 返回链。

@@ -1,6 +1,16 @@
 # 交互自动化测试协议（目标 v1）
 
-本文定义主机 Test Driver 与 ESPocket Test Adapter 的开发协议语义。命令入口尚未实现；实施见[交互自动化工作项](../../.scratch/012-test-automation-contract/spec.md)，Owner 见[交互自动化架构](../design/architecture/08-interaction-test-seam.md)。C++ 接口、USB 帧格式和字段拼写将在实现时发布版本化 schema；本页不把示意名称当成已可调用命令。
+本文定义主机 Test Driver 与 ESPocket Test Adapter 的开发协议语义。实施见[交互自动化工作项](../../.scratch/012-test-automation-contract/spec.md)，Owner 见[交互自动化架构](../design/architecture/08-interaction-test-seam.md)。当前只实现 USB 准入与 `hello`；其余命令仍是目标契约。
+
+## 当前 USB 帧格式
+
+USB Serial/JTAG 上的测试帧是以 `@ESPTEST ` 开头的一行 JSON，普通串口日志没有这个前缀。请求示例：
+
+```text
+@ESPTEST {"version":1,"request_id":42,"op":"hello"}
+```
+
+响应带相同前缀，包含 `version`、`request_id`、`ok`。成功的 `hello` 还返回 `image_identity`（当前为 ESP-IDF 保存的 ELF SHA 前 9 个字符）与 `capabilities`；错误响应带 `error_code`。当前版本号为 `1`，能力列表仅含 `hello`。未实现的操作返回 `unsupported`；开发者模式关闭时，版本正确的命令返回 `developer_mode_off`。`busy` 已作为协议错误保留，实际刺激序列并发拒绝在 ticket 02 实现。帧长上限为 1024 字节，超长帧被丢弃并返回 `bad_request`。开发者模式开关位于设备 Quick Settings，默认关闭并保存到 NVS。
 
 ## 准入与传输
 
@@ -26,7 +36,7 @@
 
 最小快照包含单调 `seq`、Home Space `surface`、`display` 开关状态、`foregroundAppId`，以及前台 App 的 `pageId`、`canBack`、`backPending`。无前台 App 时页面字段为空。Page ID 来自 App 安装声明和 ESPocket 唯一导航栈；测试协议不暴露页面参数、表单内容、私有控件树或整条栈。
 
-Home Space 的 `surface` 至少能区分 Watch Face、Launcher、Quick Settings 和具体 Card 身份。需要验证 Launcher 顶部拉伸时，Shell 可提供只读滚动到顶和拉动阶段；这些是 Owner 的交互反馈事实，不由 Test Driver 复制。精确字段、枚举值与序列化格式在首个协议实现中定版。
+Home Space 的 `surface` 至少能区分 Watch Face、Launcher、Quick Settings 和具体 Card 身份。需要验证 Launcher 顶部拉伸时，Shell 可提供只读滚动到顶和拉动阶段；这些是 Owner 的交互反馈事实，不由 Test Driver 复制。快照字段、枚举值与序列化格式在 `snapshot` 实现时定版。
 
 ## 错误与清理
 
@@ -40,4 +50,4 @@ Home Space 的 `surface` 至少能区分 Watch Face、Launcher、Quick Settings 
 | `physical-input` | 真机触摸与 PWR 硬件链路 | 视觉提示是否足够清晰 |
 | `visual` | 屏幕上的箭头、拉伸、Back 控件与状态信息 | 输入电气链路和内部状态转移 |
 
-阶段验收按相应 [Milestone](../milestones/README.md) 的证据门槛判定；三类证据不能互相冒充。测试协议不注册为 Assistant 可调用能力，Assistant 的 Home、Back 和 App Action 仍使用正式语义接口。
+任务验收按 [.scratch](../../.scratch/README.md) 中对应 ticket 的证据条件判定；三类证据不能互相冒充。测试协议不注册为 Assistant 可调用能力，Assistant 的 Home、Back 和 App Action 仍使用正式语义接口。

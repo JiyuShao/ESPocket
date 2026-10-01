@@ -1,9 +1,9 @@
-# M5 — Application Ecosystem
+# Application Ecosystem
 
 Sequence: 005
 
 Status: retrospective-active
-Blocked by: M3 `PASS`.
+Blocked by: [003/02 Runtime lifecycle 与共存](../003-m3-runtime-app/issues/02-prove-runtime-lifecycle-coexistence.md)（已完成）；上游及分发依赖见各 ticket。
 Historical basis: 2026-09-29 根据已接受 Store 工作、真机失败和未解决 distribution gate 重建。
 
 ## Problem Statement
@@ -50,7 +50,28 @@ ESPocket 需要官方 Store 与远程 Runtime distribution path，但锁定的�
 - [03 — 执行 Core 持有的 package trust gate](issues/03-enforce-core-package-trust.md)
 - [04 — 从 Core 投影 dynamic Launcher entry](issues/04-project-dynamic-launcher-from-core.md)
 - [05 — 验证 remote package lifecycle](issues/05-validate-package-lifecycle.md)
+- [06 — 采用并复验在线 Store 修复](issues/06-adopt-online-store-stability-fix.md)
+- [07 — 隔离 Runtime keyboard result](issues/07-isolate-runtime-keyboard-results.md)
+- [08 — 取得兼容签名包与发布路径](issues/08-publish-compatible-signed-package.md)
 
 ## Further Notes
 
-当前状态见 [M5 acceptance](../../docs/milestones/m5/acceptance.md)。长期契约见 [Runtime package trust](../../docs/design/product/05-runtime-package-trust.md)与 [App discovery](../../docs/design/product/06-application-discovery.md)。
+长期规则见 [Runtime package trust](../../docs/design/product/05-runtime-package-trust.md)与 [App discovery](../../docs/design/product/06-application-discovery.md)。
+
+## 已接受结果
+
+| Gate | Result |
+|---|---|
+| Official Store integration | Store 0.8.2、HTTP 0.8.2、TLS policy、resources 和 clean build 通过 |
+| Offline lifecycle | clean image Store startup/Home 与 cached 1/1 containment lifecycle 通过 |
+| Network transfer | 远程 index 和部分 metadata 曾成功写入 cache |
+| Containment image | 1 worker / 1 request app-only write、hash、90-second boot、Wi-Fi 与 SNTP 通过 |
+| Static analysis | 包信任、catalog compatibility 与 Runtime keyboard isolation 缺口已经识别 |
+
+## 剩余工作与完成条件
+
+在线稳定性由 [06](issues/06-adopt-online-store-stability-fix.md) 关闭；包信任由 [03](issues/03-enforce-core-package-trust.md) 关闭；Runtime isolation 由 [07](issues/07-isolate-runtime-keyboard-results.md) 关闭；兼容签名包与发布路径由 [08](issues/08-publish-compatible-signed-package.md) 关闭。前置条件成立后，再完成 [04 动态 Launcher](issues/04-project-dynamic-launcher-from-core.md) 和 [05 包生命周期](issues/05-validate-package-lifecycle.md)。这些未完成项仍是当前产品范围内的发布条件。
+
+## 记录
+
+- [2026-09-28-acceptance-report](records/2026-09-28-acceptance-report.md)

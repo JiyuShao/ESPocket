@@ -13,3 +13,7 @@
 ## Resolution
 
 1/1 policy 降低了 allocation pressure，但真机在 cancellation 时失败；无需继续执行不安全复现。
+
+## Comments
+
+- 2026-10-02：本票只关闭诊断。采用官方修复与在线真机复验由 [06](06-adopt-online-store-stability-fix.md) 承接，不能将诊断终态当成 online stability 已通过。

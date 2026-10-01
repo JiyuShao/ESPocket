@@ -2,7 +2,7 @@
 
 Sequence: 012
 
-Status: planned
+Status: active
 Blocked by: none
 
 ## Problem Statement
@@ -45,7 +45,8 @@ Wi-Fi 测试通道、任意 App Action、应用安装、设置修改、物理执
 
 ## Further Notes
 
+- [2026-10-02 USB 准入记录](records/2026-10-02-usb-gate.md)
 - [开发者模式产品要求](../../docs/design/product/07-developer-mode-testing.md)
 - [交互自动化架构](../../docs/design/architecture/08-interaction-test-seam.md)
 - [测试开发协议](../../docs/development/interaction-test-protocol.md)
-- [M7 验收](../../docs/milestones/m7/acceptance.md)
+- [系统导航验收](../007-m7-navigation/issues/03-run-navigation-hardware-acceptance.md)

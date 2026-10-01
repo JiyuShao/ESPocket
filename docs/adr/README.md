@@ -17,5 +17,8 @@ ADR 记录替代方案代价显著、需要长期保持可追溯的 ESPocket 决
 | [0009](0009-ai-native-is-a-foundational-design-dimension.md) | accepted | AI Native 是底层设计维度。 |
 | [0010](0010-app-cards-are-app-surfaces-in-home-space.md) | superseded by 0011 | App Card 是同一 App 在 Home Space 的专门形态；旧 Root Back 决定已替换。 |
 | [0011](0011-app-root-has-no-back.md) | accepted | App Root 无 Back；ESPocket 保存 App 页面栈。 |
+| [0012](0012-official-settings-keeps-its-navigation-owner.md) | accepted | 官方 Settings 保留导航事实源；ESPocket 适配快照与 Back。 |
+
+| [0013](0013-app-controls-back-presentation.md) | accepted | 所有 App 可定制 Back UI 与手势，不要求可见按钮。 |
 
 决策变更时新增 superseding ADR，并让新旧记录相互链接。不得静默改写已接受 ADR 的决定。

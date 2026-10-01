@@ -1,9 +1,10 @@
 idf_component_register(
-    SRCS "src/system.cpp" "src/power_key_monitor.cpp"
+    SRCS "src/system.cpp" "src/power_key_monitor.cpp" "src/settings_navigation_adapter.cpp"
     INCLUDE_DIRS "include"
     REQUIRES
         app_hello
         espocket_navigation
+        espocket_test_adapter
         shell_circular
         brookesia_app_settings
         brookesia_app_store
@@ -16,3 +17,15 @@ idf_component_register(
 )
 
 target_compile_features(${COMPONENT_LIB} PUBLIC cxx_std_23)
+
+# Reject dependency upgrades that no longer match the Settings compatibility map.
+execute_process(
+    COMMAND "${PYTHON}" "${CMAKE_CURRENT_LIST_DIR}/tests/test_settings_adapter.py"
+        SettingsCompatibility.test_locked_resources_match_adapter
+    RESULT_VARIABLE settings_compatibility_result
+    OUTPUT_VARIABLE settings_compatibility_output
+    ERROR_VARIABLE settings_compatibility_error
+)
+if(NOT settings_compatibility_result EQUAL 0)
+    message(FATAL_ERROR "Settings adapter compatibility failed:\n${settings_compatibility_output}${settings_compatibility_error}")
+endif()

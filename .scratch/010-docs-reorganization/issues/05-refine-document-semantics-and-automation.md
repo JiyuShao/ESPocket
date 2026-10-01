@@ -19,3 +19,7 @@
 ## Comments
 
 后续检查发现，把共享 evidence 与独立 verification 放入 `docs/milestones/` 仍然混合了原始产物和权威文档。最终由 [06 — 纯化产品文档与证据边界](06-purify-product-and-evidence-boundaries.md)删除 raw evidence 与共享 verification；本 ticket 保留用于追溯调整顺序。
+
+## 后续文档归属
+
+2026-10-02：本票记录的阶段文档路径属于当时的迁移历史。当前状态、验收和 records 已由 [08](08-unify-task-acceptance-records.md) 统一到本地 tracker，现行规则见 [文档入口](../../../docs/README.md)。

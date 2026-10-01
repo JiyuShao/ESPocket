@@ -1,13 +1,13 @@
-# M7 — Navigation Surfaces
+# Navigation Surfaces
 
 Sequence: 007
 
 Status: active
-Blocked by: M6 `PASS` for stage acceptance.
+Blocked by: [006/03 Home 与显示真机验收](../006-m6-home-display/issues/03-run-hardware-acceptance.md)（已完成）；Native 源码依赖见 ticket 02。
 
 ## Problem Statement
 
-M6 建立 Home 与 Display State 后，ESPocket 需要一套以手表为中心、贯穿 Cards、Quick Settings、Launcher 与 Native App 的导航闭环。
+Home 与 Display State 建立后，ESPocket 需要一套以手表为中心、贯穿 Cards、Quick Settings、Launcher 与 Native App 的导航闭环。
 
 ## Solution
 
@@ -31,7 +31,7 @@ M6 建立 Home 与 Display State 后，ESPocket 需要一套以手表为中心�
 
 ## Testing Decisions
 
-- M6 `PASS` 是阶段 acceptance 的 gate。
+- 真机验收依赖已完成的 Home 与显示验收票；源码前置由 014 的 Navigator/Back 票提供。
 - 在真机上验证完整导航闭环与每条 edge path。
 - 证明真实 Wi-Fi 与 brightness 变化，不能只观察控件文案。
 
@@ -42,13 +42,19 @@ Runtime App 契约验证、App Card 注册与动态配置、任意 App-to-App hi
 ## Tickets
 
 - [01 — 修复 brightness output identity](issues/01-fix-brightness-output-identity.md)
-- [02 — 关闭 M7 source 与 build gate](issues/02-close-navigation-source-gates.md)
-- [03 — 执行 M7 navigation hardware acceptance](issues/03-run-navigation-hardware-acceptance.md)
-
-## Further Notes
-
-固定 acceptance gate 见 [M7 acceptance](../../docs/milestones/m7/acceptance.md)。
+- [02 — 关闭系统导航源码与构建条件](issues/02-close-navigation-source-gates.md)
+- [03 — 完成系统导航真机验收](issues/03-run-navigation-hardware-acceptance.md)
 
 ## Comments
 
 - 2026-10-01：原方案要求「实现真实 Surface content、Edge Back 与一个直接 Launch Source」，并让「Back 返回直接启动 App 的 Surface」；原决定还包括「Cards 保持 single-page content，不变成 nested App」及「只保存一个直接 Launch Source」。经 [ADR-0011](../../docs/adr/0011-app-root-has-no-back.md) 决策，App Root 改为无 Back，子页面使用 Page 栈；当前固定 Card 仍保持单页，App Card 留待后续。上文为当前待实施范围，原方案保存在此作为决策历史。
+
+## 当前结果与完成条件
+
+亮度 OutputId 已修复；两轮系统导航及 Wi-Fi/亮度真实变化已取得样机证据。剩余源码、Card 边界和 Settings/Store 组合条件归 [02](issues/02-close-navigation-source-gates.md)，未覆盖的单次路径及最终镜像核对归 [03](issues/03-run-navigation-hardware-acceptance.md)。已有两轮证据保留，不重复要求完整循环。触控镜像、已刷入镜像与最新仅构建镜像分别以 records 中的 identity 为准。
+
+## 记录
+
+- [2026-10-02-brightness-output-id](records/2026-10-02-brightness-output-id.md)
+- [2026-10-02-source-gate-progress](records/2026-10-02-source-gate-progress.md)
+- [2026-10-02-two-navigation-loops](records/2026-10-02-two-navigation-loops.md)

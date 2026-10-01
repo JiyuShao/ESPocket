@@ -2,7 +2,7 @@
 
 **What to build:** 使用锁定 Toolkit 构建的最小官方 JavaScript Runtime package，并通过 System Core helper stage 到 LittleFS。
 
-**Blocked by:** M2 `PASS`.
+**Blocked by:** [002/03 Native lifecycle 与 heap](../../002-m2-native-app/issues/03-run-lifecycle-heap-gate.md)（已完成）。
 
 **Status:** retrospective-resolved
 

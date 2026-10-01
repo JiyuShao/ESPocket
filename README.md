@@ -6,7 +6,7 @@ ESPocket 负责产品语义、系统装配和交互契约；ESP-Brookesia 提供
 
 ## 项目进展
 
-阶段状态、门槛和证据只在 [Milestone 总览](docs/milestones/README.md) 维护。
+任务、依赖、验收结果与证据入口统一在 [Local work index](.scratch/README.md) 维护。
 
 ## 文档
 

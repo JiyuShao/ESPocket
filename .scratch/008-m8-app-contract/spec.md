@@ -1,9 +1,9 @@
-# M8 — App Interaction Contract
+# App Interaction Contract
 
 Sequence: 008
 
 Status: planned
-Blocked by: M7 `PASS`.
+Blocked by: [014/04 Native/Runtime 导航绑定](../014-app-navigation-card-contract/issues/04-samples-api-finalization.md)；验收与回收依赖见各 ticket。
 
 ## Problem Statement
 
@@ -31,7 +31,7 @@ Native navigation model 必须成为 Native、Runtime 与 third-party App 共用
 
 ## Testing Decisions
 
-- 要求 M7 `PASS`；M3 Runtime 证据属于依赖，不能替代本阶段证据。
+- 具体前置见各 ticket：系统导航真机验收、Native/Runtime 新绑定与可控回收入口。既有 Runtime lifecycle 证据不能替代当前交互证据。
 - Native 与 Runtime navigation/reclaim 路径各执行 5 次。
 - 使用真实 Runtime App，不使用 Native mock。
 
@@ -41,14 +41,14 @@ Native navigation model 必须成为 Native、Runtime 与 third-party App 共用
 
 ## Tickets
 
-- [01 — 完成 Native/Runtime 共享契约源码](issues/01-complete-shared-contract-source.md)
+- [01 — 既有 Native/Runtime 共享契约源码基线](issues/01-complete-shared-contract-source.md)
 - [02 — 增加 Native 与 Runtime reclaim test seam](issues/02-add-app-reclaim-test-seams.md)
-- [03 — 执行 M8 App contract hardware acceptance](issues/03-run-app-contract-hardware-acceptance.md)
-
-## Further Notes
-
-固定 acceptance gate 见 [M8 acceptance](../../docs/milestones/m8/acceptance.md)。
+- [03 — 完成 App 交互真机验收](issues/03-run-app-contract-hardware-acceptance.md)
 
 ## Comments
 
 - 2026-10-01：原问题与方案包括 `invalid-source` 行为、直接 Launch Source 验证，原实施决定为「App task 保存一个直接 Launch Source」。经 [ADR-0011](../../docs/adr/0011-app-root-has-no-back.md) 决策，Root 无 Back，ESPocket 保存 App Page 栈，首版不提供跨 App 返回；待决 Back 加入验收。上文为当前待实施范围，原方案保存在此作为决策历史。
+
+## 当前结果与完成条件
+
+四类页面指导及旧版 Runtime Toolkit/build/staging 基线已存在；这些结果不能证明新 Navigator、Root 无 Back 或待决 Back。新增语言绑定与开发 API 由 [014/04](../014-app-navigation-card-contract/issues/04-samples-api-finalization.md) 承接；本 Effort 完成 [02 回收入口](issues/02-add-app-reclaim-test-seams.md) 和 [03 真实 Native/Runtime 交互验收](issues/03-run-app-contract-hardware-acceptance.md)。两种执行模型分别保留证据，固定次数沿用原要求。

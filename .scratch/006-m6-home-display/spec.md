@@ -1,9 +1,9 @@
-# M6 — Home and Display State
+# Home and Display State
 
 Sequence: 006
 
 Status: resolved
-Blocked by: M2 `PASS`.
+Blocked by: [002/02 Home 与 cleanup](../002-m2-native-app/issues/02-close-the-home-and-cleanup-loop.md)（已完成）。
 
 ## Problem Statement
 
@@ -42,8 +42,19 @@ Cards、Quick Settings、Edge Back、dynamic Launcher 与任意后台调度。
 
 - [01 — 实现 Watch Face Home 与 Display State](issues/01-implement-home-display-state.md)
 - [02 — 增加可控 reclaim fallback seam](issues/02-add-reclaim-fallback-seam.md)
-- [03 — 执行 M6 hardware acceptance](issues/03-run-hardware-acceptance.md)
+- [03 — 完成 Home 与显示真机验收](issues/03-run-hardware-acceptance.md)
 
-## Further Notes
+## 已接受结果
 
-固定 acceptance gate 见 [M6 acceptance](../../docs/milestones/m6/acceptance.md)。
+2026-10-02 完成。四条固定路径各 5/5、四项单次检查和 failure scan 均通过；资源趋势无持续下降，诊断后恢复普通镜像并由用户确认。详细步骤、判定和各记录链接由 [03](issues/03-run-hardware-acceptance.md) 持有。离线 Store 缺少可见提示弹窗属于历史已知限制；在线稳定性与设备能力剩余票仍保持开放，不受本 Effort 完成影响。
+
+## 记录
+
+- [2026-09-29-native-detail-followup](records/2026-09-29-native-detail-followup.md)
+- [2026-09-29-quick-device-smoke](records/2026-09-29-quick-device-smoke.md)
+- [2026-10-01-cold-boot](records/2026-10-01-cold-boot.md)
+- [2026-10-01-one-pass-checks](records/2026-10-01-one-pass-checks.md)
+- [2026-10-01-pwr-sequence-followup](records/2026-10-01-pwr-sequence-followup.md)
+- [2026-10-01-reclaim-test-image](records/2026-10-01-reclaim-test-image.md)
+- [2026-10-01-store-failure-rescan](records/2026-10-01-store-failure-rescan.md)
+- [2026-10-02-resource-trend](records/2026-10-02-resource-trend.md)

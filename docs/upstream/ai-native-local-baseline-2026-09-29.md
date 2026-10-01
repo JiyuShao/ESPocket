@@ -1,6 +1,6 @@
 # AI Native 设计所用本地源码快照 — 2026-09-29
 
-本页记录一次**本地、只读**的依赖锁与 API 核对，不是升级建议、持续同步状态或 Milestone 验收。未来实施前须重新核对届时的锁定源码。长期关系见[AI Native 架构](../design/architecture/07-ai-native.md)；当前结构见[架构总览](../design/architecture/README.md)。
+本页记录一次**本地、只读**的依赖锁与 API 核对，不是升级建议、持续同步状态或 任务验收。未来实施前须重新核对届时的锁定源码。长期关系见[AI Native 架构](../design/architecture/07-ai-native.md)；当前结构见[架构总览](../design/architecture/README.md)。
 
 ## 版本锁
 
@@ -38,4 +38,4 @@ Agent Manager、XiaoZhi 和 ESP-Claw 未进入当前依赖锁。当前 Runtime �
 
 **亮度示例的已知源码缺口**：当前 Shell 的亮度读取和加亮都向 Display Service 传 `OutputId = 0`（[`circular_shell.cpp`](../../firmware/components/shell_circular/src/circular_shell.cpp)）；锁定版 Display Service 从 `1` 分配输出 ID，亮度读写按该 ID 精确查找（[`display_lifecycle.cpp`](../../firmware/managed_components/espressif__brookesia_service_display/src/display_lifecycle.cpp)、[`display_backlight.cpp`](../../firmware/managed_components/espressif__brookesia_service_display/src/display_backlight.cpp)）。`System::start_display()` 已通过 `GetOutputs` 保存真实 ID。按当前源码，Shell 的亮度按钮会遇到 `0` 不可用；这是真机待确认的静态发现，不能用 M4 Settings App 的亮度验收替代 M7 Shell 路径验证。后续若选亮度作 AI Native 校验场景，必须从真实输出 ID 读写，并区分亮度目标值与屏幕点亮状态。
 
-动态包信任仍受[产品契约](../design/product/05-runtime-package-trust.md)和[M5 验收](../milestones/m5/acceptance.md)约束；这份源码快照不能证明第三方 Runtime App 已经 AI-ready。本次文档核对未执行新的固件 Build、测试或真机验证，也没有修改依赖。
+动态包信任仍受[产品契约](../design/product/05-runtime-package-trust.md)和[应用生态任务](../../.scratch/005-m5-application-ecosystem/spec.md)约束；这份源码快照不能证明第三方 Runtime App 已经 AI-ready。本次文档核对未执行新的固件 Build、测试或真机验证，也没有修改依赖。

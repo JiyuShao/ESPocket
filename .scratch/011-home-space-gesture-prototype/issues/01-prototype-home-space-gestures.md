@@ -2,7 +2,7 @@
 
 **What to build:** 可回退的 Launcher 列表和 Home Space 返回真机样机。
 
-**Blocked by:** 实现无依赖；M7 acceptance 仍由 M6 `PASS` 阻塞。
+**Blocked by:** None；正式导航验收由 [007/03](../../007-m7-navigation/issues/03-run-navigation-hardware-acceptance.md) 独立负责。
 
 **Status:** ready-for-human
 
@@ -18,4 +18,4 @@
 
 2026-09-30：这是可回退样机；不改变 M7 的计划状态。App Card 留待后续。
 
-2026-09-30：增强版样机已构建并刷入真机，镜像 identity 和静态检查见 [M7 阶段外记录](../../../docs/milestones/m7/records/2026-09-30-home-space-prototype.md)。等待用户观察列表滚动、顶部下拉与 Quick Settings 返回后，再判断验收项。
+2026-09-30：增强版样机已构建并刷入真机，镜像 identity 和静态检查见 [M7 阶段外记录](../records/2026-09-30-home-space-prototype.md)。等待用户观察列表滚动、顶部下拉与 Quick Settings 返回后，再判断验收项。

@@ -45,7 +45,7 @@ Exposure Decision：每层只开放自己拥有的产品语义；Framework 与 H
 - [ESPocket System CMakeLists.txt](../../../firmware/components/espocket_system/CMakeLists.txt)
 - [CircularShell CMakeLists.txt](../../../firmware/components/shell_circular/CMakeLists.txt)
 - [idf_component.yml](../../../firmware/main/idf_component.yml)
-- [Board Manager generated interface](../../../firmware/components/gen_bmgr_codes/)
+- [Board Manager generated interface](../../../firmware/components/gen_bmgr_codes)
 
 ## 非目标
 

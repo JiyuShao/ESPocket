@@ -24,8 +24,11 @@
 #include "esp_log.h"
 #include "esp_timer.h"
 #include "espocket/circular_shell.hpp"
+#include "espocket/developer_mode.hpp"
 #include "espocket/hello_app.hpp"
+#include "espocket/interaction_test_adapter.hpp"
 #include "espocket/page_navigator.hpp"
+#include "espocket/settings_navigation_adapter.hpp"
 #include "espocket/power_key_monitor.hpp"
 
 namespace espocket {
@@ -174,6 +177,13 @@ esp_brookesia::system::core::SystemInfo System::on_get_system_info() const
 
 std::expected<void, std::string> System::on_init()
 {
+    developer_mode_ = make_device_developer_mode();
+    if (auto restored = developer_mode_->restore(); !restored) {
+        ESP_LOGW(TAG, "Developer mode disabled after storage read failure: %s",
+                 restored.error().c_str());
+    }
+    test_adapter_ = std::make_unique<InteractionTestAdapter>(developer_mode_);
+
     auto hello = std::make_shared<HelloApp>();
     auto declaration = hello->get_page_declaration();
     if (declaration.app_id != hello->get_manifest().id) {
@@ -189,41 +199,56 @@ std::expected<void, std::string> System::on_init()
     if (!navigator) {
         return std::unexpected("Invalid Hello Native Page declaration");
     }
-    hello_navigator_ = std::make_shared<PageNavigator>(std::move(*navigator));
-    hello_navigator_->set_availability_handler([this](bool default_visible, bool edge_enabled) {
-        default_back_visible_.store(default_visible, std::memory_order_release);
-        edge_back_enabled_.store(edge_enabled, std::memory_order_release);
+    auto hello_navigator = std::make_shared<PageNavigator>(std::move(*navigator));
+    hello_navigator->set_diagnostic_handler([](NavigationError error, std::string_view target) {
+        if (error == NavigationError::TargetUnavailable) {
+            ESP_LOGW(TAG, "App Card target unavailable: %.*s", static_cast<int>(target.size()),
+                     target.data());
+        }
     });
-    hello->set_navigator(hello_navigator_);
+    hello->set_navigator(hello_navigator);
     auto hello_result = install_app(hello);
     if (!hello_result) {
         return std::unexpected("Failed to install Hello Native: " + hello_result.error());
     }
-    hello_id_ = *hello_result;
+    register_navigator(*hello_result, std::move(hello_navigator));
     ESP_LOGI(TAG, "Hello Native installed");
 
-    auto settings_result = install_app(
-                               std::make_shared<
-                                   esp_brookesia::app::settings::SettingsApp
-                               >()
-                           );
+    settings_adapter_ = std::make_shared<SettingsNavigationAdapter>(
+        std::make_shared<esp_brookesia::app::settings::SettingsApp>()
+    );
+    auto settings_result = install_app(settings_adapter_);
     if (!settings_result) {
         return std::unexpected(
             "Failed to install Settings: " + settings_result.error()
         );
     }
+    settings_id_ = *settings_result;
     ESP_LOGI(TAG, "Settings installed");
 
-    auto store_result = install_app(
-                            std::make_shared<
-                                esp_brookesia::app::app_store::AppStoreApp
-                            >()
-                        );
+    auto store = std::make_shared<esp_brookesia::app::app_store::AppStoreApp>();
+    const auto store_manifest = store->get_manifest();
+    auto store_navigator = PageNavigator::create(
+        PageDeclaration{
+            .app_id = store_manifest.id,
+            .root_page_id = "store.root",
+            .page_ids = {"store.root"},
+            .cards = {},
+            .back_presentation = BackPresentation::Framework,
+            .uses_standard_back_control = false,
+        },
+        [](std::string_view, std::string_view) { return true; }
+    );
+    if (!store_navigator) {
+        return std::unexpected("Invalid App Store Root Page declaration");
+    }
+    auto store_result = install_app(store);
     if (!store_result) {
         return std::unexpected(
             "Failed to install App Store: " + store_result.error()
         );
     }
+    register_navigator(*store_result, std::make_shared<PageNavigator>(std::move(*store_navigator)));
     ESP_LOGI(TAG, "App Store installed");
 
     power_key_monitor_ = std::make_unique<PowerKeyMonitor>();
@@ -268,17 +293,29 @@ std::expected<void, std::string> System::on_init()
             }
         },
         [this]() {
-            const bool hello_foreground = foreground_app_id_.load(std::memory_order_acquire) ==
-                                          hello_id_;
+            const auto foreground = foreground_app_id_.load(std::memory_order_acquire);
+            if (foreground == settings_id_ && settings_adapter_) {
+                return CircularShell::BackUiState{
+                    .default_visible = false,
+                    .edge_enabled = settings_adapter_->edge_back_enabled(),
+                };
+            }
+            const bool registered_foreground = navigator_for(foreground) != nullptr;
             return CircularShell::BackUiState{
-                .default_visible = hello_foreground &&
+                .default_visible = registered_foreground &&
                                    default_back_visible_.load(std::memory_order_acquire),
-                .edge_enabled = hello_foreground &&
+                .edge_enabled = registered_foreground &&
                                 edge_back_enabled_.load(std::memory_order_acquire),
             };
         },
         [this]() {
             handle_back_timeout();
+        },
+        CircularShell::DeveloperModeControl{
+            .enabled = [mode = developer_mode_]() { return mode->enabled(); },
+            .set_enabled = [adapter = test_adapter_.get()](bool enabled) {
+                return adapter->set_developer_mode(enabled);
+            },
         }
     );
     auto result = install_app(shell_);
@@ -328,6 +365,12 @@ std::expected<void, std::string> System::on_start()
     }
     display_on_.store(true, std::memory_order_release);
     resume_app_id_ = esp_brookesia::system::core::INVALID_APP_ID;
+    if (test_adapter_) {
+        auto started = test_adapter_->start();
+        if (!started) {
+            ESP_LOGW(TAG, "USB Test Adapter unavailable: %s", started.error().c_str());
+        }
+    }
     return {};
 }
 
@@ -342,10 +385,10 @@ std::expected<void, std::string> System::on_app_started(
         return {};
     }
 
-    if (app.manifest.id == "espocket.app.hello" && hello_navigator_) {
-        auto result = hello_navigator_->start();
+    if (auto navigator = navigator_for(app.app_id)) {
+        auto result = navigator->start();
         if (!result) {
-            return std::unexpected("Failed to start Hello Native Page Navigator");
+            return std::unexpected("Failed to start App Page Navigator");
         }
     }
 
@@ -363,8 +406,8 @@ void System::on_app_start_failed(
     std::string_view reason
 )
 {
-    if (app.manifest.id == "espocket.app.hello" && hello_navigator_) {
-        hello_navigator_->stop();
+    if (auto navigator = navigator_for(app.app_id)) {
+        navigator->stop();
     }
     ESP_LOGW(
         TAG,
@@ -378,8 +421,8 @@ void System::on_app_start_failed(
 
 void System::on_app_stopped(const esp_brookesia::system::core::AppInfo &app)
 {
-    if (app.manifest.id == "espocket.app.hello" && hello_navigator_) {
-        hello_navigator_->stop();
+    if (auto navigator = navigator_for(app.app_id)) {
+        navigator->stop();
     }
     restore_home_after_lifecycle(app);
 }
@@ -389,8 +432,8 @@ void System::on_app_stop_failed(
     std::string_view reason
 )
 {
-    if (app.manifest.id == "espocket.app.hello" && hello_navigator_) {
-        hello_navigator_->stop();
+    if (auto navigator = navigator_for(app.app_id)) {
+        navigator->stop();
     }
     ESP_LOGW(
         TAG,
@@ -536,11 +579,18 @@ void System::handle_back()
         return;
     }
 
-    if (active->manifest.id == "espocket.app.hello" && hello_navigator_) {
-        if (!hello_navigator_->edge_back_enabled()) {
+    if (active->app_id == settings_id_ && settings_adapter_) {
+        auto result = settings_adapter_->request_back();
+        if (!result && result.error() != "at_root") {
+            ESP_LOGW(TAG, "Settings Back failed: %s", result.error().c_str());
+        }
+        return;
+    }
+    if (auto navigator = navigator_for(active->app_id)) {
+        if (!navigator->edge_back_enabled()) {
             return;
         }
-        auto result = hello_navigator_->request_back(
+        auto result = navigator->request_back(
             static_cast<uint64_t>(esp_timer_get_time() / 1000)
         );
         if (!result) {
@@ -551,10 +601,15 @@ void System::handle_back()
 
 void System::handle_back_timeout()
 {
-    if (!hello_navigator_) {
+    if (foreground_app_id_.load(std::memory_order_acquire) == settings_id_ && settings_adapter_) {
+        settings_adapter_->refresh();
         return;
     }
-    const auto expired = hello_navigator_->expire_back(
+    auto navigator = navigator_for(foreground_app_id_.load(std::memory_order_acquire));
+    if (!navigator) {
+        return;
+    }
+    const auto expired = navigator->expire_back(
         static_cast<uint64_t>(esp_timer_get_time() / 1000)
     );
     if (expired) {
@@ -699,6 +754,9 @@ void System::restore_home_after_lifecycle(
 void System::on_stop()
 {
     stopping_.store(true, std::memory_order_release);
+    if (test_adapter_) {
+        test_adapter_->stop();
+    }
     foreground_token_->store(0, std::memory_order_release);
     if (power_key_monitor_) {
         power_key_monitor_->stop();
@@ -726,6 +784,9 @@ void System::on_stop()
 void System::on_deinit()
 {
     shell_.reset();
+    settings_adapter_.reset();
+    settings_id_ = esp_brookesia::system::core::INVALID_APP_ID;
+    page_navigators_.clear();
     power_key_monitor_.reset();
     shell_id_ = esp_brookesia::system::core::INVALID_APP_ID;
     foreground_app_id_.store(
@@ -744,6 +805,48 @@ void System::on_deinit()
         display_started_ = false;
     }
     display_binding_.release();
+}
+
+std::shared_ptr<PageNavigator> System::navigator_for(
+    esp_brookesia::system::core::AppId app_id
+) const
+{
+    const auto it = page_navigators_.find(app_id);
+    return it == page_navigators_.end() ? nullptr : it->second;
+}
+
+std::expected<PageSnapshot, std::string> System::foreground_page_snapshot() const
+{
+    const auto token = foreground_token_->load(std::memory_order_acquire);
+    const auto app_id = foreground_app_id_.load(std::memory_order_acquire);
+    if (token == 0 || app_id == esp_brookesia::system::core::INVALID_APP_ID) {
+        return std::unexpected("no_foreground_app");
+    }
+    std::expected<PageSnapshot, std::string> result = std::unexpected("page_adapter_unavailable");
+    if (app_id == settings_id_ && settings_adapter_) {
+        result = settings_adapter_->snapshot();
+    } else if (auto navigator = navigator_for(app_id)) {
+        auto page = navigator->snapshot();
+        result = page.page_id.empty() ? std::expected<PageSnapshot, std::string>(
+            std::unexpected("not_started")) : std::expected<PageSnapshot, std::string>(std::move(page));
+    }
+    if (foreground_token_->load(std::memory_order_acquire) != token ||
+            foreground_app_id_.load(std::memory_order_acquire) != app_id) {
+        return std::unexpected("foreground_changed");
+    }
+    return result;
+}
+
+void System::register_navigator(
+    esp_brookesia::system::core::AppId app_id,
+    std::shared_ptr<PageNavigator> navigator
+)
+{
+    navigator->set_availability_handler([this](bool default_visible, bool edge_enabled) {
+        default_back_visible_.store(default_visible, std::memory_order_release);
+        edge_back_enabled_.store(edge_enabled, std::memory_order_release);
+    });
+    page_navigators_.emplace(app_id, std::move(navigator));
 }
 
 std::expected<void, std::string> System::start_display()

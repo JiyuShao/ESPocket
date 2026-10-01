@@ -3,7 +3,7 @@
 Sequence: 011
 
 Status: active
-Blocked by: none; this prototype does not enter or pass M7
+Blocked by: None；样机观察不自动关闭正式导航验收 ticket。
 
 ## Problem Statement
 
@@ -29,13 +29,13 @@ Blocked by: none; this prototype does not enter or pass M7
 ## Testing Decisions
 
 - 固件构建成功，真机上检查导航、列表滚动、返回阈值、按钮误触、PWR 与息屏恢复。
-- 记录固件 identity 和人工观察；样机结论不计作 M7 acceptance。
+- 记录固件 identity 和人工观察；样机结论不自动关闭 007/03 的正式导航检查。
 
 ## Out of Scope
 
 - App Card 注册、动态配置与生命周期实现。
 - 通用 Launcher 动态应用发现。
-- M7 阶段验收。
+- 007/03 的正式导航验收。
 
 ## Tickets
 
@@ -43,4 +43,8 @@ Blocked by: none; this prototype does not enter or pass M7
 
 ## Further Notes
 
-参见 [交互模型](../../docs/design/product/03-interaction-model.md)、[App Card ADR](../../docs/adr/0010-app-cards-are-app-surfaces-in-home-space.md) 和 [M7 acceptance](../../docs/milestones/m7/acceptance.md)。
+参见 [交互模型](../../docs/design/product/03-interaction-model.md)、[App Card ADR](../../docs/adr/0010-app-cards-are-app-surfaces-in-home-space.md) 和 [系统导航验收](../007-m7-navigation/issues/03-run-navigation-hardware-acceptance.md)。
+
+## 记录
+
+- [2026-09-30-home-space-prototype](records/2026-09-30-home-space-prototype.md)

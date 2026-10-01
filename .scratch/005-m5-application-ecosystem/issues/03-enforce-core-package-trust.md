@@ -2,7 +2,7 @@
 
 **What to build:** 一条公开 install path，对完整 remote package 执行验证和事务式提交，并在重启后重新验证 trusted state。
 
-**Blocked by:** 上游 Core/Store seam 与兼容 signed package route。
+**Blocked by:** 上游 Core/Store 的统一 install/discovery seam；[08 兼容签名包与发布路径](08-publish-compatible-signed-package.md)。
 
 **Status:** needs-info
 

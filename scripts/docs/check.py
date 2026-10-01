@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import argparse
 import os
 import re
 import subprocess
@@ -146,7 +147,7 @@ def check_discoverability(files: list[Path]) -> list[str]:
 
 def check_raw_artifacts() -> list[str]:
     errors: list[str] = []
-    milestones = ROOT / "docs/milestones"
+    record_directories = (ROOT / ".scratch").glob("*/records")
     evidence_root = ROOT / "evidence"
     if evidence_root.exists():
         errors.append("evidence/: raw acceptance artifacts must not be committed to the source tree")
@@ -156,15 +157,18 @@ def check_raw_artifacts() -> list[str]:
         if path.is_dir() and path.name in {"evidence", "shared-evidence", "verification"}
     ):
         errors.append(f"{legacy.relative_to(ROOT)}/: raw artifacts and shared verification docs do not belong under docs/")
-    for path in milestones.rglob("*"):
-        if not path.is_file() or path.suffix.lower() == ".md":
-            continue
-        errors.append(f"{path.relative_to(ROOT)}: raw Milestone artifacts must not be committed under docs/")
+    for directory in record_directories:
+        for path in directory.rglob("*"):
+            if not path.is_file() or path.suffix.lower() == ".md":
+                continue
+            errors.append(f"{path.relative_to(ROOT)}: records must contain readable Markdown, not raw artifacts")
     return errors
 
 
 def check_authority_layout() -> list[str]:
     errors: list[str] = []
+    if (ROOT / "docs/milestones").exists():
+        errors.append("docs/milestones/: task status, acceptance and records belong in .scratch/")
     if (ROOT / "docs/guides").exists():
         errors.append("docs/guides/: firmware operations belong in firmware/README.md")
     if not (ROOT / "firmware/README.md").exists():
@@ -486,6 +490,9 @@ def check_scratch() -> list[str]:
             errors.append(f"{spec.relative_to(ROOT)}: retrospective spec lacks Historical basis")
         if not re.search(r"^Blocked by:\s*\S", text, re.MULTILINE):
             errors.append(f"{spec.relative_to(ROOT)}: missing Blocked by line")
+        blocker = re.search(r"^Blocked by:\s*(.*)$", text, re.MULTILINE)
+        if blocker and re.search(r"\bM\d+\b", blocker.group(1)):
+            errors.append(f"{spec.relative_to(ROOT)}: dependencies must name concrete tickets or external blockers")
     for effort in efforts:
         seen_issue_sequences: set[str] = set()
         issue_files = sorted((effort / "issues").glob("*.md"))
@@ -508,6 +515,9 @@ def check_scratch() -> list[str]:
                 errors.append(f"{issue.relative_to(ROOT)}: invalid ticket Status {status.group(1)!r}")
             if not re.search(r"^\*\*Blocked by:\*\*\s*\S", text, re.MULTILINE):
                 errors.append(f"{issue.relative_to(ROOT)}: missing blocking edge")
+            blocker = re.search(r"^\*\*Blocked by:\*\*\s*(.*)$", text, re.MULTILINE)
+            if blocker and re.search(r"\bM\d+\b", blocker.group(1)):
+                errors.append(f"{issue.relative_to(ROOT)}: dependencies must name concrete tickets or external blockers")
             if not re.search(r"^- \[[ x]\]\s+\S", text, re.MULTILINE):
                 errors.append(f"{issue.relative_to(ROOT)}: missing acceptance checklist")
             if status and status.group(1) in {"resolved", "retrospective-resolved"} and not re.search(
@@ -569,25 +579,39 @@ def check_diagrams() -> list[str]:
 
 
 def main() -> int:
-    files = markdown_files()
-    errors = (
-        check_links(files)
-        + check_discoverability(files)
-        + check_context()
-        + check_product_docs()
-        + check_architecture_docs()
-        + check_adrs()
-        + check_scratch()
-        + check_raw_artifacts()
-        + check_authority_layout()
-        + check_diagrams()
-    )
+    parser = argparse.ArgumentParser(description=__doc__)
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--markdown", action="store_true", help="Check Markdown structure, links and documentation rules only (default; no Chrome required).")
+    mode.add_argument("--diagrams", action="store_true", help="Check architecture SVG generation and layout only (requires Node.js and Chrome).")
+    mode.add_argument("--all", action="store_true", help="Check Markdown and architecture diagrams (requires Node.js and Chrome).")
+    args = parser.parse_args()
+    if args.diagrams:
+        errors = check_diagrams()
+        success = "architecture diagram check passed"
+    else:
+        files = markdown_files()
+        errors = (
+            check_links(files)
+            + check_discoverability(files)
+            + check_context()
+            + check_product_docs()
+            + check_architecture_docs()
+            + check_adrs()
+            + check_scratch()
+            + check_raw_artifacts()
+            + check_authority_layout()
+        )
+        if args.all:
+            errors += check_diagrams()
+        success = f"documentation check passed: {len(files)} Markdown files"
+        if args.all:
+            success += "; architecture diagrams checked"
     if errors:
         print("documentation check failed:")
         for error in errors:
             print(f"- {error}")
         return 1
-    print(f"documentation check passed: {len(files)} Markdown files")
+    print(success)
     return 0
 
 

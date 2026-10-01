@@ -31,6 +31,10 @@ public:
         bool default_visible = false;
         bool edge_enabled = false;
     };
+    struct DeveloperModeControl {
+        std::function<bool()> enabled;
+        std::function<std::expected<void, std::string>(bool)> set_enabled;
+    };
     using PowerPressCountProvider = std::function<uint32_t()>;
     using DisplayOnProvider = std::function<bool()>;
     using AppVisibleProvider = std::function<bool()>;
@@ -58,7 +62,8 @@ public:
         SystemHandler back_handler = {},
         KeyboardResultHandler keyboard_result_handler = {},
         BackUiProvider back_ui_provider = {},
-        SystemHandler back_timeout_handler = {}
+        SystemHandler back_timeout_handler = {},
+        DeveloperModeControl developer_mode = {}
     );
 
     esp_brookesia::system::core::AppManifest get_manifest() const override;
@@ -131,6 +136,7 @@ private:
     void refresh_wifi();
     void refresh_battery();
     void refresh_brightness();
+    void refresh_developer_mode();
     std::expected<void, std::string> step_brightness();
     std::expected<void, std::string> toggle_wifi();
     void set_status_text(std::string_view path, std::string text);
@@ -146,6 +152,7 @@ private:
     BackUiProvider back_ui_provider_;
     SystemHandler back_timeout_handler_;
     KeyboardResultHandler keyboard_result_handler_;
+    DeveloperModeControl developer_mode_;
     std::shared_ptr<HomeGestureState> home_gesture_state_;
     std::shared_ptr<KeyboardState> keyboard_state_;
     std::shared_ptr<BackOverlayState> back_overlay_state_;

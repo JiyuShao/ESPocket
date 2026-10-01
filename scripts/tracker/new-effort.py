@@ -92,7 +92,7 @@ Blocked by: {blocked_by}
 
 ## Further Notes
 
-链接相关 ADR、产品契约、架构视图或 Milestone。
+链接相关 ADR、产品契约、架构视图、前置 ticket 或本 Effort 的 records。
 """
     (effort / "spec.md").write_text(spec, encoding="utf-8")
     insertion = rows[-1].end()

@@ -2,7 +2,7 @@
 
 **What to build:** 已验证 XiaoZhi 或同等 Provider 接入同一 Assistant 与 authorization path，不成为第二个 Conversation Owner。
 
-**Blocked by:** 05 — 已验证本地 Assistant 语义；已锁定 Provider dependency；已接受 Audio capability path。
+**Blocked by:** [05 本地 Assistant 语义](05-verify-cancellation-and-result-semantics.md)；已锁定 Provider dependency；[004/04 playback-only Audio](../../004-m4-device-capabilities/issues/04-adopt-playback-only-audio.md)。
 
 **Status:** needs-info
 

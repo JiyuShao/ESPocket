@@ -48,7 +48,6 @@ struct PageDeclaration {
     std::vector<CardDeclaration> cards = {};
     BackPresentation back_presentation = BackPresentation::Framework;
     bool uses_standard_back_control = false;
-    bool has_app_owned_back_control = false;
 };
 
 struct PageSnapshot {
@@ -63,6 +62,7 @@ public:
     using Presenter = std::function<bool(std::string_view from, std::string_view to)>;
     using BackHandler = std::function<BackDecision(const PageSnapshot &, uint64_t token)>;
     using AvailabilityHandler = std::function<void(bool default_visible, bool edge_enabled)>;
+    using DiagnosticHandler = std::function<void(NavigationError error, std::string_view target)>;
     static constexpr uint64_t BACK_TIMEOUT_MS = 15'000;
 
     static std::expected<PageNavigator, NavigationError> create(
@@ -78,6 +78,7 @@ public:
     std::expected<void, NavigationError> reset_to_root();
     void set_back_handler(BackHandler handler);
     void set_availability_handler(AvailabilityHandler handler);
+    void set_diagnostic_handler(DiagnosticHandler handler);
     std::expected<std::optional<uint64_t>, NavigationError> request_back(uint64_t now_ms);
     std::expected<void, NavigationError> complete_back(uint64_t token, bool allow);
     std::optional<NavigationError> expire_back(uint64_t now_ms);
@@ -96,6 +97,7 @@ private:
     Presenter presenter_;
     BackHandler back_handler_;
     AvailabilityHandler availability_handler_;
+    DiagnosticHandler diagnostic_handler_;
     std::vector<std::string> stack_;
     struct PendingBack {
         uint64_t token;

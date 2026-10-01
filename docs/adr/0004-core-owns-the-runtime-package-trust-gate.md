@@ -19,7 +19,7 @@ Runtime package 可以通过多个产品入口到达，也会在重启后被重�
 - Store 下载成功不等于安装成功。
 - Verification 与 unpacking 使用同一份不可变输入。
 - Activation 必须完整提交，或保留此前的可信版本。
-- 缺少上游 seam 可以继续阻塞 application-ecosystem Milestone。
+- 缺少上游 seam 可以继续阻塞 application ecosystem 工作。
 
 ## Alternatives rejected
 
@@ -28,4 +28,4 @@ Runtime package 可以通过多个产品入口到达，也会在重启后被重�
 - 安装后验证。
 - 第二套 ESPocket package manager 或 Installer。
 
-参见 [Runtime package trust 契约](../design/product/05-runtime-package-trust.md)和 [M5 验收](../milestones/m5/acceptance.md)。
+参见 [Runtime package trust 契约](../design/product/05-runtime-package-trust.md)和 [应用生态任务与结果](../../.scratch/005-m5-application-ecosystem/spec.md)。

@@ -2,7 +2,7 @@
 
 **What to build:** 一个真实 Hello Native App，由 System 安装，通过稳定 manifest identity 发现，从 Launcher 启动，并能更新可见状态。
 
-**Blocked by:** M1 `PASS`.
+**Blocked by:** [001/03 启动稳定性](../../001-m1-system/issues/03-prove-boot-stability.md)（已完成）。
 
 **Status:** retrospective-resolved
 

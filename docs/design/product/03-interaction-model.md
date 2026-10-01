@@ -29,7 +29,7 @@
 | INT-019 | 用户可增删和排序左右 Card；Quick Settings 与 Launcher 的位置固定。 |
 | INT-020 | 所有页面不得显示 Shell 常驻顶部状态栏。App 自行呈现所需状态信息；临时系统告警可覆盖当前页面。 |
 | INT-022 | Home Space 周边页以反方向手势返回 Watch Face；App 的子页面 Back 返回 App 页面栈的上一项，App Root 没有 Back。 |
-| INT-023 | App 子页面默认提供可见 Back 与 Edge Back；App 可以整体关闭两种默认入口，但多级 App 必须自带可见 Back。普通滚动、横滑与 Long Press 归 App；PWR Home 不可关闭。 |
+| INT-023 | App 子页面默认提供可见 Back 与 Edge Back；App 可以接管两种默认入口，自定义返回 UI 与手势，也可不显示可见 Back；自定义返回使用统一 Back 语义。普通滚动、横滑与 Long Press 归 App；PWR Home 不可关闭。 |
 | INT-024 | App Card 上的横滑由 Home Space 处理；Card 内纵向交互与轻量操作归 App。Card 打开完整 App 后，PWR Home 直接返回 Watch Face。 |
 | INT-025 | 完整 App 页面的 Back 请求可由 App 暂缓确认；待决期间不得重复执行 Back，超时必须取消并报告错误。PWR Home、App 停止或崩溃使待决请求失效。 |
 | INT-026 | Quick Settings 的直接切换必须立即生效并停留在原 Surface；进入完整 Settings App 后遵守 App Page 栈与 Root 无 Back 的规则。 |

@@ -16,3 +16,7 @@
 ## Resolution
 
 长期文档现在围绕 Product Requirement 与 Architecture Invariant 组织；Firmware 操作知识回到代码目录，状态与可执行工作继续由 Milestone 和 `.scratch` 维护。
+
+## 后续文档归属
+
+2026-10-02：本票记录的阶段文档路径属于当时的迁移历史。当前状态、验收和 records 已由 [08](08-unify-task-acceptance-records.md) 统一到本地 tracker，现行规则见 [文档入口](../../../docs/README.md)。

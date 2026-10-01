@@ -2,7 +2,7 @@
 
 **What to build:** 通过 ESPocket System 安装官方 Settings 与必需 Service，stage 所需资源，并提供可用的 466×466 layout。
 
-**Blocked by:** M3 `PASS`.
+**Blocked by:** [003/02 Runtime lifecycle 与共存](../../003-m3-runtime-app/issues/02-prove-runtime-lifecycle-coexistence.md)（已完成）。
 
 **Status:** retrospective-resolved
 
