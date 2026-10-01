@@ -137,7 +137,7 @@ firmware/
 - [ADR-0003：Native 与 Runtime 共享 System Core contract](../../docs/adr/0003-native-and-runtime-share-the-system-core-contract.md)
 - [ADR-0009：AI Native 是基础设计维度](../../docs/adr/0009-ai-native-is-a-foundational-design-dimension.md)
 
-待并行中的领域文档工作完成后，将 `Reference App` 同步到 `CONTEXT.md`：它是随产品可见交付、用于持续验证共同 App contract 的 App；不再需要时明确删除。
+`Reference App` 已同步到 `CONTEXT.md`；Native/Runtime 源码和当前 Owner 目录规则见 `firmware/README.md`。
 
 ## Execution Notes
 
@@ -152,3 +152,5 @@ firmware/
 - 2026-10-02：04 源码、Owner 断言及构建完成，真机 smoke 留到 05/06 最终镜像集中执行；[阶段记录](records/2026-10-02-system-split.md)。05 的纯目录整理先继续，不提前关闭 04 真机条件。
 
 - 2026-10-02：05 完成目录、依赖、Kconfig、版本与 LittleFS build 输入收敛；Host checks、完整重编译通过，见 [阶段记录](records/2026-10-02-layout-build.md)。
+
+- 2026-10-02：06 的 CI 与文档收尾、最终自动验证完成；已刷入重构镜像并核对 USB identity，04/06 等待一次集中 smoke 结果，见 [最终验证记录](records/2026-10-02-final-verification.md)。

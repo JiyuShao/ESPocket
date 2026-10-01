@@ -45,3 +45,7 @@ Exposure Decision：System、Shell 和 Service 可以注册与各自生命周期
 - 建立第二套 Native/Runtime 生命周期。
 - 保证 App 后台驻留或恢复失效页面对象。
 - 用诊断日志替代生命周期 Interface 的结果。
+
+## PWR 输入与执行上下文
+
+PowerKeyMonitor 只采样和暂存短按事件，System 在既有 App callback task 上直接消费，并执行 Home、Screen Off 或 Wake。Circular Shell 不读取按键计数、不转发 PWR Home；其通用 ShellHost tick 只提供维护节拍，键盘完成与输入处理顺序保持一致。停止时 System 先设置 stopping guard、停止 monitor，再停止 Shell 和前台 App，防止旧输入进入新任务。

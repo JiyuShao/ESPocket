@@ -13,3 +13,5 @@
 `scripts/docs/generate-architecture-diagrams.mjs` 默认写入 `docs/design/architecture/assets/`。`scripts/docs/check.py` 使用临时输出重新生成并比较，不直接改写已提交 SVG。
 
 设备诊断脚本可能需要串口设备、`pyserial`、`esptool` 和对应硬件授权；离线 parser self-test 不需要连接设备。
+
+`firmware/prepare_host_dependencies.py` 是显式的 host 环境准备命令，通过官方 Component Manager 物化锁定 Settings 测试资源；它不属于只读检查入口。

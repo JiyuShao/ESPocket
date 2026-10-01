@@ -84,3 +84,17 @@ Circular Shell 与 Hello Native 各自以 `resources/gui.json` 为唯一 GUI 文
 - `managed_components/`、`components/gen_bmgr_codes/`、本地 `sdkconfig` 与 `sdkconfig.old` 保持工具约定位置并忽略。Runtime App 的 `build/`、`dist/`、`node_modules/` 也忽略；禁止提交这些生成物或重新建立旧的 `firmware/littlefs/` 输入目录。
 - Component 的公开头文件依赖列入 `REQUIRES`，实现依赖列入 `PRIV_REQUIRES`。System 配置位于自有 `Kconfig`，固件版本由顶层 `PROJECT_VER` 注入 SystemInfo；App manifest 版本仍由 App 自有。
 - `compat/` 是显式、可移除的兼容 seam；每个文件记录影响版本、上游问题和删除条件。当前 attributes 告警豁免只作用于 `brookesia_hal_custom`；另一处 IDF/Picolibc 属性拼写兼容只应用到上游一个 display 翻译单元，不放宽告警。
+
+## CI 与独立环境准备
+
+[Host-check workflow](../.github/workflows/host-check.yml) 与本地使用同一 `scripts/check.py`，CI 显式增加图检查；[Firmware-build workflow](../.github/workflows/firmware-build.yml) 独立执行 ESP-IDF 配置、Board Manager 生成和完整构建，不烧录设备。
+
+没有物化依赖的 host-only checkout 可先安装与 ESP-IDF 6.0.1 相同的 Component Manager，再准备测试需要的锁定 Settings 组件：
+
+```bash
+python3 -m pip install idf-component-manager==3.0.3
+python3 scripts/firmware/prepare_host_dependencies.py
+python3 scripts/check.py
+```
+
+准备命令使用官方 Component Manager 从 dependencies.lock 获取组件并验证 hash；已有组件 hash 不匹配时失败，不覆盖本地改动。它只准备 host tests 的 Settings 资源，不解析或改写版本锁，也不替代固件依赖解析。统一检查本身仍只读，不隐式下载依赖。CI 的 GNU 编译器由 `CXX=g++` 选择；本地默认使用 clang++。

@@ -35,6 +35,10 @@ _Avoid_: Plugin
 **System App**：
 由系统提供或预装的应用产品角色，其执行模型仍是 Native App 或 Runtime App。
 
+**Reference App**：
+随产品可见交付、用于持续验证共同 App contract 的 App；其执行模型仍是 Native App 或 Runtime App。
+_Avoid_: hidden test app、长期隐藏样例
+
 **Shell App**：
 以隐藏 Native App 承载 Shell 生命周期的框架角色；它不属于普通 Launcher 应用集合。
 

@@ -43,6 +43,6 @@ python3 scripts/docs/check.py --markdown
 python3 scripts/docs/check.py --diagrams
 ```
 
-图检查需要 Node.js 与 Chrome／Chromium。[Documentation workflow](../.github/workflows/docs.yml) 在相关 pull request 与 push 中运行 `python3 scripts/docs/check.py --all`，执行完整检查。
+图检查需要 Node.js 与 Chrome／Chromium。[Host-check workflow](../.github/workflows/host-check.yml) 在相关 pull request 与 push 中运行 `python3 scripts/check.py --diagrams`，统一执行 host tests、Markdown 与图检查；完整固件构建由独立 [Firmware-build workflow](../.github/workflows/firmware-build.yml) 执行。
 
 原始构建、串口日志和中间产物只作为本地、CI 或 Release artifact 临时保存；影响判定的事实先提炼到对应 records，再删除临时产物。

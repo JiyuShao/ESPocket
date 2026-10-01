@@ -20,7 +20,7 @@
 
 ### `CircularShell`
 
-它通过 `IApp` 生命周期、Surface 操作、状态输入和键盘请求提供小 Interface，隐藏 JSON UI、Screen Flow、手势仲裁、Overlay 与圆屏布局 Implementation。
+它通过 `IApp` 生命周期、Surface 操作、状态输入和键盘请求提供小 Interface，隐藏 JSON UI、Screen Flow、手势仲裁、Overlay 与圆屏布局 Implementation。System 以值对象 `ShellHost` 提供产品语义查询与命令；ShellHost 不包含 GPIO、按键计数、LVGL 对象或 Service 实例。Shell、System 各自在原 component 内按职责拆分私有实现，公开类和状态 Owner 保持一致。
 
 ### `System Core`
 
@@ -54,6 +54,9 @@ Exposure Decision：Assistant 只消费这些注册关系，不接管 Module 状
 - [system.cpp](../../../firmware/components/espocket_system/src/system.cpp)
 - [circular_shell.hpp](../../../firmware/components/shell_circular/include/espocket/circular_shell.hpp)
 - [circular_shell.cpp](../../../firmware/components/shell_circular/src/circular_shell.cpp)
+- [system_power.cpp](../../../firmware/components/espocket_system/src/system_power.cpp)
+- [shell_navigation.cpp](../../../firmware/components/shell_circular/src/shell_navigation.cpp)
+- [shell_keyboard.cpp](../../../firmware/components/shell_circular/src/shell_keyboard.cpp)
 
 ## 非目标
 
