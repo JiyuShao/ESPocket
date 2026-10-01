@@ -41,6 +41,14 @@
 - 最终固件完整构建/链接与分区检查通过，App 大小 `0x5d17b0`、分区剩余 43%；BIN SHA-256 `9ba683489fa105d5087f37c86f8b9612063d1329e7cb18082fa259c4e2aeb19e`，ELF SHA-256 `6ac76887992e1cd5edbf0dfbc20cc9104ef7f271fdebf6ee23c5f3af0652e1da`，日志 `/private/tmp/espocket-night-installation-final-build.log`。设备仍是 013 `e8bbe74ff`，未刷写。
 - 同时修正 007 Spec 残留的强制可见 Back 文案，与已接受 ADR-0013 对齐；没有重新开启产品决策或改变硬件验收范围。
 
+## 第四轮自动执行
+
+- 007/02 依据已完成的 Native 接入、真实 Helper 调用/错误反馈与构建证据关闭源码门槛；007/03 的物理路径保持开放，未宣称完整 M7 PASS。
+- 012/02 先接入只读 snapshot：System 提供真实 Shell/显示/前台事实，Page 来自 Navigator 或 Settings 官方 Flow；状态变化或未知页面明确失败。USB JSON 编码七个最小字段，不暴露参数、控件树或栈；仅成功采样递增 seq。
+- 16 项 host tests、M2 parser、Markdown 通过，新增快照行为用例覆盖模式关闭不读 Owner、能力公布、实际状态变化、不伪造 Root、失败不分配成功 seq、并发 dispatch busy。
+- 012/02 仅快照组件/源码条件已勾选；触摸/PWR 刺激、占用与超时/断连 release 仍开放。下一步需要把 Shell 硬件手势 lambda 抽为同一处理入口，再接合成轨迹；合成 PWR 应排到现有 System tick 执行，不能让 USB worker 直接跑 App 停止或 NVS/GUI 业务。
+- 固件构建/链接通过，镜像大小与 hash、未刷写边界见 [012 快照证据](../../012-test-automation-contract/records/2026-10-02-readonly-snapshot.md)。设备 hello 仍只公布原来的 hello，不能从新源码能力推断设备已支持 snapshot。
+
 ## 晨间最小介入
 
 先回复已发出的单次 013 smoke 结果：Native Detail Edge Back；自动息屏唤醒保留 Detail；PWR Home/息屏/亮屏回表盘；Quick Settings 上滑、Launcher 顶部下拉返回。遇到异常停在该步即可。无需重做此前十轮资源验证。

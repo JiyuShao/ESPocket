@@ -2,6 +2,42 @@
 
 namespace espocket {
 
+std::expected<TestSnapshot, std::string> System::read_test_snapshot() const
+{
+    if (stopping_.load(std::memory_order_acquire) || !shell_) {
+        return std::unexpected("system_unavailable");
+    }
+    const auto token = foreground_token_->load(std::memory_order_acquire);
+    const auto surface = shell_->current_surface();
+    const auto display = display_on_.load(std::memory_order_acquire);
+    TestSnapshot snapshot;
+    snapshot.display = display;
+    switch (surface) {
+    case ShellSurface::WatchFace: snapshot.surface = "watch_face"; break;
+    case ShellSurface::Launcher: snapshot.surface = "launcher"; break;
+    case ShellSurface::QuickSettings: snapshot.surface = "quick_settings"; break;
+    case ShellSurface::BatteryCard: snapshot.surface = "shell.battery"; break;
+    case ShellSurface::BrightnessCard: snapshot.surface = "shell.brightness"; break;
+    }
+    if (token != 0) {
+        auto page = foreground_page_snapshot();
+        if (!page) {
+            return std::unexpected(page.error());
+        }
+        snapshot.foreground_app_id = page->app_id;
+        snapshot.page_id = page->page_id;
+        snapshot.can_back = page->can_back;
+        snapshot.back_pending = page->back_pending;
+    }
+    if (foreground_token_->load(std::memory_order_acquire) != token ||
+            shell_->current_surface() != surface ||
+            display_on_.load(std::memory_order_acquire) != display ||
+            stopping_.load(std::memory_order_acquire)) {
+        return std::unexpected("state_changed");
+    }
+    return snapshot;
+}
+
 std::expected<void, std::string> System::launch_app(
     std::string_view manifest_id,
     ShellSurface source

@@ -1,6 +1,6 @@
 # 交互自动化测试协议（目标 v1）
 
-本文定义主机 Test Driver 与 ESPocket Test Adapter 的开发协议语义。实施见[交互自动化工作项](../../.scratch/012-test-automation-contract/spec.md)，Owner 见[交互自动化架构](../design/architecture/08-interaction-test-seam.md)。当前只实现 USB 准入与 `hello`；其余命令仍是目标契约。
+本文定义主机 Test Driver 与 ESPocket Test Adapter 的开发协议语义。实施见[交互自动化工作项](../../.scratch/012-test-automation-contract/spec.md)，Owner 见[交互自动化架构](../design/architecture/08-interaction-test-seam.md)。当前源码实现 USB 准入、`hello` 与只读 `snapshot`；刺激与释放命令仍是目标契约。
 
 ## 当前 USB 帧格式
 
@@ -10,7 +10,7 @@ USB Serial/JTAG 上的测试帧是以 `@ESPTEST ` 开头的一行 JSON，普通�
 @ESPTEST {"version":1,"request_id":42,"op":"hello"}
 ```
 
-响应带相同前缀，包含 `version`、`request_id`、`ok`。成功的 `hello` 还返回 `image_identity`（当前为 ESP-IDF 保存的 ELF SHA 前 9 个字符）与 `capabilities`；错误响应带 `error_code`。当前版本号为 `1`，能力列表仅含 `hello`。未实现的操作返回 `unsupported`；开发者模式关闭时，版本正确的命令返回 `developer_mode_off`。`busy` 已作为协议错误保留，实际刺激序列并发拒绝在 ticket 02 实现。帧长上限为 1024 字节，超长帧被丢弃并返回 `bad_request`。开发者模式开关位于设备 Quick Settings，默认关闭并保存到 NVS。
+响应带相同前缀，包含 `version`、`request_id`、`ok`。成功的 `hello` 还返回 `image_identity`（当前为 ESP-IDF 保存的 ELF SHA 前 9 个字符）与 `capabilities`；错误响应带 `error_code`。当前版本号为 `1`，接入 Owner reader 后能力列表含 `hello`、`snapshot`。未实现的操作返回 `unsupported`；开发者模式关闭时，版本正确的命令返回 `developer_mode_off`。重叠的协议调用返回 `busy`，实际刺激序列的占用与释放仍待 ticket 02 实现。帧长上限为 1024 字节，超长帧被丢弃并返回 `bad_request`。开发者模式开关位于设备 Quick Settings，默认关闭并保存到 NVS。
 
 ## 准入与传输
 
@@ -36,7 +36,11 @@ USB Serial/JTAG 上的测试帧是以 `@ESPTEST ` 开头的一行 JSON，普通�
 
 最小快照包含单调 `seq`、Home Space `surface`、`display` 开关状态、`foregroundAppId`，以及前台 App 的 `pageId`、`canBack`、`backPending`。无前台 App 时页面字段为空。Page ID 来自 App 安装声明和 ESPocket 唯一导航栈；测试协议不暴露页面参数、表单内容、私有控件树或整条栈。
 
-Home Space 的 `surface` 至少能区分 Watch Face、Launcher、Quick Settings 和具体 Card 身份。需要验证 Launcher 顶部拉伸时，Shell 可提供只读滚动到顶和拉动阶段；这些是 Owner 的交互反馈事实，不由 Test Driver 复制。快照字段、枚举值与序列化格式在 `snapshot` 实现时定版。
+当前请求为 `{"version":1,"request_id":43,"op":"snapshot"}`，仍使用 `@ESPTEST ` 行前缀。成功响应的 `snapshot` 对象包含上述七个字段；布尔字段是 JSON boolean，身份是 string。`surface` 使用 `watch_face`、`launcher`、`quick_settings`、`shell.battery`、`shell.brightness`，表示 Shell 持有的 Home Space Surface；前台完整 App 存在时，它是保留的底层 Shell Surface，App 是否前台以 `foregroundAppId` 判断。无 App 时两个 ID 是空字符串，两个 Back 字段为 false。
+
+`seq` 从 Adapter 本次启动后的 1 开始，仅成功采样递增；重启或 Adapter 重启后建立新的采样序列。Owner 读取失败、未绑定 Runtime Page 或读取期间前台/Surface/显示状态改变时返回 `invalid_state`，不伪造 Root、不带成功快照。Settings 实时通过官方 GUI 任务读取 Flow；USB worker 不从 raw GUI 回调访问它。当前源码尚未刷写，设备能力以它的 `hello` 为准。
+
+Home Space 的 `surface` 至少能区分 Watch Face、Launcher、Quick Settings 和具体 Card 身份。需要验证 Launcher 顶部拉伸时，Shell 可提供只读滚动到顶和拉动阶段；这些是 Owner 的交互反馈事实，不由 Test Driver 复制。Launcher 滚动与拉动阶段的扩展字段仍待输入路径实现时定版。
 
 ## 错误与清理
 

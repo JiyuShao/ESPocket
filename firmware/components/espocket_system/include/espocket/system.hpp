@@ -21,6 +21,7 @@ class PageNavigator;
 class DeveloperMode;
 class InteractionTestAdapter;
 class SettingsNavigationAdapter;
+struct TestSnapshot;
 enum class ShellSurface : uint8_t;
 
 class System final : public esp_brookesia::system::core::System {
@@ -67,6 +68,7 @@ protected:
     ) override;
 
 private:
+    std::expected<TestSnapshot, std::string> read_test_snapshot() const;
     std::expected<void, std::string> start_display();
     void poll_system_input();
     void handle_power_short_press();

@@ -51,7 +51,7 @@ Runtime App 契约验证、App Card 注册与动态配置、任意 App-to-App hi
 
 ## 当前结果与完成条件
 
-亮度 OutputId 已修复；两轮系统导航及 Wi-Fi/亮度真实变化已取得样机证据。剩余源码、Card 边界和 Settings/Store 组合条件归 [02](issues/02-close-navigation-source-gates.md)，未覆盖的单次路径及最终镜像核对归 [03](issues/03-run-navigation-hardware-acceptance.md)。已有两轮证据保留，不重复要求完整循环。触控镜像、已刷入镜像与最新仅构建镜像分别以 records 中的 identity 为准。
+亮度 OutputId 已修复；两轮系统导航及 Wi-Fi/亮度真实变化已取得样机证据。源码、Card 边界和 Settings/Store 组合条件已由 [02](issues/02-close-navigation-source-gates.md) 收尾，未覆盖的单次路径及最终镜像核对归 [03](issues/03-run-navigation-hardware-acceptance.md)。已有两轮证据保留，不重复要求完整循环。触控镜像、已刷入镜像与最新仅构建镜像分别以 records 中的 identity 为准。
 
 ## 记录
 
@@ -60,3 +60,5 @@ Runtime App 契约验证、App Card 注册与动态配置、任意 App-to-App hi
 - [2026-10-02-two-navigation-loops](records/2026-10-02-two-navigation-loops.md)
 
 - 2026-10-02：按已接受的 [ADR-0013](../../docs/adr/0013-app-controls-back-presentation.md) 修正此前残留的多级 App 必须有可见 Back 描述；不改变 Root、导航事实或硬件验收门槛。
+
+- 2026-10-02：02 源码/构建门槛完成；03 的未覆盖物理路径继续保留，尚未给出完整 M7 PASS。

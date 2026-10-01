@@ -4,8 +4,9 @@
 
 namespace espocket {
 
-TestProtocol::TestProtocol(DeveloperMode &mode, std::string image_identity)
-    : mode_(mode), image_identity_(std::move(image_identity))
+TestProtocol::TestProtocol(DeveloperMode &mode, std::string image_identity, SnapshotReader snapshot_reader)
+    : mode_(mode), image_identity_(std::move(image_identity)),
+      snapshot_reader_(std::move(snapshot_reader))
 {}
 
 TestReply TestProtocol::dispatch(uint32_t version, std::string_view operation)
@@ -21,12 +22,25 @@ TestReply TestProtocol::dispatch(uint32_t version, std::string_view operation)
         return {.ok = false, .error_code = "developer_mode_off", .image_identity = {}, .capabilities = {}};
     }
     if (operation == "hello") {
+        std::vector<std::string> capabilities = {"hello"};
+        if (snapshot_reader_) {
+            capabilities.emplace_back("snapshot");
+        }
         return {
             .ok = true,
             .error_code = {},
             .image_identity = image_identity_,
-            .capabilities = {"hello"},
+            .capabilities = std::move(capabilities),
         };
+    }
+    if (operation == "snapshot" && snapshot_reader_) {
+        auto snapshot = snapshot_reader_();
+        if (!snapshot) {
+            return {.ok = false, .error_code = "invalid_state", .image_identity = {}, .capabilities = {}};
+        }
+        snapshot->seq = ++snapshot_seq_;
+        return {.ok = true, .error_code = {}, .image_identity = {}, .capabilities = {},
+                .snapshot = std::move(*snapshot)};
     }
     return {.ok = false, .error_code = "unsupported", .image_identity = {}, .capabilities = {}};
 }

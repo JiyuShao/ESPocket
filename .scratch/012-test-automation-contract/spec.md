@@ -45,6 +45,8 @@ Wi-Fi 测试通道、任意 App Action、应用安装、设置修改、物理执
 
 ## Further Notes
 
+- [2026-10-02 只读快照源码](records/2026-10-02-readonly-snapshot.md)
+
 - [2026-10-02 USB 准入记录](records/2026-10-02-usb-gate.md)
 - [开发者模式产品要求](../../docs/design/product/07-developer-mode-testing.md)
 - [交互自动化架构](../../docs/design/architecture/08-interaction-test-seam.md)

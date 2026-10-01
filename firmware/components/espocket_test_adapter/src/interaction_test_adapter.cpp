@@ -57,8 +57,9 @@ struct InteractionTestAdapter::ModeRequest {
     std::atomic<State> state = State::Pending;
 };
 
-InteractionTestAdapter::InteractionTestAdapter(std::shared_ptr<DeveloperMode> mode)
-    : mode_(std::move(mode))
+InteractionTestAdapter::InteractionTestAdapter(std::shared_ptr<DeveloperMode> mode,
+                                             TestProtocol::SnapshotReader snapshot_reader)
+    : mode_(std::move(mode)), snapshot_reader_(std::move(snapshot_reader))
 {}
 
 InteractionTestAdapter::~InteractionTestAdapter()
@@ -83,7 +84,7 @@ std::expected<void, std::string> InteractionTestAdapter::start()
     }
     std::array<char, 65> image_sha{};
     esp_app_get_elf_sha256(image_sha.data(), image_sha.size());
-    protocol_ = std::make_unique<TestProtocol>(*mode_, std::string(image_sha.data()));
+    protocol_ = std::make_unique<TestProtocol>(*mode_, std::string(image_sha.data()), snapshot_reader_);
     running_.store(true, std::memory_order_release);
     driver_ready_.store(false, std::memory_order_release);
     const auto created = xTaskCreate(task_entry, "espocket_test_usb", 4096, this, 3, &task_);
@@ -258,12 +259,21 @@ void InteractionTestAdapter::handle_line(std::string_view line)
         {"ok", reply.ok},
     };
     if (reply.ok) {
-        response["image_identity"] = reply.image_identity;
-        boost::json::array capabilities;
-        for (const auto &capability : reply.capabilities) {
-            capabilities.emplace_back(capability);
+        if (reply.snapshot) {
+            const auto &state = *reply.snapshot;
+            response["snapshot"] = boost::json::object{
+                {"seq", state.seq}, {"surface", state.surface}, {"display", state.display},
+                {"foregroundAppId", state.foreground_app_id}, {"pageId", state.page_id},
+                {"canBack", state.can_back}, {"backPending", state.back_pending},
+            };
+        } else {
+            response["image_identity"] = reply.image_identity;
+            boost::json::array capabilities;
+            for (const auto &capability : reply.capabilities) {
+                capabilities.emplace_back(capability);
+            }
+            response["capabilities"] = std::move(capabilities);
         }
-        response["capabilities"] = std::move(capabilities);
     } else {
         response["error_code"] = reply.error_code;
     }

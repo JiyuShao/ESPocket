@@ -8,6 +8,10 @@
 
 - [ ] 合成触摸覆盖 LVGL 点击与 Shell 手势仲裁，但不直接设置 Surface 或 App 页面栈。
 - [ ] 合成 PWR 调用 System 语义入口；报告明确它不覆盖 GPIO 链路。
-- [ ] 快照带单调序号，包含声明的 `pageId`、`canBack`、`backPending`，不包含私有页面参数。
+- [x] 快照带单调序号，包含声明的 `pageId`、`canBack`、`backPending`，不包含私有页面参数。
 - [ ] 完成、超时、断连、重启时释放触摸注入；重复 `release` 安全。
 - [ ] 一条刺激序列尚未完成时，新的并发刺激返回 `busy`，不交错执行；主机测试覆盖这一拒绝路径。
+
+## Comments
+
+- 2026-10-02（夜间）：先完成只读 snapshot 的源码与组件 slice。System 读取实际 Shell Surface、显示与前台 token，Page 来自共同 Navigator 或明确的 Settings 例外；状态变化/未适配页面明确失败。协议仅为成功样本分配 seq，不序列化私有页面参数。新增主机用例覆盖模式准入、能力公布、实时 Owner 读取、失败不报 Root/成功序号及重叠调用 busy。源码未刷写，触摸/PWR、序列占用和 release 清理仍开放。证据见 [夜间记录](../../013-firmware-structure-refactor/records/2026-10-02-overnight-frontier.md)。
