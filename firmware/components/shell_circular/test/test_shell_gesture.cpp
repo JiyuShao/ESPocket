@@ -106,4 +106,33 @@ int main()
     }, {});
     process_shell_gesture(cancelled, {.phase = ShellGesturePhase::Release}, {});
     assert(pending(cancelled) == GestureIntent::None && cancelled.launcher_pull_distance == 0);
+    // Cancelling an over-threshold pull must not manufacture the normal Release commit.
+    press(cancelled);
+    move(cancelled, ShellGestureDirection::Down);
+    reset_shell_gesture(cancelled, true);
+    process_shell_gesture(cancelled, {.phase = ShellGesturePhase::Release}, {});
+    assert(pending(cancelled) == GestureIntent::None && cancelled.launcher_pull_distance == 0);
+    cancelled.pending_gesture = static_cast<uint8_t>(GestureIntent::WatchFace);
+    reset_shell_gesture(cancelled, false);
+    assert(pending(cancelled) == GestureIntent::WatchFace);
+
+    ShellTouchTracker tracker;
+    tracker.geometry = {.width = 466, .horizontal_edge = 27, .vertical_edge = 37,
+                        .horizontal_threshold = 77, .vertical_threshold = 77};
+    auto start = tracker.sample(10, 100, true, true);
+    assert(start.phase == ShellGesturePhase::Press && start.left_edge && !start.right_edge);
+    auto drag = tracker.sample(110, 100, true, false);
+    assert(drag.phase == ShellGesturePhase::Pressing && drag.direction == ShellGestureDirection::Right &&
+           drag.distance_px == 100);
+    auto diagonal = tracker.sample(110, 300, true, false);
+    assert(diagonal.direction == ShellGestureDirection::Right); // Direction locks like Display.
+    auto release = tracker.sample(110, 300, false, false);
+    assert(release.phase == ShellGesturePhase::Release && release.direction == diagonal.direction);
+    assert(!tracker.sample(30, 300, true, true).left_edge);
+    tracker.sample(200, 300, true, true);
+    assert(tracker.sample(200, 223, true, false).direction == ShellGestureDirection::None);
+    assert(tracker.sample(200, 222, true, false).direction == ShellGestureDirection::Up);
+    tracker.sample(440, 100, true, true);
+    assert(tracker.sample(300, 100, true, false).right_edge);
+
 }

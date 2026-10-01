@@ -21,7 +21,9 @@ public:
     explicit InteractionTestAdapter(std::shared_ptr<DeveloperMode> mode,
                                     TestProtocol::SnapshotReader snapshot_reader = {},
                                     TestProtocol::Command power_short = {},
-                                    TestProtocol::Command release = {});
+                                    TestProtocol::Command release = {},
+                                    TestProtocol::TouchCommand touch = {},
+                                    TestProtocol::Command input_tick = {});
     ~InteractionTestAdapter();
 
     std::expected<void, std::string> start();
@@ -41,6 +43,8 @@ private:
     TestProtocol::SnapshotReader snapshot_reader_;
     TestProtocol::Command power_short_;
     TestProtocol::Command release_;
+    TestProtocol::TouchCommand touch_;
+    TestProtocol::Command input_tick_;
     std::atomic_bool running_ = false;
     std::atomic_bool driver_ready_ = false;
     std::mutex mode_request_mutex_;

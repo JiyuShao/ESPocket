@@ -2,7 +2,7 @@
 
 namespace espocket {
 
-std::expected<void, std::string> TestInputQueue::enqueue(uint64_t now_ms)
+std::expected<void, std::string> TestInputQueue::enqueue(uint64_t now_ms, uint64_t context_token)
 {
     std::lock_guard lock(mutex_);
     if (state_ != State::Idle) {
@@ -10,23 +10,31 @@ std::expected<void, std::string> TestInputQueue::enqueue(uint64_t now_ms)
     }
     state_ = State::Pending;
     queued_ms_ = now_ms;
+    context_token_ = context_token;
     return {};
 }
 
 bool TestInputQueue::execute_pending(const std::function<void()> &execute)
 {
+    return execute_pending_context([&execute](uint64_t) { execute(); });
+}
+
+bool TestInputQueue::execute_pending_context(const std::function<void(uint64_t)> &execute)
+{
+    uint64_t token = 0;
     {
         std::lock_guard lock(mutex_);
         if (state_ != State::Pending) {
             return false;
         }
         state_ = State::Executing;
+        token = context_token_;
     }
     struct Completion {
         TestInputQueue &queue;
         ~Completion() { queue.finish(); }
     } completion{*this};
-    execute();
+    execute(token);
     return true;
 }
 

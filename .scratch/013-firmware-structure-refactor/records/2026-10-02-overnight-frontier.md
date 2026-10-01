@@ -67,6 +67,12 @@
 - 17 项 host tests、M2 parser、Markdown 与 ESP-IDF 完整构建通过，未刷写。
 - 该组件尚未接 USB/Display/Shell，不开放 touch capability，不提前关闭 012/02；下一步接 raw 轨迹与 Owner sink，并处理取消不提交 Launcher 返回。
 
+## 第八轮自动执行
+
+- 012/02 USB 轨迹接入实际 Display/LVGL 与正式 Shell 仲裁；硬件/合成输入互斥，PWR 与触摸共用槽位，异常取消不提交 Launcher 返回或按钮点击。旧前台任务 token 使触摸/PWR 失效。
+- 主机组件用例与源码检查通过；最终固件构建和身份见 [012 Owner 记录](../../012-test-automation-contract/records/2026-10-02-touch-owner.md)。未刷写，不新增设备、物理或视觉 PASS。
+- 012/02 源码/组件门槛完成，012/03 依赖解除；下一步用真实 USB Driver 等待快照和保存失败证据，不能以投递 ACK 代替输入效果。设备仍保留 013 smoke 镜像；Driver 的新能力设备验证应与早晨统一镜像安排协调。
+
 ## 晨间最小介入
 
 先回复已发出的单次 013 smoke 结果：Native Detail Edge Back；自动息屏唤醒保留 Detail；PWR Home/息屏/亮屏回表盘；Quick Settings 上滑、Launcher 顶部下拉返回。遇到异常停在该步即可。无需重做此前十轮资源验证。

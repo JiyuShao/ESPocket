@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "espocket/developer_mode.hpp"
+#include "espocket/touch_input_sequence.hpp"
 
 namespace espocket {
 
@@ -35,11 +36,12 @@ class TestProtocol {
 public:
     static constexpr uint32_t VERSION = 1;
     using SnapshotReader = std::function<std::expected<TestSnapshot, std::string>()>;
+    using TouchCommand = std::function<std::expected<void, std::string>(std::vector<TouchInputStep>)>;
     using Command = std::function<std::expected<void, std::string>()>;
 
     TestProtocol(DeveloperMode &mode, std::string image_identity, SnapshotReader snapshot_reader = {},
-                 Command power_short = {}, Command release = {});
-    TestReply dispatch(uint32_t version, std::string_view operation);
+                 Command power_short = {}, Command release = {}, TouchCommand touch = {});
+    TestReply dispatch(uint32_t version, std::string_view operation, std::vector<TouchInputStep> steps = {});
 
 private:
     DeveloperMode &mode_;
@@ -49,6 +51,7 @@ private:
     uint64_t snapshot_seq_ = 0;
     Command power_short_;
     Command release_;
+    TouchCommand touch_;
 };
 
 } // namespace espocket

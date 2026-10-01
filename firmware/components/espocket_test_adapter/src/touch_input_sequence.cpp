@@ -15,7 +15,9 @@ std::expected<void, std::string> TouchInputSequence::start(
     if (!sink_ || !cleanup_) { return std::unexpected("invalid_state"); }
     if (width <= 0 || height <= 0 || steps.size() < 2 || steps.size() > 16 ||
             steps.front().elapsed_ms != 0 || !steps.front().pressed ||
-            steps.back().pressed || steps.back().elapsed_ms > MAX_DURATION_MS) {
+            steps.back().pressed || steps.back().elapsed_ms > MAX_DURATION_MS ||
+            steps.back().x != steps[steps.size() - 2].x ||
+            steps.back().y != steps[steps.size() - 2].y) {
         return std::unexpected("bad_request");
     }
     for (size_t i = 0; i < steps.size(); ++i) {

@@ -5,13 +5,13 @@
 namespace espocket {
 
 TestProtocol::TestProtocol(DeveloperMode &mode, std::string image_identity, SnapshotReader snapshot_reader,
-                           Command power_short, Command release)
+                           Command power_short, Command release, TouchCommand touch)
     : mode_(mode), image_identity_(std::move(image_identity)),
       snapshot_reader_(std::move(snapshot_reader)), power_short_(std::move(power_short)),
-      release_(std::move(release))
+      release_(std::move(release)), touch_(std::move(touch))
 {}
 
-TestReply TestProtocol::dispatch(uint32_t version, std::string_view operation)
+TestReply TestProtocol::dispatch(uint32_t version, std::string_view operation, std::vector<TouchInputStep> steps)
 {
     std::unique_lock lock(dispatch_mutex_, std::try_to_lock);
     if (!lock.owns_lock()) {
@@ -29,6 +29,7 @@ TestReply TestProtocol::dispatch(uint32_t version, std::string_view operation)
             capabilities.emplace_back("snapshot");
         }
         if (power_short_) { capabilities.emplace_back("stimulus.powerShort"); }
+        if (touch_) { capabilities.emplace_back("stimulus.touch"); }
         if (release_) { capabilities.emplace_back("release"); }
         return {
             .ok = true,
@@ -45,6 +46,11 @@ TestReply TestProtocol::dispatch(uint32_t version, std::string_view operation)
         snapshot->seq = ++snapshot_seq_;
         return {.ok = true, .error_code = {}, .image_identity = {}, .capabilities = {},
                 .snapshot = std::move(*snapshot)};
+    }
+    if (operation == "stimulus.touch" && touch_) {
+        auto result = touch_(std::move(steps));
+        return {.ok = result.has_value(), .error_code = result ? "" : result.error(),
+                .image_identity = {}, .capabilities = {}};
     }
     const Command *command = nullptr;
     if (operation == "stimulus.powerShort" && power_short_) { command = &power_short_; }

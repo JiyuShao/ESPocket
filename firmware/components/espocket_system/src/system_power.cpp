@@ -10,6 +10,10 @@ void System::poll_system_input()
         return;
     }
     const bool hardware_press = power_key_monitor_ && power_key_monitor_->take_short_press();
+    if (hardware_press) {
+        cancel_test_touch_.store(true, std::memory_order_release);
+        if (test_power_input_ && test_power_input_->busy() && shell_) { shell_->cancel_gesture_input(); }
+    }
     bool synthetic_press = false;
     if (test_power_input_) {
         if (!developer_mode_ || !developer_mode_->enabled()) {
@@ -17,8 +21,13 @@ void System::poll_system_input()
         } else if (test_power_input_->expire(static_cast<uint64_t>(esp_timer_get_time() / 1000))) {
             ESP_LOGW(TAG, "Synthetic PWR expired before Owner execution");
         } else {
-            synthetic_press = test_power_input_->execute_pending([this]() {
-                handle_power_short_press();
+            (void)test_power_input_->execute_pending_context([this, &synthetic_press](uint64_t token) {
+                if (foreground_token_->load(std::memory_order_acquire) == token) {
+                    synthetic_press = true;
+                    handle_power_short_press();
+                } else {
+                    ESP_LOGW(TAG, "Synthetic PWR cancelled after navigation task changed");
+                }
             });
         }
     }

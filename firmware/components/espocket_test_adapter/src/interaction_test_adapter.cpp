@@ -60,9 +60,11 @@ struct InteractionTestAdapter::ModeRequest {
 InteractionTestAdapter::InteractionTestAdapter(std::shared_ptr<DeveloperMode> mode,
                                              TestProtocol::SnapshotReader snapshot_reader,
                                              TestProtocol::Command power_short,
-                                             TestProtocol::Command release)
+                                             TestProtocol::Command release,
+                                             TestProtocol::TouchCommand touch,
+                                             TestProtocol::Command input_tick)
     : mode_(std::move(mode)), snapshot_reader_(std::move(snapshot_reader)),
-      power_short_(std::move(power_short)), release_(std::move(release))
+      power_short_(std::move(power_short)), release_(std::move(release)), touch_(std::move(touch)), input_tick_(std::move(input_tick))
 {}
 
 InteractionTestAdapter::~InteractionTestAdapter()
@@ -88,7 +90,7 @@ std::expected<void, std::string> InteractionTestAdapter::start()
     std::array<char, 65> image_sha{};
     esp_app_get_elf_sha256(image_sha.data(), image_sha.size());
     protocol_ = std::make_unique<TestProtocol>(*mode_, std::string(image_sha.data()), snapshot_reader_,
-                                              power_short_, release_);
+                                              power_short_, release_, touch_);
     running_.store(true, std::memory_order_release);
     driver_ready_.store(false, std::memory_order_release);
     const auto created = xTaskCreate(task_entry, "espocket_test_usb", 4096, this, 3, &task_);
@@ -214,8 +216,12 @@ void InteractionTestAdapter::run()
             line.clear();
             discarding_oversized_line = false;
         }
-        if ((was_connected && !connected) || !mode_->enabled()) {
+        if (!connected || !mode_->enabled()) {
             if (release_) { (void)release_(); }
+        }
+        if (connected && mode_->enabled() && input_tick_) {
+            auto result = input_tick_();
+            if (!result) { ESP_LOGW(TAG, "Synthetic input tick failed: %s", result.error().c_str()); }
         }
         was_connected = connected;
         const int count = usb_serial_jtag_read_bytes(buffer.data(), buffer.size(), pdMS_TO_TICKS(20));
@@ -243,7 +249,14 @@ void InteractionTestAdapter::run()
             }
         }
     }
-    if (release_) { (void)release_(); }
+    if (release_) {
+        for (int attempt = 0; attempt < 5; ++attempt) {
+            auto cleaned = release_();
+            if (cleaned) { break; }
+            ESP_LOGW(TAG, "Input cleanup during stop failed: %s", cleaned.error().c_str());
+            vTaskDelay(pdMS_TO_TICKS(20));
+        }
+    }
 }
 
 void InteractionTestAdapter::handle_line(std::string_view line)
@@ -266,8 +279,30 @@ void InteractionTestAdapter::handle_line(std::string_view line)
         return;
     }
     const auto &operation = op->as_string();
+    std::vector<TouchInputStep> steps;
+    if (operation == "stimulus.touch") {
+        const auto *trace = object.if_contains("points");
+        if (!trace || !trace->is_array() || trace->as_array().size() > 16) {
+            send_error(*request_id, "bad_request");
+            return;
+        }
+        for (const auto &value : trace->as_array()) {
+            if (!value.is_object()) { send_error(*request_id, "bad_request"); return; }
+            const auto &point = value.as_object();
+            auto x = unsigned_field(point, "x");
+            auto y = unsigned_field(point, "y");
+            auto elapsed = unsigned_field(point, "elapsedMs");
+            const auto *pressed = point.if_contains("pressed");
+            if (!x || !y || !elapsed || *x > INT32_MAX || *y > INT32_MAX || *elapsed > UINT32_MAX ||
+                    !pressed || !pressed->is_bool()) {
+                send_error(*request_id, "bad_request"); return;
+            }
+            steps.push_back({static_cast<int32_t>(*x), static_cast<int32_t>(*y),
+                             static_cast<uint32_t>(*elapsed), pressed->as_bool()});
+        }
+    }
     const auto reply = protocol_->dispatch(static_cast<uint32_t>(*version),
-                                           std::string_view(operation.data(), operation.size()));
+                                           std::string_view(operation.data(), operation.size()), std::move(steps));
     boost::json::object response = {
         {"version", TestProtocol::VERSION},
         {"request_id", *request_id},

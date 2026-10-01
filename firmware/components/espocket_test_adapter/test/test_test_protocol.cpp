@@ -181,7 +181,7 @@ int main()
             return {};
         });
     const std::vector<espocket::TouchInputStep> swipe{
-        {20, 100, 0, true}, {100, 100, 80, true}, {160, 100, 160, false},
+        {20, 100, 0, true}, {160, 100, 80, true}, {160, 100, 160, false},
     };
     auto invalid = swipe;
     invalid[1].x = 466;
@@ -239,5 +239,37 @@ int main()
     fail_sink = true;
     require(touch.tick(3000).error() == "sink_failed" && !power.busy() && cancelled,
             "sink failure must cancel and free the slot only after cleanup");
+
+    fail_sink = false;
+    delivered.clear();
+    int touch_calls = 0;
+    espocket::TestProtocol complete(mode, "image-touch", {}, [&] { return power.enqueue(4000); },
+        [&]() -> std::expected<void, std::string> { power.cancel_pending(); return touch.cancel(); },
+        [&](std::vector<espocket::TouchInputStep> steps) {
+            ++touch_calls;
+            return touch.start(std::move(steps), 466, 466, 4000);
+        });
+    require(complete.dispatch(1, "stimulus.touch", swipe).error_code == "developer_mode_off" &&
+                touch_calls == 0, "disabled touch must not enter the Owner");
+    require(mode.set_enabled(true).has_value(), "enable complete input fixture");
+    auto complete_hello = complete.dispatch(1, "hello");
+    require(std::ranges::find(complete_hello.capabilities, "stimulus.touch") !=
+                complete_hello.capabilities.end(), "bound touch should be advertised");
+    require(complete.dispatch(1, "stimulus.touch", {}).error_code == "bad_request" && !power.busy(),
+            "typed protocol must preserve trace validation failure");
+    require(complete.dispatch(1, "stimulus.touch", swipe).ok && power.busy() &&
+                complete.dispatch(1, "stimulus.powerShort").error_code == "busy",
+            "touch ACK reserves the same sequence boundary as PWR");
+    require(complete.dispatch(1, "release").ok && !power.busy() &&
+                complete.dispatch(1, "stimulus.powerShort").ok &&
+                complete.dispatch(1, "stimulus.touch", swipe).error_code == "busy" &&
+                complete.dispatch(1, "release").ok && !power.busy(),
+            "release and both mixed stimulus orders must preserve one Owner sequence");
+
+    uint64_t observed_token = 0;
+    require(power.enqueue(5000, 123).has_value() &&
+                power.execute_pending_context([&](uint64_t token) { observed_token = token; }) &&
+                observed_token == 123 && !power.busy(),
+            "queued PWR must carry its original navigation task token atomically to the Owner");
 
 }

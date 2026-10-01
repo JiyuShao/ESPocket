@@ -7,6 +7,7 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <vector>
 
 #include "brookesia/service_manager/service/manager.hpp"
 #include "brookesia/system_core.hpp"
@@ -18,6 +19,8 @@ namespace espocket {
 class CircularShell;
 class PowerKeyMonitor;
 class TestInputQueue;
+class TouchInputSequence;
+struct TouchInputStep;
 class PageNavigator;
 class DeveloperMode;
 class InteractionTestAdapter;
@@ -71,6 +74,9 @@ protected:
 private:
     std::expected<TestSnapshot, std::string> read_test_snapshot() const;
     std::expected<void, std::string> start_display();
+    std::expected<void, std::string> start_test_touch(std::vector<TouchInputStep> steps);
+    std::expected<void, std::string> tick_test_touch();
+    std::expected<void, std::string> release_test_input();
     void poll_system_input();
     void handle_power_short_press();
     void handle_screen_timeout();
@@ -98,6 +104,9 @@ private:
     std::unique_ptr<InteractionTestAdapter> test_adapter_;
     std::unique_ptr<PowerKeyMonitor> power_key_monitor_;
     std::unique_ptr<TestInputQueue> test_power_input_;
+    std::unique_ptr<TouchInputSequence> test_touch_input_;
+    uint64_t test_touch_foreground_token_ = 0;
+    std::atomic_bool cancel_test_touch_ = false;
     std::shared_ptr<std::atomic<uint64_t>> foreground_token_ =
         std::make_shared<std::atomic<uint64_t>>(0);
     esp_brookesia::system::core::AppId shell_id_ = esp_brookesia::system::core::INVALID_APP_ID;

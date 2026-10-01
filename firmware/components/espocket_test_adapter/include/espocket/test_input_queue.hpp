@@ -11,8 +11,9 @@ namespace espocket {
 class TestInputQueue {
 public:
     static constexpr uint64_t TIMEOUT_MS = 1'000;
-    std::expected<void, std::string> enqueue(uint64_t now_ms);
+    std::expected<void, std::string> enqueue(uint64_t now_ms, uint64_t context_token = 0);
     bool execute_pending(const std::function<void()> &execute);
+    bool execute_pending_context(const std::function<void(uint64_t)> &execute);
     bool expire(uint64_t now_ms);
     void cancel_pending();
     bool busy() const;
@@ -25,6 +26,7 @@ private:
     mutable std::mutex mutex_;
     State state_ = State::Idle;
     uint64_t queued_ms_ = 0;
+    uint64_t context_token_ = 0;
 };
 
 } // namespace espocket

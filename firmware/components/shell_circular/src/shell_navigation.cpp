@@ -1,5 +1,7 @@
 #include "shell_internal.hpp"
 
+#include <cmath>
+
 namespace espocket {
 
 void CircularShell::sync_default_back(bool visible)
@@ -65,8 +67,8 @@ std::expected<void, std::string> CircularShell::configure_home_gesture()
 
     auto &display = DisplayService::get_instance();
     auto outputs = display.get_outputs();
-    auto output = std::find_if(outputs.begin(), outputs.end(), [](const auto &candidate) {
-        return candidate.width > 0 && candidate.height > 0 && candidate.touch.has_value();
+    auto output = std::find_if(outputs.begin(), outputs.end(), [this](const auto &candidate) {
+        return candidate.id == display_output_id_ && candidate.width > 0 && candidate.height > 0 && candidate.touch.has_value();
     });
     if (output == outputs.end()) {
         return std::unexpected("No touch-capable Display output is available for Home gesture");
@@ -86,6 +88,18 @@ std::expected<void, std::string> CircularShell::configure_home_gesture()
         return std::unexpected("Failed to configure Home gesture: " + config_result.error());
     }
 
+    auto resolved = display.get_touch_gesture_config(output->id);
+    if (!resolved) { return std::unexpected(resolved.error()); }
+    touch_output_name_ = output->name;
+    synthetic_touch_tracker_.geometry = {
+        .width = static_cast<int32_t>(output->width),
+        .horizontal_edge = resolved->threshold.horizontal_edge,
+        .vertical_edge = resolved->threshold.vertical_edge,
+        .horizontal_threshold = resolved->threshold.direction_horizon,
+        .vertical_threshold = resolved->threshold.direction_vertical,
+        .direction_tan = std::tan(resolved->threshold.direction_angle * 3.14159265F / 180.0F),
+        .direction_lock = resolved->direction_lock_enabled,
+    };
     gesture_connection_ = display.connect_touch_gesture(
                               output->name,
     [state = home_gesture_state_,
@@ -94,6 +108,8 @@ std::expected<void, std::string> CircularShell::configure_home_gesture()
      back_ui_provider = host_.back_ui](
         const std::string &, const DisplayService::TouchGestureInfo &info
     ) {
+        std::lock_guard input_lock(state->input_mutex);
+        if (state->synthetic_input_active.load(std::memory_order_acquire)) { return; }
         ShellGestureEvent event;
         switch (info.event_type) {
         case DisplayHelper::TouchGestureEventType::Press: event.phase = ShellGesturePhase::Press; break;
@@ -138,6 +154,7 @@ std::expected<void, std::string> CircularShell::handle_gesture(const ShellGestur
     if (!home_gesture_state_) {
         return std::unexpected("Shell gesture input is unavailable");
     }
+    std::lock_guard input_lock(home_gesture_state_->input_mutex);
     process_shell_gesture(*home_gesture_state_, event, {
         .display_on = !host_.display_on || host_.display_on(),
         .app_visible = host_.app_visible && host_.app_visible(),
@@ -234,6 +251,62 @@ std::expected<void, std::string> CircularShell::set_display_on(bool on)
         screen_timeout_latched_ = false;
     }
     return {};
+}
+
+} // namespace espocket
+
+namespace espocket {
+
+std::expected<void, std::string> CircularShell::inject_synthetic_touch(
+    int32_t x, int32_t y, bool pressed, bool first)
+{
+    if (!home_gesture_state_ || touch_output_name_.empty()) {
+        return std::unexpected("invalid_state");
+    }
+    if (first) {
+        std::lock_guard input_lock(home_gesture_state_->input_mutex);
+        reset_shell_gesture(*home_gesture_state_, true);
+        home_gesture_state_->synthetic_input_active.store(true, std::memory_order_release);
+    }
+    auto &display = DisplayService::get_instance();
+    auto injected = pressed ? display.inject_touch(touch_output_name_, x, y) :
+                    display.inject_touch(touch_output_name_, std::vector<DisplayService::TouchPoint>{});
+    if (!injected) { return std::unexpected("internal"); }
+    return handle_gesture(synthetic_touch_tracker_.sample(x, y, pressed, first));
+}
+
+std::expected<void, std::string> CircularShell::finish_synthetic_touch(bool cancelled)
+{
+    const bool injected = home_gesture_state_ &&
+        home_gesture_state_->synthetic_input_active.load(std::memory_order_acquire);
+    if (injected && cancelled) {
+        cancel_gesture_input();
+        if (esp_lv_adapter_lock(100) != ESP_OK) { return std::unexpected("internal"); }
+        // Abort a press without manufacturing a CLICKED event on cleanup.
+        lv_indev_reset(nullptr, nullptr);
+        esp_lv_adapter_unlock();
+    }
+    // Display owns the override. Shell may have restarted after a failed cleanup.
+    if (touch_output_name_.empty()) { return std::unexpected("invalid_state"); }
+    auto cleared = DisplayService::get_instance().clear_injected_touch(touch_output_name_);
+    if (!cleared) { return std::unexpected("internal"); }
+    if (injected) {
+        std::lock_guard input_lock(home_gesture_state_->input_mutex);
+        reset_shell_gesture(*home_gesture_state_, cancelled);
+        home_gesture_state_->synthetic_input_active.store(false, std::memory_order_release);
+    }
+    return {};
+}
+
+} // namespace espocket
+
+namespace espocket {
+
+void CircularShell::cancel_gesture_input()
+{
+    if (!home_gesture_state_) { return; }
+    std::lock_guard input_lock(home_gesture_state_->input_mutex);
+    reset_shell_gesture(*home_gesture_state_, true);
 }
 
 } // namespace espocket

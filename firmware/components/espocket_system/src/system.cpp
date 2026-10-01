@@ -65,6 +65,14 @@ std::expected<void, std::string> System::on_init()
                  restored.error().c_str());
     }
     test_power_input_ = std::make_unique<TestInputQueue>();
+    test_touch_input_ = std::make_unique<TouchInputSequence>(*test_power_input_,
+        [this](const TouchInputStep &step, bool first) -> std::expected<void, std::string> {
+            if (!shell_) { return std::unexpected("invalid_state"); }
+            return shell_->inject_synthetic_touch(step.x, step.y, step.pressed, first);
+        }, [this](bool cancelled) -> std::expected<void, std::string> {
+            return shell_ ? shell_->finish_synthetic_touch(cancelled) :
+                            std::expected<void, std::string>{};
+        });
     test_adapter_ = std::make_unique<InteractionTestAdapter>(
         developer_mode_, [this]() { return read_test_snapshot(); },
         [this]() -> std::expected<void, std::string> {
@@ -72,12 +80,14 @@ std::expected<void, std::string> System::on_init()
                     !developer_mode_->enabled()) {
                 return std::unexpected("invalid_state");
             }
-            return test_power_input_->enqueue(static_cast<uint64_t>(esp_timer_get_time() / 1000));
+            return test_power_input_->enqueue(static_cast<uint64_t>(esp_timer_get_time() / 1000),
+                                               foreground_token_->load(std::memory_order_acquire));
         },
         [this]() -> std::expected<void, std::string> {
-            if (test_power_input_) { test_power_input_->cancel_pending(); }
-            return {};
-        }
+            return release_test_input();
+        },
+        [this](std::vector<TouchInputStep> steps) { return start_test_touch(std::move(steps)); },
+        [this]() { return tick_test_touch(); }
     );
 
     auto hello = std::make_shared<HelloApp>();
@@ -296,6 +306,7 @@ void System::on_deinit()
         navigator->set_availability_handler({});
     }
     power_key_monitor_.reset();
+    test_touch_input_.reset();
     test_power_input_.reset();
     shell_id_ = esp_brookesia::system::core::INVALID_APP_ID;
     foreground_app_id_.store(

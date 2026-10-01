@@ -75,6 +75,9 @@ public:
     std::expected<void, std::string> show_surface(ShellSurface surface);
     ShellSurface current_surface() const;
     std::expected<void, std::string> handle_gesture(const ShellGestureEvent &event);
+    std::expected<void, std::string> inject_synthetic_touch(int32_t x, int32_t y, bool pressed, bool first);
+    std::expected<void, std::string> finish_synthetic_touch(bool cancelled);
+    void cancel_gesture_input();
     bool is_watch_face() const;
     std::expected<void, std::string> set_display_on(bool on);
     std::expected<void, std::string> show_keyboard(
@@ -120,6 +123,8 @@ private:
     uint32_t display_output_id_;
     ShellHost host_;
     std::shared_ptr<HomeGestureState> home_gesture_state_;
+    std::string touch_output_name_;
+    ShellTouchTracker synthetic_touch_tracker_;
     std::shared_ptr<KeyboardState> keyboard_state_;
     std::shared_ptr<BackOverlayState> back_overlay_state_;
     std::shared_ptr<CallbackState> callback_state_;
