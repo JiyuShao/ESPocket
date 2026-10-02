@@ -16,10 +16,7 @@ main/idf_component.yml、dependencies.lock 与实际编译 flags 一致：Runtim
 ```diff
 --- a/Kconfig
 +++ b/Kconfig
-@@ -2,6 +2,15 @@
-     config BROOKESIA_RUNTIME_JS_ENABLE_AUTO_REGISTER
-         bool "Enable auto-register as runtime backend service"
-         default y
+@@ -4,0 +5,9 @@
 +
 +    config BROOKESIA_RUNTIME_JS_ASYNC_STACK_SIZE
 +        int "JavaScript async completion worker stack size (bytes)"
@@ -29,15 +26,9 @@ main/idf_component.yml、dependencies.lock 与实际编译 flags 一致：Runtim
 +            Stack budget for Promise resolution and JavaScript microtasks.
 +            Continuations may call synchronous native service functions.
 +            Tune this budget for the application's deepest supported call path.
- 
-     menuconfig BROOKESIA_RUNTIME_JS_ENABLE_DEBUG_LOG
-         bool "Enable debug or lower level logs"
 --- a/include/brookesia/runtime_js/macro_configs.h
 +++ b/include/brookesia/runtime_js/macro_configs.h
-@@ -43,3 +43,11 @@
- #       endif
- #   endif
- #endif
+@@ -45,0 +46,8 @@
 +
 +#if !defined(BROOKESIA_RUNTIME_JS_ASYNC_STACK_SIZE)
 +#   if defined(CONFIG_BROOKESIA_RUNTIME_JS_ASYNC_STACK_SIZE)
@@ -48,15 +39,9 @@ main/idf_component.yml、dependencies.lock 与实际编译 flags 一致：Runtim
 +#endif
 --- a/src/backend.cpp
 +++ b/src/backend.cpp
-@@ -604,7 +604,7 @@
-     scheduler_config.worker_configs = {
-         lib_utils::ThreadConfig{
-             .name = "RuntimeJsAsync",
+@@ -607 +607 @@
 -            .stack_size = 8 * 1024,
 +            .stack_size = BROOKESIA_RUNTIME_JS_ASYNC_STACK_SIZE,
-         }
-     };
-     if (!impl_->async_scheduler_.start(scheduler_config)) {
 ```
 
 ## 正式接入边界
