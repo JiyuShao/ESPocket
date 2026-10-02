@@ -4,13 +4,13 @@
 
 **Blocked by:** [03 Card 注册与生命周期](03-card-registry-lifecycle.md)；[04 Native/Runtime 导航绑定](04-samples-api-finalization.md)。
 
-**Status:** ready-for-human
+**Status:** needs-info
 
-- [ ] 两种样例均覆盖 Card 打开 Root/目标 Page，目标栈以 Root 为底，PWR Home 后再次打开从 Root 开始。
+- [x] 两种样例均覆盖 Card 打开 Root/目标 Page，目标栈以 Root 为底，PWR Home 后再次打开从 Root 开始。
 - [ ] Card ID/目标 Page 失效时降级、配置迁移、错误诊断与 API 错误结果一致。
-- [ ] Card 可见、离屏和再次可见的数据请求及生命周期通过组件验证；真实显示与触控至少覆盖对应目标打开和暂停路径。
+- [x] Card 可见、离屏和再次可见的数据请求及生命周期通过组件验证；真实显示与触控至少覆盖对应目标打开和暂停路径。
 - [x] C++ 与 Runtime Card API、版本化声明 schema 和作者职责写入 [开发契约](../../../docs/development/app-navigation-card-api.md)，不修改 Brookesia 的产品无关公开契约。
-- [ ] 记录样例与固件/package identity、构建结果和独立真机证据；导航通用证据引用 [008/03](../../008-m8-app-contract/issues/03-run-app-contract-hardware-acceptance.md)，不重新建立一套重复导航验收。
+- [x] 记录样例与固件/package identity、构建结果和独立真机证据；导航通用证据引用 [008/03](../../008-m8-app-contract/issues/03-run-app-contract-hardware-acceptance.md)，不重新建立一套重复导航验收。
 
 ## Comments
 
@@ -27,3 +27,5 @@
 - 2026-10-02（最终合成证据）：c4dfa5af8 + 闭包修复 Runtime 资源的 37 步 Card attempt PASS，完整包/固件、源码主机与资源校验通过。实际发现并修复 Root 手势误点、USB 输出交叉、release 后误超时、Owner 停止采样竞争及样例重复加载；实验实现崩溃与所有失败保留。见 [Card 设备记录](../records/2026-10-02-card-device-run.md)。物理/视觉问题已一次性发给用户，整票仍不关闭。
 
 - 2026-10-02（物理反馈）：用户报告左侧正常，右侧 Open 后空白，仅 Home 提示；实际异常设备的最小合成路径也未进入 Runtime。重启后启动与视觉恢复正常，但触发原因尚未确定，不能将重启视为修复。已保留失败、重启对比与两条未复现诊断路径，正在采集一次物理 Open 的实时日志；见 [设备记录](../records/2026-10-02-card-device-run.md)。
+
+- 2026-10-02（用户验收决定）：用户明确“没问题就过吧”，接受当前 Card 交互验收；结合左侧反馈、右侧 Root 物理/视觉确认及真实 Core 启动日志、37 步合成输入和组件证据，标记当前样例路径/呈现/记录条件完成。此前右侧空白保留为未确定根因、重启后未再复现，不声称源码修复。整票仅剩 03 的实际 package replacement/迁移依赖，状态改为 needs-info；008/03 通用回收验收仍独立。

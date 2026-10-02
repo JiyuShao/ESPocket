@@ -96,3 +96,14 @@ Hello Runtime 的顶层 const/let 在锁定 JS backend 保留的 realm 中重新
 用户在实时采集期间实际执行右侧首张 Card → Open，答复“正常出现”。`live-physical.log` 同时记录 Core `App started: id(5), manifest(espocket.app.hello_runtime), total_ms(482)`；该窗口没有观察到 panic、abort、栈溢出或 App 启动失败。采集完成后主动结束串口进程，退出 130 来自采集器 KeyboardInterrupt，不是设备崩溃。
 
 `app-sleep-20261002-212339` 又独立验证真实 Runtime Root 自动息屏、PWR 恢复 Root、PWR Home、Card 重开 Root，合成输入 PASS，最终 release 成功、seq=507、实际 Runtime Root/display=true。该项没有增加用户验收轮次。初始异常仍未修复；已询问最初空白之前是否曾启动/切换 Runtime，以缩小生命周期状态差异。当前没有 firmware 源码变更、没有换镜像，也没有把所有右侧物理步骤标为通过。
+
+
+## 当前验收接受
+
+用户明确“没问题就过吧”，接受当前 Card 交互结果，停止重复请求同一路径操作。左侧物理反馈正常，右侧重启后的 Root 画面与一次物理 Open 已确认正常；其他路径采用既有独立 synthetic/组件证据，不新增未发生的物理结果。此前空白仍记录为根因未确定、重启后未再复现，不标为已修复。014/05 的当前样例交互条件接受；实际 package replacement/配置迁移和 008/03 回收门槛不因本次接受而关闭。
+
+## 恢复普通配置后的独立导航回归
+
+当前 Card 交互接受后，恢复普通镜像 71567f599，仅写 App 分区 0x60000，esptool 输出 Hash of data verified；NVS/LittleFS 不修改。普通 ELF/BIN SHA-256 与上述已构建值一致；Card fixture、Native/Runtime reclaim、旧 M6 reclaim、resource trace 均关闭。启动原始日志 `/private/tmp/espocket-post-card-normal-startup.log`，写入日志 `/private/tmp/espocket-post-card-normal-flash.log`。
+
+一次新的 navigation attempt `20261002T135831Z-cf301c99-7fab-45fe-8c36-a475c6308db9`：PASS，34 步（初始亮屏无需唤醒步骤）；目录 `/private/tmp/espocket-post-card-normal-attempts/<attempt>/`。覆盖最终 OwnerSnapshotQueue 实现下的 Native Detail Back、Root 负向 Back、确认取消/允许、重复请求、超时与迟到确认、PWR 中断待决、重开 Root、Home Space 返回与显示切换。最终 release=ok，seq=360，Watch Face/display=true，foregroundAppId/pageId 为空、canBack/backPending/inputBusy=false。窗口没有 panic、栈溢出、abort、App 启停失败或 synthetic-input 清理失败。仍是 synthetic-input，不追加物理/视觉声明。

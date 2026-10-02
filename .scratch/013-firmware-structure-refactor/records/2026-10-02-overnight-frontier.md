@@ -177,3 +177,9 @@
 
 
 普通配置 71567f599 全量构建与最终 host checks 已通过，资源 hash 与 Card 测试资源一致；尚未刷入。用户回复当前 Card 集中问题后再恢复普通镜像、补一次新 Owner 采样的 navigation Driver，并汇总剩余 007/008 单次物理门槛，不再重复已接受的 013/亮度/Wi-Fi。
+
+## 用户接受 Card 后的当前状态
+
+用户明确“没问题就过吧”，接受当前 Card 样例交互。右侧曾实际空白的失败与重启对比完整保留，重启后视觉和一次物理 Open 正常；未确定根因，不声称实现修复。014/05 样例交互/呈现/记录条件勾选，剩余实际 package replacement/迁移依赖 014/03 → 005/03，状态 needs-info。
+
+设备已恢复普通 71567f599，App 写入校验通过。新 Owner 采样实现的一次 34 步 navigation attempt PASS、release=ok、最终表盘亮屏，见更新后的 [Card 设备记录](../../014-app-navigation-card-contract/records/2026-10-02-card-device-run.md)。Card/reclaim/trace 配置关闭，LittleFS 与 NVS 保留。剩余真实 frontier 为 007/03 尚缺的物理路径、008/03 两种 App 恢复与回收、以及已记录的上游更新事务阻塞。不会重做已经接受的 013 或亮度/Wi-Fi 多轮。
