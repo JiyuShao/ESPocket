@@ -44,3 +44,31 @@
 普通 c8d56e5e2 的 apps attempt `20261002T165910Z-97893ee9-7013-4dbf-9be8-d989213cd12e` PASS，57 步。Native 与真实 Runtime 都通过 Root/Detail、普通横滑、未回收自动息屏/恢复、重复待决 Back、取消/允许/超时、过期确认拒绝和 PWR Home 后 Root 重启。release=ok，最终表盘亮屏且没有 App/Page、Back pending 或输入占用；无 panic/stack overflow。报告与串口位于 `/private/tmp/espocket-runtime-patched-apps/`。
 
 这是 synthetic-input；008/03 的 Runtime 物理和回收/资源条件仍独立保留。原镜像失败与本次修复后的 attempt 不合并计数。
+
+## Native 独立回收与有限资源结果
+
+Native-only / resource trace 镜像完整构建通过，hello `01a86838e`。ELF `01a86838eca13871595c239e3433cc2e36760387ab06907e9a6e48151cf639f4`；BIN `76d592cf43cb98859960ab0eb2b01b3f351c80e4c8d5e39803023d81d4d30d6b`。仅 Native reclaim 和 resource trace 开启，Runtime reclaim/Card fixture 关闭，预算 16384。
+
+reclaim-native attempt `20261002T170549Z-8d3b4f21-050a-43b0-a111-6370a099c041` PASS：自动息屏后日志确认 native stop，wake 回表盘；重开从 Root，旧 confirmation 状态清除；同镜像的 Runtime 自动息屏后恢复 Detail。最终 release=ok。路径是 synthetic-input，物理/视觉未验收。
+
+resources attempt `20261002T170529Z-3b604f88-8582-4bc2-b601-49bf0aaa629c` 的 45 步语义路径 PASS，但仅收齐一条 heap 日志，资源证据不完整。为具体采样缺口增加 0.4 秒无请求读取窗口；quiet attempt `20261002T170902Z-91ea6724-ed05-4c26-be79-e7cf17a761a5` 同样 45 步 PASS、release=ok，收到两条完整 heap 日志，仍没有收齐每个 checkpoint。保留缺项，不将 quiet window 声称为日志丢失根因修复。
+
+| 同一诊断镜像有效 checkpoint | internal free | PSRAM free | internal largest | PSRAM largest |
+|---|---:|---:|---:|---:|
+| sample 4 | 51531 | 2190152 | 40960 | 2097152 |
+| sample 7 | 51567 | 2190496 | 40960 | 2097152 |
+| sample 12 | 51655 | 2190500 | 40960 | 2097152 |
+
+有限工作负载的有效数据未出现持续下降，最大空闲块相同。不是长时稳定性证明，也不为缺失 checkpoint 补造数据。RuntimeJsAsync 高水位记录的最小剩余栈先为 7416，随后稳定为 7400 bytes；IDF Xtensa StackType_t 为 uint8_t，数据单位是 bytes。所观测最大栈消耗为 8984，解释原 8192 预算不足；不保证任意未来 App 的栈上界。
+
+报告/日志位于 `/private/tmp/espocket-runtime-patched-resources/`、`resources-quiet/` 与 `reclaim-native/`（后二者同 espocket-runtime-patched 前缀）。生产 GUI 反馈与资源没有删改。新增 quiet 读取测试验证日志保存、无额外请求及 panic 检测；最终统一检查 63 项 unittest 通过。
+
+## Runtime 独立回收与普通镜像恢复
+
+Runtime-only / resource trace 镜像完整构建通过，hello `439f6431a`。ELF `439f6431aa86b1dffa975fb8cb529668a10cd9b09f6361f0015d678db3906c8f`；BIN `504b7562e66fc652b26f24adb08616ea730be690858a6f6108bbe84aaf4db854`。仅 Runtime reclaim/resource trace 开启，Native reclaim/Card fixture 关闭，预算 16384，Registry lock 身份核对通过。
+
+reclaim-runtime attempt `20261002T171315Z-faaa66a6-9cfd-4f84-b5b6-faa077021fec` PASS，17 步。Native 未回收时保留 Detail；Runtime 自动息屏后日志确认 runtime stop，wake 回表盘；重开 Root，旧 confirmation 状态清除，新 Detail 的 Edge Back 即时回 Root。release=ok，最终 seq=657、表盘亮屏、App/Page 空、Back/inputBusy false。没有 panic/stack overflow；原始报告位于 `/private/tmp/espocket-runtime-patched-reclaim-runtime/`。
+
+已重新刷回普通 c8d56e5e2，只写应用分区并校验成功；LittleFS/NVS 未写。独立只读 hello 匹配，release=ok，最终 seq=1、Watch Face/display=true、App/Page 空、canBack/backPending/inputBusy false。身份和快照保存 `/private/tmp/espocket-runtime-final-normal-state.json`，写入和启动日志同 final-normal 前缀。普通保存配置的 Card、两种 reclaim、旧 M6 reclaim 和 resource trace 均关闭。
+
+两种回收的设备语义已验证；所有 synthetic-input 证据仍不能代替物理/视觉条件，008/03 不关闭。剩余依赖与晨间最小操作见[续跑 frontier](2026-10-03-overnight-frontier.md)。

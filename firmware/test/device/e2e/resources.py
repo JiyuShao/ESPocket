@@ -10,7 +10,7 @@ def run(runner, profile):
         raise DeviceTestError('device already has an occupied input sequence')
     for cycle in range(1, 4):
         runtime_confirm.run(runner, profile)
-        runner.power(f'Runtime resource checkpoint {cycle}', {**home, 'display': False})
+        runner.power(f'Runtime resource checkpoint {cycle}', {**home, 'display': False}, quiet_window=0.4)
         runner.power(f'Runtime checkpoint wake {cycle}', home)
         root = {'foregroundAppId': 'espocket.app.hello', 'pageId': 'root',
                 'display': True, 'canBack': False, 'backPending': False}
@@ -18,5 +18,5 @@ def run(runner, profile):
         runner.touch(f'Native Root {cycle}', root, profile['native_tap'])
         runner.touch(f'Native Detail {cycle}', {**root, 'pageId': 'detail', 'canBack': True}, profile['detail_tap'])
         runner.power(f'Native Home {cycle}', home)
-        runner.power(f'Native resource checkpoint {cycle}', {**home, 'display': False})
+        runner.power(f'Native resource checkpoint {cycle}', {**home, 'display': False}, quiet_window=0.4)
         runner.power(f'Native checkpoint wake {cycle}', home)

@@ -3,7 +3,7 @@
 Sequence: 008
 
 Status: blocked
-Blocked by: [014/04 Native/Runtime 导航绑定](../014-app-navigation-card-contract/issues/04-samples-api-finalization.md)；验收与回收依赖见各 ticket。
+Blocked by: [03 剩余物理/视觉验收](issues/03-run-app-contract-hardware-acceptance.md)；014/04 绑定与 04 栈配置修复的源码/自动门槛已通过。
 
 ## Problem Statement
 
@@ -56,3 +56,5 @@ Native navigation model 必须成为 Native、Runtime 与 third-party App 共用
 四类页面指导及旧版 Runtime Toolkit/build/staging 基线已存在；这些结果不能证明新 Navigator、Root 无 Back 或待决 Back。新增语言绑定与开发 API 由 [014/04](../014-app-navigation-card-contract/issues/04-samples-api-finalization.md) 承接；本 Effort 完成 [02 回收入口](issues/02-add-app-reclaim-test-seams.md) 和 [03 真实 Native/Runtime 交互验收](issues/03-run-app-contract-hardware-acceptance.md)。两种执行模型分别保留证据，次数按 03 的单次集中验收规则。
 
 - 2026-10-02：007/03 已完成；当前 apps 设备验收发现 RuntimeJsAsync 栈溢出，最小复现与诊断证据见[记录](records/2026-10-02-app-device-frontier.md)。03 等待 04 的上游能力，未关闭 M8，未推进依赖 M8 的 009。
+
+- 2026-10-03：用户接受限定 Runtime 源码补丁方案；完整锁定构建、最小/完整 App 自动套件、两种独立 reclaim 与有限资源路径通过。已恢复普通 c8d56e5e2，原失败与缺失日志保留；008 仍等待物理/视觉条件，009 按依赖等待。见[补丁验证](records/2026-10-03-runtime-stack-patch-validation.md)和[晨间 frontier](records/2026-10-03-overnight-frontier.md)。

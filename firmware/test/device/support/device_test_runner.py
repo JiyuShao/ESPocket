@@ -30,13 +30,17 @@ class DeviceTestRunner(UsbTestClient):
             self.sleep(0.04)
         raise DeviceTestError(f'owner state timeout: expected {expected}, last {last}')
 
-    def stimulate(self, name, op, expected, **parameters):
+    def stimulate(self, name, op, expected, *, quiet_window=0, **parameters):
         before = self.snapshot()
         step = {'name': name, 'operation': op, 'parameters': parameters, 'beforeSeq': before['seq'],
                 'expected': expected, 'status': 'RUNNING'}
+        if quiet_window:
+            step['quietWindowSeconds'] = quiet_window
         self.steps.append(step)
         try:
             self.request(op, **parameters)
+            if quiet_window:
+                self.capture_logs(quiet_window)
             after = self.wait(expected, after=before['seq'])
         except (Exception, KeyboardInterrupt) as error:
             step.update(status='FAIL', error=f'{type(error).__name__}: {error}')
@@ -57,8 +61,8 @@ class DeviceTestRunner(UsbTestClient):
     def touch(self, name, expected, start, end=None):
         return self.stimulate(name, 'stimulus.touch', expected, points=self.points(start, end))
 
-    def power(self, name, expected):
-        return self.stimulate(name, 'stimulus.powerShort', expected)
+    def power(self, name, expected, *, quiet_window=0):
+        return self.stimulate(name, 'stimulus.powerShort', expected, quiet_window=quiet_window)
 
     def await_state(self, name, expected, *, timeout, invariants):
         step = {'name': name, 'operation': 'observe-transition', 'beforeSeq': self.last_seq,

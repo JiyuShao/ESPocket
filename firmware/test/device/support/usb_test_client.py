@@ -62,6 +62,18 @@ class UsbTestClient:
             return reply
         raise DeviceTestError(f'{op}: response timeout')
 
+    def capture_logs(self, duration):
+        """Read a bounded quiet window without adding protocol response traffic."""
+        deadline = self.clock() + duration
+        while self.clock() < deadline:
+            line = self.transport.readline(4096)
+            if line:
+                self.raw_log.write(b'RX ' + line)
+                self.raw_log.flush()
+                self.check_log(line)
+            else:
+                self.sleep(0.01)
+
     @staticmethod
     def check_log(line):
         markers = (b'A stack overflow in task', b'Guru Meditation', b'panic_abort', b'abort() was called', b'ESP_RST_PANIC',

@@ -2,14 +2,14 @@
 
 **What to build:** 在保持 Runtime 导航、确认提示与公开开发 API 的前提下，解决真实 RuntimeJsAsync 栈溢出并通过设备回归。
 
-**Blocked by:** None for implementation. [ADR-0015](../../../docs/adr/0015-runtime-async-stack-patch-exception.md) 已接受 Runtime 0.8.3 栈配置补丁的限定例外；完整构建、真实设备与资源门槛尚待执行。不能改 managed_components 或删掉产品行为作为验收。
+**Blocked by:** None for implementation. [ADR-0015](../../../docs/adr/0015-runtime-async-stack-patch-exception.md) 已接受 Runtime 0.8.3 栈配置补丁的限定例外；完整构建、自动设备与有限资源门槛通过；剩余 Runtime 确认反馈的物理/视觉检查。不能改 managed_components 或删掉产品行为作为验收。
 
-**Status:** ready-for-agent
+**Status:** ready-for-human
 
 - [x] 确定受支持的上游修复或配置机制及锁定版本：用户接受 ADR-0015 的限定源码补丁方案，锁定 JS 0.8.3。
 - [x] 保留确认开关与待决反馈，runtime-confirm 最小设备回归通过（普通 c8d56e5e2，synthetic-input，视觉待单独验收）。
 - [ ] apps 完整 Native/Runtime 套件与实际物理检查通过。
-- [ ] 恢复普通镜像，记录资源 identity、失败和修复后的独立 attempt。
+- [x] 恢复普通镜像，记录资源 identity、失败和修复后的独立 attempt。
 
 ## Comments
 
@@ -22,3 +22,5 @@
 2026-10-03：用户回复「好，不要停，我去休息了，你把能做的都做了吧」，接受此前明确询问的 ADR-0001 限定例外。正式补丁及独立工程构建入口已实现，先验证 16 KiB；测试结果另行追加，不预先判定修复。
 
 2026-10-03：正式接入的准备失败、锁定与主机结果见[补丁验证](../records/2026-10-03-runtime-stack-patch-validation.md)；真实设备结果按同一记录独立追加。
+
+2026-10-03：普通最小/完整 apps、两种独立 reclaim 及有限资源路径均通过；已恢复普通 c8d56e5e2。剩余物理/视觉检查集中留给用户休息后一次执行。

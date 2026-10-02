@@ -67,6 +67,17 @@ class DeviceTestRunnerTests(unittest.TestCase):
                     scenario.run(driver, {})
                 self.assertEqual([request['op'] for request in transport.requests], ['snapshot'])
 
+    def test_quiet_window_preserves_logs_without_requests_and_detects_panic(self):
+        driver, transport, log = self.make(lambda _: {})
+        transport.pending.append(b'M6_RESOURCE sample=1 internal_free=100\n')
+        driver.capture_logs(0.1)
+        self.assertIn(b'M6_RESOURCE sample=1', log.getvalue())
+        self.assertEqual(transport.requests, [])
+        transport.pending.append(b'A stack overflow in task RuntimeJsAsync\n')
+        with self.assertRaisesRegex(DeviceTestError, 'device error'):
+            driver.capture_logs(0.1)
+        self.assertIn(b'RuntimeJsAsync', log.getvalue())
+
     def test_ack_and_busy_do_not_satisfy_owner_assertion(self):
         states = iter([snapshot(1), snapshot(2, surface='launcher', inputBusy=True),
                        snapshot(3), snapshot(4, surface='launcher'), snapshot(5, surface='launcher')])
