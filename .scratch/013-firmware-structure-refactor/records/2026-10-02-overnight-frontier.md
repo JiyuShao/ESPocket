@@ -80,6 +80,11 @@
 - 没有刷写或执行新能力，设备仍为 013 identity；早晨收到单次 smoke 后，统一安排新镜像的一次 Driver 验证。每次失败保留原 attempt，合成路径不冒充物理或视觉证据。
 - 012 的可自动源码 frontier 暂告一段落；继续评估 014/03 Card 注册/lifecycle 与 014/04 Runtime 绑定的独立源码条件，不跳过 008/009 的 Spec blocker。
 
+## 第十轮自动执行
+
+- 014/03 完成 CardRegistry 配置/迁移组件：稳定二元身份、左右排序/换侧、原子替换、更新删除/卸载清理与原因通知；复用 Navigator 声明校验，不复制页面栈。
+- 31 项 host unittest、M2 parser、Markdown 通过；最终构建和范围见 [Card Registry 证据](../../014-app-navigation-card-contract/records/2026-10-02-card-registry.md)。尚未接 Core/GUI/lifecycle/NVS，整票保持开放，不宣称用户已能动态配置设备 Card。
+
 ## 晨间最小介入
 
 先回复已发出的单次 013 smoke 结果：Native Detail Edge Back；自动息屏唤醒保留 Detail；PWR Home/息屏/亮屏回表盘；Quick Settings 上滑、Launcher 顶部下拉返回。遇到异常停在该步即可。无需重做此前十轮资源验证。

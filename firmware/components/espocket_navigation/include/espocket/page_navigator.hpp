@@ -53,6 +53,8 @@ struct PageDeclaration {
     bool uses_standard_back_control = false;
 };
 
+std::expected<void, NavigationError> validate_page_declaration(const PageDeclaration &declaration);
+
 struct PageSnapshot {
     std::string app_id;
     std::string page_id;

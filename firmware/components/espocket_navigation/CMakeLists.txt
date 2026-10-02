@@ -1,5 +1,5 @@
 idf_component_register(
-    SRCS "src/page_navigator.cpp"
+    SRCS "src/page_navigator.cpp" "src/card_registry.cpp"
     INCLUDE_DIRS "include"
 )
 

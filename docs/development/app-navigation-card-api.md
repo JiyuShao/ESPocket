@@ -55,6 +55,25 @@ Root 不显示默认 Back，也不响应 Edge Back。子页面上的 Back 进入
 
 PWR Home 不经过 App Back 回调，也不受确认界面阻塞：它取消待决 token、结束当前导航任务并显示 Watch Face。App 停止或崩溃同样使 token 失效；迟到的允许或取消返回 `stale_request`，不得改变新任务。App 自定义 Back 控件或手势必须调用相同入口，不可只切换 GUI 而不更新框架栈。
 
+## Card 注册与配置组件
+
+当前 C++ 核心提供 [CardRegistry](../../firmware/components/espocket_navigation/include/espocket/card_registry.hpp)，只管理声明身份和左右配置，不保存 Page 栈、App 运行状态或 GUI 对象。它与 PageNavigator 复用 `validate_page_declaration`，避免 Card 与安装使用不同校验规则。此组件尚未连接 Shell 呈现和 Core 安装/卸载；完整 Card API 与生命周期仍按 014/03、05 接入。
+
+| 接口 | 结果 |
+|---|---|
+| `register_app(PageDeclaration)` | 校验后登记 App 可提供的 Card；重复 App 拒绝。无 Card 声明的 App 不出现在 available_cards。 |
+| `update_app(PageDeclaration)` | App 必须已登记且 Root ID 不变；失败保持原声明/配置。成功移除已删除 Card 的配置，保留其余身份和用户顺序。 |
+| `uninstall_app(appId)` | 移除 App 声明与其已配置 Card；不影响其他 App。实际 Core 回调接入尚待完成。 |
+| `available_cards()` / `target_page(CardKey)` | 查询已声明 Card；空目标解析为 Root，不执行页面转移。 |
+| `add(CardKey, side, index)` | 在左右序列指定索引插入；同一 appId+cardId 在两侧合计最多一次。 |
+| `move(CardKey, side, finalIndex)` | 移动已有配置，索引指删除原位置后的最终序列位置；可换侧。 |
+| `remove(CardKey)` | 只移除配置，不卸载 App 或删除其可添加声明。 |
+| `replace_configuration(CardConfiguration)` | 完整校验身份和跨侧重复后原子替换；任何失败保留旧配置。 |
+| `configuration()` | 返回左右稳定身份列表的拷贝；不会以声明数组顺序重新编号。 |
+| `set_removal_handler(handler)` | 提交后通知 UserRemoved、AppUninstalled 或 RemovedByUpdate；回调在锁外运行，可查询已提交配置。 |
+
+`CardSide` 只允许 Left/Right，不配置 Quick Settings 或 Launcher。`CardError` 区分无效声明、未知 App/Card、重复登记/配置、未配置、错误位置/方向和身份不一致。Registry 方法内部加锁；移除回调应快速完成且不抛异常。回调是配置移除的历史事实，不是另一个运行实例或后台订阅。配置快照尚未持久化到 NVS；存储与实际 Card 可见生命周期接入不能由本组件测试代替。
+
 ## App Card 生命周期
 
 Card 与完整 App 使用同一 App 身份和持久业务数据，但可以是不同内存实例。ESPocket 管理 Card UI 的创建、可见、暂停与释放。离屏后 Card UI 可暂停或销毁；再次可见时框架请求新数据。App 提供 Card 内容、订阅来源和轻量操作；可靠计时、网络状态与其他长期业务放在 App 持久数据或 Service，不以 Card UI 常驻为前提。进入完整 App 时 Card 暂停，PWR Home 返回 Watch Face。

@@ -10,12 +10,9 @@ PageNavigator::PageNavigator(PageDeclaration declaration, Presenter presenter)
     : declaration_(std::move(declaration)), presenter_(std::move(presenter))
 {}
 
-std::expected<PageNavigator, NavigationError> PageNavigator::create(
-    PageDeclaration declaration,
-    Presenter presenter
-)
+std::expected<void, NavigationError> validate_page_declaration(const PageDeclaration &declaration)
 {
-    if (declaration.app_id.empty() || declaration.root_page_id.empty() || !presenter) {
+    if (declaration.app_id.empty() || declaration.root_page_id.empty()) {
         return std::unexpected(NavigationError::InvalidDeclaration);
     }
     std::unordered_set<std::string_view> pages;
@@ -34,6 +31,15 @@ std::expected<PageNavigator, NavigationError> PageNavigator::create(
             return std::unexpected(NavigationError::InvalidDeclaration);
         }
     }
+    return {};
+}
+
+std::expected<PageNavigator, NavigationError> PageNavigator::create(
+    PageDeclaration declaration, Presenter presenter)
+{
+    if (!presenter) { return std::unexpected(NavigationError::InvalidDeclaration); }
+    auto validated = validate_page_declaration(declaration);
+    if (!validated) { return std::unexpected(validated.error()); }
     return PageNavigator(std::move(declaration), std::move(presenter));
 }
 
@@ -198,11 +204,11 @@ std::expected<void, NavigationError> PageNavigator::update_declaration(PageDecla
             declaration.root_page_id != declaration_.root_page_id) {
         return std::unexpected(NavigationError::IdentityMismatch);
     }
-    auto validated = create(std::move(declaration), presenter_);
+    auto validated = validate_page_declaration(declaration);
     if (!validated) {
         return std::unexpected(validated.error());
     }
-    declaration_ = std::move(validated->declaration_);
+    declaration_ = std::move(declaration);
     publish_availability();
     return {};
 }
