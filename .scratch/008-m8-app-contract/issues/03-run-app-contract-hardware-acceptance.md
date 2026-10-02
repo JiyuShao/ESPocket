@@ -2,9 +2,9 @@
 
 **What to build:** 分别取得真机 evidence，证明 Native 与 Runtime App 满足 Page 导航、Root 无 Back、Home、wake、待决 Back 与 reclaim 行为。
 
-**Blocked by:** [007/03 系统导航真机验收](../../007-m7-navigation/issues/03-run-navigation-hardware-acceptance.md)；[014/04 Native/Runtime 导航绑定](../../014-app-navigation-card-contract/issues/04-samples-api-finalization.md)；[02 回收测试入口](02-add-app-reclaim-test-seams.md)；[003/02 Runtime lifecycle 与共存](../../003-m3-runtime-app/issues/02-prove-runtime-lifecycle-coexistence.md)（已完成）。
+**Blocked by:** [04 Runtime 异步栈溢出](04-resolve-runtime-async-stack-overflow.md)； [007/03 系统导航真机验收](../../007-m7-navigation/issues/03-run-navigation-hardware-acceptance.md)；[014/04 Native/Runtime 导航绑定](../../014-app-navigation-card-contract/issues/04-samples-api-finalization.md)；[02 回收测试入口](02-add-app-reclaim-test-seams.md)；[003/02 Runtime lifecycle 与共存](../../003-m3-runtime-app/issues/02-prove-runtime-lifecycle-coexistence.md)（已完成）。
 
-**Status:** ready-for-human
+**Status:** needs-info
 
 - [ ] 四条 Native/Runtime path 各完成一次集中验收。
 - [ ] 两种模型的 Screen Off/Wake、horizontal swipe、Root 无 Back 与待决 Back 检查通过。
@@ -24,7 +24,7 @@
 
 | 执行模型 / 路径 | 次数 | PASS 条件 | 状态 |
 |---|---:|---|---|
-| Native Root → Detail → Back → Root → PWR Home | 1 | 子页面 Back、Root 无 Back 与 PWR Home 均正确 | NOT TESTED |
+| Native Root → Detail → Back → Root → PWR Home | 1 | 子页面 Back、Root 无 Back 与 PWR Home 均正确 | PASS（复用[已接受物理结果](../../014-app-navigation-card-contract/records/2026-10-02-default-back-prototype.md)，本次合成复核通过） |
 | Runtime Root → Detail → Back → Root → PWR Home | 1 | 子页面 Back、Root 无 Back 与 PWR Home 均正确 | NOT TESTED |
 | Native background reclaim → relaunch | 1 | 从 App Root 启动，不恢复失效页面 | NOT TESTED |
 | Runtime background reclaim → relaunch | 1 | 从 App Root 启动，不恢复失效页面 | NOT TESTED |
@@ -33,13 +33,13 @@
 
 | 检查项 | PASS 条件 | 状态 |
 |---|---|---|
-| Native App Screen Off / Wake | 未回收时恢复页面；回收时降级 Watch Face | NOT TESTED |
-| Runtime App Screen Off / Wake | 未回收时恢复页面；回收时降级 Watch Face | NOT TESTED |
-| Native normal horizontal swipe | 不误触发 Edge Back | NOT TESTED |
-| Runtime normal horizontal swipe | 不误触发 Edge Back | NOT TESTED |
+| Native App Screen Off / Wake | 未回收时恢复页面；回收时降级 Watch Face | PARTIAL（未回收物理结果已接受；当前合成通过，回收待检） |
+| Runtime App Screen Off / Wake | 未回收时恢复页面；回收时降级 Watch Face | PARTIAL（当前未回收合成通过，物理/回收待检） |
+| Native normal horizontal swipe | 不误触发 Edge Back | PASS（007/03 当前物理确认与本次合成复核） |
+| Runtime normal horizontal swipe | 不误触发 Edge Back | PARTIAL（本次合成通过，物理待检） |
 | Root Back attempt | 两种执行模型都保持 Root 且无默认 Back | NOT TESTED |
-| Deferred Back | 重复请求不重复提交；超时取消；PWR 可立即回表盘 | NOT TESTED |
-| Failure scan | 无 panic、watchdog、assert、deadlock、错误 Back 或持续性资源下降 | NOT TESTED |
+| Deferred Back | 重复请求不重复提交；超时取消；PWR 可立即回表盘 | FAIL（Native 合成通过；Runtime 确认开关栈溢出，见[记录](../records/2026-10-02-app-device-frontier.md)） |
+| Failure scan | 无 panic、watchdog、assert、deadlock、错误 Back 或持续性资源下降 | FAIL（RuntimeJsAsync 栈溢出；heap 与回收门槛待检） |
 
 ## 证据规则
 
@@ -57,3 +57,5 @@
 - Native 与 Runtime 的失败必须分别记录，不能互相替代。
 
 - 2026-10-02：落实用户“验证次数改小、不要反复操作”的授权，四条路径各一次；物理/视觉条件与失败记录不变。新增回收开关与镜像准备见 02，本票仍需真实设备证据。
+
+- 2026-10-02：007 前置已完成。当前 apps attempt 的 Native 合成路径通过、Runtime 在确认开关处栈溢出；自动通过不替代物理条件，失败不稀释。04 未解决前暂停回收验收，见[设备记录](../records/2026-10-02-app-device-frontier.md)。

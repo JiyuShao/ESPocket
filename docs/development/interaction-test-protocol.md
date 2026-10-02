@@ -95,7 +95,7 @@ python scripts/firmware/run_device_tests.py \
   --output /private/tmp/espocket-interaction
 ```
 
-用例位于 `firmware/test/device/e2e/`，USB 客户端与执行器位于 `firmware/test/device/support/`；`--suite cards` 选择 Native/Runtime Card 路径，需要默认关闭的 Card fixture 测试镜像。`--suite surfaces` 在普通配置补查系统 Surface 边界、各页面 PWR Home、Settings 入口和 Native 普通横滑，不改变服务设置。目录职责与主机检查入口见 [Firmware README](../../firmware/README.md)。旧 `interaction_driver.py` 转发到同一 CLI，参数与报告语义不变。
+用例位于 `firmware/test/device/e2e/`，USB 客户端与执行器位于 `firmware/test/device/support/`；`--suite cards` 选择 Native/Runtime Card 路径，需要默认关闭的 Card fixture 测试镜像。`--suite surfaces` 在普通配置补查系统 Surface 边界、各页面 PWR Home、Settings 入口和 Native 普通横滑，不改变服务设置。`--suite apps` 在普通配置集中验证真实 Native/Runtime App 的 Root/Detail、普通横滑、待决 Back、PWR Home 与未回收息屏恢复；不用于回收测试镜像。目录职责与主机检查入口见 [Firmware README](../../firmware/README.md)。旧 `interaction_driver.py` 转发到同一 CLI，参数与报告语义不变。
 
 设备 ID 来自操作者的设备清单，报告明确标注该来源，不把串口路径冒充唯一设备 identity。`--expected-image` 必填且严格比对设备 hello；不匹配或缺少能力时，在任何刺激前失败，仍尝试 release 和最终 snapshot。
 
@@ -124,3 +124,5 @@ python scripts/firmware/run_device_tests.py \
 `--suite navigation` 是默认套件。`--suite cards` 要求明确的 Card 样例镜像（CONFIG_ESPOCKET_M8_CARD_SAMPLE_TEST 开启）、设备 Developer Mode On 与空持久 Card 配置；不自动修改 NVS 或开启模式。该镜像在 RAM 中配置左 Native、右 Runtime 的 summary/detail。Driver 使用同一套 USB 原始轨迹和 Owner 快照验证两种真实 App 的 Root/目标 Detail、Root 无 Back、子页返回、PWR Home，以及 Card 自动息屏/唤醒恢复。
 
 Card ID 不新增到协议快照；第二张 Card 通过打开目标 Detail 的实际 Page 结果证明，而非仅凭相同 Surface。报告增加 testSuite 字段，全部结果仍为 synthetic-input，不满足视觉/触摸/GPIO 门槛。Card 按钮坐标来自样例 GUI，须保留首次实际 attempt 的校准结果。
+
+`--suite runtime-confirm` 保留 Runtime 异步确认的最小设备回归。故障及实际触发步骤见[上游跟踪](../upstream/issues/runtime-js-async-stack-overflow.md)；它不替代 apps 完整套件。

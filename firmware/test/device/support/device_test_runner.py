@@ -2,7 +2,7 @@
 from __future__ import annotations
 from datetime import datetime, timezone
 import uuid
-from ..e2e import navigation, cards, surfaces
+from ..e2e import navigation, cards, surfaces, apps, runtime_confirm
 from .usb_test_client import UsbTestClient, DeviceTestError
 
 LIMITS = 'Synthetic input does not verify touch hardware, PWR GPIO, or visual feedback.'
@@ -118,6 +118,10 @@ class DeviceTestRunner(UsbTestClient):
                 self.card_suite(profile)
             elif suite == 'surfaces':
                 surfaces.run(self, profile)
+            elif suite == 'apps':
+                apps.run(self, profile)
+            elif suite == 'runtime-confirm':
+                runtime_confirm.run(self, profile)
             else:
                 raise DeviceTestError('unknown test suite')
         except (Exception, KeyboardInterrupt) as error:

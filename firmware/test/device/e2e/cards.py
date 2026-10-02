@@ -1,11 +1,13 @@
 """Cards device scenarios; assertions use real Owner snapshots."""
 
+from ..support.usb_test_client import DeviceTestError
+
 def run(runner, profile):
     home = {'surface': 'watch_face', 'display': True, 'foregroundAppId': '', 'pageId': '',
             'canBack': False, 'backPending': False}
     initial = runner.snapshot()
     if initial['inputBusy']:
-        raise DriverError('device already has an occupied input sequence')
+        raise DeviceTestError('device already has an occupied input sequence')
     if not initial['display']:
         runner.power('initial wake', {'display': True})
         initial = runner.snapshot()

@@ -8,6 +8,7 @@
 - [2026-09-29 AI Native 本地源码快照](ai-native-local-baseline-2026-09-29.md)
 - [2026-09-29 Runtime package trust 本地源码快照](package-trust-local-baseline-2026-09-29.md)
 - [2026-10-02 Settings 与 Store GUI 本地源码快照](settings-store-gui-local-baseline-2026-10-02.md)
+- [Runtime JS 异步 GUI 栈溢出最小复现](issues/runtime-js-async-stack-overflow.md)
 - [HTTP CancelRequest/TLS handshake race Issue 草稿](issues/http-cancel-race.md)
 
 ## 边界

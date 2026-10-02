@@ -74,7 +74,7 @@ firmware/
         └── profiles/  # 设备布局的坐标、手势与校准信息
 ```
 
-`scripts/check.py` 显式发现各 Owner 的 `test/` 和 `firmware/test/host/`，不发现 `device/`，不打开串口、不刷写、不改变开发者模式。设备测试通过 `scripts/firmware/run_device_tests.py` 显式运行；`--suite navigation`（默认）、`--suite cards` 与 `--suite surfaces` 选择用例；surfaces 补查普通配置的 Card 边界、系统页面 PWR Home、Quick Settings → Settings 与 App 普通横滑。未来资源、回收或稳定性测试也归 `device/`，有真实用例时再增加分类。
+`scripts/check.py` 显式发现各 Owner 的 `test/` 和 `firmware/test/host/`，不发现 `device/`，不打开串口、不刷写、不改变开发者模式。设备测试通过 `scripts/firmware/run_device_tests.py` 显式运行；`--suite navigation`（默认）、`--suite cards`、`--suite surfaces` 与 `--suite apps` 选择用例；surfaces 补查普通配置的 Card 边界、系统页面 PWR Home、Quick Settings → Settings 与 App 普通横滑；apps 在普通配置验证 Native/Runtime 导航、待决 Back 与未回收息屏恢复。未来资源、回收或稳定性测试也归 `device/`，有真实用例时再增加分类。
 
 USB 客户端只负责线缆协议、响应匹配和快照校验；执行器负责行为断言、步骤、attempt 及始终执行的清理；E2E 用例调用执行器，不自行实现串口协议或另一份导航状态。CLI 负责参数、连接和产物目录。
 
@@ -137,3 +137,5 @@ python3 scripts/check.py
 ```
 
 准备命令使用官方 Component Manager 从 dependencies.lock 获取组件并验证 hash；已有组件 hash 不匹配时失败，不覆盖本地改动。它只准备 host tests 的 Settings 资源与 Runtime JSON 编码所用 Boost，不解析或改写版本锁，也不替代固件依赖解析。统一检查本身仍只读，不隐式下载依赖。CI 的 GNU 编译器由 `CXX=g++` 选择；本地默认使用 clang++。
+
+Runtime 异步确认故障最小设备回归使用 `--suite runtime-confirm`，与其他套件共用设备身份、镜像核对和失败报告规则。此套件通过不代表完整 App 契约验收；上游阻塞与诊断见[Runtime 异步 GUI 栈溢出](../docs/upstream/issues/runtime-js-async-stack-overflow.md)。

@@ -2,7 +2,7 @@
 
 Sequence: 008
 
-Status: active
+Status: blocked
 Blocked by: [014/04 Native/Runtime 导航绑定](../014-app-navigation-card-contract/issues/04-samples-api-finalization.md)；验收与回收依赖见各 ticket。
 
 ## Problem Statement
@@ -45,6 +45,8 @@ Native navigation model 必须成为 Native、Runtime 与 third-party App 共用
 - [02 — 增加 Native 与 Runtime reclaim test seam](issues/02-add-app-reclaim-test-seams.md)
 - [03 — 完成 App 交互真机验收](issues/03-run-app-contract-hardware-acceptance.md)
 
+- [04 — 解决 Runtime 异步 GUI 栈溢出](issues/04-resolve-runtime-async-stack-overflow.md)
+
 ## Comments
 
 - 2026-10-01：原问题与方案包括 `invalid-source` 行为、直接 Launch Source 验证，原实施决定为「App task 保存一个直接 Launch Source」。经 [ADR-0011](../../docs/adr/0011-app-root-has-no-back.md) 决策，Root 无 Back，ESPocket 保存 App Page 栈，首版不提供跨 App 返回；待决 Back 加入验收。上文为当前待实施范围，原方案保存在此作为决策历史。
@@ -52,3 +54,5 @@ Native navigation model 必须成为 Native、Runtime 与 third-party App 共用
 ## 当前结果与完成条件
 
 四类页面指导及旧版 Runtime Toolkit/build/staging 基线已存在；这些结果不能证明新 Navigator、Root 无 Back 或待决 Back。新增语言绑定与开发 API 由 [014/04](../014-app-navigation-card-contract/issues/04-samples-api-finalization.md) 承接；本 Effort 完成 [02 回收入口](issues/02-add-app-reclaim-test-seams.md) 和 [03 真实 Native/Runtime 交互验收](issues/03-run-app-contract-hardware-acceptance.md)。两种执行模型分别保留证据，次数按 03 的单次集中验收规则。
+
+- 2026-10-02：007/03 已完成；当前 apps 设备验收发现 RuntimeJsAsync 栈溢出，最小复现与诊断证据见[记录](records/2026-10-02-app-device-frontier.md)。03 等待 04 的上游能力，未关闭 M8，未推进依赖 M8 的 009。

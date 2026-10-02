@@ -1,10 +1,14 @@
 """Remaining system Surface paths on the ordinary Circular Shell image."""
 
 
+from ..support.usb_test_client import DeviceTestError
+
 def run(runner, profile):
     home = {'surface': 'watch_face', 'display': True, 'foregroundAppId': '', 'pageId': '',
             'canBack': False, 'backPending': False}
     initial = runner.snapshot()
+    if initial['inputBusy']:
+        raise DeviceTestError('device already has an occupied input sequence')
     if not initial['display']:
         runner.power('initial wake', {'display': True})
         initial = runner.snapshot()

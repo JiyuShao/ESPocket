@@ -59,6 +59,14 @@ class DeviceTestRunnerTests(unittest.TestCase):
                              timeout=0.3, request_seed=100)
         return driver, transport, log
 
+    def test_scenarios_reject_initial_busy_input_without_stimulus(self):
+        for scenario in (MODULE.navigation, MODULE.cards, MODULE.surfaces, MODULE.apps, MODULE.runtime_confirm):
+            with self.subTest(scenario=scenario.__name__):
+                driver, transport, _ = self.make(lambda _: {'snapshot': snapshot(1, inputBusy=True)})
+                with self.assertRaisesRegex(DeviceTestError, 'occupied input'):
+                    scenario.run(driver, {})
+                self.assertEqual([request['op'] for request in transport.requests], ['snapshot'])
+
     def test_ack_and_busy_do_not_satisfy_owner_assertion(self):
         states = iter([snapshot(1), snapshot(2, surface='launcher', inputBusy=True),
                        snapshot(3), snapshot(4, surface='launcher'), snapshot(5, surface='launcher')])

@@ -183,3 +183,7 @@
 用户明确“没问题就过吧”，接受当前 Card 样例交互。右侧曾实际空白的失败与重启对比完整保留，重启后视觉和一次物理 Open 正常；未确定根因，不声称实现修复。014/05 样例交互/呈现/记录条件勾选，剩余实际 package replacement/迁移依赖 014/03 → 005/03，状态 needs-info。
 
 设备已恢复普通 71567f599，App 写入校验通过。新 Owner 采样实现的一次 34 步 navigation attempt PASS、release=ok、最终表盘亮屏，见更新后的 [Card 设备记录](../../014-app-navigation-card-contract/records/2026-10-02-card-device-run.md)。Card/reclaim/trace 配置关闭，LittleFS 与 NVS 保留。剩余真实 frontier 为 007/03 尚缺的物理路径、008/03 两种 App 恢复与回收、以及已记录的上游更新事务阻塞。不会重做已经接受的 013 或亮度/Wi-Fi 多轮。
+
+## 导航验收完成与新的 Runtime frontier
+
+015 测试职责目录重构已提交，007/03 剩余集中物理路径由用户回复“都正常”，007 全部 resolved。008 apps 自动验收在普通 71567f599 上发现 RuntimeJsAsync 栈溢出；最小复现与隔离记录见[008 设备记录](../../008-m8-app-contract/records/2026-10-02-app-device-frontier.md)，新增 008/04 needs-info 等待上游公开执行/栈配置能力。008 保持 blocked，009 按依赖等待。诊断资源已撤销，普通资源写回校验通过，最终真实快照为表盘亮屏且无输入占用。未改 managed_components，未 push。
