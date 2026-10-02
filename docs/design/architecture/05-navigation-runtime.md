@@ -47,6 +47,8 @@ App Card 是同一 App 在 Home Space 的呈现角色，位于完整 App 页面�
 
 用户配置以 `App ID + Card ID` 为身份；同一 Card ID 最多一张。App 卸载或更新移除 Card ID 时，配置删除并记录原因。Quick Settings 和 Launcher 不是可替换 Card。App Card 的注册与生命周期由 ESPocket 产品层提供，Brookesia 的 App 生命周期和 GUI 接口仍作为底层能力。
 
+首版 Runtime Card 使用声明式 GUI 和受限元数据绑定，由 ESPocket 在真实安装身份下管理独立文档，不启动另一套 Runtime。Native Card 使用 CardModel 回调；共同导航和生命周期语义不依赖语言接口相同。独立 JS 业务回调延后，见 [ADR-0014](../../adr/0014-runtime-card-starts-declarative.md)。
+
 ## AI Native
 
 Assistant 调用 Home、Back 或打开 App 时仍进入对应 Owner 的语义接口。打开 App 的 Action 需要明确 Root 或目标 Page；Back 仅在可返回的子页面可用。页面快照可以作为经过授权的系统 Context，但页面参数、表单内容和整条栈不自动暴露。

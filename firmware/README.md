@@ -61,6 +61,12 @@ python3 -m unittest discover -s firmware/components/espocket_system/test -p 'tes
 
 启用设备开发者模式并刷入具有 touch/PWR/snapshot/release capability 的固件后，使用 [interaction_driver.py](../scripts/firmware/interaction_driver.py) 执行单次自动路径。它不自动刷写、重启或开启模式；需要 `pyserial`，可使用 ESP-IDF Python 环境。必须显式指定设备清单 ID 和期望镜像 identity。CLI、466px profile 与报告格式见 [交互测试协议](../docs/development/interaction-test-protocol.md)。输出仅证明 `synthetic-input`，不能满足 GPIO、触摸硬件或视觉条件。
 
+## Card 样例测试镜像
+
+`CONFIG_ESPOCKET_M8_CARD_SAMPLE_TEST` 默认关闭。测试配置开启后，设备必须已持久开启 Developer Mode，且恢复后的 Card 配置为空；框架才使用临时左右序列：左侧 Native summary/detail，右侧 Runtime summary/detail。有既有配置或恢复失败时不替换。临时配置只在 RAM 中，不由卸载或声明更新写回 NVS；System 重启先释放临时配置再恢复存储。显式调用 `configure_cards` 成功后才转为用户持久配置。它是验收 fixture，不是 Card 编辑器。
+
+从 Watch Face 向右滑进入 Native summary，再向右滑进入 Native detail；向左滑进入 Runtime summary，再向左滑进入 Runtime detail。每张 Card 的 Open App/Open Detail 打开对应完整 App；Detail Back 回 Root、Root 无 Back，PWR Home 回 Watch Face。向内横滑逐张返回，首张回 Watch Face；息屏后再显示应重新请求数据。每条物理路径集中一次，合成输入与视觉/GPIO 证据分别记录，仍不能替代尚待回应的 013 smoke。
+
 ## 独立 App 回收测试
 
 `CONFIG_ESPOCKET_M8_RECLAIM_NATIVE_TEST` 与 `CONFIG_ESPOCKET_M8_RECLAIM_RUNTIME_TEST` 默认关闭，可分别在测试配置中开启。自动息屏后，只停止所选执行模型的可见 resume target；另一模型保持原 Page。两个开关均开时覆盖两类，旧 `CONFIG_ESPOCKET_M6_RECLAIM_ON_TIMEOUT_TEST` 仍覆盖两类。它们复用真实 Core stop、Navigator 失效及键盘/临时 GUI 清理，不增加 USB 命令或内存淘汰策略。日志 `APP_RECLAIM_TEST` 包含 model、manifest 与 App ID；旧 M6 开关保留原事件。唤醒应到 Watch Face，用户重新打开从 Root 开始。此处为源码入口，物理和视觉验证由 008/03 持有。

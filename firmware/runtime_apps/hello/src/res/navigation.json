@@ -2,12 +2,33 @@
   "version": 1,
   "appId": "espocket.app.hello_runtime",
   "rootPageId": "root",
-  "pageIds": ["root", "detail"],
+  "pageIds": [
+    "root",
+    "detail"
+  ],
   "presentation": {
     "screenFlow": "main",
     "transitions": [
-      {"from": "root", "to": "detail", "action": "open_detail"},
-      {"from": "detail", "to": "root", "action": "back_root"}
+      {
+        "from": "root",
+        "to": "detail",
+        "action": "open_detail"
+      },
+      {
+        "from": "detail",
+        "to": "root",
+        "action": "back_root"
+      }
     ]
-  }
+  },
+  "cards": [
+    {
+      "cardId": "summary",
+      "targetPageId": "root"
+    },
+    {
+      "cardId": "detail",
+      "targetPageId": "detail"
+    }
+  ]
 }

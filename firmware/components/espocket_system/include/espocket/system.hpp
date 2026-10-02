@@ -89,6 +89,7 @@ protected:
 
 private:
     void init_cards();
+    std::expected<void, std::string> init_card_samples();
     std::expected<void, std::string> step_card(bool left, bool inward);
     void card_surface_changed(ShellSurface surface);
     void drain_card_actions();
@@ -132,6 +133,7 @@ private:
     std::shared_ptr<NavigationRequestQueue> runtime_requests_;
     std::unique_ptr<CardRegistry> cards_;
     std::unique_ptr<CardConfigurationStore> card_store_;
+    bool card_samples_active_ = false;
     std::unique_ptr<CardSession> card_session_;
     std::shared_ptr<NavigationRequestQueue> card_actions_;
     std::unordered_map<esp_brookesia::system::core::AppId, CardModelFactory> card_factories_;

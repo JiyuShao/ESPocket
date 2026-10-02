@@ -6,7 +6,7 @@ std::expected<void, std::string> System::on_app_uninstalled(
     const esp_brookesia::system::core::AppInfo &app
 )
 {
-    if (cards_ && cards_->uninstall_app(app.manifest.id)) {
+    if (cards_ && cards_->uninstall_app(app.manifest.id) && !card_samples_active_) {
         if (auto saved = card_store_->save_current(); !saved) {
             ESP_LOGE(TAG, "Card uninstall persistence failed: %s", saved.error().c_str());
         }

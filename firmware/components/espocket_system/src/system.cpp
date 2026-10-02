@@ -227,10 +227,17 @@ std::expected<void, std::string> System::on_start()
     init_runtime_navigation();
     if (card_actions_) card_actions_->close();
     card_actions_ = std::make_shared<NavigationRequestQueue>();
+    if (card_samples_active_ && cards_) (void)cards_->replace_configuration({});
+    card_samples_active_ = false;
+    bool cards_restored = true;
     if (card_store_) {
         if (auto restored = card_store_->restore(); !restored) {
+            cards_restored = false;
             ESP_LOGW(TAG, "Card configuration not restored: %s", restored.error().c_str());
         }
+    }
+    if (cards_restored) {
+        if (auto samples = init_card_samples(); !samples) return samples;
     }
     stopping_.store(false, std::memory_order_release);
     if (test_power_input_) { test_power_input_->cancel_pending(); }

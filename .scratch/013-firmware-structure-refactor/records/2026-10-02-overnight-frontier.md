@@ -151,3 +151,9 @@
 [本轮上游核对](../../../docs/upstream/status-2026-10-02.md)取得 Core 0.8.4、JS 0.8.3 与 Audio 0.8.2 官方发行页面，与现有锁一致；HTTP/HAL 和部分源码请求未取得内容，不能据此作出已修复/绝无修复结论。没有采用未经核实的新依赖。
 
 人工最小介入仍为：回应既有 013 单次 smoke；Runtime Card 首版接口范围选择。之后才能按原依赖推进一次明确镜像的 USB Driver 与 Native/Runtime 单次物理路径。已有已接受结果不重做，旧镜像/新构建身份不混用。
+
+## 用户恢复后的声明式 Runtime Card slice
+
+用户已接受声明式 Runtime Card 首版并要求继续，范围选择不再待答复。已实现真实安装声明校验、Core 元数据刷新、独立 GUI 文档、summary/目标 Detail 样例、版本化 schema 和开发 API；没有创建独立 JS Runtime。见 [首版实施证据](../../014-app-navigation-card-contract/records/2026-10-02-declarative-runtime-card.md)。
+
+新增默认关闭的 Card 样例入口，仅在 Developer Mode On、空持久配置时使用 RAM 序列，保留既有 NVS。未刷写或新增硬件 PASS。014/03 package replacement 事务条件、014/05 硬件/迁移条件、013/04 与 013/06 既有单次 smoke、012/03 一次设备 Driver、008/03 各路径一次仍保留。早前已接受的亮度/Wi-Fi 与十轮资源结果不重复。

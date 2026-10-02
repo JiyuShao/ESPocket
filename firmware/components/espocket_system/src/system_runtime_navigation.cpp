@@ -2,6 +2,7 @@
 #include "runtime_navigation_provider.hpp"
 #include "espocket/navigation_request_queue.hpp"
 #include "espocket/runtime_page_adapter.hpp"
+#include "espocket/declarative_card.hpp"
 #include "brookesia/service_helper/system/storage.hpp"
 #include <filesystem>
 
@@ -71,6 +72,20 @@ std::expected<void, std::string> System::on_app_installed(
     if (definition->declaration.app_id != app.manifest.id) return std::unexpected("identity_mismatch");
     const auto flow = definition->screen_flow;
     const auto card_declaration = definition->declaration;
+    CardModelFactory card_factory;
+    if (!card_declaration.cards.empty()) {
+        const auto resources = path.parent_path();
+        const auto cards_json = esp_brookesia::service::helper::Storage::fs_read_text((resources / "cards.json").generic_string(), 5000);
+        if (!cards_json) return std::unexpected("Runtime Card declaration missing: " + cards_json.error());
+        auto cards = decode_declarative_cards(*cards_json, card_declaration);
+        if (!cards) return std::unexpected(cards.error());
+        card_factory = make_declarative_card_factory(std::move(*cards), resources.generic_string(),
+            [this, id = app.app_id]() -> std::optional<CardMetadata> {
+                const auto installed = get_app(id);
+                if (!installed) return std::nullopt;
+                return CardMetadata{installed->manifest.id, installed->manifest.name, installed->manifest.version};
+            });
+    }
     auto adapter = RuntimePageAdapter::create(std::move(*definition),
         [this, id = app.app_id](auto flow, auto action, auto from, auto to) {
             const auto before = gui_get_screen_flow_state(id, flow);
@@ -81,6 +96,7 @@ std::expected<void, std::string> System::on_app_installed(
         });
     if (!adapter) return std::unexpected(adapter.error());
     if (!cards_ || !cards_->register_app(card_declaration)) return std::unexpected("card_declaration_registration_failed");
+    if (card_factory) card_factories_.emplace(app.app_id, std::move(card_factory));
     register_navigator(app.app_id, (*adapter)->navigator());
     { std::lock_guard lock(page_navigators_mutex_); runtime_pages_.emplace(app.app_id, RuntimePages{*adapter, flow}); }
     return {};

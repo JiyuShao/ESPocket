@@ -82,7 +82,7 @@ Native Reference App 的 Detail 提供 `Back confirm: Off/On` 开关，默认 Of
 
 ## Card 注册与配置组件
 
-当前 C++ 核心提供 [CardRegistry](../../firmware/components/espocket_navigation/include/espocket/card_registry.hpp)，只管理声明身份和左右配置，不保存 Page 栈、App 运行状态或 GUI 对象。它与 PageNavigator 复用 `validate_page_declaration`，避免 Card 与安装使用不同校验规则。System 已连接 Core 安装/卸载、NVS 配置和 Shell 呈现；Runtime Card 提供者与 package 替换迁移仍由 014/03、05 接入。
+当前 C++ 核心提供 [CardRegistry](../../firmware/components/espocket_navigation/include/espocket/card_registry.hpp)，只管理声明身份和左右配置，不保存 Page 栈、App 运行状态或 GUI 对象。它与 PageNavigator 复用 `validate_page_declaration`，避免 Card 与安装使用不同校验规则。System 已连接 Core 安装/卸载、NVS 配置和 Shell 呈现；声明式 Runtime Card 提供者已接入；package 替换迁移仍待真实更新事务入口。
 
 | 接口 | 结果 |
 |---|---|
@@ -107,7 +107,7 @@ Native Reference App 的 Detail 提供 `Back confirm: Off/On` 开关，默认 Of
 
 普通 Native 和可见 Runtime 的安装声明现在登记到同一个 Registry。真实 Core 卸载删除对应配置并记录 AppUninstalled；失败的 NVS 保存报告错误，不复活已卸载 App。停止后的 Native 声明更新使用 `System::update_navigated_declaration`，复用 Navigator 身份规则，再更新 Registry，移除删除的 Card 并记录 RemovedByUpdate，保留其他稳定 ID 与顺序。更新已生效后保存失败仍报告错误，不能声称回滚了 Owner 事实。
 
-Runtime package 替换与 Native 的声明更新是不同入口。锁定 Core 将替换实现为 uninstall/install，现有 hook 不带原因；尚未提供保留 Card 配置的产品更新事务。不能把普通卸载判成更新，或声称官方 Store 替换已经验证迁移。该事务与 Runtime Card 提供者仍由 014/03–05 完成；Native 提供者和 Shell 呈现已经接入，真实显示验收保留。
+Runtime package 替换与 Native 的声明更新是不同入口。锁定 Core 将替换实现为 uninstall/install，现有 hook 不带原因；尚未提供保留 Card 配置的产品更新事务。不能把普通卸载判成更新，或声称官方 Store 替换已经验证迁移。该事务仍未完成；Native 和声明式 Runtime 提供者、Shell 呈现已经接入，真实显示验收保留。
 
 ## Native Card 内容接口
 
@@ -117,9 +117,29 @@ App 使用 [CardModel](../../firmware/components/espocket_navigation/include/esp
 
 左右已配置序列替代该方向原有示例 Card，空序列保留系统 Battery/Brightness 示例。横滑向外浏览序列，向内在首个 Card 回 Watch Face；纵向交互保留给 App。App Card 有轻微返回方向提示，没有顶部状态栏。Card 编辑器不在本轮范围，正式固件不自动把所有声明加入用户配置。
 
+## 声明式 Runtime Card v1
+
+按 [ADR-0014](../adr/0014-runtime-card-starts-declarative.md)，首版不执行独立 JS Card 实例。完整 App 继续使用既有 JS 导航绑定；Card 的显示与刷新由 ESPocket 提供。包内 `navigation.json.cards` 声明稳定 Card ID 与目标 Page；有 Card 声明时，资源目录必须提供 `cards.json`，其 appId 与 Card ID 集合完全一致。无声明的包不创建 Card 提供者。
+
+[Runtime Card schema v1](schemas/runtime-cards-v1.schema.json) 的字段如下：
+
+| 字段 | 约束与含义 |
+|---|---|
+| version / appId | 整数 1；匹配 Core 安装身份。 |
+| cards | 最多 32 个 Card，ID 不重复且完整匹配 navigation.json。 |
+| cardId / screen | 稳定 Card ID；screen 是 GUI 根 viewScreen 的绝对路径，例如 /card。 |
+| gui | 内联 Brookesia GUI 文档，只含 version 与 assets，assets 恰有一个匹配 screen 的 viewScreen；不提供外部文档导入或 screenFlow。 |
+| bindings | 可选，最多 32 个文本绑定；path 在该 screen 内且不重复，source 仅 app.name 或 app.version。 |
+
+整个声明最大 65,536 字节。路径段使用字母、数字、下划线或连字符，拒绝空段、越级路径和跨 screen 绑定。GUI 的 action 字段只接受 `espocket.card.open`；它打开 navigation.json 中对应 Card 的目标，而不是在 GUI 内指定另一 App/Page。未知字段、版本、身份、绑定来源和动作被拒绝，错误进入真实 Core 安装失败结果，不登记半套 Card。
+
+每次 Card 再次可见，模型重新读取当前 Core App 元数据并更新声明的文本；安装消失、身份不一致或 GUI 更新失败时暂停并报告错误。离屏/息屏释放订阅，不创建 App JS timer、宿主模块或后台任务。静态内容、纵向滚动与样式由 App 的内联 GUI 提供，渲染属性由 Brookesia GUI 在呈现时校验。第一版不读取表单、私有业务参数、任意 Service 或持久业务文件，不支持自定义 JS 轻量业务动作；这些能力须独立扩展数据源与授权协议。
+
+实际包样例见 [cards.json](../../firmware/runtime_apps/hello/src/res/cards.json) 与 [navigation.json](../../firmware/runtime_apps/hello/src/res/navigation.json)。summary 打开 Root，detail 打开 Detail；框架先暂停 Card，再在唯一 Navigator 上建立 Root 与目标 Page。PWR Home 后普通重开从 Root 开始；真实视觉与触控证据仍由 014/05、008/03 持有。
+
 ## App Card 生命周期
 
-当前提供 [CardSession](../../firmware/components/espocket_navigation/include/espocket/card_session.hpp) 的同步 C++ 生命周期组件，已接 Shell GUI 和 Native Card 提供者。一个 Session 管理一个呈现槽位，状态为 Empty、Paused 或 Visible；不是 Core Running Instance，也不保存 Page 栈。`show(key)` 只接受已声明且已配置的 Card，首次创建内容，暂停后再次显示调用 `show` 和 `refresh` 请求新数据；已可见的重复 show 不重复刷新。切换 Card 先暂停并销毁旧内容。`pause()` 保留当前 UI，`release()` 和析构释放 UI 与订阅。
+当前提供 [CardSession](../../firmware/components/espocket_navigation/include/espocket/card_session.hpp) 的同步 C++ 生命周期组件，已接 Shell GUI、Native 与声明式 Runtime Card 提供者。一个 Session 管理一个呈现槽位，状态为 Empty、Paused 或 Visible；不是 Core Running Instance，也不保存 Page 栈。`show(key)` 只接受已声明且已配置的 Card，首次创建内容，暂停后再次显示调用 `show` 和 `refresh` 请求新数据；已可见的重复 show 不重复刷新。切换 Card 先暂停并销毁旧内容。`pause()` 保留当前 UI，`release()` 和析构释放 UI 与订阅。
 
 App 绑定实现 `CardContent::show/refresh/pause`，析构负责资源回收。创建失败保持 Empty；显示或刷新失败暂停内容并报告明确错误，可由 Shell 再次 show 重试。`open_app(launcher)` 重新读取 Registry 的当前目标，先暂停，再调用完整 App 启动入口；启动失败保持 Paused，由 Shell 明确决定恢复呈现。Launcher 仍需使用现有 Navigator 建立 Root 和目标路径，这个组件不建立第二份栈。配置已删除或声明已卸载时拒绝启动并释放内容。
 

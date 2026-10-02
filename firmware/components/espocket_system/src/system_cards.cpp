@@ -74,6 +74,26 @@ void System::init_cards()
     });
 }
 
+std::expected<void, std::string> System::init_card_samples()
+{
+#if CONFIG_ESPOCKET_M8_CARD_SAMPLE_TEST
+    if (!cards_ || !developer_mode_ || !developer_mode_->enabled()) return {};
+    const auto current = cards_->configuration();
+    if (!current.left.empty() || !current.right.empty()) {
+        ESP_LOGI(TAG, "Card sample fixture skipped: existing configuration");
+        return {};
+    }
+    CardConfiguration samples{
+        .left = {{"espocket.app.hello", "summary"}, {"espocket.app.hello", "detail"}},
+        .right = {{"espocket.app.hello_runtime", "summary"}, {"espocket.app.hello_runtime", "detail"}},
+    };
+    if (!cards_->replace_configuration(std::move(samples))) return std::unexpected("card_sample_declaration_unavailable");
+    card_samples_active_ = true;
+    ESP_LOGI(TAG, "CARD_SAMPLE_TEST temporary Native/Runtime configuration active; NVS unchanged");
+#endif
+    return {};
+}
+
 void System::pause_card()
 {
     card_generation_ = 0;
@@ -179,6 +199,7 @@ std::expected<void, std::string> System::configure_cards(CardConfiguration confi
     if (card_session_ && card_session_->busy()) return std::unexpected("card_busy");
     const auto saved = card_store_->apply(std::move(configuration));
     if (!saved) return saved;
+    card_samples_active_ = false; // Explicit user configuration replaces the temporary fixture.
     if (card_session_ && card_session_->visibility() == CardVisibility::Visible && shell_) {
         const auto key = card_session_->key();
         const auto committed = cards_->configuration();
@@ -212,6 +233,6 @@ std::expected<void, std::string> System::update_navigated_declaration(
     auto updated = navigator->update_declaration(declaration);
     if (!updated) return std::unexpected(std::string(navigation_error_name(updated.error())));
     if (!cards_->update_app(std::move(declaration))) return std::unexpected("card_declaration_update_failed");
-    return card_store_->save_current();
+    return card_samples_active_ ? std::expected<void, std::string>{} : card_store_->save_current();
 }
 }

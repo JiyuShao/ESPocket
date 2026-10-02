@@ -25,6 +25,15 @@ menu "ESPocket"
             target. The next PWR wake must show Watch Face without restarting
             the App. Leave disabled in normal interactive firmware.
 
+    config ESPOCKET_M8_CARD_SAMPLE_TEST
+        bool "M8 test: show Native/Runtime Card samples with a temporary configuration"
+        default n
+        help
+            With persisted Developer Mode enabled and an empty restored Card
+            configuration, place Native summary/detail on the left and Runtime
+            summary/detail on the right. This fixture is RAM only, not a Card
+            editor and never writes NVS. Leave disabled in normal firmware.
+
     config ESPOCKET_M8_RECLAIM_NATIVE_TEST
         bool "M8 test: reclaim only Native Apps after automatic screen-off"
         default n

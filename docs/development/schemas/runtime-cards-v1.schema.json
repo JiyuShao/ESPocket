@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://espocket.dev/schemas/runtime-cards-v1.schema.json",
+  "title": "ESPocket declarative Runtime Cards v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "appId", "cards"],
+  "properties": {
+    "version": {"const": 1},
+    "appId": {"type": "string", "minLength": 1},
+    "cards": {
+      "type": "array", "maxItems": 32,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["cardId", "screen", "gui"],
+        "properties": {
+          "cardId": {"type": "string", "minLength": 1},
+          "screen": {"type": "string", "pattern": "^/[A-Za-z0-9_-]+$"},
+          "gui": {
+            "type": "object", "additionalProperties": false,
+            "required": ["version", "assets"],
+            "properties": {
+              "version": {"type": "string", "minLength": 1},
+              "assets": {
+                "type": "array", "minItems": 1, "maxItems": 1,
+                "items": {
+                  "type": "object", "required": ["type", "id"],
+                  "properties": {"type": {"const": "viewScreen"}, "id": {"type": "string", "minLength": 1}}
+                }
+              }
+            }
+          },
+          "bindings": {
+            "type": "array", "maxItems": 32,
+            "items": {
+              "type": "object", "additionalProperties": false,
+              "required": ["path", "source"],
+              "properties": {
+                "path": {"type": "string", "pattern": "^(/[A-Za-z0-9_-]+){2,}$"},
+                "source": {"enum": ["app.name", "app.version"]}
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$comment": "Production codec also validates encoded size <=65536 bytes, stable IDs exactly matching navigation.json, unique Card IDs/binding paths, matching screen asset ID, binding paths inside that screen, and recursive GUI action restrictions (only espocket.card.open). Brookesia validates GUI rendering properties at presentation."
+}

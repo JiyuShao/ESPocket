@@ -30,6 +30,8 @@ Blocked by: [006/03 Home 与显示真机验收](../006-m6-home-display/issues/03
 - PWR Home 后再次打开 App 从 Root 开始；息屏可恢复有效 Page；首版不提供跨 App 返回。
 - Card UI 的可见、暂停和再次请求数据由框架处理；长期业务数据在 App 持久状态或 Service 中。
 
+- 首版 Runtime Card 按用户确认采用声明式 GUI、Core 元数据绑定与目标 Page；不执行独立 JS 业务回调。框架管理显示、刷新、暂停与释放，见 [ADR-0014](../../docs/adr/0014-runtime-card-starts-declarative.md)。
+
 ## Testing Decisions
 
 - 声明校验、栈操作、Back 待决/超时/失效和 Card 配置迁移应有组件级测试。

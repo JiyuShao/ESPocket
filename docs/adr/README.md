@@ -20,5 +20,6 @@ ADR 记录替代方案代价显著、需要长期保持可追溯的 ESPocket 决
 | [0012](0012-official-settings-keeps-its-navigation-owner.md) | accepted | 官方 Settings 保留导航事实源；ESPocket 适配快照与 Back。 |
 
 | [0013](0013-app-controls-back-presentation.md) | accepted | 所有 App 可定制 Back UI 与手势，不要求可见按钮。 |
+| [0014](0014-runtime-card-starts-declarative.md) | accepted | Runtime Card 首版声明式呈现，框架管理生命周期，独立 JS 业务回调延后。 |
 
 决策变更时新增 superseding ADR，并让新旧记录相互链接。不得静默改写已接受 ADR 的决定。

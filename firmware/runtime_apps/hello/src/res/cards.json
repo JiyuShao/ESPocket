@@ -1,0 +1,218 @@
+{
+  "version": 1,
+  "appId": "espocket.app.hello_runtime",
+  "cards": [
+    {
+      "cardId": "summary",
+      "screen": "/card",
+      "gui": {
+        "version": "0.1.0",
+        "assets": [
+          {
+            "type": "viewScreen",
+            "id": "card",
+            "commonProps": {
+              "scrollable": false
+            },
+            "style": {
+              "bgColor": "#101722",
+              "padding": 0
+            },
+            "layout": {
+              "type": "flex",
+              "flexFlow": "column",
+              "mainAlign": "center",
+              "crossAlign": "center",
+              "gap": "20dp"
+            },
+            "children": [
+              {
+                "type": "label",
+                "id": "title",
+                "labelProps": {
+                  "text": "Hello Runtime Card"
+                },
+                "style": {
+                  "textColor": "#f4f7fb",
+                  "fontSize": "32sp",
+                  "textAlign": "center"
+                },
+                "placement": {
+                  "width": "300dp",
+                  "height": "44dp"
+                }
+              },
+              {
+                "type": "label",
+                "id": "version",
+                "labelProps": {
+                  "text": "Version: 0.1.0"
+                },
+                "style": {
+                  "textColor": "#cbd5e1",
+                  "fontSize": "20sp",
+                  "textAlign": "center"
+                },
+                "placement": {
+                  "width": "220dp",
+                  "height": "30dp"
+                }
+              },
+              {
+                "type": "button",
+                "id": "open",
+                "events": [
+                  {
+                    "type": "clicked",
+                    "action": "espocket.card.open"
+                  }
+                ],
+                "style": {
+                  "bgColor": "#334155",
+                  "radius": "24dp"
+                },
+                "placement": {
+                  "width": "190dp",
+                  "height": "54dp"
+                },
+                "children": [
+                  {
+                    "type": "label",
+                    "id": "label",
+                    "labelProps": {
+                      "text": "Open App"
+                    },
+                    "style": {
+                      "textColor": "#ffffff",
+                      "fontSize": "18sp"
+                    },
+                    "placement": {
+                      "mode": "relative",
+                      "align": "center"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "bindings": [
+        {
+          "path": "/card/title",
+          "source": "app.name"
+        },
+        {
+          "path": "/card/version",
+          "source": "app.version"
+        }
+      ]
+    },
+    {
+      "cardId": "detail",
+      "screen": "/card",
+      "gui": {
+        "version": "0.1.0",
+        "assets": [
+          {
+            "type": "viewScreen",
+            "id": "card",
+            "commonProps": {
+              "scrollable": false
+            },
+            "style": {
+              "bgColor": "#101722",
+              "padding": 0
+            },
+            "layout": {
+              "type": "flex",
+              "flexFlow": "column",
+              "mainAlign": "center",
+              "crossAlign": "center",
+              "gap": "20dp"
+            },
+            "children": [
+              {
+                "type": "label",
+                "id": "title",
+                "labelProps": {
+                  "text": "Hello Runtime Card"
+                },
+                "style": {
+                  "textColor": "#f4f7fb",
+                  "fontSize": "32sp",
+                  "textAlign": "center"
+                },
+                "placement": {
+                  "width": "300dp",
+                  "height": "44dp"
+                }
+              },
+              {
+                "type": "label",
+                "id": "version",
+                "labelProps": {
+                  "text": "Version: 0.1.0"
+                },
+                "style": {
+                  "textColor": "#cbd5e1",
+                  "fontSize": "20sp",
+                  "textAlign": "center"
+                },
+                "placement": {
+                  "width": "220dp",
+                  "height": "30dp"
+                }
+              },
+              {
+                "type": "button",
+                "id": "open",
+                "events": [
+                  {
+                    "type": "clicked",
+                    "action": "espocket.card.open"
+                  }
+                ],
+                "style": {
+                  "bgColor": "#334155",
+                  "radius": "24dp"
+                },
+                "placement": {
+                  "width": "190dp",
+                  "height": "54dp"
+                },
+                "children": [
+                  {
+                    "type": "label",
+                    "id": "label",
+                    "labelProps": {
+                      "text": "Open Detail"
+                    },
+                    "style": {
+                      "textColor": "#ffffff",
+                      "fontSize": "18sp"
+                    },
+                    "placement": {
+                      "mode": "relative",
+                      "align": "center"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "bindings": [
+        {
+          "path": "/card/title",
+          "source": "app.name"
+        },
+        {
+          "path": "/card/version",
+          "source": "app.version"
+        }
+      ]
+    }
+  ]
+}

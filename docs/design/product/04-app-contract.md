@@ -53,6 +53,8 @@
 | APP-027 | App Card 可以声明打开完整 App 的目标 Page；Root 必须位于该目标 Page 的栈底。目标 Page 失效时必须打开 Root 并记录错误。 |
 | APP-028 | Card 与完整 App 使用同一 App 身份和持久业务数据，不要求共享同一内存实例。Card 离屏时其 UI 可暂停，再次可见时由系统请求新数据。 |
 
+首版 Runtime Card 展示 App 提供的静态内容及 App 名称、版本，可打开完整 App 的目标页面。卡片不独立执行 App 业务或后台订阅；复杂操作进入完整 App。上述 App 身份、Home Space、Root/目标 Page 和 PWR 规则共同适用。
+
 ## 非目标
 
 - 规定页面类、回调 Interface、资源对象或 Runtime 内部实现。
