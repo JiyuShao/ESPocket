@@ -21,13 +21,15 @@ class GuiActionCheckerTest(unittest.TestCase):
             (temporary / 'resources').mkdir()
             (temporary / 'src').mkdir()
             cases = [
-                original.replace('subscribe_action(INCREMENT_ACTION)', 'subscribe_action(OPEN_DETAIL_ACTION)'),
+                original.replace('for (const auto action : {INCREMENT_ACTION,',
+                                 'for (const auto action : {OPEN_DETAIL_ACTION,'),
                 original.replace('action != INCREMENT_ACTION', 'action != OPEN_DETAIL_ACTION'),
                 original.replace('constexpr std::string_view INCREMENT_ACTION = "hello.increment";',
                                  'constexpr std::string_view INCREMENT_ACTION = "hello.extra";'),
             ]
             for source in cases:
                 with self.subTest(source=source):
+                    self.assertNotEqual(source, original, 'negative fixture must mutate the source')
                     (temporary / 'src/hello_app.cpp').write_text(source)
                     (temporary / 'resources/gui.json').write_text(json.dumps(document))
                     with self.assertRaises(ValueError):

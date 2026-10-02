@@ -55,6 +55,8 @@ Root 不显示默认 Back，也不响应 Edge Back。子页面上的 Back 进入
 
 PWR Home 不经过 App Back 回调，也不受确认界面阻塞：它取消待决 token、结束当前导航任务并显示 Watch Face。App 停止或崩溃同样使 token 失效；迟到的允许或取消返回 `stale_request`，不得改变新任务。App 自定义 Back 控件或手势必须调用相同入口，不可只切换 GUI 而不更新框架栈。
 
+Native Reference App 的 Detail 提供 `Back confirm: Off/On` 开关，默认 Off 保持立即返回。开启后使用默认 Back 或 Edge Back，会保持 Detail、暂停重复 Back，并提示选择 `Allow Back` 或 `Cancel Back`；两者调用共同 Navigator 的 `complete_back(token, allow)`。未有待决时点击确认按钮报告不可用，不执行 pop。15 秒超时由 System 调用 Navigator 的 `expire_back`，App 的 100ms 状态 timer 只更新提示、清理已失效的本地 token，不另设超时或页面栈。停止时释放 timer 和回调，重新打开关闭确认开关，旧运行的确认状态不能写入新运行。该路径源码和组件验证完成，设备验证仍归 008/03，Runtime 同等样例尚待 014/04。
+
 ## Card 注册与配置组件
 
 当前 C++ 核心提供 [CardRegistry](../../firmware/components/espocket_navigation/include/espocket/card_registry.hpp)，只管理声明身份和左右配置，不保存 Page 栈、App 运行状态或 GUI 对象。它与 PageNavigator 复用 `validate_page_declaration`，避免 Card 与安装使用不同校验规则。此组件尚未连接 Shell 呈现和 Core 安装/卸载；完整 Card API 与生命周期仍按 014/03、05 接入。
@@ -85,6 +87,21 @@ System/Shell 装配应在 GUI Owner 任务串行调用 Session 和 Registry 更�
 Card 与完整 App 使用同一 App 身份和持久业务数据，但可以是不同内存实例。ESPocket 管理 Card UI 的创建、可见、暂停与释放。离屏后 Card UI 可暂停或销毁；再次可见时框架请求新数据。App 提供 Card 内容、订阅来源和轻量操作；可靠计时、网络状态与其他长期业务放在 App 持久数据或 Service，不以 Card UI 常驻为前提。进入完整 App 时 Card 暂停，PWR Home 返回 Watch Face。
 
 Home Space 拥有 Card 横滑。Card 内点击、纵向滚动和轻量操作归 App；需要多级交互时打开完整 App。App 不通过 Card 拦截 PWR Home 或改变左右 Card 顺序。
+
+## 页面开发指导
+
+遵循 [App 产品契约 APP-008–APP-010](../design/product/04-app-contract.md) 和[导航 Owner 分工](../design/architecture/05-navigation-runtime.md)，每个 Page 突出一个主要任务。以下是布局和行为指导，不增加页面类继承体系。
+
+| 页面用途 | 呈现与操作 | 导航和数据边界 |
+|---|---|---|
+| 信息型 | 中部优先显示一个主数值或短结论；来源、更新时间作为辅助内容。 | 读取 Service 或持久业务数据；再次可见重新请求，不把控件文字当状态源。需要更多细节时 push 已声明 Detail。 |
+| 控制型 | 一个主要操作配合明确的当前值、执行中和失败反馈；点击区域留在圆屏可操作区域。 | Action 交给实际 Owner，成功后读真实状态；投递成功不表示操作完成。未保存修改可暂缓 Back，PWR Home 不等待确认。 |
+| 列表型 | 纵向单列，每行只承担一个明确入口或操作；短标签优先，避免边缘裁切。 | 同一 Detail 类型共用稳定 Page ID，业务项目放参数而不是生成 Page ID。完整 App 的纵向滚动归 App；Home Space 横滑仍归 Shell。 |
+| 工具型 | 当前任务、结果与一个主操作分层；把复杂流程拆为明确的 App Page。 | push/pop/replace 经共同 Navigator；Root 无 Back。进行中的长期计时或网络任务放 Service/持久业务层，不依赖当前 Page 或 Card 存活。 |
+
+圆屏中部是标题、主值和主操作的优先区域；首版采用短内容和单列布局，检查首尾项、长文案及控件是否被圆形边缘裁切。不要用手机式 Bottom Navigation、密集 Toolbar 或 Tabs 承载主要流程。需要 Back 时使用框架默认入口，或按已声明接管规则实现同一语义，避免重复按钮；Root 的离开入口是 PWR Home。
+
+App 只维护业务数据和呈现对象，不维护供系统读取的第二份页面栈。开始时连接回调/订阅，暂停可停止只影响可见内容的工作，停止时释放 timer、订阅和 GUI 引用；迟到回调应检查运行身份或使用不会写入新运行的状态对象。后台驻留不作保证，App/Card UI 被释放后可靠业务仍由其持久状态或 Service 负责。Native Hello 的确认样例可参考 timer 与 token 清理；Runtime API 可调用绑定仍待实施，不能直接把 C++ 接口当作现成 JS 导出。
 
 ## 观察与错误
 

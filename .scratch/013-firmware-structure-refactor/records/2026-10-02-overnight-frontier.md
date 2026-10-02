@@ -91,6 +91,13 @@
 - 014/04 审计到公开 RuntimeFunctionProvider 注册与 System Core 调用方身份接口，可作为后续语言绑定 seam；尚未实现绑定，不将私有 HostBridge 误报为必须改上游的 blocker。
 - 32 项 host unittest、M2 parser、163 个 Markdown 与完整 ESP-IDF 构建通过；未接入的组件没有改变最终镜像 identity，没有刷写或新增硬件 PASS。
 
+## 第十二轮自动执行
+
+- 014/04 Native Reference App 增加可控 Back 确认：默认关闭，开启后允许/取消，框架仍独占待决与 15 秒超时；生命周期停止清理回调、timer 和旧 token。真实 App 源码与 Navigator 的主机用例通过，范围见 [Native 确认证据](../../014-app-navigation-card-contract/records/2026-10-02-native-back-confirmation.md)。
+- 完成信息型、控制型、列表型和工具型页面开发指导，勾选该独立文档条件。Runtime Adapter、schema、Native/Runtime 同等验证尚未完成，014/04 仍开放；008 Spec blocker 不变。
+- 不刷写，不打断现有 013 smoke 镜像；新 Detail 布局的设备/视觉条件保留到统一硬件验收。
+- 33 项 host unittest、M2 parser、164 个 Markdown 与最终固件构建通过。未刷写镜像的 hash/identity 在上述证据记录中，设备仍为 013 `e8bbe74ff`。
+
 ## 晨间最小介入
 
 先回复已发出的单次 013 smoke 结果：Native Detail Edge Back；自动息屏唤醒保留 Detail；PWR Home/息屏/亮屏回表盘；Quick Settings 上滑、Launcher 顶部下拉返回。遇到异常停在该步即可。无需重做此前十轮资源验证。

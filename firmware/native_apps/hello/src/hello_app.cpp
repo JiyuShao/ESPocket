@@ -6,16 +6,22 @@
 #include "espocket/page_navigator.hpp"
 
 namespace espocket {
+extern const char hello_gui_json_start[] asm("_binary_hello_gui_json_start");
 namespace {
 
 constexpr char TAG[] = "ESPocket.Hello";
 constexpr std::string_view INCREMENT_ACTION = "hello.increment";
 constexpr std::string_view OPEN_DETAIL_ACTION = "hello.open_detail";
+constexpr std::string_view TOGGLE_CONFIRM_ACTION = "hello.toggle_confirm";
+constexpr std::string_view ALLOW_BACK_ACTION = "hello.allow_back";
+constexpr std::string_view CANCEL_BACK_ACTION = "hello.cancel_back";
+constexpr std::string_view BACK_STATUS_TIMER = "hello.back_status";
+constexpr std::string_view BACK_STATUS_PATH = "/detail/hint";
+constexpr std::string_view CONFIRM_LABEL_PATH = "/detail/confirm/label";
 constexpr std::string_view MAIN_FLOW = "main";
 constexpr std::string_view OPEN_DETAIL_TRANSITION = "open_detail";
 constexpr std::string_view BACK_ROOT_TRANSITION = "back_root";
 constexpr std::string_view COUNTER_PATH = "/root/counter";
-extern const char hello_gui_json_start[] asm("_binary_hello_gui_json_start");
 
 } // namespace
 
@@ -92,14 +98,16 @@ std::expected<void, std::string> HelloApp::on_start(
 )
 {
     count_ = 0;
+    // A late callback from a stopped instance cannot overwrite this instance's token.
+    back_confirmation_ = std::make_shared<BackConfirmation>();
+    back_status_.clear();
 
-    auto action_result = context.gui().subscribe_action(INCREMENT_ACTION);
-    if (!action_result) {
-        return std::unexpected("Failed to subscribe increment action: " + action_result.error());
-    }
-    action_result = context.gui().subscribe_action(OPEN_DETAIL_ACTION);
-    if (!action_result) {
-        return std::unexpected("Failed to subscribe Detail action: " + action_result.error());
+    for (const auto action : {INCREMENT_ACTION, OPEN_DETAIL_ACTION, TOGGLE_CONFIRM_ACTION,
+                             ALLOW_BACK_ACTION, CANCEL_BACK_ACTION}) {
+        auto action_result = context.gui().subscribe_action(action);
+        if (!action_result) {
+            return std::unexpected("Failed to subscribe action: " + action_result.error());
+        }
     }
 
     auto text_result = context.gui().set_text(COUNTER_PATH, "Counter: 0");
@@ -107,7 +115,19 @@ std::expected<void, std::string> HelloApp::on_start(
         return std::unexpected("Failed to reset counter text: " + text_result.error());
     }
 
+    auto timer = context.timer().start_periodic(BACK_STATUS_TIMER, 100);
+    if (!timer) {
+        return std::unexpected("Failed to start Back status timer: " + timer.error());
+    }
+    back_status_timer_ = *timer;
     context_ = &context;
+    if (auto navigator = navigator_.lock()) {
+        navigator->set_back_handler([state = back_confirmation_](const PageSnapshot &, uint64_t token) {
+            if (!state->enabled.load()) return BackDecision::Allow;
+            state->pending_token.store(token);
+            return BackDecision::Defer;
+        });
+    }
     ESP_LOGI(TAG, "Hello Native started");
     return {};
 }
@@ -116,7 +136,12 @@ std::expected<void, std::string> HelloApp::on_stop(
     esp_brookesia::system::core::AppContext &context
 )
 {
-    (void)context;
+    context.timer().stop(back_status_timer_);
+    back_status_timer_ = 0;
+    if (auto navigator = navigator_.lock()) navigator->set_back_handler({});
+    back_confirmation_->pending_token.store(0);
+    back_confirmation_->enabled.store(false);
+    back_status_.clear();
     context_ = nullptr;
     count_ = 0;
     ESP_LOGI(TAG, "Hello Native stopped");
@@ -137,6 +162,30 @@ std::expected<void, std::string> HelloApp::on_action(
         if (!result) {
             return std::unexpected("Failed to navigate to Detail");
         }
+        auto label = context.gui().set_text(CONFIRM_LABEL_PATH,
+            back_confirmation_->enabled.load() ? "Back confirm: On" : "Back confirm: Off");
+        if (!label) return std::unexpected(label.error());
+        back_status_.clear();
+        return {};
+    }
+    if (action == TOGGLE_CONFIRM_ACTION) {
+        if (back_confirmation_->pending_token.load() != 0) return std::unexpected("Back confirmation is pending");
+        const bool enabled = !back_confirmation_->enabled.load();
+        auto result = context.gui().set_text(CONFIRM_LABEL_PATH,
+            enabled ? "Back confirm: On" : "Back confirm: Off");
+        if (!result) return std::unexpected(result.error());
+        back_confirmation_->enabled.store(enabled);
+        back_status_.clear();
+        return {};
+    }
+    if (action == ALLOW_BACK_ACTION || action == CANCEL_BACK_ACTION) {
+        auto navigator = navigator_.lock();
+        if (!navigator) return std::unexpected("App Navigator is unavailable");
+        const auto token = back_confirmation_->pending_token.exchange(0);
+        if (token == 0) return std::unexpected("No Back confirmation is pending");
+        auto result = navigator->complete_back(token, action == ALLOW_BACK_ACTION);
+        back_status_.clear();
+        if (!result) return std::unexpected("Back confirmation failed: " + std::to_string(static_cast<int>(result.error())));
         return {};
     }
     if (action != INCREMENT_ACTION) {
@@ -149,6 +198,34 @@ std::expected<void, std::string> HelloApp::on_action(
         return std::unexpected("Failed to update counter text: " + result.error());
     }
     count_ = next_count;
+    return {};
+}
+
+std::expected<void, std::string> HelloApp::on_timer(
+    esp_brookesia::system::core::AppContext &context,
+    esp_brookesia::system::core::TimerId timer_id,
+    std::string_view name
+)
+{
+    if (timer_id != back_status_timer_ || name != BACK_STATUS_TIMER) return {};
+    auto navigator = navigator_.lock();
+    if (!navigator) return {};
+    auto observed_token = back_confirmation_->pending_token.load();
+    const auto snapshot = navigator->snapshot();
+    if (snapshot.page_id != "detail") return {};
+    std::string status;
+    if (snapshot.back_pending) {
+        status = "Back? Allow or Cancel";
+    } else if (observed_token != 0 &&
+               back_confirmation_->pending_token.compare_exchange_strong(observed_token, 0)) {
+        status = "Back expired or invalidated";
+    } else {
+        status = back_confirmation_->enabled.load() ? "Use Back to confirm" : "Edge Back returns to Root";
+    }
+    if (status == back_status_) return {};
+    auto result = context.gui().set_text(BACK_STATUS_PATH, status);
+    if (!result) return std::unexpected(result.error());
+    back_status_ = std::move(status);
     return {};
 }
 

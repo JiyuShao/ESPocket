@@ -67,10 +67,31 @@
       "id": "detail",
       "commonProps": { "scrollable": false },
       "style": { "bgColor": "#172033", "padding": 0 },
-      "layout": { "type": "flex", "flexFlow": "column", "mainAlign": "center", "crossAlign": "center", "gap": "18dp" },
+      "layout": { "type": "flex", "flexFlow": "column", "mainAlign": "center", "crossAlign": "center", "gap": "12dp" },
       "children": [
         { "type": "label", "id": "title", "labelProps": { "text": "Native Detail" }, "style": { "textColor": "#ffffff", "fontSize": "30sp" }, "placement": { "width": "280dp", "height": "44dp" } },
-        { "type": "label", "id": "hint", "labelProps": { "text": "Edge Back returns to Root" }, "style": { "textColor": "#a8b3c5", "fontSize": "17sp", "textAlign": "center" }, "placement": { "width": "300dp", "height": "30dp" } }
+        { "type": "label", "id": "hint", "labelProps": { "text": "Edge Back returns to Root" }, "style": { "textColor": "#a8b3c5", "fontSize": "17sp", "textAlign": "center" }, "placement": { "width": "300dp", "height": "30dp" } },
+        {
+          "type": "button", "id": "confirm",
+          "events": [ { "type": "clicked", "action": "hello.toggle_confirm" } ],
+          "style": { "bgColor": "#334155", "radius": "22dp" },
+          "placement": { "width": "230dp", "height": "46dp" },
+          "children": [ { "type": "label", "id": "label", "labelProps": { "text": "Back confirm: Off" }, "style": { "textColor": "#ffffff", "fontSize": "17sp" }, "placement": { "mode": "relative", "align": "center" } } ]
+        },
+        {
+          "type": "button", "id": "allow",
+          "events": [ { "type": "clicked", "action": "hello.allow_back" } ],
+          "style": { "bgColor": "#2157d5", "radius": "22dp" },
+          "placement": { "width": "230dp", "height": "46dp" },
+          "children": [ { "type": "label", "id": "label", "labelProps": { "text": "Allow Back" }, "style": { "textColor": "#ffffff", "fontSize": "17sp" }, "placement": { "mode": "relative", "align": "center" } } ]
+        },
+        {
+          "type": "button", "id": "cancel",
+          "events": [ { "type": "clicked", "action": "hello.cancel_back" } ],
+          "style": { "bgColor": "#334155", "radius": "22dp" },
+          "placement": { "width": "230dp", "height": "46dp" },
+          "children": [ { "type": "label", "id": "label", "labelProps": { "text": "Cancel Back" }, "style": { "textColor": "#ffffff", "fontSize": "17sp" }, "placement": { "mode": "relative", "align": "center" } } ]
+        }
       ]
     },
     {
