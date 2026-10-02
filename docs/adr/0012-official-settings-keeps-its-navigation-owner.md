@@ -33,4 +33,4 @@ ESPocket 的组合式 `IApp` Adapter 持有官方 SettingsApp，转发生命周�
 - 将 managed component patch 作为产品基线：与 [ADR-0001](0001-espocket-is-a-product-layer-over-brookesia.md) 冲突，升级需要重复维护补丁。
 - 现在重写完整 Settings：当前需求只需要页面观察和 Back，尚无明确深度定制范围。
 
-接口事实见 [2026-10-02 上游源码快照](../upstream/settings-store-gui-local-baseline-2026-10-02.md)，适配契约见 [开发 API](../development/app-navigation-card-api.md)。
+接口事实见 [2026-10-02 上游源码快照](../../.scratch/014-app-navigation-card-contract/records/2026-10-02-upstream-settings-store-gui-baseline.md)，适配契约见 [开发 API](../development/app-navigation-card-api.md)。

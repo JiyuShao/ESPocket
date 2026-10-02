@@ -18,4 +18,4 @@
 
 - 2026-10-02（用户恢复后）：Core/NVS/Shell/Native 提供者、Owner 动作队列与文档释放已接通，前三项源码条件完成。普通卸载和 Native 更新已实现，Runtime package replacement 的配置保留及更新原因尚缺真实事务 seam，最后一项保持未勾选；整票保持开放。见 [Owner 与呈现证据](../records/2026-10-02-card-owner-presentation.md)。
 
-- 2026-10-02：余下 package replacement 需要真实事务身份，状态据此为 needs-info；已实现的普通卸载、Native 声明更新与前三项源码条件保持。上游核对与限制见 [当前快照](../../../docs/upstream/status-2026-10-02.md)。
+- 2026-10-02：余下 package replacement 需要真实事务身份，状态据此为 needs-info；已实现的普通卸载、Native 声明更新与前三项源码条件保持。上游核对与限制见 [当前快照](../records/2026-10-02-upstream-status.md)。

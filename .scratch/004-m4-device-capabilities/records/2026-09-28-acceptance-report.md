@@ -135,7 +135,7 @@ Result:
 | AudioPlayback service | DISABLED | prevents ServiceManager startup failure without `PlaybackIface` |
 | Settings Sound/Volume | BLOCKED | unavailable until the official HAL/Audio-service path provides playback control with recorder disabled |
 
-This is a verified upstream HAL/Audio-service capability boundary, not a reason to fork HAL, patch managed code, enable the unwanted HAL Adaptor recorder implementation, or claim a false PASS. The 2026-09-28 released-version and immutable-`master` recheck is recorded in [`../upstream/status-2026-09-28.md`](../../../docs/upstream/status-2026-09-28.md); it found no official playback-only fix.
+This is a verified upstream HAL/Audio-service capability boundary, not a reason to fork HAL, patch managed code, enable the unwanted HAL Adaptor recorder implementation, or claim a false PASS. The 2026-09-28 released-version and immutable-`master` recheck is recorded in [`../upstream/status-2026-09-28.md`](../../005-m5-application-ecosystem/records/2026-09-28-upstream-status.md); it found no official playback-only fix.
 
 ## Settings Resource and Round-Screen Boundary
 

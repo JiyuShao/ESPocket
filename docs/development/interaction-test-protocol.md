@@ -125,4 +125,4 @@ python scripts/firmware/run_device_tests.py \
 
 Card ID 不新增到协议快照；第二张 Card 通过打开目标 Detail 的实际 Page 结果证明，而非仅凭相同 Surface。报告增加 testSuite 字段，全部结果仍为 synthetic-input，不满足视觉/触摸/GPIO 门槛。Card 按钮坐标来自样例 GUI，须保留首次实际 attempt 的校准结果。
 
-`--suite runtime-confirm` 保留 Runtime 异步确认的最小设备回归。故障及实际触发步骤见[上游跟踪](../upstream/issues/runtime-js-async-stack-overflow.md)；它不替代 apps 完整套件。
+`--suite runtime-confirm` 保留 Runtime 异步确认的最小设备回归。故障及实际触发步骤见[上游跟踪](../../.scratch/008-m8-app-contract/records/2026-10-02-runtime-js-async-stack-overflow.md)；它不替代 apps 完整套件。

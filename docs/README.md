@@ -10,7 +10,7 @@
 | 当前或目标结构怎样组织 | [架构视图](design/architecture/README.md) |
 | 当前任务、依赖、状态和验收结果是什么 | [.scratch](../.scratch/README.md) |
 | App 开发 API 与测试协议 | [开发契约](development/README.md) |
-| 某个上游版本实际提供什么 | [Upstream Tracking](upstream/README.md) |
+| 某次上游版本核查与故障分析 | [对应 Effort 的 records](../.scratch/README.md) |
 | 如何构建 firmware | [Firmware README](../firmware/README.md) |
 | Agent 如何读取这些文档 | [Agent docs](agents/domain.md) |
 
@@ -22,7 +22,7 @@
 - 工作范围、整体状态和结果摘要进入 `.scratch/<effort>/spec.md`。
 - 可执行工作、具体依赖、验收条件、步骤和完成结果进入 `.scratch/<effort>/issues/`。
 - 日期、镜像 identity、测量值、失败、豁免与未验证项进入对应 Effort 的 `records/`，由 Spec 或 ticket 链接。
-- 特定上游版本事实进入 `upstream/`。
+- 有日期的上游版本/源码核查、故障分析、最小复现与上游提交草稿进入 `.scratch/<effort>/records/`，由具体 ticket 引用；依赖与解决状态由该 ticket 持有。长期开发契约或架构决定仍分别进入 development 与 ADR，不复制日期核查记录。
 - 与 firmware 直接相关的长期操作说明进入 `firmware/README.md`。
 
 Spec/ticket 是工作状态的权威；records 保存有日期的历史事实。代码完成、构建通过与真机通过分别记录。设计文档可以描述目标，但只有对应证据成立后才能写成已实现。

@@ -21,10 +21,11 @@
 | 013 | [Firmware structure refactor](013-firmware-structure-refactor/spec.md) | 2026-10-01 用户确认的结构整理 |
 | 014 | [App Page、Card 与 Back 开发契约](014-app-navigation-card-contract/spec.md) | 2026-10-01 用户确认的导航开发契约 |
 | 015 | [测试目录与设备测试职责重构](015-test-layout-refactor/spec.md) | 用户确认测试分层设计后要求整体实施 |
+| 016 | [上游文档与兼容目录整理](016-upstream-maintenance-layout/spec.md) | 用户确认 compat 与 patches 分开并要求整理 upstream |
 
 ## 当前工作入口
 
-- 系统导航剩余源码组合与真机路径：[007](007-m7-navigation/spec.md)。
+- 系统导航源码与真机验收：[007](007-m7-navigation/spec.md)。
 - Navigator、Back、Native/Runtime 绑定及 Card 实现：[014](014-app-navigation-card-contract/spec.md)。
 - Native/Runtime 回收与共同交互验收：[008](008-m8-app-contract/spec.md)。
 - 设备能力剩余发布条件：[004](004-m4-device-capabilities/spec.md)。

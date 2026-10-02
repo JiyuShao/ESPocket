@@ -148,7 +148,7 @@
 
 截至本轮本地提交 cd4e72d，008/02 源码已关闭；014/03 余下真实 package update 事务条件转为 needs-info，014/05 等待该条件、Runtime Card 范围答复和设备结果。其余未完成 tickets 都有未满足的具体人工、上游或 ticket 依赖；没有把 009 的 ready-for-agent 标签当成越过 008/03 的授权。
 
-[本轮上游核对](../../../docs/upstream/status-2026-10-02.md)取得 Core 0.8.4、JS 0.8.3 与 Audio 0.8.2 官方发行页面，与现有锁一致；HTTP/HAL 和部分源码请求未取得内容，不能据此作出已修复/绝无修复结论。没有采用未经核实的新依赖。
+[本轮上游核对](../../014-app-navigation-card-contract/records/2026-10-02-upstream-status.md)取得 Core 0.8.4、JS 0.8.3 与 Audio 0.8.2 官方发行页面，与现有锁一致；HTTP/HAL 和部分源码请求未取得内容，不能据此作出已修复/绝无修复结论。没有采用未经核实的新依赖。
 
 人工最小介入仍为：回应既有 013 单次 smoke；Runtime Card 首版接口范围选择。之后才能按原依赖推进一次明确镜像的 USB Driver 与 Native/Runtime 单次物理路径。已有已接受结果不重做，旧镜像/新构建身份不混用。
 

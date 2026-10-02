@@ -2,7 +2,7 @@
 
 > Draft only. This document has not been published or submitted upstream.
 >
-> Official Registry/current-`master` status was rechecked on 2026-09-28 in [`../status-2026-09-28.md`](../status-2026-09-28.md); no confirmed fix was found.
+> Official Registry/current-`master` status was rechecked on 2026-09-28 in [`../status-2026-09-28.md`](2026-09-28-upstream-status.md); no confirmed fix was found.
 
 ## Summary
 

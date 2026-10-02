@@ -122,7 +122,9 @@ Circular Shell 与 Hello Native 以 `resources/gui.json` 为完整 App/Shell 的
 - LittleFS 镜像输入位于当前 build tree 的 `littlefs-root/`（默认 `firmware/build/littlefs-root/`）。System 的 `project_include.cmake` 通过 Brookesia 公开路径配置接口在资源 staging 前指定该路径；设备挂载仍为 `/littlefs`，App 根仍为 `/littlefs/apps`。
 - `managed_components/`、`components/gen_bmgr_codes/`、本地 `sdkconfig` 与 `sdkconfig.old` 保持工具约定位置并忽略。Runtime App 的 `build/`、`dist/`、`node_modules/` 也忽略；禁止提交这些生成物或重新建立旧的 `firmware/littlefs/` 输入目录。
 - Component 的公开头文件依赖列入 `REQUIRES`，实现依赖列入 `PRIV_REQUIRES`。System 配置位于自有 `Kconfig`，固件版本由顶层 `PROJECT_VER` 注入 SystemInfo；App manifest 版本仍由 App 自有。
-- `compat/` 是显式、可移除的兼容 seam；每个文件记录影响版本、上游问题和删除条件。当前 attributes 告警豁免只作用于 `brookesia_hal_custom`；另一处 IDF/Picolibc 属性拼写兼容只应用到上游一个 display 翻译单元，不放宽告警。
+- [`compat/`](compat/README.md) 保存自有兼容实现与编译适配；每个文件记录影响版本、上游问题和删除条件。当前 attributes 告警豁免只作用于 `brookesia_hal_custom`；另一处 IDF/Picolibc 属性拼写兼容只应用到上游一个 display 翻译单元，不放宽告警。
+
+- [`patches/`](patches/README.md) 保存已接受的上游源码 diff 与版本/应用顺序元数据，构建副本不提交；当前只有管理约定，Runtime 栈配置提案尚未接入。compat 与 patches 分开，核查与故障材料归[对应 Effort](../.scratch/README.md) 的 records。
 
 ## CI 与独立环境准备
 
@@ -138,4 +140,4 @@ python3 scripts/check.py
 
 准备命令使用官方 Component Manager 从 dependencies.lock 获取组件并验证 hash；已有组件 hash 不匹配时失败，不覆盖本地改动。它只准备 host tests 的 Settings 资源与 Runtime JSON 编码所用 Boost，不解析或改写版本锁，也不替代固件依赖解析。统一检查本身仍只读，不隐式下载依赖。CI 的 GNU 编译器由 `CXX=g++` 选择；本地默认使用 clang++。
 
-Runtime 异步确认故障最小设备回归使用 `--suite runtime-confirm`，与其他套件共用设备身份、镜像核对和失败报告规则。此套件通过不代表完整 App 契约验收；上游阻塞与诊断见[Runtime 异步 GUI 栈溢出](../docs/upstream/issues/runtime-js-async-stack-overflow.md)。
+Runtime 异步确认故障最小设备回归使用 `--suite runtime-confirm`，与其他套件共用设备身份、镜像核对和失败报告规则。此套件通过不代表完整 App 契约验收；上游阻塞与诊断见[Runtime 异步 GUI 栈溢出](../.scratch/008-m8-app-contract/records/2026-10-02-runtime-js-async-stack-overflow.md)。

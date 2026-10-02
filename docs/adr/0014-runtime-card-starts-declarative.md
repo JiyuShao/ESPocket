@@ -23,4 +23,4 @@ Native Card 继续通过 CardModel 提供内容回调。两种呈现方式共享
 - Card API 的可执行范围必须明确记录，不能把声明式呈现称为已支持 JS 业务回调。
 - Package replacement 的稳定 Card 配置迁移仍需要实际更新事务 seam，本决定不解除该条件。
 
-字段与作者职责见 [开发 API](../development/app-navigation-card-api.md)；上游事实见 [2026-10-02 核对](../upstream/status-2026-10-02.md)。
+字段与作者职责见 [开发 API](../development/app-navigation-card-api.md)；上游事实见 [2026-10-02 核对](../../.scratch/014-app-navigation-card-contract/records/2026-10-02-upstream-status.md)。

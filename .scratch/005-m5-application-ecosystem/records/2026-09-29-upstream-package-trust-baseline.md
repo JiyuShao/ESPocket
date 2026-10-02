@@ -48,4 +48,4 @@ Build-staged Hello Runtime 属于固件构建供应链，可以作为内置样�
 
 在统一 Core 信任门、不可变 verify-to-unpack、事务更新、可信重启发现和兼容签名发布路径同时存在以前，动态安装与动态 Launcher 必须保持关闭。
 
-产品契约见 [Runtime 包信任](../design/product/05-runtime-package-trust.md)，当前任务与结果见 [Application Ecosystem Spec](../../.scratch/005-m5-application-ecosystem/spec.md)。
+产品契约见 [Runtime 包信任](../../../docs/design/product/05-runtime-package-trust.md)，当前任务与结果见 [Application Ecosystem Spec](../spec.md)。

@@ -2,7 +2,7 @@
 
 ## 核对范围
 
-本轮只读核对锁定源码、官方 Component Registry 页面与官方 Programming Guide。没有修改依赖锁、下载替换组件或改动 managed_components。历史 HTTP、Audio、信任及键盘诊断仍见 [2026-09-28 快照](status-2026-09-28.md)；本次不把历史快照当作新的修复判定。
+本轮只读核对锁定源码、官方 Component Registry 页面与官方 Programming Guide。没有修改依赖锁、下载替换组件或改动 managed_components。历史 HTTP、Audio、信任及键盘诊断仍见 [2026-09-28 快照](../../005-m5-application-ecosystem/records/2026-09-28-upstream-status.md)；本次不把历史快照当作新的修复判定。
 
 ## 可核实的发布与接口
 
@@ -20,11 +20,11 @@
 
 锁定 Core 公共 System 接口不提供独立的、未启动完整 App 的 Card JS 实例调用能力。本地 Runtime::init 发现共享 Backend，并以自己的 function_bridge 配置它；deinit 清理同一 Backend。JS Backend 构造私有。直接制造另一个 Runtime、自行分配共享 backend App ID 或复制 Runtime 都不能满足原有身份和生命周期边界。
 
-Runtime Card 首版声明式呈现可作为另一个接口方案，但与可执行 JS 生命周期和轻量业务回调不同；已向用户提出具体范围选择，未把无回答当作同意。实际 Native Card 接入及构建见 [014 源码记录](../../.scratch/014-app-navigation-card-contract/records/2026-10-02-card-owner-presentation.md)。
+Runtime Card 首版声明式呈现可作为另一个接口方案，但与可执行 JS 生命周期和轻量业务回调不同；已向用户提出具体范围选择，未把无回答当作同意。实际 Native Card 接入及构建见 [014 源码记录](2026-10-02-card-owner-presentation.md)。
 
 ## 更新 / 信任
 
-本地 Core 0.8.4 package replacement 使用 uninstall/install，卸载回调 AppInfo 不带替换原因或事务身份。显式 Native 声明更新可以保留 Card 稳定身份；官方 Store/USB 的统一 package replacement 不能仅靠相邻事件推测。该问题与 [005/03](../../.scratch/005-m5-application-ecosystem/issues/03-enforce-core-package-trust.md) 的统一可信安装/更新入口共同受上游 seam 约束。
+本地 Core 0.8.4 package replacement 使用 uninstall/install，卸载回调 AppInfo 不带替换原因或事务身份。显式 Native 声明更新可以保留 Card 稳定身份；官方 Store/USB 的统一 package replacement 不能仅靠相邻事件推测。该问题与 [005/03](../../005-m5-application-ecosystem/issues/03-enforce-core-package-trust.md) 的统一可信安装/更新入口共同受上游 seam 约束。
 
 [官方 package 文档](https://docs.espressif.com/projects/esp-brookesia/en/latest/system/core/app_package.html)描述服务声明、兼容性及相对路径限制；这些规则不能自动证明本项目要求的 release receipt、原子更新回滚和 reboot discovery 信任门槛已经覆盖。
 

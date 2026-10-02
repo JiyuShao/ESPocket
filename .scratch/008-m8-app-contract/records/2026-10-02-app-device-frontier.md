@@ -29,7 +29,7 @@ Attempt 20261002T154159Z-17fff828-ba8c-400d-93d7-1ad1dc7d75f1：FAIL，41 步，
 
 ## 结论与未完成项
 
-隔离支持异步完成微任务中的同步 GUI 服务调用触发 8 KiB RuntimeJsAsync 栈溢出。实际错误、锁定源码与需要的公开能力见[上游复现](../../../docs/upstream/issues/runtime-js-async-stack-overflow.md)。不删产品提示作为修复；未测调整栈大小、未确定完整溢出调用链或最小安全预算。
+隔离支持异步完成微任务中的同步 GUI 服务调用触发 8 KiB RuntimeJsAsync 栈溢出。实际错误、锁定源码与需要的公开能力见[上游复现](2026-10-02-runtime-js-async-stack-overflow.md)。不删产品提示作为修复；未测调整栈大小、未确定完整溢出调用链或最小安全预算。
 
 两个回收配置与 heap 门槛尚未执行。尝试准备回收 build 时，idf.py 扩展因未设置 ESP_IDF_VERSION 在配置前 TypeError，未产生回收镜像，也未刷入；实际设备故障与这个本机环境错误分开记录。当前只改测试工具及文档，既有生产源码/资源保持原样。
 

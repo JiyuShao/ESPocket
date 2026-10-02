@@ -214,7 +214,7 @@ The Native App Store itself has no supported-system restriction and can be insta
 
 ## Required Unblock
 
-1. Consume an upstream HTTP/Store/HAL fix that serializes cancellation/timeouts with active ESP HTTP client operations, then rebuild and repeat the non-download Refresh validation. The current 1/1 containment image already failed with a symbolized TLS-handshake `LoadProhibited`; no further reproduction is required. Read-only upstream status is recorded in [`../upstream/status-2026-09-28.md`](../../../docs/upstream/status-2026-09-28.md), and an unpublished Issue draft is retained at [`../upstream/issues/http-cancel-race.md`](../../../docs/upstream/issues/http-cancel-race.md).
+1. Consume an upstream HTTP/Store/HAL fix that serializes cancellation/timeouts with active ESP HTTP client operations, then rebuild and repeat the non-download Refresh validation. The current 1/1 containment image already failed with a symbolized TLS-handshake `LoadProhibited`; no further reproduction is required. Read-only upstream status is recorded in [`../upstream/status-2026-09-28.md`](2026-09-28-upstream-status.md), and an unpublished Issue draft is retained at [`../upstream/issues/http-cancel-race.md`](2026-09-28-http-cancel-race.md).
 2. Obtain an official BPK whose `systems` allows `espocket`, plus a supported publication/update route.
 3. Upstream Store/Core must enforce the common install and reboot-discovery [trust contract](../../../docs/design/product/05-runtime-package-trust.md) before ESPocket can claim verified package distribution.
 4. Upstream Core must owner-scope `KeyboardClosed` delivery and/or unconditionally release Runtime resources after lifecycle stop failure before arbitrary downloaded Runtime code can be treated as isolated.

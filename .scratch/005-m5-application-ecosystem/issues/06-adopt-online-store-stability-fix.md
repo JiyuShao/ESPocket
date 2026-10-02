@@ -15,4 +15,4 @@
 
 诊断已完成不代表修复已采用。1 worker / 1 request containment 曾在 Refresh 的 retry/cancel 后发生 TLS handshake `LoadProhibited` 并重启；不继续重复已知不安全复现。
 
-历史事实见 [Store 报告](../records/2026-09-28-acceptance-report.md)，源码诊断见 [HTTP race 草稿](../../../docs/upstream/issues/http-cancel-race.md)及[上游状态快照](../../../docs/upstream/status-2026-09-28.md)。这些快照不证明当前上游已经修复。
+历史事实见 [Store 报告](../records/2026-09-28-acceptance-report.md)，源码诊断见 [HTTP race 草稿](../records/2026-09-28-http-cancel-race.md)及[上游状态快照](../records/2026-09-28-upstream-status.md)。这些快照不证明当前上游已经修复。

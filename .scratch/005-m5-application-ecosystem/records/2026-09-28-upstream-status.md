@@ -71,7 +71,7 @@ Anonymous API results were incomplete: 17 Issue records, 6 PR records, and 7 of 
 
 No confirmed official fix exists in a released component or at the inspected current `master` head. The locked HTTP service is already the latest Registry release, and all four decisive service, HAL, Helper-schema, and ServiceManager-dispatch source files are byte-identical to current `master`. The one-worker/one-request ESPocket setting mitigates overlapping TLS allocation pressure but cannot serialize cancellation from the Store/System context against the active worker. The upstream `deterministic_async_cancel` test waits only for `RequestStarted`, which is published before `open()`; it does not force or assert a close-versus-open/read overlap.
 
-Keep M5 online Store stability blocked. The source-backed failure report remains an unpublished draft at [`issues/http-cancel-race.md`](issues/http-cancel-race.md); no upstream Issue was submitted.
+Keep M5 online Store stability blocked. The source-backed failure report remains an unpublished draft at [`issues/http-cancel-race.md`](2026-09-28-http-cancel-race.md); no upstream Issue was submitted.
 
 ## Audio playback-only blocker
 
