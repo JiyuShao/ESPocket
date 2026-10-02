@@ -1,6 +1,6 @@
 {
   "name": "Circular Shell 466px / Native and Runtime samples",
-  "calibration": "navigation verified on image 09e8eb00d; Card suite verified on c4dfa5af8 with Runtime main.js d7e27a802f1575934348b2d91821bd70ce5fae32c8f2e855f5caf48838063130",
+  "calibration": "navigation verified on image 09e8eb00d; Card suite verified on c4dfa5af8 with Runtime main.js d7e27a802f1575934348b2d91821bd70ce5fae32c8f2e855f5caf48838063130; surfaces verified on ordinary image 71567f599 (attempt 20261002T145324Z-ad0d0a4e-ad62-462a-a75e-8e4b1432f557)",
   "width": 466,
   "height": 466,
   "up": [
@@ -86,5 +86,19 @@
   "card_open_tap": [
     233,
     290
+  ],
+  "quick_settings_app_tap": [
+    233,
+    349
+  ],
+  "app_horizontal": [
+    [
+      130,
+      110
+    ],
+    [
+      350,
+      110
+    ]
   ]
 }

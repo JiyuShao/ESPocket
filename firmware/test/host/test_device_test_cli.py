@@ -21,7 +21,7 @@ class DeviceTestCliTest(unittest.TestCase):
                         cwd=directory, capture_output=True, text=True)
                     self.assertEqual(result.returncode, 0, result.stderr)
                     self.assertIn('--expected-image', result.stdout)
-                    self.assertIn('--suite {navigation,cards}', result.stdout)
+                    self.assertIn('--suite {navigation,cards,surfaces}', result.stdout)
 
     def test_transport_failure_keeps_evidence_and_legacy_entry_behavior(self):
         with tempfile.TemporaryDirectory() as directory:

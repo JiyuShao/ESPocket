@@ -74,7 +74,7 @@ firmware/
         └── profiles/  # 设备布局的坐标、手势与校准信息
 ```
 
-`scripts/check.py` 显式发现各 Owner 的 `test/` 和 `firmware/test/host/`，不发现 `device/`，不打开串口、不刷写、不改变开发者模式。设备测试通过 `scripts/firmware/run_device_tests.py` 显式运行；`--suite navigation`（默认）和 `--suite cards` 选择用例。未来资源、回收或稳定性测试也归 `device/`，有真实用例时再增加分类。
+`scripts/check.py` 显式发现各 Owner 的 `test/` 和 `firmware/test/host/`，不发现 `device/`，不打开串口、不刷写、不改变开发者模式。设备测试通过 `scripts/firmware/run_device_tests.py` 显式运行；`--suite navigation`（默认）、`--suite cards` 与 `--suite surfaces` 选择用例；surfaces 补查普通配置的 Card 边界、系统页面 PWR Home、Quick Settings → Settings 与 App 普通横滑。未来资源、回收或稳定性测试也归 `device/`，有真实用例时再增加分类。
 
 USB 客户端只负责线缆协议、响应匹配和快照校验；执行器负责行为断言、步骤、attempt 及始终执行的清理；E2E 用例调用执行器，不自行实现串口协议或另一份导航状态。CLI 负责参数、连接和产物目录。
 

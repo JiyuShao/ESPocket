@@ -50,9 +50,9 @@ Watch Face
 
 | 路径 | PASS 条件 | 状态 |
 |---|---|---|
-| Watch Face ↔ Cards | 顺序稳定，边界不循环 | PARTIAL（Battery/Brightness 往返已见，序列边界未单测） |
+| Watch Face ↔ Cards | 顺序稳定，边界不循环 | PASS（已接受 Card fixture 序列；普通边界合成检查通过，见[补测记录](../records/2026-10-02-remaining-paths.md)） |
 | Watch Face → Quick Settings → Up | 返回 Watch Face | PASS（样机镜像） |
-| Watch Face → Launcher → top pull release | 返回 Watch Face，不误开 App | NOT TESTED |
+| Watch Face → Launcher → top pull release | 返回 Watch Face，不误开 App | PASS（013 集中物理 smoke；见[补测对账](../records/2026-10-02-remaining-paths.md)） |
 | Launcher → App Root → Edge Back | 保持 App Root，无返回控件 | PASS（样机镜像；[记录](../../014-app-navigation-card-contract/records/2026-10-02-default-back-prototype.md)） |
 | App Root → Detail → Back | 返回 App Root | PASS（样机镜像；[记录](../../014-app-navigation-card-contract/records/2026-10-02-default-back-prototype.md)） |
 | Quick Settings → Settings Root → PWR | 返回 Watch Face | NOT TESTED |
@@ -67,3 +67,5 @@ Watch Face
 - App Root 必须证明无可见 Back；PWR Home 必须证明直接回 Watch Face。
 - 物理触摸与显示观察不可由日志或 Preview 代替。
 - 任一必需项缺少证据时不得关闭本票。
+
+- 2026-10-02（对账与补测）：复用既有已接受证据；普通镜像 71567f599 的新 surfaces 22 步合成检查通过。剩余 Settings/PWR、系统页面 PWR 与 Native 普通横滑已合并为一次物理确认，答复前不关闭。见 [补测记录](../records/2026-10-02-remaining-paths.md)。

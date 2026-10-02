@@ -14,7 +14,7 @@ from firmware.test.device.support.device_test_runner import DeviceTestRunner, LI
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--suite', choices=('navigation', 'cards'), default='navigation')
+    parser.add_argument('--suite', choices=('navigation', 'cards', 'surfaces'), default='navigation')
     parser.add_argument('--port', required=True)
     parser.add_argument('--device-id', required=True, help='board identity from inventory, not the serial port name')
     parser.add_argument('--expected-image', required=True, help='exact hello image_identity for this build')
