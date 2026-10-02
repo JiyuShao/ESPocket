@@ -4,7 +4,7 @@ from pathlib import Path, PurePosixPath
 import subprocess
 import unittest
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3]
 
 
 def generated_paths(paths):
@@ -60,7 +60,8 @@ class RepositoryLayoutTest(unittest.TestCase):
 
     def test_tests_live_with_their_owner(self):
         for directory in [*(ROOT / 'firmware/components').iterdir(),
-                          *(ROOT / 'firmware/native_apps').iterdir()]:
+                          *(ROOT / 'firmware/native_apps').iterdir(),
+                          *(ROOT / 'firmware/runtime_apps').iterdir()]:
             self.assertFalse((directory / 'tests').exists(),
                              f'{directory.name}: use test/ instead of tests/')
         self.assertFalse((ROOT / 'firmware/tests').exists())

@@ -83,23 +83,25 @@ Home Space 的 `surface` 至少能区分 Watch Face、Launcher、Quick Settings 
 
 协议至少区分：`developer_mode_off`、`bad_request`、`unsupported`、`busy`、`invalid_state`、`timeout` 和 `internal`。前五项不可被自动重试成成功。每次失败先 `release`，再采集最终 `snapshot` 和串口日志；再次运行作为新 attempt，保留原失败证据。设备重启、App 停止或导航任务替换后，旧刺激和旧 Back token 不得继续作用于新任务。
 
-## 主机 Driver
+## 设备测试执行入口
 
-[interaction_driver.py](../../scripts/firmware/interaction_driver.py) 是首版可执行 USB Driver；需要 `pyserial`（可使用 ESP-IDF 的 Python 环境）。必须先刷入支持上述能力的准确镜像并在设备开启开发者模式，不能把源码能力当作旧镜像能力。Driver 不自动刷写、重启设备或开启模式。
+[run_device_tests.py](../../scripts/firmware/run_device_tests.py) 是可执行设备测试 CLI；需要 `pyserial`（可使用 ESP-IDF 的 Python 环境）。必须先刷入支持上述能力的准确镜像并在设备开启开发者模式，不能把源码能力当作旧镜像能力。Driver 不自动刷写、重启设备或开启模式。
 
 ```bash
-python scripts/firmware/interaction_driver.py \
+python scripts/firmware/run_device_tests.py \
   --port /dev/cu.usbmodem101 \
   --device-id <inventory-board-id> \
   --expected-image <exact-hello-image-identity> \
   --output /private/tmp/espocket-interaction
 ```
 
+用例位于 `firmware/test/device/e2e/`，USB 客户端与执行器位于 `firmware/test/device/support/`；`--suite cards` 选择 Native/Runtime Card 路径，需要默认关闭的 Card fixture 测试镜像。目录职责与主机检查入口见 [Firmware README](../../firmware/README.md)。旧 `interaction_driver.py` 转发到同一 CLI，参数与报告语义不变。
+
 设备 ID 来自操作者的设备清单，报告明确标注该来源，不把串口路径冒充唯一设备 identity。`--expected-image` 必填且严格比对设备 hello；不匹配或缺少能力时，在任何刺激前失败，仍尝试 release 和最终 snapshot。
 
-默认 [466px profile](../../scripts/firmware/interaction-profile-466.json) 的坐标依据当前 GUI 资源推导，标记为尚未经过设备路径验证。它只包含输入轨迹与控件点击位置，不重实现导航状态。其他布局可通过 `--profile` 指定同形 JSON。Driver 通过真实 Owner 快照验证 Launcher、Card、Quick Settings、Native Root/Detail、Back 与 PWR，点击坐标不构成视觉验收。
+默认 [466px profile](../../firmware/test/device/profiles/circular-466.json) 的坐标依据当前 GUI 资源推导，其已验证镜像与资源 identity 写在 profile 的 calibration 字段；布局变更后需要重新校准。它只包含输入轨迹与控件点击位置，不重实现导航状态。其他布局可通过 `--profile` 指定同形 JSON。Driver 通过真实 Owner 快照验证 Launcher、Card、Quick Settings、Native Root/Detail、Back 与 PWR，点击坐标不构成视觉验收。
 
-当前套件还需要带 Native Back 确认控件的镜像（源码基线 `18a6ec0`）。profile 增加 confirm_tap、allow_back_tap、cancel_back_tap，均未经过设备校准；只具备测试 capability 的旧镜像不一定具备这些 App 控件。套件检查暂缓/重复 Back 保持 Detail、取消保留 Detail、允许回 Root；再等待待决自动解除，期间逐样本保持 App ID、Detail 和亮屏不变，最多等待 18 秒，并拒绝 backPending 与 canBack 同时为 true。迟到允许不得 pop，待决时 PWR Home 后重开必须从 Root 开始、确认开关恢复 Off。此路径验证状态结果，不精确测量 15 秒超时边界；边界由 Navigator 组件用例覆盖。
+导航套件（`--suite navigation`，默认）还需要带 Native Back 确认控件的镜像（源码基线 `18a6ec0`）。profile 增加 confirm_tap、allow_back_tap、cancel_back_tap，校准结果见 profile 与独立设备记录；只具备测试 capability 的旧镜像不一定具备这些 App 控件。套件检查暂缓/重复 Back 保持 Detail、取消保留 Detail、允许回 Root；再等待待决自动解除，期间逐样本保持 App ID、Detail 和亮屏不变，最多等待 18 秒，并拒绝 backPending 与 canBack 同时为 true。迟到允许不得 pop，待决时 PWR Home 后重开必须从 Root 开始、确认开关恢复 Off。此路径验证状态结果，不精确测量 15 秒超时边界；边界由 Navigator 组件用例覆盖。
 
 每次 CLI 调用创建新的 UUID attempt 目录，包含 `report.json` 和 `serial.log`；不覆盖既往失败。报告保存期望/实际镜像、协议版本、设备 ID、profile、步骤、递增快照、清理结果和 `synthetic-input` 证据类型。串口日志保存 TX、RX 与普通设备日志。无自动重试；再次执行是新的 attempt。
 

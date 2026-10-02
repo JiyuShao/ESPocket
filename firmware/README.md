@@ -33,7 +33,7 @@ idf.py -C firmware build
 
 ## 测试
 
-只约束一个组件或 Native App 的测试放在该 Owner 的 `test/`；跨组件测试放在 `firmware/test/`。测试可以执行组件行为，也可以分析源码或资源，只要它对稳定约束做出可重复的断言。
+只约束一个组件、Native App 或 Runtime App 的测试放在该 Owner 的 `test/`；跨模块主机测试放在 `firmware/test/host/`，真实设备测试放在 `firmware/test/device/`。测试可以执行组件行为，也可以分析源码或资源，只要它对稳定约束做出可重复的断言。
 
 无需硬件的统一检查入口：
 
@@ -57,9 +57,34 @@ python3 -m unittest discover -s firmware/components/espocket_system/test -p 'tes
 
 该测试检查锁定组件、页面资源与 Back 路由，并在主机执行 Adapter 委托和错误行为（需要支持 C++23 的 host 编译器（默认 `clang++`，可用 `CXX` 指定））。固件 CMake 配置也会自动运行资源兼容检查，不匹配会阻止构建。升级时同次审查 manifest／lock、Adapter 映射和兼容测试，再按上文重新生成配置、完整构建并完成必要真机验收。生成的 `managed_components/` 改动不提交。
 
+## 测试目录与职责
+
+先按行为的 Owner 定位测试，再按执行环境选择入口。组件自身的单元、契约和 Adapter 兼容测试共用该组件的 `test/`；不按测试语言或文件数量新建目录。App 资源、动作和 JS 生命周期测试放在各自 App 的 `test/`。跨模块集成、仓库布局与测试执行器的离线测试放在 `firmware/test/host/`。
+
+```text
+firmware/
+├── components/<owner>/test/
+├── native_apps/<app>/test/
+├── runtime_apps/<app>/test/
+└── test/
+    ├── host/
+    └── device/
+        ├── e2e/       # navigation.py、cards.py：真实设备用户路径
+        ├── support/   # USB 客户端、状态断言、attempt 与失败清理
+        └── profiles/  # 设备布局的坐标、手势与校准信息
+```
+
+`scripts/check.py` 显式发现各 Owner 的 `test/` 和 `firmware/test/host/`，不发现 `device/`，不打开串口、不刷写、不改变开发者模式。设备测试通过 `scripts/firmware/run_device_tests.py` 显式运行；`--suite navigation`（默认）和 `--suite cards` 选择用例。未来资源、回收或稳定性测试也归 `device/`，有真实用例时再增加分类。
+
+USB 客户端只负责线缆协议、响应匹配和快照校验；执行器负责行为断言、步骤、attempt 及始终执行的清理；E2E 用例调用执行器，不自行实现串口协议或另一份导航状态。CLI 负责参数、连接和产物目录。
+
+人工画面、真实触摸和实体键验收步骤放在相应 ticket；有日期的判定和 identity 放在同一 Effort 的 records。原始报告与日志保留在 `--output` 指定的本地目录或 CI artifacts，不提交源码。当前默认临时目录保持 `/private/tmp/espocket-interaction`。
+
+旧 `scripts/firmware/interaction_driver.py` 只转发到新 CLI；旧 profile 路径通过符号链接指向唯一的 `device/profiles/circular-466.json`。已有命令参数与报告字段保持不变，新文档使用新入口与配置位置。
+
 ## USB 合成输入回归
 
-启用设备开发者模式并刷入具有 touch/PWR/snapshot/release capability 的固件后，使用 [interaction_driver.py](../scripts/firmware/interaction_driver.py) 执行单次自动路径。它不自动刷写、重启或开启模式；需要 `pyserial`，可使用 ESP-IDF Python 环境。必须显式指定设备清单 ID 和期望镜像 identity。CLI、466px profile 与报告格式见 [交互测试协议](../docs/development/interaction-test-protocol.md)。输出仅证明 `synthetic-input`，不能满足 GPIO、触摸硬件或视觉条件。
+启用设备开发者模式并刷入具有 touch/PWR/snapshot/release capability 的固件后，使用 [run_device_tests.py](../scripts/firmware/run_device_tests.py) 执行单次自动路径。它不自动刷写、重启或开启模式；需要 `pyserial`，可使用 ESP-IDF Python 环境。必须显式指定设备清单 ID 和期望镜像 identity。CLI、466px profile 与报告格式见 [交互测试协议](../docs/development/interaction-test-protocol.md)。输出仅证明 `synthetic-input`，不能满足 GPIO、触摸硬件或视觉条件。
 
 ## Card 样例测试镜像
 

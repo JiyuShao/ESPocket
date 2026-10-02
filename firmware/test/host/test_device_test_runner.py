@@ -1,14 +1,14 @@
-"""Verify the real Driver against controlled protocol observations, without a device."""
-import importlib.util
+"""Verify the real device runner against controlled protocol observations, without a device."""
 import io
 import json
 from pathlib import Path
 import unittest
 
-ROOT = Path(__file__).resolve().parents[2]
-SPEC = importlib.util.spec_from_file_location('interaction_driver', ROOT / 'scripts/firmware/interaction_driver.py')
-MODULE = importlib.util.module_from_spec(SPEC)
-SPEC.loader.exec_module(MODULE)
+ROOT = Path(__file__).resolve().parents[3]
+import sys
+sys.path.insert(0, str(ROOT))
+from firmware.test.device.support import device_test_runner as MODULE
+from firmware.test.device.support.usb_test_client import PREFIX, CAPABILITIES, DeviceTestError
 
 
 def snapshot(seq, **fields):
@@ -35,14 +35,14 @@ class Transport:
         self.pending = []
 
     def write(self, frame):
-        request = json.loads(frame[len(MODULE.PREFIX):])
+        request = json.loads(frame[len(PREFIX):])
         self.requests.append(request)
         result = self.responder(request)
         if isinstance(result, list):
             self.pending.extend(result)
         else:
             reply = {'version': 1, 'request_id': request['request_id'], 'ok': True, **result}
-            self.pending.append(MODULE.PREFIX + json.dumps(reply).encode() + b'\n')
+            self.pending.append(PREFIX + json.dumps(reply).encode() + b'\n')
         return len(frame)
 
     def readline(self, limit=4096):
@@ -50,8 +50,8 @@ class Transport:
         return self.pending.pop(0) if self.pending else b''
 
 
-class DriverTests(unittest.TestCase):
-    def make(self, responder, driver_type=MODULE.Driver):
+class DeviceTestRunnerTests(unittest.TestCase):
+    def make(self, responder, driver_type=MODULE.DeviceTestRunner):
         clock = Clock()
         transport = Transport(responder, clock)
         log = io.BytesIO()
@@ -71,17 +71,17 @@ class DriverTests(unittest.TestCase):
 
     def test_protocol_error_is_not_automatically_retried(self):
         driver, transport, _ = self.make(lambda _: {'ok': False, 'error_code': 'invalid_state'})
-        with self.assertRaisesRegex(MODULE.DriverError, 'invalid_state'):
+        with self.assertRaisesRegex(DeviceTestError, 'invalid_state'):
             driver.request('snapshot')
         self.assertEqual(len(transport.requests), 1)
 
     def test_nonadvancing_sequence_and_invalid_boolean_fail(self):
         driver, _, _ = self.make(lambda _: {'snapshot': snapshot(1)})
         driver.snapshot()
-        with self.assertRaisesRegex(MODULE.DriverError, 'did not advance'):
+        with self.assertRaisesRegex(DeviceTestError, 'did not advance'):
             driver.snapshot()
         driver, _, _ = self.make(lambda _: {'snapshot': snapshot(1, display=1)})
-        with self.assertRaisesRegex(MODULE.DriverError, 'display'):
+        with self.assertRaisesRegex(DeviceTestError, 'display'):
             driver.snapshot()
 
     def test_wait_times_out_when_owner_never_changes_despite_ack(self):
@@ -91,17 +91,17 @@ class DriverTests(unittest.TestCase):
             sequence += 1
             return {'snapshot': snapshot(sequence)} if request['op'] == 'snapshot' else {}
         driver, _, _ = self.make(respond)
-        with self.assertRaisesRegex(MODULE.DriverError, 'owner state timeout'):
+        with self.assertRaisesRegex(DeviceTestError, 'owner state timeout'):
             driver.touch('Launcher', {'surface': 'launcher'}, [233, 350], [233, 130])
         self.assertEqual(driver.steps[0]['status'], 'FAIL')
 
     def test_failed_attempt_releases_then_samples_and_keeps_new_attempt_identity(self):
-        class Failed(MODULE.Driver):
+        class Failed(MODULE.DeviceTestRunner):
             def suite(self, profile):
                 self.request('stimulus.powerShort')
         def respond(request):
             if request['op'] == 'hello':
-                return {'image_identity': 'image-1', 'capabilities': sorted(MODULE.CAPABILITIES)}
+                return {'image_identity': 'image-1', 'capabilities': sorted(CAPABILITIES)}
             if request['op'] == 'stimulus.powerShort':
                 return {'ok': False, 'error_code': 'busy'}
             return {'snapshot': snapshot(1)} if request['op'] == 'snapshot' else {}
@@ -118,12 +118,12 @@ class DriverTests(unittest.TestCase):
         self.assertNotEqual(first['attempt'], second.attempt({}, device_id='board-1')['attempt'])
 
     def test_cleanup_failure_still_collects_final_snapshot(self):
-        class Empty(MODULE.Driver):
+        class Empty(MODULE.DeviceTestRunner):
             def suite(self, profile):
                 pass
         def respond(request):
             if request['op'] == 'hello':
-                return {'image_identity': 'image', 'capabilities': sorted(MODULE.CAPABILITIES)}
+                return {'image_identity': 'image', 'capabilities': sorted(CAPABILITIES)}
             if request['op'] == 'release':
                 return {'ok': False, 'error_code': 'internal'}
             return {'snapshot': snapshot(1, inputBusy=True)}
@@ -137,7 +137,7 @@ class DriverTests(unittest.TestCase):
     def test_image_mismatch_is_failure_before_stimulus(self):
         def respond(request):
             if request['op'] == 'hello':
-                return {'image_identity': 'wrong', 'capabilities': sorted(MODULE.CAPABILITIES)}
+                return {'image_identity': 'wrong', 'capabilities': sorted(CAPABILITIES)}
             return {'snapshot': snapshot(1)} if request['op'] == 'snapshot' else {}
         driver, transport, _ = self.make(respond)
         report = driver.attempt({}, device_id='board-1', expected_image='required')
@@ -148,7 +148,7 @@ class DriverTests(unittest.TestCase):
     def test_no_back_observation_rejects_transient_violation(self):
         states = iter([snapshot(1), snapshot(2, foregroundAppId='app', pageId='detail', canBack=True)])
         driver, _, _ = self.make(lambda _: {'snapshot': next(states)})
-        with self.assertRaisesRegex(MODULE.DriverError, 'invariant violated'):
+        with self.assertRaisesRegex(DeviceTestError, 'invariant violated'):
             driver.observe('Root no Back', {'canBack': False})
         self.assertEqual(driver.steps[0]['status'], 'FAIL')
         self.assertEqual(driver.steps[0]['afterSeq'], 2)
@@ -157,7 +157,7 @@ class DriverTests(unittest.TestCase):
     def test_pending_back_cannot_accept_another_back(self):
         driver, _, _ = self.make(lambda _: {'snapshot': snapshot(
             1, foregroundAppId='app', pageId='detail', canBack=True, backPending=True)})
-        with self.assertRaisesRegex(MODULE.DriverError, 'pending Back'):
+        with self.assertRaisesRegex(DeviceTestError, 'pending Back'):
             driver.snapshot()
 
     def test_timeout_transition_waits_for_fresh_owner_samples(self):
@@ -179,7 +179,7 @@ class DriverTests(unittest.TestCase):
                        snapshot(2, foregroundAppId='app', pageId='root')])
         driver, _, _ = self.make(lambda _: {'snapshot': next(states)})
         driver.snapshot()
-        with self.assertRaisesRegex(MODULE.DriverError, 'invariant violated'):
+        with self.assertRaisesRegex(DeviceTestError, 'invariant violated'):
             driver.await_state('timeout', {'canBack': True}, timeout=0.3,
                                invariants={'foregroundAppId': 'app', 'pageId': 'detail'})
         self.assertEqual(driver.steps[0]['status'], 'FAIL')
@@ -192,7 +192,7 @@ class DriverTests(unittest.TestCase):
             return {'snapshot': snapshot(sequence, foregroundAppId='app', pageId='detail', backPending=True)}
         driver, _, _ = self.make(respond)
         driver.snapshot()
-        with self.assertRaisesRegex(MODULE.DriverError, 'owner state timeout'):
+        with self.assertRaisesRegex(DeviceTestError, 'owner state timeout'):
             driver.await_state('timeout', {'backPending': False}, timeout=0.1,
                                invariants={'foregroundAppId': 'app', 'pageId': 'detail'})
         self.assertEqual(driver.steps[0]['status'], 'FAIL')
@@ -201,33 +201,33 @@ class DriverTests(unittest.TestCase):
     def test_stale_response_and_chatter_cannot_satisfy_current_request(self):
         def respond(request):
             def frame(identifier):
-                return MODULE.PREFIX + json.dumps({'version': 1, 'request_id': identifier, 'ok': True}).encode() + b'\n'
+                return PREFIX + json.dumps({'version': 1, 'request_id': identifier, 'ok': True}).encode() + b'\n'
             return [b'ordinary device log\n', frame(request['request_id'] - 1), frame(request['request_id'])]
         driver, _, log = self.make(respond)
         self.assertTrue(driver.request('release')['ok'])
         self.assertIn(b'ordinary device log', log.getvalue())
 
     def test_stack_overflow_log_fails_before_reboot(self):
-        with self.assertRaisesRegex(MODULE.DriverError, 'device error observed'):
-            MODULE.Driver.check_log(b'***ERROR*** A stack overflow in task espocket_test_u has been detected.\n')
+        with self.assertRaisesRegex(DeviceTestError, 'device error observed'):
+            MODULE.DeviceTestRunner.check_log(b'***ERROR*** A stack overflow in task espocket_test_u has been detected.\n')
 
     def test_device_error_log_fails_current_operation(self):
         driver, _, log = self.make(lambda _: [b'Synthetic input tick failed: timeout\n'])
-        with self.assertRaisesRegex(MODULE.DriverError, 'device error observed'):
+        with self.assertRaisesRegex(DeviceTestError, 'device error observed'):
             driver.request('snapshot')
         self.assertIn(b'timeout', log.getvalue())
 
     def test_tail_device_error_is_retained_and_cannot_be_reported_as_pass(self):
-        class Empty(MODULE.Driver):
+        class Empty(MODULE.DeviceTestRunner):
             def suite(self, profile):
                 pass
         def respond(request):
             if request['op'] == 'hello':
-                return {'image_identity': 'image', 'capabilities': sorted(MODULE.CAPABILITIES)}
+                return {'image_identity': 'image', 'capabilities': sorted(CAPABILITIES)}
             if request['op'] == 'snapshot':
                 reply = {'version': 1, 'request_id': request['request_id'], 'ok': True,
                          'snapshot': snapshot(1)}
-                return [MODULE.PREFIX + json.dumps(reply).encode() + b'\n',
+                return [PREFIX + json.dumps(reply).encode() + b'\n',
                         b'Guru Meditation Error: core panic\n']
             return {}
         driver, _, log = self.make(respond, Empty)
@@ -235,17 +235,17 @@ class DriverTests(unittest.TestCase):
         self.assertEqual(result['status'], 'FAIL')
         self.assertIn('tailLogError', result['cleanup'])
         self.assertIn(b'Guru Meditation', log.getvalue())
-        with self.assertRaisesRegex(MODULE.DriverError, 'new Driver'):
+        with self.assertRaisesRegex(DeviceTestError, 'new DeviceTestRunner'):
             driver.attempt({}, device_id='board-1')
 
     def test_partial_write_cannot_be_acknowledged_as_success(self):
         driver, transport, _ = self.make(lambda _: {})
         transport.write = lambda frame: len(frame) - 1
-        with self.assertRaisesRegex(MODULE.DriverError, 'partial request write'):
+        with self.assertRaisesRegex(DeviceTestError, 'partial request write'):
             driver.request('release')
 
     def test_suite_contains_required_semantic_paths(self):
-        class Recording(MODULE.Driver):
+        class Recording(MODULE.DeviceTestRunner):
             def snapshot(self):
                 self.last_seq += 1
                 return snapshot(self.last_seq)
@@ -258,7 +258,7 @@ class DriverTests(unittest.TestCase):
             def observe(self, name, expected, **options):
                 self.steps.append({'name': name, 'expected': expected})
         driver, _, _ = self.make(lambda _: {}, Recording)
-        profile = json.loads((ROOT / 'scripts/firmware/interaction-profile-466.json').read_text())
+        profile = json.loads((ROOT / 'firmware/test/device/profiles/circular-466.json').read_text())
         driver.suite(profile)
         by_name = {step['name']: step['expected'] for step in driver.steps}
         self.assertEqual(by_name['Watch Face to Launcher']['surface'], 'launcher')

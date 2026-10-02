@@ -20,6 +20,7 @@
 | 012 | [真机交互自动化开发契约](012-test-automation-contract/spec.md) | 2026-09-30 用户要求定义所有权、协议与 API |
 | 013 | [Firmware structure refactor](013-firmware-structure-refactor/spec.md) | 2026-10-01 用户确认的结构整理 |
 | 014 | [App Page、Card 与 Back 开发契约](014-app-navigation-card-contract/spec.md) | 2026-10-01 用户确认的导航开发契约 |
+| 015 | [测试目录与设备测试职责重构](015-test-layout-refactor/spec.md) | 用户确认测试分层设计后要求整体实施 |
 
 ## 当前工作入口
 

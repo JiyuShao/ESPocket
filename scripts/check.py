@@ -22,7 +22,8 @@ def main():
     ]
     test_directories = sorted((ROOT / 'firmware/components').glob('*/test'))
     test_directories += sorted((ROOT / 'firmware/native_apps').glob('*/test'))
-    test_directories.append(ROOT / 'firmware/test')
+    test_directories += sorted((ROOT / 'firmware/runtime_apps').glob('*/test'))
+    test_directories.append(ROOT / 'firmware/test/host')
     for directory in test_directories:
         commands.append((str(directory.relative_to(ROOT)), [
             sys.executable, '-B', '-m', 'unittest', 'discover',
