@@ -150,6 +150,53 @@ class DriverTests(unittest.TestCase):
         driver, _, _ = self.make(lambda _: {'snapshot': next(states)})
         with self.assertRaisesRegex(MODULE.DriverError, 'invariant violated'):
             driver.observe('Root no Back', {'canBack': False})
+        self.assertEqual(driver.steps[0]['status'], 'FAIL')
+        self.assertEqual(driver.steps[0]['afterSeq'], 2)
+        self.assertEqual(driver.steps[0]['samples'], 2)
+
+    def test_pending_back_cannot_accept_another_back(self):
+        driver, _, _ = self.make(lambda _: {'snapshot': snapshot(
+            1, foregroundAppId='app', pageId='detail', canBack=True, backPending=True)})
+        with self.assertRaisesRegex(MODULE.DriverError, 'pending Back'):
+            driver.snapshot()
+
+    def test_timeout_transition_waits_for_fresh_owner_samples(self):
+        pending = {'foregroundAppId': 'app', 'pageId': 'detail', 'backPending': True}
+        states = iter([snapshot(1, **pending), snapshot(2, **pending),
+                       snapshot(3, foregroundAppId='app', pageId='detail', canBack=True),
+                       snapshot(4, foregroundAppId='app', pageId='detail', canBack=True)])
+        driver, _, _ = self.make(lambda _: {'snapshot': next(states)})
+        driver.snapshot()
+        result = driver.await_state('timeout', {'canBack': True, 'backPending': False}, timeout=0.3,
+                                    invariants={'foregroundAppId': 'app', 'pageId': 'detail', 'display': True})
+        self.assertEqual(result['seq'], 4)
+        self.assertEqual(driver.steps[0]['status'], 'PASS')
+        self.assertEqual(driver.steps[0]['beforeSeq'], 1)
+        self.assertEqual(driver.steps[0]['afterSeq'], 4)
+
+    def test_timeout_transition_cannot_hide_a_wrong_page(self):
+        states = iter([snapshot(1, foregroundAppId='app', pageId='detail', backPending=True),
+                       snapshot(2, foregroundAppId='app', pageId='root')])
+        driver, _, _ = self.make(lambda _: {'snapshot': next(states)})
+        driver.snapshot()
+        with self.assertRaisesRegex(MODULE.DriverError, 'invariant violated'):
+            driver.await_state('timeout', {'canBack': True}, timeout=0.3,
+                               invariants={'foregroundAppId': 'app', 'pageId': 'detail'})
+        self.assertEqual(driver.steps[0]['status'], 'FAIL')
+
+    def test_uncompleted_transition_keeps_failure_evidence(self):
+        sequence = 0
+        def respond(_):
+            nonlocal sequence
+            sequence += 1
+            return {'snapshot': snapshot(sequence, foregroundAppId='app', pageId='detail', backPending=True)}
+        driver, _, _ = self.make(respond)
+        driver.snapshot()
+        with self.assertRaisesRegex(MODULE.DriverError, 'owner state timeout'):
+            driver.await_state('timeout', {'backPending': False}, timeout=0.1,
+                               invariants={'foregroundAppId': 'app', 'pageId': 'detail'})
+        self.assertEqual(driver.steps[0]['status'], 'FAIL')
+        self.assertIn('owner state timeout', driver.steps[0]['error'])
 
     def test_stale_response_and_chatter_cannot_satisfy_current_request(self):
         def respond(request):
@@ -217,6 +264,14 @@ class DriverTests(unittest.TestCase):
         self.assertEqual(by_name['PWR Home']['surface'], 'watch_face')
         self.assertFalse(by_name['PWR screen off']['display'])
         self.assertTrue(by_name['PWR wake']['display'])
+        self.assertTrue(by_name['Back awaits App confirmation']['backPending'])
+        self.assertFalse(by_name['Repeated pending Back stays Detail']['canBack'])
+        self.assertEqual(by_name['Cancel Back preserves Detail']['pageId'], 'detail')
+        self.assertEqual(by_name['Allow Back returns Root']['pageId'], 'root')
+        self.assertFalse(by_name['Back timeout cancels on Detail']['backPending'])
+        self.assertEqual(by_name['Expired confirmation cannot pop']['pageId'], 'detail')
+        self.assertEqual(by_name['Reopen Native starts Root']['pageId'], 'root')
+        self.assertEqual(by_name['Reopened Back confirmation defaults Off']['pageId'], 'root')
 
 
 if __name__ == '__main__':

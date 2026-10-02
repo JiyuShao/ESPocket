@@ -111,16 +111,20 @@ class Driver:
             raise DriverError('foreground App without a declared page')
         if not value['foregroundAppId'] and (value['pageId'] or value['canBack'] or value['backPending']):
             raise DriverError('page state without a foreground App')
+        if value['backPending'] and value['canBack']:
+            raise DriverError('pending Back cannot also accept another Back')
         self.last_seq = value['seq']
         self.snapshots.append(value)
         return value
 
-    def wait(self, expected, *, after, timeout=None, stable_samples=2):
+    def wait(self, expected, *, after, timeout=None, stable_samples=2, invariants=None):
         deadline = self.clock() + (self.timeout if timeout is None else timeout)
         stable = 0
         last = None
         while self.clock() < deadline:
             last = self.snapshot()
+            if invariants and any(last.get(key) != value for key, value in invariants.items()):
+                raise DriverError(f'waiting invariant violated: {last}')
             matches = last['seq'] > after and not last['inputBusy'] and \
                 all(last.get(key) == value for key, value in expected.items())
             stable = stable + 1 if matches else 0
@@ -159,21 +163,40 @@ class Driver:
     def power(self, name, expected):
         return self.stimulate(name, 'stimulus.powerShort', expected)
 
+    def await_state(self, name, expected, *, timeout, invariants):
+        step = {'name': name, 'operation': 'observe-transition', 'beforeSeq': self.last_seq,
+                'expected': expected, 'invariants': invariants, 'timeoutSeconds': timeout,
+                'status': 'RUNNING'}
+        self.steps.append(step)
+        try:
+            after = self.wait(expected, after=self.last_seq, timeout=timeout, invariants=invariants)
+        except (Exception, KeyboardInterrupt) as error:
+            step.update(status='FAIL', error=f'{type(error).__name__}: {error}')
+            raise
+        step.update(status='PASS', afterSeq=after['seq'])
+        return after
+
     def observe(self, name, expected, duration=0.5):
         # A bounded negative assertion checks every fresh sample, not only the final one.
         deadline = self.clock() + duration
-        before = self.last_seq
         count = 0
-        while self.clock() < deadline:
-            value = self.snapshot()
-            if value['inputBusy'] or any(value.get(key) != target for key, target in expected.items()):
-                raise DriverError(f'{name}: invariant violated: {value}')
-            count += 1
-            self.sleep(0.04)
-        if count < 2:
-            raise DriverError(f'{name}: insufficient observations')
-        self.steps.append({'name': name, 'status': 'PASS', 'beforeSeq': before,
-                           'afterSeq': self.last_seq, 'samples': count, 'windowSeconds': duration})
+        step = {'name': name, 'status': 'RUNNING', 'operation': 'observe-invariant',
+                'expected': expected, 'beforeSeq': self.last_seq, 'windowSeconds': duration}
+        self.steps.append(step)
+        try:
+            while self.clock() < deadline:
+                value = self.snapshot()
+                count += 1
+                if value['inputBusy'] or any(value.get(key) != target for key, target in expected.items()):
+                    raise DriverError(f'{name}: invariant violated: {value}')
+                self.sleep(0.04)
+            if count < 2:
+                raise DriverError(f'{name}: insufficient observations')
+        except (Exception, KeyboardInterrupt) as error:
+            step.update(status='FAIL', error=f'{type(error).__name__}: {error}',
+                        afterSeq=self.last_seq, samples=count)
+            raise
+        step.update(status='PASS', afterSeq=self.last_seq, samples=count)
 
     def suite(self, profile):
         home = {'surface': 'watch_face', 'display': True, 'foregroundAppId': '', 'pageId': '',
@@ -206,7 +229,29 @@ class Driver:
         self.touch('Detail Edge Back to Root', root, *profile['edge_back'])
         self.touch('Root Edge Back remains Root', root, *profile['edge_back'])
         self.observe('Root has no Back', root)
+        self.touch('Detail for Back confirmation', detail, profile['detail_tap'])
+        self.touch('Enable Back confirmation', detail, profile['confirm_tap'])
+        pending = {**detail, 'canBack': False, 'backPending': True}
+        self.touch('Back awaits App confirmation', pending, *profile['edge_back'])
+        self.touch('Repeated pending Back stays Detail', pending, *profile['edge_back'])
+        self.observe('Pending Back preserves Detail', pending)
+        self.touch('Cancel Back preserves Detail', detail, profile['cancel_back_tap'])
+        self.touch('Back confirmation for allow', pending, *profile['edge_back'])
+        self.touch('Allow Back returns Root', root, profile['allow_back_tap'])
+        self.touch('Detail for Back timeout', detail, profile['detail_tap'])
+        self.touch('Back confirmation for timeout', pending, *profile['edge_back'])
+        self.await_state('Back timeout cancels on Detail', detail, timeout=18.0,
+                         invariants={'foregroundAppId': root['foregroundAppId'],
+                                     'pageId': 'detail', 'display': True})
+        self.touch('Expired confirmation cannot pop', detail, profile['allow_back_tap'])
+        self.observe('Expired confirmation remains Detail', detail)
+        self.touch('Back confirmation before PWR Home', pending, *profile['edge_back'])
         self.power('PWR Home', home)
+        self.touch('Launcher after pending PWR Home', {**home, 'surface': 'launcher'}, *profile['up'])
+        self.touch('Reopen Native starts Root', root, profile['native_tap'])
+        self.touch('Reopened Native Detail', detail, profile['detail_tap'])
+        self.touch('Reopened Back confirmation defaults Off', root, *profile['edge_back'])
+        self.power('PWR Home after reopening', home)
         self.power('PWR screen off', {**home, 'display': False})
         self.power('PWR wake', home)
 

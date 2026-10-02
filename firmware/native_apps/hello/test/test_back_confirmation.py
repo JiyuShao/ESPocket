@@ -117,8 +117,12 @@ int main() {
     assert(navigator->expire_back(15100) == NavigationError::BackTimeout);
     assert(app.on_timer(context, 42, "hello.back_status"));
     assert(context.gui_port.texts["/detail/hint"] == "Back expired or invalidated");
+    assert(app.on_timer(context, 42, "hello.back_status"));
+    assert(context.gui_port.texts["/detail/hint"] == "Back expired or invalidated");
     assert(!app.on_action(context, "hello.allow_back"));
     assert(navigator->request_back(16000));
+    assert(app.on_timer(context, 42, "hello.back_status"));
+    assert(context.gui_port.texts["/detail/hint"] == "Back? Allow or Cancel");
     context.gui_port.fail = true;
     assert(!app.on_action(context, "hello.allow_back"));
     assert(navigator->snapshot().page_id == "detail" && navigator->snapshot().can_back);

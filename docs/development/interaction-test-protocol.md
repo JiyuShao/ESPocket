@@ -91,6 +91,8 @@ python scripts/firmware/interaction_driver.py \
 
 默认 [466px profile](../../scripts/firmware/interaction-profile-466.json) 的坐标依据当前 GUI 资源推导，标记为尚未经过设备路径验证。它只包含输入轨迹与控件点击位置，不重实现导航状态。其他布局可通过 `--profile` 指定同形 JSON。Driver 通过真实 Owner 快照验证 Launcher、Card、Quick Settings、Native Root/Detail、Back 与 PWR，点击坐标不构成视觉验收。
 
+当前套件还需要带 Native Back 确认控件的镜像（源码基线 `18a6ec0`）。profile 增加 confirm_tap、allow_back_tap、cancel_back_tap，均未经过设备校准；只具备测试 capability 的旧镜像不一定具备这些 App 控件。套件检查暂缓/重复 Back 保持 Detail、取消保留 Detail、允许回 Root；再等待待决自动解除，期间逐样本保持 App ID、Detail 和亮屏不变，最多等待 18 秒，并拒绝 backPending 与 canBack 同时为 true。迟到允许不得 pop，待决时 PWR Home 后重开必须从 Root 开始、确认开关恢复 Off。此路径验证状态结果，不精确测量 15 秒超时边界；边界由 Navigator 组件用例覆盖。
+
 每次 CLI 调用创建新的 UUID attempt 目录，包含 `report.json` 和 `serial.log`；不覆盖既往失败。报告保存期望/实际镜像、协议版本、设备 ID、profile、步骤、递增快照、清理结果和 `synthetic-input` 证据类型。串口日志保存 TX、RX 与普通设备日志。无自动重试；再次执行是新的 attempt。
 
 刺激响应不判 PASS：Driver 等待至少两个新序号、匹配预期且 inputBusy=false 的快照；Root 无 Back 还逐样本检查一个有限观察窗口。错误响应、序号倒退/停滞、panic、输入 tick/清理错误都使 attempt 失败。成功或失败均先 release，再取最终快照，并收集短窗口尾部日志；不能把 final snapshot 忙碌或清理失败记成 PASS。观察窗口与轮询间隔用于采样，不以固定 sleep 代替 Owner 断言。

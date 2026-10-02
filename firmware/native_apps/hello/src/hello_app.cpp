@@ -219,6 +219,8 @@ std::expected<void, std::string> HelloApp::on_timer(
     } else if (observed_token != 0 &&
                back_confirmation_->pending_token.compare_exchange_strong(observed_token, 0)) {
         status = "Back expired or invalidated";
+    } else if (back_status_ == "Back expired or invalidated") {
+        status = back_status_; // Keep the error readable until an action or a new request.
     } else {
         status = back_confirmation_->enabled.load() ? "Use Back to confirm" : "Edge Back returns to Root";
     }

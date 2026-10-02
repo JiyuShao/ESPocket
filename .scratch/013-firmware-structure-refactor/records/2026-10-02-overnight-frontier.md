@@ -98,8 +98,34 @@
 - 不刷写，不打断现有 013 smoke 镜像；新 Detail 布局的设备/视觉条件保留到统一硬件验收。
 - 33 项 host unittest、M2 parser、164 个 Markdown 与最终固件构建通过。未刷写镜像的 hash/identity 在上述证据记录中，设备仍为 013 `e8bbe74ff`。
 
+## 第十三轮自动执行
+
+- 012/03 Driver 接入 Native Back 确认的完整编排，逐快照检查待决、取消、允许、自动解除、迟到确认及待决 PWR Home 后重开。新增等待不变量和失败步骤证据；仍未运行设备套件。见 [确认 Driver 记录](../../012-test-automation-contract/records/2026-10-02-back-confirmation-driver.md)。
+- 修复 Native 超时反馈仅保持 100ms 的可读性问题，保留到操作或下一 Back 请求；真实 App + Navigator 测试验证提示保留与新请求更新。没有更改导航或超时契约。
+- 最终 37 项 host unittest、M2 parser、165 个 Markdown 与 ESP-IDF 编译/链接通过。未刷写的新镜像 identity 为 `307f10707`，完整 hash 见上述 Driver 记录；设备仍是 013 `e8bbe74ff`。
+
 ## 晨间最小介入
 
 先回复已发出的单次 013 smoke 结果：Native Detail Edge Back；自动息屏唤醒保留 Detail；PWR Home/息屏/亮屏回表盘；Quick Settings 上滑、Launcher 顶部下拉返回。遇到异常停在该步即可。无需重做此前十轮资源验证。
 
 后续新增硬件条件统一积累在此处，避免每完成一小段源码就要求用户重复操作。夜间只做必要构建、主机检查和本地提交，不 push；续跑安排在当前 chat，至工具本地时间 2026-10-02 09:00。
+
+## 晨间状态总览
+
+以下是夜间结束前的 frontier，不把未实现事项冒充外部阻塞。014/03、04 仍有可自主源码工作，09:00 续跑期限结束后留给后续继续；它们不需要重新发起产品选择。
+
+| 工作 | 当前结论 | 下一步 |
+|---|---|---|
+| 013 结构重构 | 01、02、03、05 已关闭；04、06 源码/主机/构建完成 | 收到既有单次 smoke 结果后关闭对应硬件条件。 |
+| 014/01–02 Navigator 与 Back | 源码、Native 安装/卸载、稳定 ID 更新和待决规则已关闭 | 已有证据保持，不重复重做。 |
+| 014/03 Card | Registry 配置/迁移和 Session 生命周期组件完成，整票未关闭 | 接 Core 安装/更新/卸载、真实 Shell 呈现、Card 提供者与 NVS；不能宣称设备已能动态配置。 |
+| 014/04 导航语言绑定 | Native 确认样例、四类页面指导完成；公开 Runtime Provider seam 已确认 | 实现 Runtime Adapter、versioned Page schema、GUI Owner 调度和双方同等验证，再 clean build/staging。 |
+| 014/05 Card 样例 | 前置 03、04 未完成 | 等待真实 Card 与语言绑定，不跳过依赖。 |
+| 012 测试入口 | 01、02 源码关闭；03 Driver 源码与主机检查完成 | 013 smoke 后统一刷明确新镜像，只跑一次 USB suite；失败保留 attempt，坐标仍待校准。 |
+| 007 导航 | 01、02 源码门槛关闭；03 物理条件仍开放 | 按 ticket 引用已有结果和剩余证据，不要求重做已接受的亮度/Wi-Fi 操作。 |
+| 008 App 契约 | Spec 仍等待 014/04 | 后续再实施回收 seam、App 物理验收，不把单个 ready-for-agent 标签当成 Spec 已解除。 |
+| 009 AI Native | Spec 等待 008/03 真机验收 | 不跳到 Semantic/Assistant 实现。 |
+| 004 剩余项 | storage/developer 需人工证据；playback-only Audio 缺官方 capability 变更 | 保留人工与上游阻塞，不复制 HAL/Audio Owner。 |
+| 005 生态剩余项 | package trust、Store 稳定性、Runtime keyboard 隔离和签名分发受上游/发布路径约束 | 不修改 managed_components、不绕过 Core trust；相关 Launcher/package lifecycle 按真实依赖保留。 |
+
+设备没有收到任何夜间刷写，仍为 013 identity `e8bbe74ff`。当前 build tree 的镜像不同；刷写前使用最新记录的 BIN/ELF hash 与 hello identity，不拿构建目录 ELF 误判旧设备。临时构建/Driver 日志与本地 commits 只记录源码或合成证据，不能自动关闭物理/视觉条件。

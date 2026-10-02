@@ -45,6 +45,8 @@ Wi-Fi 测试通道、任意 App Action、应用安装、设置修改、物理执
 
 ## Further Notes
 
+- [2026-10-02 Back 确认 Driver 路径](records/2026-10-02-back-confirmation-driver.md)
+
 - [2026-10-02 Driver 源码与主机验证](records/2026-10-02-host-driver.md)
 
 - [2026-10-02 USB 触摸 Owner 接入](records/2026-10-02-touch-owner.md)
