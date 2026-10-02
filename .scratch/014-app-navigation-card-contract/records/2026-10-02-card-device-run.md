@@ -90,3 +90,9 @@ Hello Runtime 的顶层 const/let 在锁定 JS backend 保留的 realm 中重新
 `power-fresh-open.json` / `power-fresh-open-serial.log`：唤醒、PWR Home、从表盘向左进入右侧首张 Card 成功；点 Open 后等待 Runtime Root 超时，最终 seq=90、app_card.right/display=true、前台 App/Page 为空，release 成功。没有观察到此次点击的 Core 启动日志。此前直接在异常 Card 唤醒点击也没有打开 App；一次尝试横滑返回超时单独保留，不能从缺少 Card ID 的快照判断它是首张或第二张。
 
 保存异常证据后，用 esptool chip-id 的 hard-reset 重启一次，不改分区或资源。`reset-open.json` / `reset-open-serial.log`：重启后的同样右侧首张 Card → Open 成功，真实 foregroundAppId=espocket.app.hello_runtime、pageId=root、display=true，release 成功。这是重启后的对比结果，不是修复；当前 Root 的视觉确认已询问用户。尚需找到异常的具体运行触发条件并建立回归，暂未修改实现或声称根因确定。
+
+用户随后确认重启后确实看到 Hello from JavaScript 和 Open Detail，证明该次 Root 实际画面正常。继续执行两个独立缩小路径：`mixed-20261002-211842` 覆盖 Native Root、Runtime Root、Native Detail、Runtime Detail、Runtime 重开与各自 PWR Home；`app-button-20261002-212031` 覆盖 Runtime App 自带 Open Detail 按钮、Detail 普通非边缘横滑保持、Edge Back 回 Root、PWR Home、Card 重开 Root。两者合成输入均 PASS，release 成功，没有重现初始异常；不能据此关闭空白 bug 或声称找到根因。两者原始 serial.log/report.json 位于同一诊断目录。已返回 Watch Face，并启动一次物理 Open 的实时串口采集，等待用户单次操作反馈。
+
+用户在实时采集期间实际执行右侧首张 Card → Open，答复“正常出现”。`live-physical.log` 同时记录 Core `App started: id(5), manifest(espocket.app.hello_runtime), total_ms(482)`；该窗口没有观察到 panic、abort、栈溢出或 App 启动失败。采集完成后主动结束串口进程，退出 130 来自采集器 KeyboardInterrupt，不是设备崩溃。
+
+`app-sleep-20261002-212339` 又独立验证真实 Runtime Root 自动息屏、PWR 恢复 Root、PWR Home、Card 重开 Root，合成输入 PASS，最终 release 成功、seq=507、实际 Runtime Root/display=true。该项没有增加用户验收轮次。初始异常仍未修复；已询问最初空白之前是否曾启动/切换 Runtime，以缩小生命周期状态差异。当前没有 firmware 源码变更、没有换镜像，也没有把所有右侧物理步骤标为通过。

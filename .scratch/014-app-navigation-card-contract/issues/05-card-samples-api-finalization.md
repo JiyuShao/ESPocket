@@ -25,3 +25,5 @@
 - 2026-10-02（设备）：已新增真实 Native/Runtime Card Driver。首个 Card attempt 验证 Native 全部路径，Runtime Root 发现边缘滑动误点 Open Detail，修复默认手势责任与可 Back 分离；原失败保留，见 [Card 设备记录](../records/2026-10-02-card-device-run.md)。物理/视觉与更新事务条件保持开放。
 
 - 2026-10-02（最终合成证据）：c4dfa5af8 + 闭包修复 Runtime 资源的 37 步 Card attempt PASS，完整包/固件、源码主机与资源校验通过。实际发现并修复 Root 手势误点、USB 输出交叉、release 后误超时、Owner 停止采样竞争及样例重复加载；实验实现崩溃与所有失败保留。见 [Card 设备记录](../records/2026-10-02-card-device-run.md)。物理/视觉问题已一次性发给用户，整票仍不关闭。
+
+- 2026-10-02（物理反馈）：用户报告左侧正常，右侧 Open 后空白，仅 Home 提示；实际异常设备的最小合成路径也未进入 Runtime。重启后启动与视觉恢复正常，但触发原因尚未确定，不能将重启视为修复。已保留失败、重启对比与两条未复现诊断路径，正在采集一次物理 Open 的实时日志；见 [设备记录](../records/2026-10-02-card-device-run.md)。
