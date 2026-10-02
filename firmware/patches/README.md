@@ -17,7 +17,7 @@ patches/
         └── 002-<change>.patch
 ```
 
-例如 registry component 可使用 `espressif__brookesia_runtime_js`。该布局是后续接入约定，当前尚未实现补丁应用工具。
+例如 registry component 可使用 `espressif__brookesia_runtime_js`。该布局是后续接入约定。[独立副本准备工具](../../scripts/firmware/prepare_patched_component.py)已实现完整源码与补丁 hash 校验、准确应用及失败清理；尚未接入生产构建。工具验证见[008 记录](../../.scratch/008-m8-app-contract/records/2026-10-03-patch-preparation-tool.md)。
 
 manifest 记录原始组件版本、源码 commit/hash、按顺序排列的补丁文件及其 hash、上游问题/修复链接、负责验证的工作票和删除条件。未提交的问题应链接本地草稿并明确该状态。
 

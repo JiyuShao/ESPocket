@@ -16,3 +16,5 @@
 2026-10-02：008/03 的真实 apps attempt 在 Runtime confirmation On 重启。无需息屏的最小路径同样失败；仅省略异步文字调用的诊断资源使路径通过，但不接受为正式修复。见[上游复现](../records/2026-10-02-runtime-js-async-stack-overflow.md)与[设备记录](../records/2026-10-02-app-device-frontier.md)。
 
 2026-10-03：确认此前 backend 版本误记，实际 JS 0.8.3/Manager 0.8.2，镜像和复现事实不变。已准备[公开栈配置补丁提案](../records/2026-10-03-runtime-stack-proposal.md)，尚待用户决定组件补丁维护策略，不自行修改正式依赖。
+
+2026-10-03：完成[独立组件副本准备工具](../records/2026-10-03-patch-preparation-tool.md)，通过实际锁定版源码与补丁准备验证。发现 ADR-0001 的产品基线限制，已提出限定例外确认；尚未接入正式构建或宣称设备修复。
