@@ -29,3 +29,7 @@
 构建入口已扩展为显式列出的 Runtime/Core 两个锁定补丁，逐项校验源码/hash、override 选中目录与 registry drift。完整构建正在验证；真实 JS 故意失败 on_stop 与资源释放仍未验收，产品 keyboard latch 不撤销。
 
 Runtime/Core 双补丁完整构建通过，准确选中独立副本，原 registry 依赖无 drift；镜像身份与 [009 构建记录](../../009-ai-native-foundation/records/2026-10-03-semantic-brightness.md)一致。设备未刷入，真实 Runtime 故意失败与跨 App 验证仍待完成。
+
+候选普通镜像 `5e79e3a82` 应用分区刷写校验通过，NVS/LittleFS 未写。真实设备 apps 套件 PASS，attempt `20261002T210416Z-0836daa1-0455-4b3b-8e3a-53a465f97125`（原报告 `/private/tmp/espocket-009-core-apps`），覆盖普通 Native/Runtime 导航与未回收唤醒；是 synthetic-input，不能证明故意失败 on_stop 后恶意订阅隔离。该原始镜像/ELF 保存于 `/private/tmp/espocket-009-core-normal-preserved`，避免后续候选增量构建覆盖身份。
+
+Exposure Decision：键盘隔离、订阅撤销与退出清理是 Core 内部约束，不注册 Keyboard Text 或订阅对象为 AI Context；修复不扩大 Assistant 对文本的读取范围。

@@ -9,3 +9,5 @@ Brightness 使用真实 selected Display output 的公开 Helper；Shell 读写�
 当前两项独立 C++ host contract 测试通过。完整仓库检查与固件构建结果待本轮补录；没有刷机，也不宣称物理亮度验收通过。
 
 完整固件构建通过：`/private/tmp/espocket-009-core-isolation-build/firmware/build`；逐项确认 Runtime/Core override 来源，registry 依赖无 drift。此构建包含最终 semantic header 与 Core 补丁，普通诊断配置关闭。ELF SHA-256：`5e79e3a82b1ed66069e9d741ace6a08cf4281e3428c7162aa4da90e0967a5020`。尚未刷机，物理显示/亮度不冒充验收。
+
+刷入上述普通镜像后 apps 57 步自动回归通过，release=ok；原镜像/ELF 保存在 `/private/tmp/espocket-009-core-normal-preserved`。这证明 App 共同路径未被本 slice 破坏，不作为肉眼亮度变化验证。仓库主机检查通过：21 项 Owner tests 与 48 项跨模块 tests，共 69 项。
