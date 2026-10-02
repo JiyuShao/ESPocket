@@ -80,3 +80,13 @@ Hello Runtime 的顶层 const/let 在锁定 JS backend 保留的 realm 中重新
 普通配置完整 build/link 已通过，Card、Native/Runtime reclaim、旧 M6 reclaim 与 resource trace 开关均关闭。最终 Owner queue 的结果发布与 close 判定保持同一临界区，避免读取完成后的关闭竞争；并发/关闭主机检查及全量 44 项检查通过。该补充没有重新冒充设备上的关闭验收。
 
 普通 ELF identity=71567f599，SHA-256 71567f599c68054a4a011a621f22c70bb1e8f85765342b8ff17c3466c4ab8a33；BIN SHA-256 c43c7d0ea2414b92c3e5ff399c101ea34122b1eddda1682c82e46f50cb5ebf0c。LittleFS 仍为上述 a5a5f1cb，staged main.js 校验一致。日志 /private/tmp/espocket-final-owner-normal-build.log、espocket-card-final-host.log。当前尚未刷入普通镜像：等待已发出的 Card 物理问题，保持 c4dfa5af8 样例设备可操作。答复后恢复普通镜像并执行一次新的 navigation Driver，检验新的 Owner 采样对待决 Back 的影响。
+
+## 物理验收发现 Runtime 空白（未修复）
+
+用户报告左侧观察均正常；右侧 Card 点击 Open 后空白，仅留下 Home 方向提示，看起来没有进入 App。该反馈推翻整体验收通过的可能，014/05 不关闭，不能用此前 synthetic PASS 覆盖。
+
+独立诊断目录 `/private/tmp/espocket-runtime-blank-20261002/`。只读 hello 确认设备仍为 c4dfa5af8；初始 snapshot seq=1、surface=app_card.right、display=false、foregroundAppId/pageId 为空。串口连续出现 `Navigation snapshot error: not_started`。未据此断言 crash、启动失败原因或后台实例归属。
+
+`power-fresh-open.json` / `power-fresh-open-serial.log`：唤醒、PWR Home、从表盘向左进入右侧首张 Card 成功；点 Open 后等待 Runtime Root 超时，最终 seq=90、app_card.right/display=true、前台 App/Page 为空，release 成功。没有观察到此次点击的 Core 启动日志。此前直接在异常 Card 唤醒点击也没有打开 App；一次尝试横滑返回超时单独保留，不能从缺少 Card ID 的快照判断它是首张或第二张。
+
+保存异常证据后，用 esptool chip-id 的 hard-reset 重启一次，不改分区或资源。`reset-open.json` / `reset-open-serial.log`：重启后的同样右侧首张 Card → Open 成功，真实 foregroundAppId=espocket.app.hello_runtime、pageId=root、display=true，release 成功。这是重启后的对比结果，不是修复；当前 Root 的视觉确认已询问用户。尚需找到异常的具体运行触发条件并建立回归，暂未修改实现或声称根因确定。
