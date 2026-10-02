@@ -27,3 +27,7 @@ Scope: 007/03；不重复用户已接受的固定循环、亮度或 Wi-Fi 操作
 ## 主机门槛
 
 `PATH=/Users/jiyu/.nvm/versions/node/v22.22.2/bin:$PATH python3 scripts/check.py` 通过：46 项 unittest、M2 parser 和 177 份 Markdown。实际 surfaces 设备 attempt 的 release 与最终快照检查通过，原始窗口未见 panic、watchdog、assert、App start/stop 或输入清理错误。该结论仅属于本窗口，既往失败仍保留在原记录。
+
+## 物理结果
+
+用户在上述集中操作后回复“都正常”：Settings、Launcher、Battery、Brightness 与 Native Detail 的 PWR 均回表盘；Native Detail 中部普通横滑保持 Detail。当前普通镜像为 71567f599，期间未刷写。物理结果来自用户直接观察。物理采集文件为空，不能作为该次操作的串口证明；failure scan 仅引用前述 22 步合成 attempt 的实际窗口。既有亮度、Wi-Fi、Back 与恢复结果继续按原镜像记录引用。007/03 全部条件满足。

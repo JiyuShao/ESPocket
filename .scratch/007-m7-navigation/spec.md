@@ -2,7 +2,7 @@
 
 Sequence: 007
 
-Status: active
+Status: resolved
 Blocked by: [006/03 Home 与显示真机验收](../006-m6-home-display/issues/03-run-hardware-acceptance.md)（已完成）；Native 源码依赖见 ticket 02。
 
 ## Problem Statement
@@ -62,3 +62,7 @@ Runtime App 契约验证、App Card 注册与动态配置、任意 App-to-App hi
 - 2026-10-02：按已接受的 [ADR-0013](../../docs/adr/0013-app-controls-back-presentation.md) 修正此前残留的多级 App 必须有可见 Back 描述；不改变 Root、导航事实或硬件验收门槛。
 
 - 2026-10-02：02 源码/构建门槛完成；03 的未覆盖物理路径继续保留，尚未给出完整 M7 PASS。
+
+## Resolution
+
+2026-10-02：01、02、03 全部完成。剩余 Settings/PWR、系统 Surface PWR 与 Native 普通横滑由用户集中确认“都正常”；[补测记录](records/2026-10-02-remaining-paths.md)区分合成输入、物理确认与既往证据。系统导航验收完成，释放 008/03 的前置依赖。

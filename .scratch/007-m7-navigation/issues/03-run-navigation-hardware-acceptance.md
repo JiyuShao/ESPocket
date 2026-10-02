@@ -4,11 +4,11 @@
 
 **Blocked by:** [006/03 Home 与显示真机验收](../../006-m6-home-display/issues/03-run-hardware-acceptance.md)（已完成）；[02 导航源码与构建](02-close-navigation-source-gates.md)。
 
-**Status:** ready-for-human
+**Status:** resolved
 
 - [x] 完整导航闭环通过 2 次（样机镜像；见[两轮记录](../records/2026-10-02-two-navigation-loops.md)）。
 - [x] Wi-Fi 与 brightness 各自真实改变状态 2 次（采集窗口累计；见[两轮记录](../records/2026-10-02-two-navigation-loops.md)）。
-- [ ] 所有单次 source、gesture、Home 与 failure 检查通过。
+- [x] 所有单次 source、gesture、Home 与 failure 检查通过。
 
 ## Comments
 
@@ -55,10 +55,10 @@ Watch Face
 | Watch Face → Launcher → top pull release | 返回 Watch Face，不误开 App | PASS（013 集中物理 smoke；见[补测对账](../records/2026-10-02-remaining-paths.md)） |
 | Launcher → App Root → Edge Back | 保持 App Root，无返回控件 | PASS（样机镜像；[记录](../../014-app-navigation-card-contract/records/2026-10-02-default-back-prototype.md)） |
 | App Root → Detail → Back | 返回 App Root | PASS（样机镜像；[记录](../../014-app-navigation-card-contract/records/2026-10-02-default-back-prototype.md)） |
-| Quick Settings → Settings Root → PWR | 返回 Watch Face | NOT TESTED |
-| Normal horizontal swipe in App | 由 App 处理，不误触发 Back | NOT TESTED |
-| Any Screen On non-Home + PWR | 返回 Watch Face | PARTIAL（Native Root/Detail 已见，其他 Surface 未覆盖） |
-| Failure scan | 无 panic、watchdog、assert 或错误 Back | PARTIAL（本次串口窗口未见，最终镜像仍待核对） |
+| Quick Settings → Settings Root → PWR | 返回 Watch Face | PASS（71567f599，用户集中确认；[记录](../records/2026-10-02-remaining-paths.md)） |
+| Normal horizontal swipe in App | 由 App 处理，不误触发 Back | PASS（71567f599，合成与物理确认；[记录](../records/2026-10-02-remaining-paths.md)） |
+| Any Screen On non-Home + PWR | 返回 Watch Face | PASS（既有 Native Root 与本次其余 Surface 物理确认；[记录](../records/2026-10-02-remaining-paths.md)） |
+| Failure scan | 无 panic、watchdog、assert 或错误 Back | PASS（71567f599 合成窗口未见指定错误，物理操作正常；历史失败保留，见[记录](../records/2026-10-02-remaining-paths.md)） |
 
 ## 证据规则
 
@@ -69,3 +69,7 @@ Watch Face
 - 任一必需项缺少证据时不得关闭本票。
 
 - 2026-10-02（对账与补测）：复用既有已接受证据；普通镜像 71567f599 的新 surfaces 22 步合成检查通过。剩余 Settings/PWR、系统页面 PWR 与 Native 普通横滑已合并为一次物理确认，答复前不关闭。见 [补测记录](../records/2026-10-02-remaining-paths.md)。
+
+## Resolution
+
+2026-10-02：用户对剩余集中物理路径回复“都正常”。结合已接受的两轮真实状态变化、Card/Back 与 Home 证据，全部必需项通过；见[补测与物理确认](../records/2026-10-02-remaining-paths.md)。
