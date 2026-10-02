@@ -2,10 +2,14 @@
 
 **What to build:** 一套小型产品接口，表达 Owner identity、Context、Action、Event、Permission、Action Risk 与 lifecycle，不引入全局 state manager。
 
-**Blocked by:** [008/03 App 交互真机验收](../../008-m8-app-contract/issues/03-run-app-contract-hardware-acceptance.md)。
+**Blocked by:** 无；用户于 2026-10-03 解除原产品顺序约束。
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] 接口表达产品语义，不暴露任意 method。
-- [ ] Registration 与 invalidation lifetime 明确。
-- [ ] 设计为自身内部 seam 作出 Exposure Decision。
+- [x] 接口表达产品语义，不暴露任意 method。
+- [x] Registration 与 invalidation lifetime 明确。
+- [x] 设计为自身内部 seam 作出 Exposure Decision。
+
+## Resolution
+
+Owner-local public contract 与生命周期、授权交集主机测试完成。证据见 [2026-10-03 实现记录](../records/2026-10-03-semantic-brightness.md)与 [semantic interfaces](../../../firmware/components/espocket_semantics/README.md)。

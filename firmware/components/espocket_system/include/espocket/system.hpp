@@ -16,6 +16,7 @@
 #include "espocket/native_page_installation.hpp"
 #include "espocket/card_registry.hpp"
 #include "espocket/card_model.hpp"
+#include "espocket/brightness.hpp"
 
 namespace espocket {
 
@@ -163,6 +164,7 @@ private:
     uint32_t display_width_ = 0;
     uint32_t display_height_ = 0;
     uint32_t display_output_id_ = 0;
+    std::unique_ptr<semantic::Brightness> brightness_;
     bool display_started_ = false;
     std::atomic_bool display_on_ = true;
     esp_brookesia::system::core::AppId resume_app_id_ =

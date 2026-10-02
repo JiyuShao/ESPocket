@@ -31,3 +31,5 @@ Circular Shell 使用隐藏的 Native `IApp` 作为 Brookesia carrier，同时�
 ## 限定修订
 
 [ADR-0015](0015-runtime-async-stack-patch-exception.md) 仅允许 Runtime JS 0.8.3 异步栈配置补丁，经独立副本与明确回归门槛维护；其余边界保持不变。
+
+补丁授权范围于 2026-10-03 被 [ADR-0016](0016-maintained-upstream-fixes.md) 更新；本记录保留原始决定。

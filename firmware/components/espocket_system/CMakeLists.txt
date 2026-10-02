@@ -5,7 +5,7 @@ idf_component_register(
         "src/system_runtime_navigation.cpp" "src/runtime_navigation_provider.cpp"
         "src/system_cards.cpp" "src/card_document.cpp"
     INCLUDE_DIRS "include"
-    REQUIRES brookesia_system_core brookesia_service_manager espocket_navigation freertos
+    REQUIRES brookesia_system_core brookesia_service_manager espocket_navigation espocket_semantics freertos
     PRIV_REQUIRES
         hello espocket_test_adapter shell_circular
         brookesia_app_settings brookesia_app_store brookesia_gui_lvgl

@@ -205,43 +205,22 @@ void CircularShell::refresh_battery()
 
 void CircularShell::refresh_brightness()
 {
-    if (display_output_id_ == 0) {
-        set_status_text(BRIGHTNESS_CARD_PATH, "Brightness: ?");
-        set_status_text(QUICK_BRIGHTNESS_PATH, "Brightness: ?");
-        return;
-    }
-    auto value = DisplayHelper::call_function_sync<double>(
-                     DisplayHelper::FunctionId::GetBacklightBrightness,
-                     static_cast<double>(display_output_id_)
-                 );
-    const auto text = value ?
-                      "Brightness: " + std::to_string(static_cast<int>(*value)) + "%" :
-                      "Brightness: ?";
+    auto value = host_.brightness_read ? host_.brightness_read() :
+                 std::expected<double, std::string>(std::unexpected("brightness_unavailable"));
+    const auto text = value ? "Brightness: " + std::to_string(static_cast<int>(*value)) + "%" :
+                             "Brightness: ?";
     set_status_text(BRIGHTNESS_CARD_PATH, text);
     set_status_text(QUICK_BRIGHTNESS_PATH, text);
 }
 
 std::expected<void, std::string> CircularShell::step_brightness()
 {
-    if (display_output_id_ == 0) {
-        return std::unexpected("Display output is unavailable for brightness");
-    }
-    auto current = DisplayHelper::call_function_sync<double>(
-                       DisplayHelper::FunctionId::GetBacklightBrightness,
-                       static_cast<double>(display_output_id_)
-                   );
-    if (!current) {
-        return std::unexpected("Failed to read brightness: " + current.error());
-    }
+    if (!host_.brightness_read || !host_.brightness_set) return std::unexpected("brightness_unavailable");
+    auto current = host_.brightness_read();
+    if (!current) return std::unexpected(current.error());
     const double next = *current >= 100.0 ? 20.0 : std::min(100.0, *current + 20.0);
-    auto result = DisplayHelper::call_function_sync<void>(
-                      DisplayHelper::FunctionId::SetBacklightBrightness,
-                      static_cast<double>(display_output_id_),
-                      next
-                  );
-    if (!result) {
-        return std::unexpected("Failed to set brightness: " + result.error());
-    }
+    auto result = host_.brightness_set(next);
+    if (!result) return std::unexpected(result.error());
     refresh_brightness();
     return {};
 }

@@ -25,3 +25,5 @@ ADR 记录替代方案代价显著、需要长期保持可追溯的 ESPocket 决
 | [0015](0015-runtime-async-stack-patch-exception.md) | accepted | Runtime JS 0.8.3 异步栈配置补丁的限定例外。 |
 
 决策变更时新增 superseding ADR，并让新旧记录相互链接。不得静默改写已接受 ADR 的决定。
+
+| [0016](0016-maintained-upstream-fixes.md) | accepted | 允许维护真实 Owner 内的上游 bug 修复，精确应用锁定版本补丁。 |

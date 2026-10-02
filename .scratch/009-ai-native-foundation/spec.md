@@ -2,8 +2,10 @@
 
 Sequence: 009
 
-Status: planned
-Blocked by: [008/03 App 交互真机验收](../008-m8-app-contract/issues/03-run-app-contract-hardware-acceptance.md)，作为产品实现顺序约束。
+Status: active
+Blocked by: 无全局实施顺序阻塞；各 ticket 保留自身前置。
+
+Implementation order: 用户于 2026-10-03 授权先启动 009；008/03 的剩余真机验收保持独立，不再阻塞 009/01–02。
 
 ## Problem Statement
 

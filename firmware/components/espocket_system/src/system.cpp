@@ -220,6 +220,19 @@ std::expected<void, std::string> System::on_init()
         .tick = [this]() { poll_system_input(); },
         .card_step = [this](bool left, bool inward) { return step_card(left, inward); },
         .surface_changed = [this](ShellSurface surface) { card_surface_changed(surface); },
+        .brightness_read = [this]() -> std::expected<double, std::string> {
+            if (!brightness_) return std::unexpected("brightness_unavailable");
+            auto value = brightness_->read({semantic::CallerKind::ProductUi, "espocket.shell", 0});
+            if (!value) return std::unexpected(value.error());
+            return value->percent;
+        },
+        .brightness_set = [this](double percent) -> std::expected<double, std::string> {
+            if (!brightness_) return std::unexpected("brightness_unavailable");
+            auto result = brightness_->set({semantic::CallerKind::ProductUi, "espocket.shell", 0}, percent);
+            if (result.status != semantic::ResultStatus::Succeeded || !result.observed)
+                return std::unexpected(result.detail);
+            return result.observed->percent;
+        },
         }
     );
     auto result = install_app(shell_);
@@ -331,6 +344,8 @@ void System::on_stop()
 
 void System::on_deinit()
 {
+    if (brightness_) brightness_->invalidate();
+    brightness_.reset();
     stop_runtime_navigation();
     if (card_actions_) card_actions_->close();
     card_session_.reset();

@@ -118,6 +118,27 @@ std::expected<void, std::string> System::start_display()
     display_width_ = output->width;
     display_height_ = output->height;
     display_output_id_ = output->id;
+    // One selected output, reached only through the public Display service.
+    brightness_ = std::make_unique<semantic::Brightness>(output->name,
+        [id = output->id]() {
+            return DisplayHelper::call_function_sync<double>(
+                DisplayHelper::FunctionId::GetBacklightBrightness, static_cast<double>(id),
+                esp_brookesia::service::helper::Timeout(DISPLAY_TIMEOUT_MS));
+        },
+        [id = output->id](double percent) {
+            return DisplayHelper::call_function_sync<void>(
+                DisplayHelper::FunctionId::SetBacklightBrightness, static_cast<double>(id), percent,
+                esp_brookesia::service::helper::Timeout(DISPLAY_TIMEOUT_MS));
+        },
+        [this](const semantic::Access& access) {
+            // Only the internally composed Shell caller is admitted in this slice.
+            // Assistant stays denied until confirmed user-goal admission is wired.
+            const bool ui = access.caller.kind == semantic::CallerKind::ProductUi &&
+                            access.caller.id == "espocket.shell" && access.caller.running_instance == 0;
+            const bool available = !stopping_.load(std::memory_order_acquire) &&
+                                   display_binding_.is_valid() && DisplayHelper::is_available();
+            return semantic::Permission{ui, available, available};
+        });
     ESP_LOGI(
         TAG,
         "Display ready: %s (%" PRIu32 "x%" PRIu32 ")",

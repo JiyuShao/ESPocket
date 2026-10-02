@@ -43,6 +43,8 @@ struct ShellHost {
     // Left=true denotes the left sequence. inward=true advances toward Home.
     std::function<std::expected<void, std::string>(bool left, bool inward)> card_step;
     std::function<void(ShellSurface)> surface_changed;
+    std::function<std::expected<double, std::string>()> brightness_read;
+    std::function<std::expected<double, std::string>(double)> brightness_set;
 };
 
 class CircularShell final : public esp_brookesia::system::core::IApp {
