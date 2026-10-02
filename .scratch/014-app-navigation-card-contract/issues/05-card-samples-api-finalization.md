@@ -15,3 +15,5 @@
 ## Comments
 
 - 2026-10-02：由原 ticket 04 的 Card 部分拆出。该拆分只改变任务归属，保留 Native/Runtime Card 样例与 API 的原要求。
+
+- 2026-10-02：Native summary/detail Card 工厂和独立 GUI 文档已作为框架接入 slice 实现，整票不关闭。Runtime Card 需要明确声明式首版范围，或上游提供隔离执行实例 seam；已提出范围选择，未收到回答前不擅自缩小可执行回调要求。03 的 package update 条件、双方实际触控/暂停与镜像证据仍保留。见 [Card 接入记录](../records/2026-10-02-card-owner-presentation.md)。

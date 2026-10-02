@@ -142,3 +142,12 @@
 - 新镜像未刷写，设备仍为旧 013 identity。013 smoke 仍等待既有问题的结果，不重复请求；012/03 的设备 Driver attempt 排在该 smoke 后。
 - Runtime Card 的独立可执行实例不能通过另建 Runtime 安全提供：当前注册表返回共享 JS backend，且其构造私有。另一个 Runtime deinit 可能清理 Core 的 backend。需明确声明式 Card 边界或获得上游专用实例 seam，不伪造 App 运行身份、不自行分配共享 backend 私有 ID、不复制 Runtime。
 - 009 继续等待 008/03；004 Audio、005 trust/keyboard/Store/publication 的外部条件未改变。所有前置均按真实 ticket 保留。
+
+
+## 当前可执行 frontier 核对
+
+截至本轮本地提交 cd4e72d，008/02 源码已关闭；014/03 余下真实 package update 事务条件转为 needs-info，014/05 等待该条件、Runtime Card 范围答复和设备结果。其余未完成 tickets 都有未满足的具体人工、上游或 ticket 依赖；没有把 009 的 ready-for-agent 标签当成越过 008/03 的授权。
+
+[本轮上游核对](../../../docs/upstream/status-2026-10-02.md)取得 Core 0.8.4、JS 0.8.3 与 Audio 0.8.2 官方发行页面，与现有锁一致；HTTP/HAL 和部分源码请求未取得内容，不能据此作出已修复/绝无修复结论。没有采用未经核实的新依赖。
+
+人工最小介入仍为：回应既有 013 单次 smoke；Runtime Card 首版接口范围选择。之后才能按原依赖推进一次明确镜像的 USB Driver 与 Native/Runtime 单次物理路径。已有已接受结果不重做，旧镜像/新构建身份不混用。
