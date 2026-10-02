@@ -22,4 +22,6 @@ ADR 记录替代方案代价显著、需要长期保持可追溯的 ESPocket 决
 | [0013](0013-app-controls-back-presentation.md) | accepted | 所有 App 可定制 Back UI 与手势，不要求可见按钮。 |
 | [0014](0014-runtime-card-starts-declarative.md) | accepted | Runtime Card 首版声明式呈现，框架管理生命周期，独立 JS 业务回调延后。 |
 
+| [0015](0015-runtime-async-stack-patch-exception.md) | accepted | Runtime JS 0.8.3 异步栈配置补丁的限定例外。 |
+
 决策变更时新增 superseding ADR，并让新旧记录相互链接。不得静默改写已接受 ADR 的决定。

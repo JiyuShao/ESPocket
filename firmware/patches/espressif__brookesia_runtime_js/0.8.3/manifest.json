@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "component": "espressif__brookesia_runtime_js",
+  "upstream_version": "0.8.3",
+  "source_commit": "01939b5e58fd50d18339b1c35fb74c4e808962c7",
+  "registry_component_hash": "be4ae9c11b34b259ea9148fb3b4f475125587849d2b635bc2c8c5026883359cb",
+  "source_files": {
+    ".component_hash": "73b6b272fa375751858675a40e841a677f56245008c676144abfe4bfbe891c80",
+    ".gitignore": "c239470575a7204bb5db2246fe48a965dae279979b0a7f80d6d3091cdbac3e62",
+    "CHANGELOG.md": "01857dd117a74361e7c2852a912016eb8bbbc77a0d25b4011a3b21fcf8e481a6",
+    "CHECKSUMS.json": "b52481003de0accd60364c5ab76c0a653455f8b8e7c9f7b4a964e4c848ecdc45",
+    "CMakeLists.txt": "fe784f04fc8fd97619105a6f249d3279912d2e42cfd9d9919615e4d150084734",
+    "Kconfig": "a8ffbb08c5efb9b1fa12eec2a263f96e872f0d350a2ee4f5789dd96646697025",
+    "README.md": "165c081b033bc19e64a9512c47b2e9bb779049d4eb49c36ecaa58c9cddde5899",
+    "README_CN.md": "d569b1fe5db9008855313a06f111c663f2228326927b78c8003a8454a57f56ad",
+    "cmake/esp_platform.cmake": "9b3022e792574a0ac756cfb0fb2aa21aa79a7493cfe630b747a5ca5afba94138",
+    "cmake/pc_platform.cmake": "eef74228b3b355383daa81ef3d0eb8450ef728c9033165d27145fd957bc894b3",
+    "idf_component.yml": "1a661ad96f37ed7e61a60cd82b79f22b8a49eb263ae65ef75bb2b1272423cee4",
+    "include/brookesia/runtime_js/backend.hpp": "42cb09033ebc10f9d3e68cfc8bf8a407c80aede41ef6b9caab58eaad43aeda71",
+    "include/brookesia/runtime_js/macro_configs.h": "c6f0a3f1ce853638b11590f5c30ab125d08274eed9cc5c710e4c99e77a9d070b",
+    "include/brookesia/runtime_js.hpp": "2638de465eacd1351ff8b6397ab21c79c2e945bce1cb0b724bb9f2e7a76fc4e8",
+    "license.txt": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+    "src/backend.cpp": "04dafcc0cc215ff356b0c21e08e6c71cd2f12af952c35b57a6fa511a70ec4a3f",
+    "src/private/utils.hpp": "18e20cd2ce04568db5c0b50e9ab43e868585e4884c887d1752fcc4dfbff05ab1",
+    "test_apps/CMakeLists.txt": "374bfaf90c77875f1b70dd296d6e7928eda0c23461f5d097b8cdcb2ad3f61987",
+    "test_apps/cmake/esp_platform.cmake": "92a1f0fc8830551cb9c8d5a04882c9963f7f6fdf9eb65bcd377dfe94113a9499",
+    "test_apps/cmake/pc_platform.cmake": "4012756e9aa8105a6100c845317c2cd31890ba64c194f77897dca3c7f0419cf7",
+    "test_apps/main/CMakeLists.txt": "e6d36568fac8c8e50402c702470b5013f16eeba511b49e92ed0fe6ac8a9961c3",
+    "test_apps/main/idf_component.yml": "dd0786caf4d49b7a9eecc138ed37fa9b5cc2cf19b8cf9c0c27acac4d894d3fc8",
+    "test_apps/main/test_app_main.cpp": "b191a655a94afe9f07692a1b33d4f907ce8122c4f74eca3ee7356abad40c727e",
+    "test_apps/main/test_runtime_js.cpp": "5ee7373195b373eb6085f1e1e8ce7be65aae3a03f7ee3d079637be7d0c328d86",
+    "test_apps/partitions.csv": "16e5bf3a0a412ecca28815fef47cbb44d8288f418347e26c83d0b9d1983cf95d",
+    "test_apps/pytest_runtime_js.py": "987636ead97f21e70cff5f9bb47a877581b95b41762658ce42124684b93395d3",
+    "test_apps/sdkconfig.ci.esp32p4_xip": "952a43d6e80fc5cb288e0b184d0ab1a4148db0ee1585410fd46e78a0c0798c68",
+    "test_apps/sdkconfig.ci.esp32s3_psram_xip": "ad65b9815226c4caa37fe32490f1ef7217abd6481bddc1a98ed39b30015cdecf",
+    "test_apps/sdkconfig.defaults": "a9fc83aaf7773ff5e13d92696b72b4516f93052895b58ea9b4d908dd049f3f48",
+    "test_apps/sdkconfig.defaults.esp32p4": "05a5f1761ca0abb9d73e774dc8abdc3323d1cbce06b10dff4a69655c850db3f0",
+    "test_apps/sdkconfig.defaults.esp32s3": "936edc1c336b7c0666b16ec9040bc79406228ce9358ef4129f84af2fa2054eab"
+  },
+  "patches": [
+    {
+      "file": "001-configure-async-stack.patch",
+      "sha256": "91b3c9d85a8c368826be835b330bb3376da83950010210943e9b9389d51448ce"
+    }
+  ],
+  "issue": "../../../../.scratch/008-m8-app-contract/issues/04-resolve-runtime-async-stack-overflow.md",
+  "upstream_report": "../../../../.scratch/008-m8-app-contract/records/2026-10-02-runtime-js-async-stack-overflow.md",
+  "upstream_submission": "not submitted",
+  "remove_when": "Upstream exposes an equivalent async stack budget; remove after apps and resource regressions pass."
+}

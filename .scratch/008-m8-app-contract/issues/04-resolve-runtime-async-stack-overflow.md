@@ -2,12 +2,12 @@
 
 **What to build:** 在保持 Runtime 导航、确认提示与公开开发 API 的前提下，解决真实 RuntimeJsAsync 栈溢出并通过设备回归。
 
-**Blocked by:** 锁定 backend 0.8.3 固定 8 KiB 异步任务栈且无公开配置；需上游公开配置/执行能力修复，或用户另行决定源码维护策略。不能改 managed_components 或删掉产品行为作为验收。
+**Blocked by:** None for implementation. [ADR-0015](../../../docs/adr/0015-runtime-async-stack-patch-exception.md) 已接受 Runtime 0.8.3 栈配置补丁的限定例外；完整构建、真实设备与资源门槛尚待执行。不能改 managed_components 或删掉产品行为作为验收。
 
-**Status:** needs-info
+**Status:** ready-for-agent
 
-- [ ] 确定受支持的上游修复或配置机制及锁定版本。
-- [ ] 保留确认开关与待决反馈，runtime-confirm 最小设备回归通过。
+- [x] 确定受支持的上游修复或配置机制及锁定版本：用户接受 ADR-0015 的限定源码补丁方案，锁定 JS 0.8.3。
+- [x] 保留确认开关与待决反馈，runtime-confirm 最小设备回归通过（普通 c8d56e5e2，synthetic-input，视觉待单独验收）。
 - [ ] apps 完整 Native/Runtime 套件与实际物理检查通过。
 - [ ] 恢复普通镜像，记录资源 identity、失败和修复后的独立 attempt。
 
@@ -18,3 +18,7 @@
 2026-10-03：确认此前 backend 版本误记，实际 JS 0.8.3/Manager 0.8.2，镜像和复现事实不变。已准备[公开栈配置补丁提案](../records/2026-10-03-runtime-stack-proposal.md)，尚待用户决定组件补丁维护策略，不自行修改正式依赖。
 
 2026-10-03：完成[独立组件副本准备工具](../records/2026-10-03-patch-preparation-tool.md)，通过实际锁定版源码与补丁准备验证。发现 ADR-0001 的产品基线限制，已提出限定例外确认；尚未接入正式构建或宣称设备修复。
+
+2026-10-03：用户回复「好，不要停，我去休息了，你把能做的都做了吧」，接受此前明确询问的 ADR-0001 限定例外。正式补丁及独立工程构建入口已实现，先验证 16 KiB；测试结果另行追加，不预先判定修复。
+
+2026-10-03：正式接入的准备失败、锁定与主机结果见[补丁验证](../records/2026-10-03-runtime-stack-patch-validation.md)；真实设备结果按同一记录独立追加。

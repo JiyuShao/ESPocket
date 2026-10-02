@@ -31,6 +31,20 @@ Board Manager 生成的 defaults 必须与同一 checkout 一起使用。切换�
 idf.py -C firmware build
 ```
 
+## 已接受源码补丁的产品构建
+
+Runtime JS 0.8.3 的栈配置补丁依据 [ADR-0015](../docs/adr/0015-runtime-async-stack-patch-exception.md)维护。上面的直接 idf.py 命令用于物化上游依赖与生成板级配置，直接构建不会应用该补丁。产品镜像使用独立入口：
+
+```bash
+python3 scripts/firmware/build_patched_firmware.py \
+  --workspace /tmp/espocket-patched-build \
+  --sdkconfig firmware/sdkconfig
+```
+
+先加载 ESP-IDF 环境。workspace 必须不存在且位于源码 checkout 外；每次独立构建保留各自证据。入口复制工程和已物化依赖，准确应用 hash 锁定补丁，使用 Component Manager override_path 选择副本，再执行完整构建并核对选中的组件路径。原始 managed_components、sdkconfig 和 dependencies.lock 不写入。工程副本把全部 Registry 版本约束为原始 lock 的精确版本，构建后核对版本和 component hash，阻止切换 override 时顺带升级传递依赖。当前产品预算为 16 KiB，上游默认仍为 8 KiB。
+
+产物位于 `<workspace>/firmware/build/`，配置位于 `<workspace>/firmware/sdkconfig`，输入身份位于 `<workspace>/patch-inputs.json`。生成的 lock 只属于此次构建；registry lock 与补丁 manifest 共同限定产品输入。`--prepare-only` 只准备副本，不构建也不证明设备修复。升级源码/hash 不匹配时停止，不能绕过校验。
+
 ## 测试
 
 只约束一个组件、Native App 或 Runtime App 的测试放在该 Owner 的 `test/`；跨模块主机测试放在 `firmware/test/host/`，真实设备测试放在 `firmware/test/device/`。测试可以执行组件行为，也可以分析源码或资源，只要它对稳定约束做出可重复的断言。
@@ -74,7 +88,7 @@ firmware/
         └── profiles/  # 设备布局的坐标、手势与校准信息
 ```
 
-`scripts/check.py` 显式发现各 Owner 的 `test/` 和 `firmware/test/host/`，不发现 `device/`，不打开串口、不刷写、不改变开发者模式。设备测试通过 `scripts/firmware/run_device_tests.py` 显式运行；`--suite navigation`（默认）、`--suite cards`、`--suite surfaces` 与 `--suite apps` 选择用例；surfaces 补查普通配置的 Card 边界、系统页面 PWR Home、Quick Settings → Settings 与 App 普通横滑；apps 在普通配置验证 Native/Runtime 导航、待决 Back 与未回收息屏恢复。未来资源、回收或稳定性测试也归 `device/`，有真实用例时再增加分类。
+`scripts/check.py` 显式发现各 Owner 的 `test/` 和 `firmware/test/host/`，不发现 `device/`，不打开串口、不刷写、不改变开发者模式。设备测试通过 `scripts/firmware/run_device_tests.py` 显式运行；`--suite navigation`（默认）、`--suite cards`、`--suite surfaces` 与 `--suite apps` 选择用例；surfaces 补查普通配置的 Card 边界、系统页面 PWR Home、Quick Settings → Settings 与 App 普通横滑；apps 在普通配置验证 Native/Runtime 导航、待决 Back 与未回收息屏恢复。`--suite runtime-confirm` 为异步确认反馈最小回归；`--suite reclaim-native` / `reclaim-runtime` 分别要求只开启对应模型回收配置，验证目标回收与另一模型未回收恢复。`--suite resources` 在关闭回收、开启资源诊断的镜像执行三轮有限 App 路径与表盘 heap/stack checkpoint；报告中的语义路径通过不自动判定内存稳定，需核对串口采样。当前资源与回收使用同一设备目录，不增加另一套 USB 协议。
 
 USB 客户端只负责线缆协议、响应匹配和快照校验；执行器负责行为断言、步骤、attempt 及始终执行的清理；E2E 用例调用执行器，不自行实现串口协议或另一份导航状态。CLI 负责参数、连接和产物目录。
 

@@ -27,3 +27,7 @@ Circular Shell 使用隐藏的 Native `IApp` 作为 Brookesia carrier，同时�
 - 在第二个实现出现前构建私有 Installer、Runtime 或 Shell framework。
 
 参见[产品总览](../design/product/01-overview.md)和[分层架构](../design/architecture/02-layered-architecture.md)。
+
+## 限定修订
+
+[ADR-0015](0015-runtime-async-stack-patch-exception.md) 仅允许 Runtime JS 0.8.3 异步栈配置补丁，经独立副本与明确回归门槛维护；其余边界保持不变。
