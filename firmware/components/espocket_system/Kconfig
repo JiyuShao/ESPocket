@@ -25,6 +25,23 @@ menu "ESPocket"
             target. The next PWR wake must show Watch Face without restarting
             the App. Leave disabled in normal interactive firmware.
 
+    config ESPOCKET_M8_RECLAIM_NATIVE_TEST
+        bool "M8 test: reclaim only Native Apps after automatic screen-off"
+        default n
+        help
+            Stop only the visible Native resume target through System Core.
+            Runtime Apps retain their current Page. Old Page/Back/keyboard
+            resources follow ordinary Core stop cleanup. Wake shows Watch Face;
+            a later user launch starts at Root. Leave disabled in normal firmware.
+
+    config ESPOCKET_M8_RECLAIM_RUNTIME_TEST
+        bool "M8 test: reclaim only Runtime Apps after automatic screen-off"
+        default n
+        help
+            Stop only the visible Runtime resume target through System Core.
+            Native Apps retain their current Page. This is a bounded test seam,
+            not a low-memory killer or a new USB command. Leave disabled normally.
+
     config ESPOCKET_M6_RESOURCE_TRACE
         bool "M6 test: log heap at Watch Face before PWR screen-off"
         default n

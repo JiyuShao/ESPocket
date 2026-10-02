@@ -70,6 +70,7 @@ std::expected<void, std::string> System::on_app_installed(
     if (!definition) return std::unexpected(definition.error());
     if (definition->declaration.app_id != app.manifest.id) return std::unexpected("identity_mismatch");
     const auto flow = definition->screen_flow;
+    const auto card_declaration = definition->declaration;
     auto adapter = RuntimePageAdapter::create(std::move(*definition),
         [this, id = app.app_id](auto flow, auto action, auto from, auto to) {
             const auto before = gui_get_screen_flow_state(id, flow);
@@ -79,6 +80,7 @@ std::expected<void, std::string> System::on_app_installed(
             return after && *after == to;
         });
     if (!adapter) return std::unexpected(adapter.error());
+    if (!cards_ || !cards_->register_app(card_declaration)) return std::unexpected("card_declaration_registration_failed");
     register_navigator(app.app_id, (*adapter)->navigator());
     { std::lock_guard lock(page_navigators_mutex_); runtime_pages_.emplace(app.app_id, RuntimePages{*adapter, flow}); }
     return {};

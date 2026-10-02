@@ -4,6 +4,28 @@
 
 namespace espocket {
 
+void CircularShell::sync_card_hint(bool visible)
+{
+    if (!back_overlay_state_) return;
+    LvglLock lock;
+    if (!lock) return;
+    auto *&label = back_overlay_state_->card_hint;
+    if (!visible) {
+        if (label && lv_obj_is_valid(label)) lv_obj_delete(label);
+        label = nullptr;
+        return;
+    }
+    if (!label) {
+        label = lv_label_create(lv_layer_top());
+        if (!label) return;
+        lv_obj_remove_flag(label, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_set_style_text_color(label, lv_color_hex(0x9aa9bd), 0);
+        lv_obj_set_style_text_font(label, &lv_font_montserrat_18, 0);
+        lv_obj_align(label, LV_ALIGN_BOTTOM_MID, 0, -24);
+    }
+    lv_label_set_text(label, current_surface() == ShellSurface::LeftAppCard ? "Home  >" : "<  Home");
+}
+
 void CircularShell::sync_default_back(bool visible)
 {
     if (!back_overlay_state_ || visible == (back_overlay_state_->button != nullptr)) {
@@ -207,6 +229,8 @@ std::expected<void, std::string> CircularShell::show_surface(ShellSurface surfac
     case ShellSurface::BrightnessCard: action = "open_brightness_card"; break;
     case ShellSurface::QuickSettings: action = "open_quick_settings"; break;
     case ShellSurface::Launcher: action = "open_launcher"; break;
+    case ShellSurface::LeftAppCard:
+    case ShellSurface::RightAppCard: action = "open_app_card"; break;
     }
     auto result = context_->gui().trigger_screen_flow(PAGE_FLOW, action);
     if (result && home_gesture_state_) {
@@ -220,6 +244,8 @@ std::expected<void, std::string> CircularShell::show_surface(ShellSurface surfac
             home_gesture_state_->launcher_pull_distance.store(0, std::memory_order_release);
         }
     }
+    if (result && host_.surface_changed) host_.surface_changed(surface);
+    if (result) sync_card_hint(surface == ShellSurface::LeftAppCard || surface == ShellSurface::RightAppCard);
     return result;
 }
 

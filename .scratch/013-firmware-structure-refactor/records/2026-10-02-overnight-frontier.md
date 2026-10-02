@@ -133,3 +133,12 @@
 ## 用户恢复后的推进（2026-10-02）
 
 用户明确要求继续直到完成，覆盖此前 09:00 夜间截止。014/04 的 Runtime 绑定、schema、Owner 队列、确认样例、对等组件与 clean build/staging 已完成并 resolved；详见 [绑定证据](../../014-app-navigation-card-contract/records/2026-10-02-runtime-navigation-binding.md)。008 的这项源码前置已满足，008/03 真机门槛保留。下一步继续 014/03 实际 Card 呈现与持久配置，再按依赖推进 014/05、008；本记录之前的夜间状态保留为历史。
+
+
+## 用户恢复后的第二个 slice
+
+- 014/03 的 Core/NVS/Shell/Native Card/GUI Owner 队列接入完成，前三项源码条件勾选；Runtime replacement 的配置保留与更新原因仍缺真实事务 seam，不关闭整票。014/05 仍缺 Runtime Card 提供者及设备证据。详见 [Card 接入记录](../../014-app-navigation-card-contract/records/2026-10-02-card-owner-presentation.md)。
+- 008/02 独立回收测试入口 resolved；五种配置生产边界主机测试、Native/Runtime 启用分支 ESP32-S3 交叉编译和普通完整 build 通过。008/03 每条路径按用户减量要求集中一次，硬件条件保留。
+- 新镜像未刷写，设备仍为旧 013 identity。013 smoke 仍等待既有问题的结果，不重复请求；012/03 的设备 Driver attempt 排在该 smoke 后。
+- Runtime Card 的独立可执行实例不能通过另建 Runtime 安全提供：当前注册表返回共享 JS backend，且其构造私有。另一个 Runtime deinit 可能清理 Core 的 backend。需明确声明式 Card 边界或获得上游专用实例 seam，不伪造 App 运行身份、不自行分配共享 backend 私有 ID、不复制 Runtime。
+- 009 继续等待 008/03；004 Audio、005 trust/keyboard/Store/publication 的外部条件未改变。所有前置均按真实 ticket 保留。

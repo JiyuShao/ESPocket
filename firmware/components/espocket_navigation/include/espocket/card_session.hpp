@@ -17,6 +17,7 @@ public:
     virtual bool show() noexcept = 0;
     virtual bool refresh() noexcept = 0;
     virtual void pause() noexcept = 0;
+    virtual bool action(std::string_view) noexcept { return false; }
 };
 
 enum class CardVisibility { Empty, Paused, Visible };
@@ -43,7 +44,9 @@ public:
     // Registry removal notifications are forwarded here by the composition owner.
     std::expected<void, CardSessionError> invalidate(const CardKey &key);
     std::expected<void, CardSessionError> open_app(const AppLauncher &launcher);
+    std::expected<void, CardSessionError> action(std::string_view action);
     CardVisibility visibility() const { return visibility_; }
+    bool busy() const { return busy_; }
     std::optional<CardKey> key() const { return key_; }
 
 private:

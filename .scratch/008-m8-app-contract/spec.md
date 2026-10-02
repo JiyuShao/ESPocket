@@ -2,7 +2,7 @@
 
 Sequence: 008
 
-Status: planned
+Status: active
 Blocked by: [014/04 Native/Runtime 导航绑定](../014-app-navigation-card-contract/issues/04-samples-api-finalization.md)；验收与回收依赖见各 ticket。
 
 ## Problem Statement
@@ -32,7 +32,7 @@ Native navigation model 必须成为 Native、Runtime 与 third-party App 共用
 ## Testing Decisions
 
 - 具体前置见各 ticket：系统导航真机验收、Native/Runtime 新绑定与可控回收入口。既有 Runtime lifecycle 证据不能替代当前交互证据。
-- Native 与 Runtime navigation/reclaim 路径各执行 5 次。
+- Native 与 Runtime navigation/reclaim 路径各集中执行一次，按用户已要求减少重复操作；结果与失败保持独立记录。
 - 使用真实 Runtime App，不使用 Native mock。
 
 ## Out of Scope
@@ -51,4 +51,4 @@ Native navigation model 必须成为 Native、Runtime 与 third-party App 共用
 
 ## 当前结果与完成条件
 
-四类页面指导及旧版 Runtime Toolkit/build/staging 基线已存在；这些结果不能证明新 Navigator、Root 无 Back 或待决 Back。新增语言绑定与开发 API 由 [014/04](../014-app-navigation-card-contract/issues/04-samples-api-finalization.md) 承接；本 Effort 完成 [02 回收入口](issues/02-add-app-reclaim-test-seams.md) 和 [03 真实 Native/Runtime 交互验收](issues/03-run-app-contract-hardware-acceptance.md)。两种执行模型分别保留证据，固定次数沿用原要求。
+四类页面指导及旧版 Runtime Toolkit/build/staging 基线已存在；这些结果不能证明新 Navigator、Root 无 Back 或待决 Back。新增语言绑定与开发 API 由 [014/04](../014-app-navigation-card-contract/issues/04-samples-api-finalization.md) 承接；本 Effort 完成 [02 回收入口](issues/02-add-app-reclaim-test-seams.md) 和 [03 真实 Native/Runtime 交互验收](issues/03-run-app-contract-hardware-acceptance.md)。两种执行模型分别保留证据，次数按 03 的单次集中验收规则。

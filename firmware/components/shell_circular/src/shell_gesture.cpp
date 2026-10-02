@@ -134,6 +134,14 @@ void process_shell_gesture(ShellGestureState &state, const ShellGestureEvent &ev
             break;
         case ShellSurface::Launcher:
             break;
+        case ShellSurface::LeftAppCard:
+            if (event.direction == ShellGestureDirection::Left) intent = GestureIntent::LeftCardIn;
+            else if (event.direction == ShellGestureDirection::Right) intent = GestureIntent::BatteryCard;
+            break;
+        case ShellSurface::RightAppCard:
+            if (event.direction == ShellGestureDirection::Right) intent = GestureIntent::RightCardIn;
+            else if (event.direction == ShellGestureDirection::Left) intent = GestureIntent::BrightnessCard;
+            break;
         }
     }
     if (intent == GestureIntent::None) {

@@ -31,7 +31,7 @@ PageDeclaration HelloApp::get_page_declaration() const
         .app_id = "espocket.app.hello",
         .root_page_id = "root",
         .page_ids = {"root", "detail"},
-        .cards = {},
+        .cards = {{"summary", "root"}, {"detail", "detail"}},
     };
 }
 

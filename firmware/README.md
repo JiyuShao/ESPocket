@@ -61,9 +61,13 @@ python3 -m unittest discover -s firmware/components/espocket_system/test -p 'tes
 
 启用设备开发者模式并刷入具有 touch/PWR/snapshot/release capability 的固件后，使用 [interaction_driver.py](../scripts/firmware/interaction_driver.py) 执行单次自动路径。它不自动刷写、重启或开启模式；需要 `pyserial`，可使用 ESP-IDF Python 环境。必须显式指定设备清单 ID 和期望镜像 identity。CLI、466px profile 与报告格式见 [交互测试协议](../docs/development/interaction-test-protocol.md)。输出仅证明 `synthetic-input`，不能满足 GPIO、触摸硬件或视觉条件。
 
+## 独立 App 回收测试
+
+`CONFIG_ESPOCKET_M8_RECLAIM_NATIVE_TEST` 与 `CONFIG_ESPOCKET_M8_RECLAIM_RUNTIME_TEST` 默认关闭，可分别在测试配置中开启。自动息屏后，只停止所选执行模型的可见 resume target；另一模型保持原 Page。两个开关均开时覆盖两类，旧 `CONFIG_ESPOCKET_M6_RECLAIM_ON_TIMEOUT_TEST` 仍覆盖两类。它们复用真实 Core stop、Navigator 失效及键盘/临时 GUI 清理，不增加 USB 命令或内存淘汰策略。日志 `APP_RECLAIM_TEST` 包含 model、manifest 与 App ID；旧 M6 开关保留原事件。唤醒应到 Watch Face，用户重新打开从 Root 开始。此处为源码入口，物理和视觉验证由 008/03 持有。
+
 ## GUI 资源
 
-Circular Shell 与 Hello Native 各自以 `resources/gui.json` 为唯一 GUI 文档源码。CMake 在构建目录生成 `shell_gui.json`／`hello_gui.json` 副本，再用 `EMBED_TXTFILES` 嵌入；不同文件名避免 ESP-IDF 按 basename 生成的符号重名。生成副本不编辑、不提交，资源变化会触发重新配置与嵌入。
+Circular Shell 与 Hello Native 以 `resources/gui.json` 为完整 App/Shell 的 GUI 文档源码；Hello Native 的独立 Card 文档另存 `resources/card.json`。CMake 在构建目录生成 `shell_gui.json`／`hello_gui.json`／`hello_card.json` 副本，再用 `EMBED_TXTFILES` 嵌入；不同文件名避免 ESP-IDF 按 basename 生成的符号重名。生成副本不编辑、不提交，资源变化会触发重新配置与嵌入。
 
 每个 Owner 的 `test/test_document_actions.py` 比较 GUI 事件声明、`on_start` 订阅与 `on_action` handler 集合，并保留事件唯一 Owner 检查。共享检查器只解析这些约定的结构，不解析整个 C++ 语言；改动 action 注册或处理形式时同步更新检查器和负例。
 

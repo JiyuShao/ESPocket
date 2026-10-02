@@ -12,6 +12,8 @@ enum class ShellSurface : uint8_t {
     BrightnessCard,
     QuickSettings,
     Launcher,
+    LeftAppCard,
+    RightAppCard,
 };
 
 enum class GestureIntent : uint8_t {
@@ -22,6 +24,8 @@ enum class GestureIntent : uint8_t {
     QuickSettings,
     Launcher,
     Back,
+    LeftCardIn,
+    RightCardIn,
 };
 
 enum class ShellGesturePhase { Press, Pressing, Release };

@@ -23,7 +23,7 @@ App 级 Back 呈现声明有两种模式：`framework` 为默认；`appOwned` �
 
 第一版 C++ 声明使用 `BackPresentation::Framework` 或 `BackPresentation::AppOwned`。App 自行放置 ESPocket 标准 Back 控件时声明 `uses_standard_back_control=true`，避免 Shell 再叠加控件；`AppOwned` 不要求声明可见控件；`uses_standard_back_control` 是 App 的呈现承诺；完整 App API 与控件注册机制仍待定版。
 
-Native 核心提供 `update_declaration(PageDeclaration)`：仅在 Navigator 已停止、无页面任务时更新，运行中返回 `DeclarationInUse`。App ID 与 Root Page ID 保持稳定，否则返回 `IdentityMismatch`；新声明仍按安装规则完整校验，失败保留旧声明。Page/Card 列表可重排、新增或移除，保留的 ID 不按数组位置重新编号；页面语义是否仍相同由 App 作者保证。更新后不恢复旧栈或待决 Back，下一次启动从同一 Root 开始；旧 Card 不存在时保持既有 Root 降级和诊断。此入口不负责软件包安装、Card 配置删除或替换 Presenter，分别由安装 Adapter、Card Registry 和对应语言绑定承担；Runtime 安装接入仍待 014/04，不能把组件测试算作软件包更新验收。
+Native 核心提供 `update_declaration(PageDeclaration)`：仅在 Navigator 已停止、无页面任务时更新，运行中返回 `DeclarationInUse`。App ID 与 Root Page ID 保持稳定，否则返回 `IdentityMismatch`；新声明仍按安装规则完整校验，失败保留旧声明。Page/Card 列表可重排、新增或移除，保留的 ID 不按数组位置重新编号；页面语义是否仍相同由 App 作者保证。更新后不恢复旧栈或待决 Back，下一次启动从同一 Root 开始；旧 Card 不存在时保持既有 Root 降级和诊断。此入口不负责软件包安装、Card 配置删除或替换 Presenter，分别由安装 Adapter、Card Registry 和对应语言绑定承担；Runtime 安装和导航已接入，软件包替换迁移仍未完成，不能把组件测试算作软件包更新验收。
 
 Native 产品装配使用 `System::install_navigated_app(app, declaration, presenter)`，返回 `InstalledPageApp` 中的 Core App ID 与共享 Navigator。身份与声明先校验，通过后才调用 Core 的真实安装入口；Core 安装失败时透传错误、不发布注册。App 保存 Navigator 的弱引用，页面适配器由 App 实现。System 按 Core App ID 处理开始、停止、失败和卸载；卸载清空旧栈、token、注册与系统 UI 回调。安装入口在系统初始化或 Core 管理操作的串行调用上下文执行，不从原始 GUI 输入回调或任意并发线程调用；注册表的锁不表示 Core 安装接口支持任意并发。`install_native_page_app` 是此入口的底层 Core 边界，App 作者使用 System 入口，以保证注册和生命周期连接。
 
@@ -78,17 +78,17 @@ Root 不显示默认 Back，也不响应 Edge Back。子页面上的 Back 进入
 
 PWR Home 不经过 App Back 回调，也不受确认界面阻塞：它取消待决 token、结束当前导航任务并显示 Watch Face。App 停止或崩溃同样使 token 失效；迟到的允许或取消返回 `stale_request`，不得改变新任务。App 自定义 Back 控件或手势必须调用相同入口，不可只切换 GUI 而不更新框架栈。
 
-Native Reference App 的 Detail 提供 `Back confirm: Off/On` 开关，默认 Off 保持立即返回。开启后使用默认 Back 或 Edge Back，会保持 Detail、暂停重复 Back，并提示选择 `Allow Back` 或 `Cancel Back`；两者调用共同 Navigator 的 `complete_back(token, allow)`。未有待决时点击确认按钮报告不可用，不执行 pop。15 秒超时由 System 调用 Navigator 的 `expire_back`，App 的 100ms 状态 timer 只更新提示、清理已失效的本地 token，不另设超时或页面栈。停止时释放 timer 和回调，重新打开关闭确认开关，旧运行的确认状态不能写入新运行。该路径源码和组件验证完成，设备验证仍归 008/03，Runtime 同等样例尚待 014/04。
+Native Reference App 的 Detail 提供 `Back confirm: Off/On` 开关，默认 Off 保持立即返回。开启后使用默认 Back 或 Edge Back，会保持 Detail、暂停重复 Back，并提示选择 `Allow Back` 或 `Cancel Back`；两者调用共同 Navigator 的 `complete_back(token, allow)`。未有待决时点击确认按钮报告不可用，不执行 pop。15 秒超时由 System 调用 Navigator 的 `expire_back`，App 的 100ms 状态 timer 只更新提示、清理已失效的本地 token，不另设超时或页面栈。停止时释放 timer 和回调，重新打开关闭确认开关，旧运行的确认状态不能写入新运行。该路径源码和组件验证完成，设备验证仍归 008/03，Runtime 同等确认样例已随 014/04 进入源码，真机结果仍由 008/03 持有。
 
 ## Card 注册与配置组件
 
-当前 C++ 核心提供 [CardRegistry](../../firmware/components/espocket_navigation/include/espocket/card_registry.hpp)，只管理声明身份和左右配置，不保存 Page 栈、App 运行状态或 GUI 对象。它与 PageNavigator 复用 `validate_page_declaration`，避免 Card 与安装使用不同校验规则。此组件尚未连接 Shell 呈现和 Core 安装/卸载；完整 Card API 与生命周期仍按 014/03、05 接入。
+当前 C++ 核心提供 [CardRegistry](../../firmware/components/espocket_navigation/include/espocket/card_registry.hpp)，只管理声明身份和左右配置，不保存 Page 栈、App 运行状态或 GUI 对象。它与 PageNavigator 复用 `validate_page_declaration`，避免 Card 与安装使用不同校验规则。System 已连接 Core 安装/卸载、NVS 配置和 Shell 呈现；Runtime Card 提供者与 package 替换迁移仍由 014/03、05 接入。
 
 | 接口 | 结果 |
 |---|---|
 | `register_app(PageDeclaration)` | 校验后登记 App 可提供的 Card；重复 App 拒绝。无 Card 声明的 App 不出现在 available_cards。 |
 | `update_app(PageDeclaration)` | App 必须已登记且 Root ID 不变；失败保持原声明/配置。成功移除已删除 Card 的配置，保留其余身份和用户顺序。 |
-| `uninstall_app(appId)` | 移除 App 声明与其已配置 Card；不影响其他 App。实际 Core 回调接入尚待完成。 |
+| `uninstall_app(appId)` | 移除 App 声明与其已配置 Card；不影响其他 App。真实 Core 卸载回调使用此入口。 |
 | `available_cards()` / `target_page(CardKey)` | 查询已声明 Card；空目标解析为 Root，不执行页面转移。 |
 | `add(CardKey, side, index)` | 在左右序列指定索引插入；同一 appId+cardId 在两侧合计最多一次。 |
 | `move(CardKey, side, finalIndex)` | 移动已有配置，索引指删除原位置后的最终序列位置；可换侧。 |
@@ -97,15 +97,33 @@ Native Reference App 的 Detail 提供 `Back confirm: Off/On` 开关，默认 Of
 | `configuration()` | 返回左右稳定身份列表的拷贝；不会以声明数组顺序重新编号。 |
 | `set_removal_handler(handler)` | 提交后通知 UserRemoved、AppUninstalled 或 RemovedByUpdate；回调在锁外运行，可查询已提交配置。 |
 
-`CardSide` 只允许 Left/Right，不配置 Quick Settings 或 Launcher。`CardError` 区分无效声明、未知 App/Card、重复登记/配置、未配置、错误位置/方向和身份不一致。Registry 方法内部加锁；移除回调应快速完成且不抛异常。回调是配置移除的历史事实，不是另一个运行实例或后台订阅。配置快照尚未持久化到 NVS；存储与实际 Card 可见生命周期接入不能由本组件测试代替。
+`CardSide` 只允许 Left/Right，不配置 Quick Settings 或 Launcher。`CardError` 区分无效声明、未知 App/Card、重复登记/配置、未配置、错误位置/方向和身份不一致。Registry 方法内部加锁；移除回调应快速完成且不抛异常。回调是配置移除的历史事实，不是另一个运行实例或后台订阅。配置快照现在由下节的 Store 接入 NVS；实际 Card 可见生命周期仍不能由 Registry/Store 组件测试代替。
+
+## Card 配置存储与 Core 接入
+
+`System::configure_cards(CardConfiguration)` 是串行 App Owner 的完整配置入口，`card_configuration()` 与 `available_cards()` 返回拷贝。配置仅包含左右数组中的稳定 appId/cardId，不包含 Quick Settings、Launcher、页面栈或 GUI 对象。增删和排序通过修改这份拷贝并提交完整候选完成；Card 编辑器不属于当前范围。身份与跨侧重复完整校验后，先保存 NVS，再发布 Registry 更新；保存失败保留现有配置，不能将 ACK 当作已改变。
+
+[Card 配置 schema v1](schemas/card-configuration-v1.schema.json) 与生产 codec 使用整数 version 1、left/right 数组，所有未知字段与跨侧重复拒绝。最大编码 16,384 字节。设备保存于 espocket/cards_v1，启动在 Core package 安装后恢复。未知 App/Card、坏编码或读取失败报告错误、保留原始 NVS，不猜测它是卸载，也不覆写为一个空配置。
+
+普通 Native 和可见 Runtime 的安装声明现在登记到同一个 Registry。真实 Core 卸载删除对应配置并记录 AppUninstalled；失败的 NVS 保存报告错误，不复活已卸载 App。停止后的 Native 声明更新使用 `System::update_navigated_declaration`，复用 Navigator 身份规则，再更新 Registry，移除删除的 Card 并记录 RemovedByUpdate，保留其他稳定 ID 与顺序。更新已生效后保存失败仍报告错误，不能声称回滚了 Owner 事实。
+
+Runtime package 替换与 Native 的声明更新是不同入口。锁定 Core 将替换实现为 uninstall/install，现有 hook 不带原因；尚未提供保留 Card 配置的产品更新事务。不能把普通卸载判成更新，或声称官方 Store 替换已经验证迁移。该事务与 Runtime Card 提供者仍由 014/03–05 完成；Native 提供者和 Shell 呈现已经接入，真实显示验收保留。
+
+## Native Card 内容接口
+
+App 使用 [CardModel](../../firmware/components/espocket_navigation/include/espocket/card_model.hpp) 和 `CardModelFactory` 提供内容，并把工厂作为 `System::install_navigated_app` 第四个参数。工厂按稳定 Card ID 创建专用模型，不启动完整 App、不创建第二份页面栈。`view()` 提供 Brookesia GUI JSON、资源目录、绝对 Screen 路径和动作名称；`on_show/on_refresh/on_pause/on_action` 在 System Owner 上执行，不得抛异常、重入配置或保留失效的 `CardUi` 引用。`CardUi::set_text` 只作用于自己的文档，可见时有效。
+
+框架挂载专用文档，订阅点击并交给有期限、有代际校验的 Owner 队列；离屏和息屏取消订阅、暂停模型，恢复时重新订阅并请求数据。GUI 迟到事件仍绑定旧代际，不能作用于恢复后的槽位。App 声明动作 `espocket.card.open` 即可打开该 Card 的最新目标；框架先暂停 Card，再建立完整 App Root 和目标 Page。Native Reference App 提供 summary→Root、detail→Detail 两个 Card，数据来自自己的 manifest；没有承诺后台常驻或业务持久化。
+
+左右已配置序列替代该方向原有示例 Card，空序列保留系统 Battery/Brightness 示例。横滑向外浏览序列，向内在首个 Card 回 Watch Face；纵向交互保留给 App。App Card 有轻微返回方向提示，没有顶部状态栏。Card 编辑器不在本轮范围，正式固件不自动把所有声明加入用户配置。
 
 ## App Card 生命周期
 
-当前提供 [CardSession](../../firmware/components/espocket_navigation/include/espocket/card_session.hpp) 的同步 C++ 生命周期组件，尚未接 Shell GUI 或 Native/Runtime Card 提供者。一个 Session 管理一个呈现槽位，状态为 Empty、Paused 或 Visible；不是 Core Running Instance，也不保存 Page 栈。`show(key)` 只接受已声明且已配置的 Card，首次创建内容，暂停后再次显示调用 `show` 和 `refresh` 请求新数据；已可见的重复 show 不重复刷新。切换 Card 先暂停并销毁旧内容。`pause()` 保留当前 UI，`release()` 和析构释放 UI 与订阅。
+当前提供 [CardSession](../../firmware/components/espocket_navigation/include/espocket/card_session.hpp) 的同步 C++ 生命周期组件，已接 Shell GUI 和 Native Card 提供者。一个 Session 管理一个呈现槽位，状态为 Empty、Paused 或 Visible；不是 Core Running Instance，也不保存 Page 栈。`show(key)` 只接受已声明且已配置的 Card，首次创建内容，暂停后再次显示调用 `show` 和 `refresh` 请求新数据；已可见的重复 show 不重复刷新。切换 Card 先暂停并销毁旧内容。`pause()` 保留当前 UI，`release()` 和析构释放 UI 与订阅。
 
 App 绑定实现 `CardContent::show/refresh/pause`，析构负责资源回收。创建失败保持 Empty；显示或刷新失败暂停内容并报告明确错误，可由 Shell 再次 show 重试。`open_app(launcher)` 重新读取 Registry 的当前目标，先暂停，再调用完整 App 启动入口；启动失败保持 Paused，由 Shell 明确决定恢复呈现。Launcher 仍需使用现有 Navigator 建立 Root 和目标路径，这个组件不建立第二份栈。配置已删除或声明已卸载时拒绝启动并释放内容。
 
-System/Shell 装配应在 GUI Owner 任务串行调用 Session 和 Registry 更新，并把 Registry 的移除通知转发给 `invalidate(key)`；它仅释放匹配的 Card，不影响其他 Card。内容、工厂与启动回调不得抛异常或在回调中修改 Registry；重入 Session 操作返回 Busy。当前 refresh 是同步能力，未提供后台异步结果提交 API；线程调度、GUI 容器、真实提供者接入和持久配置仍由 014/03–05 完成，组件测试不代替实际界面验收。
+System/Shell 装配应在 GUI Owner 任务串行调用 Session 和 Registry 更新，并把 Registry 的移除通知转发给 `invalidate(key)`；它仅释放匹配的 Card，不影响其他 Card。内容、工厂与启动回调不得抛异常或在回调中修改 Registry；重入 Session 操作返回 Busy。当前 refresh 是同步能力，未提供后台异步结果提交 API；System 在原有串行 App 回调任务调度模型与动作，GUI 回调只入队。组件测试不代替实际界面验收。
 
 Card 与完整 App 使用同一 App 身份和持久业务数据，但可以是不同内存实例。ESPocket 管理 Card UI 的创建、可见、暂停与释放。离屏后 Card UI 可暂停或销毁；再次可见时框架请求新数据。App 提供 Card 内容、订阅来源和轻量操作；可靠计时、网络状态与其他长期业务放在 App 持久数据或 Service，不以 Card UI 常驻为前提。进入完整 App 时 Card 暂停，PWR Home 返回 Watch Face。
 
@@ -124,7 +142,7 @@ Home Space 拥有 Card 横滑。Card 内点击、纵向滚动和轻量操作归 
 
 圆屏中部是标题、主值和主操作的优先区域；首版采用短内容和单列布局，检查首尾项、长文案及控件是否被圆形边缘裁切。不要用手机式 Bottom Navigation、密集 Toolbar 或 Tabs 承载主要流程。需要 Back 时使用框架默认入口，或按已声明接管规则实现同一语义，避免重复按钮；Root 的离开入口是 PWR Home。
 
-App 只维护业务数据和呈现对象，不维护供系统读取的第二份页面栈。开始时连接回调/订阅，暂停可停止只影响可见内容的工作，停止时释放 timer、订阅和 GUI 引用；迟到回调应检查运行身份或使用不会写入新运行的状态对象。后台驻留不作保证，App/Card UI 被释放后可靠业务仍由其持久状态或 Service 负责。Native Hello 的确认样例可参考 timer 与 token 清理；Runtime API 可调用绑定仍待实施，不能直接把 C++ 接口当作现成 JS 导出。
+App 只维护业务数据和呈现对象，不维护供系统读取的第二份页面栈。开始时连接回调/订阅，暂停可停止只影响可见内容的工作，停止时释放 timer、订阅和 GUI 引用；迟到回调应检查运行身份或使用不会写入新运行的状态对象。后台驻留不作保证，App/Card UI 被释放后可靠业务仍由其持久状态或 Service 负责。Native Hello 的确认样例可参考 timer 与 token 清理；Runtime Page 绑定已提供版本化 JSON API；Card 模型的 C++ 回调不能直接当作现成 JS 导出。
 
 ## 观察与错误
 

@@ -69,6 +69,7 @@ std::expected<void, std::string> System::on_init()
         ESP_LOGW(TAG, "Developer mode disabled after storage read failure: %s",
                  restored.error().c_str());
     }
+    init_cards();
     test_power_input_ = std::make_unique<TestInputQueue>();
     test_touch_input_ = std::make_unique<TouchInputSequence>(*test_power_input_,
         [this](const TouchInputStep &step, bool first) -> std::expected<void, std::string> {
@@ -101,7 +102,7 @@ std::expected<void, std::string> System::on_init()
         [weak_hello = std::weak_ptr<HelloApp>(hello)](std::string_view from, std::string_view to) {
             auto app = weak_hello.lock();
             return app && app->present_page(from, to);
-        }
+        }, hello->get_card_factory()
     );
     if (!hello_result) {
         return std::unexpected("Failed to install Hello Native: " + hello_result.error());
@@ -207,6 +208,8 @@ std::expected<void, std::string> System::on_init()
             },
         },
         .tick = [this]() { poll_system_input(); },
+        .card_step = [this](bool left, bool inward) { return step_card(left, inward); },
+        .surface_changed = [this](ShellSurface surface) { card_surface_changed(surface); },
         }
     );
     auto result = install_app(shell_);
@@ -222,6 +225,13 @@ std::expected<void, std::string> System::on_init()
 std::expected<void, std::string> System::on_start()
 {
     init_runtime_navigation();
+    if (card_actions_) card_actions_->close();
+    card_actions_ = std::make_shared<NavigationRequestQueue>();
+    if (card_store_) {
+        if (auto restored = card_store_->restore(); !restored) {
+            ESP_LOGW(TAG, "Card configuration not restored: %s", restored.error().c_str());
+        }
+    }
     stopping_.store(false, std::memory_order_release);
     if (test_power_input_) { test_power_input_->cancel_pending(); }
     foreground_app_id_.store(
@@ -271,6 +281,8 @@ void System::on_stop()
 {
     stopping_.store(true, std::memory_order_release);
     stop_runtime_navigation();
+    pause_card();
+    if (card_actions_) card_actions_->close();
     if (test_adapter_) {
         test_adapter_->stop();
     }
@@ -301,8 +313,14 @@ void System::on_stop()
 void System::on_deinit()
 {
     stop_runtime_navigation();
+    if (card_actions_) card_actions_->close();
+    card_session_.reset();
+    card_actions_.reset();
+    card_factories_.clear();
     shell_.reset();
     settings_adapter_.reset();
+    card_store_.reset();
+    cards_.reset();
     settings_id_ = esp_brookesia::system::core::INVALID_APP_ID;
     decltype(page_navigators_) retired_navigators;
     {

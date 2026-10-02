@@ -50,10 +50,12 @@ public:
     std::expected<void, CardError> move(const CardKey &key, CardSide side, size_t final_index);
     std::expected<void, CardError> remove(const CardKey &key);
     std::expected<void, CardError> replace_configuration(CardConfiguration configuration);
+    std::expected<void, CardError> validate_configuration(const CardConfiguration &configuration) const;
     CardConfiguration configuration() const;
     void set_removal_handler(RemovalHandler handler);
 
 private:
+    std::expected<void, CardError> validate_configuration_locked(const CardConfiguration &configuration) const;
     std::expected<std::string, CardError> target_page_locked(const CardKey &key) const;
     std::vector<CardKey> &side_locked(CardSide side);
     std::vector<CardRemoval> prune_locked(std::string_view app_id, CardRemovalReason reason);

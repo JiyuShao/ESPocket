@@ -34,6 +34,9 @@
 #include "espocket/touch_input_sequence.hpp"
 #include "espocket/page_navigator.hpp"
 #include "espocket/runtime_page_adapter.hpp"
+#include "espocket/card_configuration_store.hpp"
+#include "espocket/card_session.hpp"
+#include "espocket/navigation_request_queue.hpp"
 #include "espocket/settings_navigation_adapter.hpp"
 #include "espocket/power_key_monitor.hpp"
 

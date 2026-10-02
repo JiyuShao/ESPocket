@@ -217,6 +217,7 @@ struct CircularShell::KeyboardState {
 
 struct CircularShell::BackOverlayState {
     lv_obj_t *button = nullptr;
+    lv_obj_t *card_hint = nullptr;
     std::atomic_bool clicked = false;
 };
 

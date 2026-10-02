@@ -154,14 +154,11 @@ std::expected<void, CardError> CardRegistry::replace_configuration(CardConfigura
     RemovalHandler handler;
     {
         std::lock_guard lock(mutex_);
+        if (auto valid = validate_configuration_locked(configuration); !valid) return valid;
         std::set<std::pair<std::string, std::string>> seen;
         for (const auto *side : {&configuration.left, &configuration.right}) {
             for (const auto &key : *side) {
-                auto target = target_page_locked(key);
-                if (!target) { return std::unexpected(target.error()); }
-                if (!seen.emplace(key.app_id, key.card_id).second) {
-                    return std::unexpected(CardError::AlreadyConfigured);
-                }
+                seen.emplace(key.app_id, key.card_id);
             }
         }
         for (const auto *side : {&configuration_.left, &configuration_.right}) {
@@ -176,6 +173,25 @@ std::expected<void, CardError> CardRegistry::replace_configuration(CardConfigura
     }
     if (handler) { for (const auto &event : removed) { handler(event); } }
     return {};
+}
+
+std::expected<void, CardError> CardRegistry::validate_configuration_locked(const CardConfiguration &configuration) const
+{
+    std::set<std::pair<std::string, std::string>> seen;
+    for (const auto *side : {&configuration.left, &configuration.right}) {
+        for (const auto &key : *side) {
+            auto target = target_page_locked(key);
+            if (!target) return std::unexpected(target.error());
+            if (!seen.emplace(key.app_id, key.card_id).second) return std::unexpected(CardError::AlreadyConfigured);
+        }
+    }
+    return {};
+}
+
+std::expected<void, CardError> CardRegistry::validate_configuration(const CardConfiguration &configuration) const
+{
+    std::lock_guard lock(mutex_);
+    return validate_configuration_locked(configuration);
 }
 
 CardConfiguration CardRegistry::configuration() const

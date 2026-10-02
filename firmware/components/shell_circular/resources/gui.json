@@ -165,16 +165,24 @@
       "children": []
     },
     {
+      "type": "viewScreen",
+      "id": "app_card",
+      "commonProps": { "scrollable": false },
+      "style": { "bgColor": "#07090d", "padding": 0 },
+      "children": []
+    },
+    {
       "type": "screenFlow",
       "id": "shell_pages",
-      "screens": [ "watch_face", "battery_card", "brightness_card", "quick_settings", "launcher" ],
+      "screens": [ "watch_face", "battery_card", "brightness_card", "quick_settings", "launcher", "app_card" ],
       "initial": "watch_face",
       "transitions": [
         { "from": [], "action": "open_watch_face", "to": "watch_face" },
         { "from": [], "action": "open_battery_card", "to": "battery_card" },
         { "from": [], "action": "open_brightness_card", "to": "brightness_card" },
         { "from": [], "action": "open_quick_settings", "to": "quick_settings" },
-        { "from": [], "action": "open_launcher", "to": "launcher" }
+        { "from": [], "action": "open_launcher", "to": "launcher" },
+        { "from": [], "action": "open_app_card", "to": "app_card" }
       ]
     },
     {

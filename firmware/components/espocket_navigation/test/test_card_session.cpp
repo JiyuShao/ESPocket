@@ -10,12 +10,14 @@ struct Content final : CardContent {
     std::vector<std::string> &events;
     bool &show_ok;
     bool &refresh_ok;
-    Content(std::vector<std::string> &log, bool &show_result, bool &refresh_result)
-        : events(log), show_ok(show_result), refresh_ok(refresh_result) {}
+    CardSession *owner = nullptr;
+    Content(std::vector<std::string> &log, bool &show_result, bool &refresh_result, CardSession *session = nullptr)
+        : events(log), show_ok(show_result), refresh_ok(refresh_result), owner(session) {}
     ~Content() override { events.push_back("destroy"); }
     bool show() noexcept override { events.push_back("show"); return show_ok; }
     bool refresh() noexcept override { events.push_back("refresh"); return refresh_ok; }
     void pause() noexcept override { events.push_back("pause"); }
+    bool action(std::string_view value) noexcept override { if (owner) assert(owner->pause().error() == CardSessionError::Busy); events.push_back(std::string(value)); return value == "increment"; }
 };
 
 int main()
@@ -31,10 +33,11 @@ int main()
         events.push_back("create");
         assert(owner->release().error() == CardSessionError::Busy);
         if (!create_ok) return nullptr;
-        return std::make_unique<Content>(events, show_ok, refresh_ok);
+        return std::make_unique<Content>(events, show_ok, refresh_ok, owner);
     });
     owner = &session;
     registry.set_removal_handler([&](const auto &removed) { assert(session.invalidate(removed.key)); });
+    assert(session.action("increment").error() == CardSessionError::NoCard);
     assert(session.open_app({}).error() == CardSessionError::NoCard);
     assert(session.show(a).error() == CardSessionError::NotConfigured);
     assert(events.empty() && session.visibility() == CardVisibility::Empty);
@@ -48,9 +51,14 @@ int main()
     assert(session.show(a));
     assert(events == std::vector<std::string>({"create", "show", "refresh"}));
     assert(session.key() == a && session.visibility() == CardVisibility::Visible);
+    assert(session.action("increment"));
+    assert(events.back() == "increment");
+    assert(session.action("unknown").error() == CardSessionError::PresentationFailed);
+    events.resize(3);
     assert(session.show(a)); // Already visible is not another visibility transition.
     assert(events.size() == 3);
     assert(session.pause());
+    assert(session.action("increment").error() == CardSessionError::NoCard);
     assert(session.pause());
     assert(events.back() == "pause" && events.size() == 4);
     assert(session.show(a)); // Resume retained UI, always request fresh data.
@@ -100,6 +108,11 @@ int main()
 
     // Even if removal notification wiring is missing, an invalid launch releases old UI.
     registry.set_removal_handler({});
+    assert(registry.add(a, CardSide::Left, 0));
+    assert(session.show(a));
+    assert(registry.remove(a));
+    assert(session.action("increment").error() == CardSessionError::NotConfigured);
+    assert(session.visibility() == CardVisibility::Empty);
     assert(registry.add(a, CardSide::Left, 0));
     assert(session.show(a));
     assert(registry.remove(a));

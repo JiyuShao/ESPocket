@@ -6,7 +6,7 @@
 
 **Status:** ready-for-human
 
-- [ ] 四条固定 Native/Runtime path 各通过 5 次。
+- [ ] 四条 Native/Runtime path 各完成一次集中验收。
 - [ ] 两种模型的 Screen Off/Wake、horizontal swipe、Root 无 Back 与待决 Back 检查通过。
 - [ ] Lifecycle 与 heap evidence 无持续 regression。
 
@@ -18,16 +18,16 @@
 
 本票要求 Native 与 Runtime 分别提供真机证据。Runtime lifecycle 基线已通过，但不能替代本票的真实 Runtime 导航、恢复与回收验证。
 
-### Fixed repetition counts
+### 单次路径
 
-以下次数均为固定验收要求，且不超过 5 次。任何一次失败都必须记录，不能追加次数稀释失败。
+按用户已明确要求减少验证次数，每条路径集中执行一次；失败保留独立 attempt，修复后再执行，不以追加成功次数稀释失败。既有已接受结果继续有效。
 
 | 执行模型 / 路径 | 次数 | PASS 条件 | 状态 |
 |---|---:|---|---|
-| Native Root → Detail → Back → Root → PWR Home | 5 | 子页面 Back、Root 无 Back 与 PWR Home 均正确 | NOT TESTED |
-| Runtime Root → Detail → Back → Root → PWR Home | 5 | 子页面 Back、Root 无 Back 与 PWR Home 均正确 | NOT TESTED |
-| Native background reclaim → relaunch | 5 | 从 App Root 启动，不恢复失效页面 | NOT TESTED |
-| Runtime background reclaim → relaunch | 5 | 从 App Root 启动，不恢复失效页面 | NOT TESTED |
+| Native Root → Detail → Back → Root → PWR Home | 1 | 子页面 Back、Root 无 Back 与 PWR Home 均正确 | NOT TESTED |
+| Runtime Root → Detail → Back → Root → PWR Home | 1 | 子页面 Back、Root 无 Back 与 PWR Home 均正确 | NOT TESTED |
+| Native background reclaim → relaunch | 1 | 从 App Root 启动，不恢复失效页面 | NOT TESTED |
+| Runtime background reclaim → relaunch | 1 | 从 App Root 启动，不恢复失效页面 | NOT TESTED |
 
 ### Required one-pass checks
 
@@ -43,7 +43,7 @@
 
 ## 证据规则
 
-- 每次固定循环必须标识执行模型、attempt 编号、Page ID 与最终目标。
+- 每条验收路径必须标识执行模型、attempt 编号、Page ID 与最终目标。
 - Runtime 路径必须使用真实 Runtime App，不能用 Native mock 替代。
 - Preview、host 测试或串口状态打印不能替代物理显示、触摸和 PWR 观察。
 - Runtime 路径未通过或任一必需项缺少证据时，不得关闭本票。
@@ -55,3 +55,5 @@
 - 每次回收必须证明旧页面和瞬时 Overlay 不再可恢复。
 - 重新启动必须证明从 App Root 开始。
 - Native 与 Runtime 的失败必须分别记录，不能互相替代。
+
+- 2026-10-02：落实用户“验证次数改小、不要反复操作”的授权，四条路径各一次；物理/视觉条件与失败记录不变。新增回收开关与镜像准备见 02，本票仍需真实设备证据。

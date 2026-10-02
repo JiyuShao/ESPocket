@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ESPocket Home Space Card configuration v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "left",
+    "right"
+  ],
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "left": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "appId",
+          "cardId"
+        ],
+        "properties": {
+          "appId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "cardId": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "right": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "appId",
+          "cardId"
+        ],
+        "properties": {
+          "appId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "cardId": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  }
+}

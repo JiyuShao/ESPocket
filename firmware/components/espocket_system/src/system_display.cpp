@@ -2,31 +2,6 @@
 
 namespace espocket {
 
-void System::handle_screen_timeout()
-{
-    if (stopping_.load(std::memory_order_acquire) ||
-            !display_on_.load(std::memory_order_acquire)) {
-        return;
-    }
-    auto result = set_display_on(false);
-    if (!result) {
-        ESP_LOGW(TAG, "Automatic screen-off failed: %s", result.error().c_str());
-        return;
-    }
-
-#if CONFIG_ESPOCKET_M6_RECLAIM_ON_TIMEOUT_TEST
-    if (resume_app_id_ != esp_brookesia::system::core::INVALID_APP_ID) {
-        const auto target = resume_app_id_;
-        auto stop_result = stop_app(target);
-        if (!stop_result) {
-            ESP_LOGE(TAG, "M6_RECLAIM_TEST failed to stop App: %s", stop_result.error().c_str());
-        } else {
-            ESP_LOGI(TAG, "M6_RECLAIM_TEST stopped resume target app_id=%" PRIu32, target);
-        }
-    }
-#endif
-}
-
 std::expected<void, std::string> System::set_display_on(bool on)
 {
     if (!shell_) {
@@ -66,6 +41,13 @@ std::expected<void, std::string> System::set_display_on(bool on)
         }
     }
     display_on_.store(on, std::memory_order_release);
+    if (!on) pause_card();
+    else if (foreground_token_->load() == 0 &&
+        (shell_->current_surface() == ShellSurface::LeftAppCard || shell_->current_surface() == ShellSurface::RightAppCard)) {
+        if (auto resumed = resume_card(); !resumed) {
+            ESP_LOGW(TAG, "Card wake presentation failed: %s", resumed.error().c_str());
+        }
+    }
     ESP_LOGI(TAG, "M6 display state: %s", on ? "On" : "Off");
     return {};
 }

@@ -1,4 +1,4 @@
-"""Run the real versioned JSON boundary and Runtime adapter against the shared Navigator."""
+"""Run production Runtime navigation and Card storage JSON boundaries."""
 from pathlib import Path
 import os
 import subprocess
@@ -11,6 +11,12 @@ BOOST = COMPONENT.parents[1] / 'managed_components/espressif__esp-boost/src'
 
 class RuntimeAdapterTest(unittest.TestCase):
     def test_json_and_navigation_contract(self):
+        self.run_contract("test_runtime_page_adapter.cpp")
+
+    def test_card_configuration_storage(self):
+        self.run_contract("test_card_configuration_store.cpp")
+
+    def run_contract(self, source):
         with tempfile.TemporaryDirectory(prefix='espocket-runtime-pages-') as directory:
             temp = Path(directory)
             (temp / 'boost.cpp').write_text('#include <boost/json/src.hpp>\n')
@@ -22,7 +28,9 @@ class RuntimeAdapterTest(unittest.TestCase):
                 str(COMPONENT / 'src/page_declaration_codec.cpp'),
                 str(COMPONENT / 'src/runtime_page_adapter.cpp'),
                 str(COMPONENT / 'src/navigation_request_queue.cpp'),
-                str(COMPONENT / 'test/test_runtime_page_adapter.cpp'), str(temp / 'boost.cpp'),
+                str(COMPONENT / 'src/card_registry.cpp'),
+                str(COMPONENT / 'src/card_configuration_store.cpp'),
+                str(COMPONENT / 'test' / source), str(temp / 'boost.cpp'),
                 '-o', str(binary),
             ], check=True)
             subprocess.run([str(binary)], check=True)

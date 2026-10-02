@@ -6,6 +6,12 @@ std::expected<void, std::string> System::on_app_uninstalled(
     const esp_brookesia::system::core::AppInfo &app
 )
 {
+    if (cards_ && cards_->uninstall_app(app.manifest.id)) {
+        if (auto saved = card_store_->save_current(); !saved) {
+            ESP_LOGE(TAG, "Card uninstall persistence failed: %s", saved.error().c_str());
+        }
+    }
+    card_factories_.erase(app.app_id);
     std::shared_ptr<PageNavigator> removed;
     {
         std::lock_guard lock(page_navigators_mutex_);
@@ -53,11 +59,19 @@ std::expected<void, std::string> System::on_app_started(
         }
     }
 
+    pause_card();
     foreground_app_id_.store(app.app_id, std::memory_order_release);
     do {
         ++foreground_generation_;
     } while (foreground_generation_ == 0);
     foreground_token_->store(foreground_generation_, std::memory_order_release);
+    if (pending_card_ && pending_card_->app_id == app.manifest.id) {
+        const auto target = cards_->target_page(*pending_card_);
+        auto navigator = navigator_for(app.app_id);
+        if (!target || !navigator || (*target != navigator->snapshot().page_id && !navigator->push(*target))) {
+            ESP_LOGW(TAG, "Card target_unavailable: app=%s card=%s; no target Page committed", pending_card_->app_id.c_str(), pending_card_->card_id.c_str());
+        }
+    }
     const auto navigator = navigator_for(app.app_id);
     default_back_visible_.store(navigator && navigator->show_default_back(),
                                std::memory_order_release);

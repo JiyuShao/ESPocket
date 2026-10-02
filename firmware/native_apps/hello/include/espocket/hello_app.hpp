@@ -8,6 +8,7 @@
 #include <string_view>
 
 #include "brookesia/system_core.hpp"
+#include "espocket/card_model.hpp"
 
 namespace espocket {
 
@@ -17,6 +18,7 @@ struct PageDeclaration;
 class HelloApp final : public esp_brookesia::system::core::IApp {
 public:
     PageDeclaration get_page_declaration() const;
+    CardModelFactory get_card_factory() const;
     void set_navigator(std::weak_ptr<PageNavigator> navigator);
     bool present_page(std::string_view from, std::string_view to);
     esp_brookesia::system::core::AppManifest get_manifest() const override;

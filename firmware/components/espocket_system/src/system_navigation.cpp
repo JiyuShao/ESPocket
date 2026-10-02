@@ -19,6 +19,8 @@ std::expected<TestSnapshot, std::string> System::read_test_snapshot() const
     case ShellSurface::QuickSettings: snapshot.surface = "quick_settings"; break;
     case ShellSurface::BatteryCard: snapshot.surface = "shell.battery"; break;
     case ShellSurface::BrightnessCard: snapshot.surface = "shell.brightness"; break;
+    case ShellSurface::LeftAppCard: snapshot.surface = "app_card.left"; break;
+    case ShellSurface::RightAppCard: snapshot.surface = "app_card.right"; break;
     }
     if (token != 0) {
         auto page = foreground_page_snapshot();
@@ -159,15 +161,23 @@ std::shared_ptr<PageNavigator> System::navigator_for(
 std::expected<InstalledPageApp, std::string> System::install_navigated_app(
     std::shared_ptr<esp_brookesia::system::core::IApp> app,
     PageDeclaration declaration,
-    PageNavigator::Presenter presenter
+    PageNavigator::Presenter presenter,
+    CardModelFactory card_factory
 )
 {
+    const auto card_declaration = declaration;
     auto installed = install_native_page_app(*this, std::move(app), std::move(declaration),
                                              std::move(presenter));
     if (!installed) {
         return installed;
     }
+    if (!cards_ || !cards_->register_app(card_declaration)) {
+        const auto rollback = uninstall_app(installed->app_id);
+        if (!rollback) return std::unexpected("card_declaration_registration_failed; rollback_failed: " + rollback.error());
+        return std::unexpected("card_declaration_registration_failed");
+    }
     register_navigator(installed->app_id, installed->navigator);
+    if (card_factory) card_factories_.emplace(installed->app_id, std::move(card_factory));
     return installed;
 }
 

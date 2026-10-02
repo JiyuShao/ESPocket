@@ -113,4 +113,23 @@ std::expected<void, CardSessionError> CardSession::open_app(const AppLauncher &l
     return {};
 }
 
+std::expected<void, CardSessionError> CardSession::action(std::string_view action)
+{
+    if (busy_) return std::unexpected(CardSessionError::Busy);
+    Operation operation(busy_);
+    if (!key_ || visibility_ != CardVisibility::Visible) return std::unexpected(CardSessionError::NoCard);
+    if (!registry_.target_page(*key_)) {
+        release_content();
+        return std::unexpected(CardSessionError::DeclarationUnavailable);
+    }
+    const auto configuration = registry_.configuration();
+    if (std::ranges::find(configuration.left, *key_) == configuration.left.end() &&
+        std::ranges::find(configuration.right, *key_) == configuration.right.end()) {
+        release_content();
+        return std::unexpected(CardSessionError::NotConfigured);
+    }
+    return content_->action(action) ? std::expected<void, CardSessionError>{} :
+                                    std::unexpected(CardSessionError::PresentationFailed);
+}
+
 } // namespace espocket

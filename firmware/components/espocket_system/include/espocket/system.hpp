@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <expected>
 #include <memory>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -13,6 +14,8 @@
 #include "brookesia/system_core.hpp"
 #include "espocket/page_navigator.hpp"
 #include "espocket/native_page_installation.hpp"
+#include "espocket/card_registry.hpp"
+#include "espocket/card_model.hpp"
 
 namespace espocket {
 
@@ -27,6 +30,8 @@ class InteractionTestAdapter;
 class SettingsNavigationAdapter;
 class RuntimePageAdapter;
 class NavigationRequestQueue;
+class CardConfigurationStore;
+class CardSession;
 struct TestSnapshot;
 enum class ShellSurface : uint8_t;
 
@@ -39,8 +44,15 @@ public:
     std::expected<InstalledPageApp, std::string> install_navigated_app(
         std::shared_ptr<esp_brookesia::system::core::IApp> app,
         PageDeclaration declaration,
-        PageNavigator::Presenter presenter
+        PageNavigator::Presenter presenter,
+        CardModelFactory cards = {}
     );
+    // Invoke from the serialized App owner, as for installation and declaration update.
+    std::expected<void, std::string> configure_cards(CardConfiguration configuration);
+    CardConfiguration card_configuration() const;
+    std::vector<CardKey> available_cards() const;
+    std::expected<void, std::string> update_navigated_declaration(
+        esp_brookesia::system::core::AppId id, PageDeclaration declaration);
 
 protected:
     esp_brookesia::system::core::SystemInfo on_get_system_info() const override;
@@ -76,6 +88,12 @@ protected:
     ) override;
 
 private:
+    void init_cards();
+    std::expected<void, std::string> step_card(bool left, bool inward);
+    void card_surface_changed(ShellSurface surface);
+    void drain_card_actions();
+    void pause_card();
+    std::expected<void, std::string> resume_card();
     void init_runtime_navigation();
     void stop_runtime_navigation();
     void drain_runtime_navigation();
@@ -112,6 +130,15 @@ private:
     struct RuntimePages { std::shared_ptr<RuntimePageAdapter> adapter; std::string flow; };
     std::unordered_map<esp_brookesia::system::core::AppId, RuntimePages> runtime_pages_;
     std::shared_ptr<NavigationRequestQueue> runtime_requests_;
+    std::unique_ptr<CardRegistry> cards_;
+    std::unique_ptr<CardConfigurationStore> card_store_;
+    std::unique_ptr<CardSession> card_session_;
+    std::shared_ptr<NavigationRequestQueue> card_actions_;
+    std::unordered_map<esp_brookesia::system::core::AppId, CardModelFactory> card_factories_;
+    uint64_t card_generation_ = 0;
+    uint64_t next_card_generation_ = 0;
+    esp_brookesia::system::core::AppId card_owner_id_ = esp_brookesia::system::core::INVALID_APP_ID;
+    std::optional<CardKey> pending_card_;
     std::shared_ptr<DeveloperMode> developer_mode_;
     std::unique_ptr<InteractionTestAdapter> test_adapter_;
     std::unique_ptr<PowerKeyMonitor> power_key_monitor_;

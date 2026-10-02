@@ -39,6 +39,12 @@ int main()
         {ShellSurface::BatteryCard, ShellGestureDirection::Right, GestureIntent::None},
         {ShellSurface::BrightnessCard, ShellGestureDirection::Right, GestureIntent::WatchFace},
         {ShellSurface::BrightnessCard, ShellGestureDirection::Left, GestureIntent::None},
+        {ShellSurface::LeftAppCard, ShellGestureDirection::Left, GestureIntent::LeftCardIn},
+        {ShellSurface::LeftAppCard, ShellGestureDirection::Right, GestureIntent::BatteryCard},
+        {ShellSurface::LeftAppCard, ShellGestureDirection::Up, GestureIntent::None},
+        {ShellSurface::RightAppCard, ShellGestureDirection::Right, GestureIntent::RightCardIn},
+        {ShellSurface::RightAppCard, ShellGestureDirection::Left, GestureIntent::BrightnessCard},
+        {ShellSurface::RightAppCard, ShellGestureDirection::Down, GestureIntent::None},
     };
     for (const auto &[surface, direction, expected] : paths) {
         ShellGestureState state;

@@ -35,6 +35,7 @@ void System::poll_system_input()
         handle_power_short_press();
     }
     drain_runtime_navigation();
+    drain_card_actions();
 }
 
 void System::handle_power_short_press()

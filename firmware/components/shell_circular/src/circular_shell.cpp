@@ -108,6 +108,7 @@ std::expected<void, std::string> CircularShell::on_stop(
         }
     }
     sync_default_back(false);
+    sync_card_hint(false);
     gesture_connection_.disconnect();
     if (home_intent_timer_id_ != esp_brookesia::system::core::INVALID_TIMER_ID) {
         (void)context.timer().stop(home_intent_timer_id_);
@@ -201,6 +202,9 @@ std::expected<void, std::string> CircularShell::on_timer(
             const bool visible = host_.back_ui && host_.back_ui().default_visible &&
                                  !keyboard_active;
             sync_default_back(visible);
+            const auto surface = current_surface();
+            sync_card_hint(!keyboard_active && !(host_.app_visible && host_.app_visible()) &&
+                (surface == ShellSurface::LeftAppCard || surface == ShellSurface::RightAppCard));
         }
         if (keyboard_state_ && host_.keyboard_result) {
             esp_brookesia::system::core::AppId app_id =
@@ -286,10 +290,10 @@ std::expected<void, std::string> CircularShell::on_timer(
                 result = show_surface(ShellSurface::WatchFace);
                 break;
             case GestureIntent::BatteryCard:
-                result = show_surface(ShellSurface::BatteryCard);
+                result = host_.card_step ? host_.card_step(true, false) : show_surface(ShellSurface::BatteryCard);
                 break;
             case GestureIntent::BrightnessCard:
-                result = show_surface(ShellSurface::BrightnessCard);
+                result = host_.card_step ? host_.card_step(false, false) : show_surface(ShellSurface::BrightnessCard);
                 break;
             case GestureIntent::QuickSettings:
                 result = show_surface(ShellSurface::QuickSettings);
@@ -303,6 +307,12 @@ std::expected<void, std::string> CircularShell::on_timer(
                 }
                 break;
             case GestureIntent::None:
+                break;
+            case GestureIntent::LeftCardIn:
+                result = host_.card_step ? host_.card_step(true, true) : show_watch_face();
+                break;
+            case GestureIntent::RightCardIn:
+                result = host_.card_step ? host_.card_step(false, true) : show_watch_face();
                 break;
             }
             if (!result) {

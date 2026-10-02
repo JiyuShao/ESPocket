@@ -39,6 +39,9 @@ struct ShellHost {
     std::function<void()> expire_back;
     ShellDeveloperModeControl developer_mode;
     std::function<void()> tick;
+    // Left=true denotes the left sequence. inward=true advances toward Home.
+    std::function<std::expected<void, std::string>(bool left, bool inward)> card_step;
+    std::function<void(ShellSurface)> surface_changed;
 };
 
 class CircularShell final : public esp_brookesia::system::core::IApp {
@@ -107,6 +110,7 @@ private:
         std::string_view display_name
     );
     void sync_default_back(bool visible);
+    void sync_card_hint(bool visible);
 
     void start_status();
     void stop_status();
