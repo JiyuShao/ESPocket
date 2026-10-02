@@ -2,7 +2,7 @@
 
 Date: 2026-10-02
 Status: 本地复现，未提交上游
-Locked backend: espressif/brookesia_runtime_js 0.8.2
+Locked backend: espressif/brookesia_runtime_js 0.8.3
 Device: Waveshare ESP32-S3 AMOLED 1.75C
 
 ## 实际故障
@@ -57,3 +57,9 @@ python scripts/firmware/run_device_tests.py --suite runtime-confirm \
 请求可配置的异步完成任务栈预算及分配策略，或让微任务/同步 Service 调用安全地在有足够栈预算的执行上下文运行。还需相同最小复现和完整 apps 套件验证，不以隐藏确认 UI 或取消契约作为通过条件。本地不修改 managed_components，不私自维护 backend fork。
 
 产品验收与 attempt 清单见 [008 设备记录](../../../.scratch/008-m8-app-contract/records/2026-10-02-app-device-frontier.md)。
+
+## 2026-10-03 版本勘误与补丁提案
+
+此前把 Runtime Manager 0.8.2 误记为 Runtime JS 版本。重新核对 main/idf_component.yml、dependencies.lock、组件 metadata、原镜像 compile_commands 后确认 Runtime JS 为 0.8.3，Manager 为 0.8.2；原故障 ELF 和资源 hash 不变。Registry 当前最新稳定 JS 版本仍是 [0.8.3](https://components.espressif.com/components/espressif/brookesia_runtime_js/versions/0.8.3/readme?language=en)。本地 0.8.3 changelog 只记载 Storage loader 修复，不是本故障修复。
+
+已准备[最小公开配置补丁提案](../../../.scratch/008-m8-app-contract/records/2026-10-03-runtime-stack-proposal.md)。它尚未接入产品、未刷写、未向上游发消息；是否维护受版本锁约束的组件补丁需用户决定。
