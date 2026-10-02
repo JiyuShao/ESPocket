@@ -1,0 +1,42 @@
+--- a/src/app/manager.cpp
++++ b/src/app/manager.cpp
+@@ -294,6 +294,19 @@
+     auto &record = *record_result.value();
+     if (record.info.manifest.kind == AppKind::Native) {
+         return {};
++    }
++    if (!record.runtime_started || record.info.state != AppState::Running) {
++        return std::unexpected("Runtime event owner is not running");
++    }
++    if (service_name == SystemCoreHelper::get_name() &&
++        event_name == BROOKESIA_DESCRIBE_TO_STR(SystemCoreHelper::EventId::KeyboardClosed)) {
++        boost::system::error_code error;
++        const auto payload = boost::json::parse(items_json, error);
++        const auto object = !error ? payload.if_object() : nullptr;
++        const auto owner = object ? object->if_contains("AppId") : nullptr;
++        if (!owner || !owner->is_number() || owner->to_number<double>() != static_cast<double>(app_id)) {
++            return std::unexpected("Keyboard result does not belong to runtime event owner");
++        }
+     }
+     return call_runtime_lifecycle(
+                record,
+--- a/src/runtime/host_bridge.cpp
++++ b/src/runtime/host_bridge.cpp
+@@ -1405,7 +1405,7 @@
+                               const std::string & event_name, const service::EventItemMap & items
+     ) {
+         const auto items_json = event_items_to_json(items);
+-        BROOKESIA_LOGD("Service event [%1%.%2%]: %3%", service_name, event_name, items_json);
++        BROOKESIA_LOGD("Service event [%1%.%2%]", service_name, event_name);
+         if (!event_dispatcher_) {
+             return;
+         }
+@@ -1474,7 +1474,7 @@
+                               const std::string & event_name, const service::EventItemMap & items
+     ) {
+         const auto items_json = event_items_to_json(items);
+-        BROOKESIA_LOGD("Service event [%1%.%2%]: %3%", service_name, event_name, items_json);
++        BROOKESIA_LOGD("Service event [%1%.%2%]", service_name, event_name);
+         if (!event_dispatcher_) {
+             return;
+         }

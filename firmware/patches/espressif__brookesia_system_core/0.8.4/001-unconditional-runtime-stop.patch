@@ -1,0 +1,25 @@
+--- a/src/app/manager.cpp
++++ b/src/app/manager.cpp
+@@ -979,7 +979,7 @@
+             heap_trace::capture(),
+             &heap_before_lifecycle
+         );
+-        if (stop_result && impl_->runtime_ && record.runtime_app_id.has_value()) {
++        if (impl_->runtime_ && record.runtime_app_id.has_value()) {
+             auto heap_before_runtime_stop = heap_trace::capture();
+             heap_trace::log(
+                 "system.runtime",
+@@ -987,7 +987,12 @@
+                 record.info.manifest.id,
+                 heap_before_runtime_stop
+             );
+-            stop_result = impl_->runtime_->stop_app(*record.runtime_app_id);
++            // Runtime::stop_app releases host resources even if its backend fails.
++            // A lifecycle failure must not retain subscriptions or service handles.
++            auto runtime_stop_result = impl_->runtime_->stop_app(*record.runtime_app_id);
++            if (stop_result) {
++                stop_result = std::move(runtime_stop_result);
++            }
+             heap_trace::log(
+                 "system.runtime",
+                 "after runtime stop_app",

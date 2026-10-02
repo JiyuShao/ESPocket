@@ -6,6 +6,8 @@
 
 已接受 [Runtime JS 0.8.3 异步栈配置补丁](espressif__brookesia_runtime_js/0.8.3/001-configure-async-stack.patch)，由 [ADR-0015](../../docs/adr/0015-runtime-async-stack-patch-exception.md)限定授权。manifest 锁定完整原始源码与补丁 hash，上游问题尚未提交。构建与设备验收状态以 [008/04](../../.scratch/008-m8-app-contract/issues/04-resolve-runtime-async-stack-overflow.md)为准。
 
+Core 0.8.4 的 failed-stop、键盘 Owner 与 queued event 补丁依据 [ADR-0016](../../docs/adr/0016-maintained-upstream-fixes.md)维护；源码回归、完整构建与尚待设备门槛见 [005/07](../../.scratch/005-m5-application-ecosystem/issues/07-isolate-runtime-keyboard-results.md)。
+
 ## 组织约定
 
 ```text

@@ -37,9 +37,22 @@ class PatchedFirmwareStageTest(unittest.TestCase):
             'source_files': BUILDER.inventory(self.registry),
             'patches': [{'file': patch.name, 'sha256': BUILDER.digest(patch)}],
         }))
+        core_component, core_version = BUILDER.PATCHES[1]
+        core = self.firmware / 'managed_components' / core_component
+        core.mkdir()
+        (core / 'source.txt').write_text('old\n')
+        core_patches = self.firmware / 'patches' / core_component / core_version
+        core_patches.mkdir(parents=True)
+        core_patch = core_patches / '001.patch'
+        core_patch.write_text(patch.read_text())
+        (core_patches / 'manifest.json').write_text(json.dumps({
+            'schema_version': 1, 'component': core_component, 'upstream_version': core_version,
+            'source_files': BUILDER.inventory(core),
+            'patches': [{'file': core_patch.name, 'sha256': BUILDER.digest(core_patch)}],
+        }))
         (self.firmware / 'main').mkdir()
         (self.firmware / 'main/idf_component.yml').write_text(
-            'dependencies:\n  espressif/brookesia_runtime_js: "0.8.3"\n')
+            'dependencies:\n  espressif/brookesia_runtime_js: "0.8.3"\n  espressif/brookesia_system_core: "0.8.4"\n')
         (self.firmware / 'dependencies.lock').write_text('registry lock\n')
         self.config = self.base / 'sdkconfig'
         self.config.write_text('CONFIG_EXISTING=y\nCONFIG_BROOKESIA_RUNTIME_JS_ASYNC_STACK_SIZE=8192\n')
@@ -50,7 +63,9 @@ class PatchedFirmwareStageTest(unittest.TestCase):
         staged = BUILDER.stage(self.root, self.workspace, self.config)
         self.assertEqual(BUILDER.inventory(self.firmware), before)
         self.assertTrue((staged / 'managed_components/vendor/littlefs/lfs.h').exists())
-        self.assertIn('override_path:', (staged / 'main/idf_component.yml').read_text())
+        self.assertEqual((staged / 'main/idf_component.yml').read_text().count('override_path:'), 2)
+        self.assertEqual(len(json.loads((self.workspace / 'patch-inputs.json').read_text())['patches']), 2)
+        self.assertEqual((self.workspace / 'patched_components' / BUILDER.PATCHES[1][0] / 'source.txt').read_text(), 'new\n')
         self.assertIn('STACK_SIZE=16384', (staged / 'sdkconfig').read_text())
         self.assertIn('STACK_SIZE=8192', self.config.read_text())
         self.assertEqual((self.workspace / 'patched_components' / BUILDER.COMPONENT / 'source.txt').read_text(), 'new\n')

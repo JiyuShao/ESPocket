@@ -33,7 +33,7 @@ idf.py -C firmware build
 
 ## 已接受源码补丁的产品构建
 
-Runtime JS 0.8.3 的栈配置补丁依据 [ADR-0015](../docs/adr/0015-runtime-async-stack-patch-exception.md)维护。上面的直接 idf.py 命令用于物化上游依赖与生成板级配置，直接构建不会应用该补丁。产品镜像使用独立入口：
+Runtime JS 0.8.3 的栈配置补丁依据 [ADR-0015](../docs/adr/0015-runtime-async-stack-patch-exception.md)维护；Core 0.8.4 的键盘 Owner 与退出清理补丁依据 [ADR-0016](../docs/adr/0016-maintained-upstream-fixes.md)维护。上面的直接 idf.py 命令用于物化上游依赖与生成板级配置，直接构建不会应用这些补丁。产品镜像使用独立入口：
 
 ```bash
 python3 scripts/firmware/build_patched_firmware.py \
@@ -138,7 +138,7 @@ Circular Shell 与 Hello Native 以 `resources/gui.json` 为完整 App/Shell 的
 - Component 的公开头文件依赖列入 `REQUIRES`，实现依赖列入 `PRIV_REQUIRES`。System 配置位于自有 `Kconfig`，固件版本由顶层 `PROJECT_VER` 注入 SystemInfo；App manifest 版本仍由 App 自有。
 - [`compat/`](compat/README.md) 保存自有兼容实现与编译适配；每个文件记录影响版本、上游问题和删除条件。当前 attributes 告警豁免只作用于 `brookesia_hal_custom`；另一处 IDF/Picolibc 属性拼写兼容只应用到上游一个 display 翻译单元，不放宽告警。
 
-- [`patches/`](patches/README.md) 保存已接受的上游源码 diff 与版本/应用顺序元数据，构建副本不提交；当前只有管理约定，Runtime 栈配置提案尚未接入。compat 与 patches 分开，核查与故障材料归[对应 Effort](../.scratch/README.md) 的 records。
+- [`patches/`](patches/README.md) 保存已接受的上游源码 diff 与版本/应用顺序元数据，构建副本不提交；产品构建入口准确应用 Runtime 栈配置与 Core 键盘隔离补丁，设备验收状态见对应工作票。compat 与 patches 分开，核查与故障材料归[对应 Effort](../.scratch/README.md) 的 records。
 
 ## CI 与独立环境准备
 

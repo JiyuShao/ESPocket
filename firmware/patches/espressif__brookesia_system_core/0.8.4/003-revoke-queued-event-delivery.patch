@@ -1,0 +1,146 @@
+--- a/src/private/runtime/host_bridge.hpp
++++ b/src/private/runtime/host_bridge.hpp
+@@ -5,6 +5,7 @@
+  */
+ #pragma once
+ 
++#include <atomic>
+ #include <expected>
+ #include <functional>
+ #include <memory>
+@@ -28,7 +29,8 @@
+                                 runtime::AppId,
+                                 std::string,
+                                 std::string,
+-                                std::string
++                                std::string,
++                                std::shared_ptr<std::atomic<bool>>
+                             )>;
+ 
+     explicit SystemHostBridge(
+--- a/src/runtime/host_bridge.cpp
++++ b/src/runtime/host_bridge.cpp
+@@ -222,6 +222,7 @@
+     struct SubscriptionRecord {
+         RuntimeAppId app_id = runtime::INVALID_APP_ID;
+         service::EventRegistry::SignalConnection connection;
++        std::shared_ptr<std::atomic<bool>> event_active;
+     };
+ 
+     struct AsyncCallRecord {
+@@ -397,6 +398,7 @@
+             for (auto handle : subscription_it->second) {
+                 auto it = subscriptions_.find(handle);
+                 if (it != subscriptions_.end()) {
++                    it->second.event_active->store(false, std::memory_order_release);
+                     subscriptions.push_back(std::move(it->second.connection));
+                     subscriptions_.erase(it);
+                 }
+@@ -1399,17 +1401,19 @@
+         service = it->second.service;
+     }
+ 
++    auto event_active = std::make_shared<std::atomic<bool>>(true);
+     auto connection = service->subscribe_event(
+                           event_name,
+-                          [this, app_id = app_id.value(), service_name = service->get_attributes().name](
++                          [this, app_id = app_id.value(), service_name = service->get_attributes().name, event_active](
+                               const std::string & event_name, const service::EventItemMap & items
+     ) {
++        if (!event_active->load(std::memory_order_acquire)) return;
+         const auto items_json = event_items_to_json(items);
+         BROOKESIA_LOGD("Service event [%1%.%2%]", service_name, event_name);
+         if (!event_dispatcher_) {
+             return;
+         }
+-        auto dispatch_result = event_dispatcher_(app_id, service_name, event_name, items_json);
++        auto dispatch_result = event_dispatcher_(app_id, service_name, event_name, items_json, event_active);
+         if (!dispatch_result) {
+             BROOKESIA_LOGW(
+                 "Failed to dispatch runtime service event: service(%1%), event(%2%), error(%3%)",
+@@ -1428,6 +1432,7 @@
+     subscriptions_.emplace(handle, SubscriptionRecord{
+         .app_id = app_id.value(),
+         .connection = std::move(connection),
++        .event_active = event_active,
+     });
+     app_subscriptions_[app_id.value()].insert(handle);
+     return NativeValue{handle};
+@@ -1468,17 +1473,19 @@
+         return std::unexpected("Service not found: " + service_name);
+     }
+ 
++    auto event_active = std::make_shared<std::atomic<bool>>(true);
+     auto connection = service->subscribe_event(
+                           event_name,
+-                          [this, app_id = app_id.value(), service_name = service->get_attributes().name](
++                          [this, app_id = app_id.value(), service_name = service->get_attributes().name, event_active](
+                               const std::string & event_name, const service::EventItemMap & items
+     ) {
++        if (!event_active->load(std::memory_order_acquire)) return;
+         const auto items_json = event_items_to_json(items);
+         BROOKESIA_LOGD("Service event [%1%.%2%]", service_name, event_name);
+         if (!event_dispatcher_) {
+             return;
+         }
+-        auto dispatch_result = event_dispatcher_(app_id, service_name, event_name, items_json);
++        auto dispatch_result = event_dispatcher_(app_id, service_name, event_name, items_json, event_active);
+         if (!dispatch_result) {
+             BROOKESIA_LOGW(
+                 "Failed to dispatch runtime service event: service(%1%), event(%2%), error(%3%)",
+@@ -1497,6 +1504,7 @@
+     subscriptions_.emplace(handle, SubscriptionRecord{
+         .app_id = app_id.value(),
+         .connection = std::move(connection),
++        .event_active = event_active,
+     });
+     app_subscriptions_[app_id.value()].insert(handle);
+     return NativeValue{handle};
+@@ -1524,6 +1532,7 @@
+             return std::unexpected("Subscription handle does not belong to current app");
+         }
+         app_subscriptions_[it->second.app_id].erase(handle);
++        it->second.event_active->store(false, std::memory_order_release);
+         connection = std::move(it->second.connection);
+         subscriptions_.erase(it);
+     }
+--- a/src/system/lifecycle.cpp
++++ b/src/system/lifecycle.cpp
+@@ -135,8 +135,10 @@
+                                 runtime::AppId runtime_app_id,
+                                 std::string service_name,
+                                 std::string event_name,
+-                                std::string items_json
++                                std::string items_json,
++                                std::shared_ptr<std::atomic<bool>> event_active
+     ) -> std::expected<void, std::string> {
++        if (!event_active || !event_active->load(std::memory_order_acquire)) return {};
+         auto it = impl_->runtime_to_app_.find(runtime_app_id);
+         if (it == impl_->runtime_to_app_.end())
+         {
+@@ -148,8 +150,12 @@
+         app_id,
+         service_name = std::move(service_name),
+         event_name = std::move(event_name),
+-        items_json = std::move(items_json)
++        items_json = std::move(items_json),
++        event_active = std::move(event_active)
+         ]() mutable {
++            // A disconnected subscription may already have queued a callback.
++            // Its token remains revoked even if the same App restarts.
++            if (!event_active->load(std::memory_order_acquire)) return;
+             auto result = impl_->dispatch_event(
+                 app_id,
+                 std::move(service_name),
+--- a/src/app/manager.cpp
++++ b/src/app/manager.cpp
+@@ -295,7 +295,8 @@
+     if (record.info.manifest.kind == AppKind::Native) {
+         return {};
+     }
+-    if (!record.runtime_started || record.info.state != AppState::Running) {
++    if (!record.runtime_started ||
++        (record.info.state != AppState::Running && record.info.state != AppState::Paused)) {
+         return std::unexpected("Runtime event owner is not running");
+     }
+     if (service_name == SystemCoreHelper::get_name() &&
