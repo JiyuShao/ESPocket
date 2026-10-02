@@ -43,7 +43,7 @@ python3 scripts/firmware/build_patched_firmware.py \
 
 先加载 ESP-IDF 环境。workspace 必须不存在且位于源码 checkout 外；每次独立构建保留各自证据。入口复制工程和已物化依赖，准确应用 hash 锁定补丁，使用 Component Manager override_path 选择副本，再执行完整构建并核对选中的组件路径。原始 managed_components、sdkconfig 和 dependencies.lock 不写入。工程副本把全部 Registry 版本约束为原始 lock 的精确版本，构建后核对版本和 component hash，阻止切换 override 时顺带升级传递依赖。当前产品预算为 16 KiB，上游默认仍为 8 KiB。
 
-产物位于 `<workspace>/firmware/build/`，配置位于 `<workspace>/firmware/sdkconfig`，输入身份位于 `<workspace>/patch-inputs.json`。生成的 lock 只属于此次构建；registry lock 与补丁 manifest 共同限定产品输入。`--prepare-only` 只准备副本，不构建也不证明设备修复。升级源码/hash 不匹配时停止，不能绕过校验。
+产物位于 `<workspace>/firmware/build/`，配置位于 `<workspace>/firmware/sdkconfig`，输入身份位于 `<workspace>/patch-inputs.json`。生成的 lock 只属于此次构建；registry lock 与补丁 manifest 共同限定产品输入。`--prepare-only` 只准备副本，不构建也不证明设备修复。默认 `--patch-set production` 使用已接入的 Runtime/Core 补丁；`--patch-set hal-candidate` 显式试做 HTTP/Audio HAL 候选（普通配置不打开 Audio Processor）；`--patch-set audio-candidate` 另外固定 playback-only 的新增依赖、开启 Player/Processor/Audio Service，并强制 Recorder/AFE/Media Dump/Video 关闭。Audio 候选在 reconfigure 后复核这些选项与精确版本/hash，再构建；实验依赖不改生产 lock。候选不等于设备门槛通过。升级源码/hash 不匹配时停止，不能绕过校验。
 
 ## 测试
 

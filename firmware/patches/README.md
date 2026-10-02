@@ -8,6 +8,8 @@
 
 Core 0.8.4 的 failed-stop、键盘 Owner 与 queued event 补丁依据 [ADR-0016](../../docs/adr/0016-maintained-upstream-fixes.md)维护；源码回归、完整构建与尚待设备门槛见 [005/07](../../.scratch/005-m5-application-ecosystem/issues/07-isolate-runtime-keyboard-results.md)。
 
+HAL 0.8.4 的 HTTP cooperative cancel 与 playback-only 差异当前属于候选，尚不在默认产品构建清单；状态分别见 [005/06](../../.scratch/005-m5-application-ecosystem/issues/06-adopt-online-store-stability-fix.md)与 [004/04](../../.scratch/004-m4-device-capabilities/issues/04-adopt-playback-only-audio.md)。
+
 ## 组织约定
 
 ```text

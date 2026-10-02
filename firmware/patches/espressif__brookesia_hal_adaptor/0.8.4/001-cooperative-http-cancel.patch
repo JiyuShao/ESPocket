@@ -1,0 +1,93 @@
+--- a/src/network/http_client_impl.cpp
++++ b/src/network/http_client_impl.cpp
+@@ -4,6 +4,7 @@
+  * SPDX-License-Identifier: Apache-2.0
+  */
+ #include <algorithm>
++#include <atomic>
+ #include <string>
+ #include <utility>
+ #include <vector>
+@@ -81,6 +82,7 @@
+ private:
+     static esp_err_t event_handler(esp_http_client_event_t *evt);
+ 
++    std::atomic<bool> canceled_{false};
+     esp_http_client_handle_t client_ = nullptr;
+     std::vector<std::pair<std::string, std::string>> headers_;
+ };
+@@ -104,6 +106,7 @@
+     const Request &request, Response &response, uint32_t &content_length
+ )
+ {
++    if (canceled_.load(std::memory_order_acquire)) return ErrorCode::Canceled;
+     const bool is_https = is_https_url(request.url);
+     const bool should_verify = request.tls_verify == TlsVerifyMode::Default ?
+                                BROOKESIA_HAL_ADAPTOR_NETWORK_HTTP_CLIENT_REQUIRE_TLS_VERIFY :
+@@ -144,6 +147,7 @@
+ 
+     const int write_len = request.body.size();
+     auto err = esp_http_client_open(client_, write_len);
++    if (canceled_.load(std::memory_order_acquire)) return ErrorCode::Canceled;
+     if (err != ESP_OK) {
+         response.error_message = esp_err_to_name(err);
+         return ErrorCode::RequestFailed;
+@@ -151,6 +155,7 @@
+ 
+     if (write_len > 0) {
+         auto written = esp_http_client_write(client_, request.body.data(), write_len);
++        if (canceled_.load(std::memory_order_acquire)) return ErrorCode::Canceled;
+         if (written < 0 || written != write_len) {
+             response.error_message = "Failed to write HTTP request body";
+             return ErrorCode::RequestFailed;
+@@ -158,6 +163,7 @@
+     }
+ 
+     auto fetched_length = esp_http_client_fetch_headers(client_);
++    if (canceled_.load(std::memory_order_acquire)) return ErrorCode::Canceled;
+     if (fetched_length < 0) {
+         response.error_message = "Failed to fetch HTTP response headers";
+         return ErrorCode::RequestFailed;
+@@ -174,12 +180,20 @@
+ 
+ int EspHttpTransaction::read(char *buffer, size_t size, std::string &error_message)
+ {
++    if (canceled_.load(std::memory_order_acquire)) {
++        error_message = "HTTP transaction canceled";
++        return -1;
++    }
+     if (client_ == nullptr) {
+         error_message = "HTTP transaction is not opened";
+         return -1;
+     }
+ 
+     const int read_len = esp_http_client_read(client_, buffer, size);
++    if (canceled_.load(std::memory_order_acquire)) {
++        error_message = "HTTP transaction canceled";
++        return -1;
++    }
+     if (read_len < 0) {
+         error_message = "Failed to read HTTP response body";
+     }
+@@ -188,14 +202,17 @@
+ 
+ bool EspHttpTransaction::is_complete() const
+ {
+-    return (client_ != nullptr) && esp_http_client_is_complete_data_received(client_);
++    return !canceled_.load(std::memory_order_acquire) &&
++           (client_ != nullptr) && esp_http_client_is_complete_data_received(client_);
+ }
+ 
+ void EspHttpTransaction::cancel()
+ {
+-    if (client_ != nullptr) {
+-        esp_http_client_close(client_);
+-    }
++    // The owning worker may be blocked in TLS/open/read. Never touch its
++    // esp_http_client handle from the cancelling task. Operations are bounded
++    // by request.timeout_ms; the worker observes this flag when they return,
++    // and destroys the client after leaving its operation.
++    canceled_.store(true, std::memory_order_release);
+ }
+ 
+ } // namespace

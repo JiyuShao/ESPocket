@@ -17,11 +17,13 @@ if(TARGET idf::brookesia_hal_custom)
     )
 endif()
 
-# Repair the IDF/Picolibc attribute spelling in the one affected upstream TU.
+# Repair IDF/Picolibc attribute spelling in the affected board-header TUs.
 # This does not relax warnings or modify managed component sources.
 idf_component_get_property(espocket_hal_adaptor_lib espressif__brookesia_hal_adaptor COMPONENT_LIB)
 idf_component_get_property(espocket_hal_adaptor_dir espressif__brookesia_hal_adaptor COMPONENT_DIR)
-set_property(SOURCE "${espocket_hal_adaptor_dir}/src/display/device.cpp"
-    TARGET_DIRECTORY ${espocket_hal_adaptor_lib}
-    APPEND PROPERTY COMPILE_OPTIONS
-    "-include" "${CMAKE_CURRENT_LIST_DIR}/compat/idf_6_0_1_picolibc_noreturn.hpp")
+foreach(espocket_hal_source IN ITEMS src/display/device.cpp src/audio/device.cpp src/audio/codec_player_impl.cpp)
+    set_property(SOURCE "${espocket_hal_adaptor_dir}/${espocket_hal_source}"
+        TARGET_DIRECTORY ${espocket_hal_adaptor_lib}
+        APPEND PROPERTY COMPILE_OPTIONS
+        "-include" "${CMAKE_CURRENT_LIST_DIR}/compat/idf_6_0_1_picolibc_noreturn.hpp")
+endforeach()

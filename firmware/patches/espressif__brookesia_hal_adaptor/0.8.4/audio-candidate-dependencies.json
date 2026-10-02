@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "purpose": "playback-only experiment; not production dependency lock",
+  "dependencies": {
+    "espressif/cjson": {
+      "version": "1.7.19~2",
+      "component_hash": "e788323270d90738662d66fffa910bfe1fba019bba087f01557e70c40485b469"
+    },
+    "espressif/dl_fft": {
+      "version": "0.8.0",
+      "component_hash": "965be7152132b365061abf5fc5fc7b85e525f73b94a204cdda61cfe9572c0d77"
+    },
+    "espressif/esp-dsp": {
+      "version": "1.8.0",
+      "component_hash": "12e44db246517a627bc0fe2b255b8335410c0215c98bfba2df5a8e3edea839ef"
+    },
+    "espressif/esp-sr": {
+      "version": "2.4.4",
+      "component_hash": "e89fce9c0afe1b6782a9fbc65b5fc2ba5841ed4a39704d08414aad891ccce1a3"
+    },
+    "espressif/esp_audio_codec": {
+      "version": "2.5.0",
+      "component_hash": "16e2880dbdd5a72264051f750f33a6e5a38fd25621c83e3a32a85a152d2d2643"
+    },
+    "espressif/esp_audio_effects": {
+      "version": "1.3.0~1",
+      "component_hash": "6ad72ee106e25b07c9ae5b8ec77b566ef8d697473095f1c982e13247005b9ba6"
+    },
+    "espressif/esp_audio_render": {
+      "version": "0.8.1",
+      "component_hash": "0e940c088dc4071224c08d2b798a8c923c9ebe5ac77ef7633db172a480147718"
+    },
+    "espressif/esp_audio_simple_player": {
+      "version": "0.9.6~1",
+      "component_hash": "84d3f8a4e7a41ad33a2ed33e640cf20313422a25f697f8d4e13c1af9699735a2"
+    },
+    "espressif/esp_extractor": {
+      "version": "1.0.7",
+      "component_hash": "d2e99ae3e45f2d3b0b35d5615e0ef32d5b813daed6f79253aab94b6e76445086"
+    },
+    "espressif/esp_hls_stream": {
+      "version": "1.0.2",
+      "component_hash": "b4202f5e93987ccbe82d0e22829bb42cad7c259d47e3638ea9ea5cf88916ec27"
+    },
+    "espressif/gmf_ai_audio": {
+      "version": "0.8.3",
+      "component_hash": "73a3a73ce506c8d35324a557bda12270f676471c42d5159a55dfe30a436133da"
+    },
+    "espressif/gmf_audio": {
+      "version": "0.8.3",
+      "component_hash": "dc88b927adc66bd617aacb39fee28ff61a339f1ab603ff21dc9d0d226eea4947"
+    },
+    "espressif/gmf_core": {
+      "version": "0.8.4",
+      "component_hash": "6e11017fc41cdb19a8035e334c9e9caced803d67547fb0e60f69cba5fd735f6a"
+    },
+    "espressif/gmf_fft": {
+      "version": "1.0.0",
+      "component_hash": "b59451ef2f96d22b80c27a162515b21f1b85954dda434c0b092172164028779d"
+    },
+    "espressif/gmf_io": {
+      "version": "0.8.1",
+      "component_hash": "c6e9b6f560156dc110477214aab279c677e8746ca07a41d08da0452addac7f28"
+    },
+    "espressif/media_lib_sal": {
+      "version": "0.9.3",
+      "component_hash": "ab439aa852ecde6f2510a755045eac0cad8a540f1c76096d4d08fdcf4e7753c2"
+    },
+    "jason-mao/av_processor": {
+      "version": "0.6.6",
+      "component_hash": "67b9054b361f90c18bddf781bd934b735c63062217a25a53e59f4eff15f78c58"
+    }
+  }
+}

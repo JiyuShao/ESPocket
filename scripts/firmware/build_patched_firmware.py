@@ -15,6 +15,47 @@ ROOT = Path(__file__).resolve().parents[2]
 COMPONENT = 'espressif__brookesia_runtime_js'
 VERSION = '0.8.3'
 PATCHES = ((COMPONENT, VERSION), ('espressif__brookesia_system_core', '0.8.4'))
+PATCH_SETS = {
+    'production': PATCHES,
+    'hal-candidate': PATCHES + (('espressif__brookesia_hal_adaptor', '0.8.4'),),
+    'audio-candidate': PATCHES + (('espressif__brookesia_hal_adaptor', '0.8.4'),),
+}
+
+
+AUDIO_OPTIONS = {
+    'CONFIG_BROOKESIA_HAL_ADAPTOR_ENABLE_AUDIO_DEVICE': True,
+    'CONFIG_BROOKESIA_HAL_ADAPTOR_AUDIO_ENABLE_CODEC_PLAYER_IMPL': True,
+    'CONFIG_BROOKESIA_HAL_ADAPTOR_AUDIO_ENABLE_CODEC_RECORDER_IMPL': False,
+    'CONFIG_BROOKESIA_HAL_ADAPTOR_AUDIO_ENABLE_PROCESSOR_IMPL': True,
+    'CONFIG_BROOKESIA_SERVICE_AUDIO_ENABLE_AUTO_REGISTER': True,
+    'CONFIG_VIDEO_PROCESSOR_ENABLE': False,
+    'CONFIG_AUDIO_AFE_ENABLE': False,
+    'CONFIG_MEDIA_DUMP_ENABLE': False,
+}
+
+
+def audio_dependencies(root):
+    path = root / 'firmware/patches/espressif__brookesia_hal_adaptor/0.8.4/audio-candidate-dependencies.json'
+    document = json.loads(path.read_text())
+    if document['schema_version'] != 1:
+        raise ValueError('Unknown audio candidate dependency schema')
+    return document['dependencies']
+
+
+def configure_audio_candidate(text):
+    lines = [line for line in text.splitlines() if not any(
+        line.startswith(key + '=') or line.startswith('# ' + key + ' ')
+        for key in AUDIO_OPTIONS)]
+    for key, enabled in AUDIO_OPTIONS.items():
+        lines.append(key + '=y' if enabled else '# ' + key + ' is not set')
+    return '\n'.join(lines) + '\n'
+
+
+def verify_audio_config(text):
+    for key, enabled in AUDIO_OPTIONS.items():
+        actual = key + '=y' in text.splitlines()
+        if actual != enabled:
+            raise ValueError(f'Unsafe or incomplete audio candidate configuration: {key}')
 
 
 def registry_lock(path):
@@ -40,10 +81,15 @@ def pin_registry_dependencies(text, locked):
     return text
 
 
-def verify_registry_lock(original, generated):
+def verify_registry_lock(original, generated, patch_set='production', root=ROOT):
     expected = registry_lock(original)
     actual = registry_lock(generated)
-    for component, _ in PATCHES:
+    if patch_set == 'audio-candidate':
+        extra = audio_dependencies(root)
+        if set(expected) & set(extra):
+            raise ValueError('Audio dependency constraints overlap production')
+        expected.update(extra)
+    for component, _ in PATCH_SETS[patch_set]:
         expected.pop(component.replace('__', '/'), None)
     if actual != expected:
         changed = sorted(name for name in set(actual) | set(expected)
@@ -51,7 +97,7 @@ def verify_registry_lock(original, generated):
         raise ValueError(f'Unexpected registry dependency drift: {changed}')
 
 
-def stage(root, workspace, sdkconfig):
+def stage(root, workspace, sdkconfig, patch_set='production'):
     root = root.resolve()
     source = root / 'firmware'
     workspace = workspace.resolve()
@@ -60,7 +106,7 @@ def stage(root, workspace, sdkconfig):
     if workspace == root or root in workspace.parents or workspace in root.parents:
         raise ValueError('Workspace must be outside the source checkout')
     manifests = []
-    for component, version in PATCHES:
+    for component, version in PATCH_SETS[patch_set]:
         registry = source / 'managed_components' / component
         manifest = source / 'patches' / component / version / 'manifest.json'
         locked = json.loads(manifest.read_text())
@@ -81,7 +127,12 @@ def stage(root, workspace, sdkconfig):
     shutil.copytree(source, firmware, ignore=ignore_generated)
     shutil.copyfile(sdkconfig, firmware / 'sdkconfig')
     main_manifest = firmware / 'main/idf_component.yml'
-    text = pin_registry_dependencies(main_manifest.read_text(), registry_lock(source / 'dependencies.lock'))
+    constraints = registry_lock(source / 'dependencies.lock')
+    audio_extra = audio_dependencies(root) if patch_set == 'audio-candidate' else {}
+    if set(constraints) & set(audio_extra):
+        raise ValueError('Audio dependency constraints overlap production')
+    constraints.update(audio_extra)
+    text = pin_registry_dependencies(main_manifest.read_text(), constraints)
     patch_inputs = []
     for component, version, registry, manifest, locked in manifests:
         patched = prepare(registry, manifest, workspace / 'patched_components' / component)
@@ -98,10 +149,14 @@ def stage(root, workspace, sdkconfig):
                              'patched_component': str(patched)})
     main_manifest.write_text(text)
     config = firmware / 'sdkconfig'
+    if patch_set == 'audio-candidate':
+        config.write_text(configure_audio_candidate(config.read_text()))
     lines = [line for line in config.read_text().splitlines()
              if 'CONFIG_BROOKESIA_RUNTIME_JS_ASYNC_STACK_SIZE' not in line]
     config.write_text('\n'.join(lines) + '\nCONFIG_BROOKESIA_RUNTIME_JS_ASYNC_STACK_SIZE=16384\n')
     (workspace / 'patch-inputs.json').write_text(json.dumps({
+        'patch_set': patch_set,
+        'audio_candidate_dependencies': audio_extra,
         'patches': patch_inputs,
         'sdkconfig_input_sha256': digest(sdkconfig), 'async_stack_bytes': 16384,
         'original_registry_lock_sha256': digest(source / 'dependencies.lock'),
@@ -114,24 +169,28 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--workspace', required=True, type=Path)
     parser.add_argument('--sdkconfig', required=True, type=Path,
-                        help='existing board-configured sdkconfig; copied without modification')
+                        help='existing board-configured sdkconfig; copied with documented patch-set settings')
     parser.add_argument('--prepare-only', action='store_true')
+    parser.add_argument('--patch-set', choices=PATCH_SETS, default='production',
+                        help='production is the accepted baseline; hal-candidate applies HAL fixes; audio-candidate also pins playback-only dependencies')
     args = parser.parse_args()
     try:
-        firmware = stage(ROOT, args.workspace, args.sdkconfig.resolve())
+        firmware = stage(ROOT, args.workspace, args.sdkconfig.resolve(), args.patch_set)
         print(f'Prepared firmware: {firmware}', flush=True)
         if not args.prepare_only:
             subprocess.run(['idf.py', '-C', str(firmware), 'reconfigure'], check=True)
-            verify_registry_lock(ROOT / 'firmware/dependencies.lock', firmware / 'dependencies.lock')
+            verify_registry_lock(ROOT / 'firmware/dependencies.lock', firmware / 'dependencies.lock', args.patch_set)
+            if args.patch_set == 'audio-candidate':
+                verify_audio_config((firmware / 'sdkconfig').read_text())
             description = json.loads((firmware / 'build/project_description.json').read_text())
-            for component, _ in PATCHES:
+            for component, _ in PATCH_SETS[args.patch_set]:
                 selected = description['build_component_info'][component]['dir']
                 expected = args.workspace.resolve() / 'patched_components' / component
                 if Path(selected).resolve() != expected:
                     raise ValueError(f'Build selected unexpected patched source: {selected}')
             subprocess.run(['idf.py', '-C', str(firmware), 'build'], check=True)
-            verify_registry_lock(ROOT / 'firmware/dependencies.lock', firmware / 'dependencies.lock')
-            print(f'Verified patched components: {[item[0] for item in PATCHES]}', flush=True)
+            verify_registry_lock(ROOT / 'firmware/dependencies.lock', firmware / 'dependencies.lock', args.patch_set)
+            print(f'Verified patched components: {[item[0] for item in PATCH_SETS[args.patch_set]]}', flush=True)
     except (ValueError, KeyError, OSError, subprocess.CalledProcessError) as error:
         parser.exit(1, f'Patched build failed: {error}\n')
 

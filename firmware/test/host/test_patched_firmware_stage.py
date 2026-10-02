@@ -86,6 +86,30 @@ class PatchedFirmwareStageTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'outside'):
             BUILDER.stage(self.root, self.root / 'nested', self.config)
 
+    def test_explicit_hal_candidate_isolated_from_production(self):
+        component, version = BUILDER.PATCH_SETS['hal-candidate'][-1]
+        registry = self.firmware / 'managed_components' / component
+        registry.mkdir()
+        (registry / 'source.txt').write_text('old\n')
+        patches = self.firmware / 'patches' / component / version
+        patches.mkdir(parents=True)
+        patch = patches / '001.patch'
+        patch.write_text('--- a/source.txt\n+++ b/source.txt\n@@ -1 +1 @@\n-old\n+new\n')
+        (patches / 'manifest.json').write_text(json.dumps({
+            'schema_version': 1, 'component': component, 'upstream_version': version,
+            'source_files': BUILDER.inventory(registry),
+            'patches': [{'file': patch.name, 'sha256': BUILDER.digest(patch)}],
+        }))
+        main = self.firmware / 'main/idf_component.yml'
+        main.write_text(main.read_text() + '  espressif/brookesia_hal_adaptor: "0.8.4"\n')
+        before = BUILDER.inventory(self.firmware)
+        staged = BUILDER.stage(self.root, self.workspace, self.config, 'hal-candidate')
+        self.assertEqual((staged / 'main/idf_component.yml').read_text().count('override_path:'), 3)
+        inputs = json.loads((self.workspace / 'patch-inputs.json').read_text())
+        self.assertEqual(inputs['patch_set'], 'hal-candidate')
+        self.assertEqual(inputs['patches'][-1]['component'], component)
+        self.assertEqual(BUILDER.inventory(self.firmware), before)
+
 class RegistryLockTest(unittest.TestCase):
     def test_pins_transitive_versions_without_extra_public_requirements(self):
         text = BUILDER.pin_registry_dependencies('dependencies:\n  vendor/direct: "*"\n', {
@@ -104,3 +128,22 @@ class RegistryLockTest(unittest.TestCase):
             generated.write_text(text.replace('abc', 'changed'))
             with self.assertRaisesRegex(ValueError, 'drift'):
                 BUILDER.verify_registry_lock(original, generated)
+
+    def test_hal_registry_exclusion_requires_explicit_candidate(self):
+        with tempfile.TemporaryDirectory() as directory:
+            original, generated = Path(directory) / 'old', Path(directory) / 'new'
+            original.write_text('dependencies:\n  espressif/brookesia_hal_adaptor:\n    component_hash: abc\n    version: 0.8.4\n')
+            generated.write_text('dependencies:\n')
+            with self.assertRaisesRegex(ValueError, 'drift'):
+                BUILDER.verify_registry_lock(original, generated)
+            BUILDER.verify_registry_lock(original, generated, 'hal-candidate')
+
+
+class AudioCandidateConfigTest(unittest.TestCase):
+    def test_candidate_overrides_recording_and_preserves_board_settings(self):
+        text = BUILDER.configure_audio_candidate('CONFIG_EXISTING=y\nCONFIG_BROOKESIA_HAL_ADAPTOR_AUDIO_ENABLE_CODEC_RECORDER_IMPL=y\nCONFIG_AUDIO_AFE_ENABLE=y\n')
+        BUILDER.verify_audio_config(text)
+        self.assertIn('CONFIG_EXISTING=y', text)
+        self.assertNotIn('CONFIG_BROOKESIA_HAL_ADAPTOR_AUDIO_ENABLE_CODEC_RECORDER_IMPL=y', text)
+        with self.assertRaisesRegex(ValueError, 'Unsafe'):
+            BUILDER.verify_audio_config(text.replace('# CONFIG_AUDIO_AFE_ENABLE is not set', 'CONFIG_AUDIO_AFE_ENABLE=y'))

@@ -5,7 +5,7 @@
 // Upstream issue: hal/assert.h leaves __noreturn as [[noreturn]], which is
 // invalid at Picolibc's suffix attribute sites when board headers precede libc.
 // No upstream issue number has been assigned in this repository.
-// Remove when the locked IDF/toolchain compiles the affected display TU with
+// Remove when the locked IDF/toolchain compiles the affected display/audio board-header TUs with
 // -Werror=attributes and no forced include. Preserve the noreturn semantics.
 #include "hal/assert.h"
 

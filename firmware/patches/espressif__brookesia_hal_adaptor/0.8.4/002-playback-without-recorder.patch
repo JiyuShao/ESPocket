@@ -1,0 +1,145 @@
+--- a/Kconfig
++++ b/Kconfig
+@@ -280,8 +280,8 @@
+         menuconfig BROOKESIA_HAL_ADAPTOR_AUDIO_ENABLE_PROCESSOR_IMPL
+             bool "Audio Processor"
+             depends on BROOKESIA_HAL_ADAPTOR_AUDIO_ENABLE_CODEC_PLAYER_IMPL
+-            depends on BROOKESIA_HAL_ADAPTOR_AUDIO_ENABLE_CODEC_RECORDER_IMPL
+-            default y
++            default y if BROOKESIA_HAL_ADAPTOR_AUDIO_ENABLE_CODEC_RECORDER_IMPL
++            default n
+             help
+                 Enable the high-level audio processor backed by av_processor.
+ 
+--- a/src/audio/device.cpp
++++ b/src/audio/device.cpp
+@@ -74,7 +74,9 @@
+ #endif
+ #if BROOKESIA_HAL_ADAPTOR_AUDIO_ENABLE_PROCESSOR_IMPL
+     specs.push_back({audio::PlaybackIface::NAME, PLAYBACK_IMPL_NAME});
++#if BROOKESIA_HAL_ADAPTOR_AUDIO_ENABLE_CODEC_RECORDER_IMPL
+     specs.push_back({audio::EncoderIface::NAME, ENCODER_IMPL_NAME});
++#endif
+     specs.push_back({audio::DecoderIface::NAME, DECODER_IMPL_NAME});
+ #endif
+     return specs;
+@@ -209,7 +211,9 @@
+     auto player_iface = std::dynamic_pointer_cast<audio::CodecPlayerIface>(interfaces_[CODEC_PLAYER_IMPL_NAME]);
+     auto recorder_iface = std::dynamic_pointer_cast<audio::CodecRecorderIface>(interfaces_[CODEC_RECORDER_IMPL_NAME]);
+     BROOKESIA_CHECK_NULL_RETURN(player_iface, false, "Codec player is not initialized");
++#if BROOKESIA_HAL_ADAPTOR_AUDIO_ENABLE_CODEC_RECORDER_IMPL
+     BROOKESIA_CHECK_NULL_RETURN(recorder_iface, false, "Codec recorder is not initialized");
++#endif
+ 
+     std::shared_ptr<AudioProcessorCore> core = nullptr;
+     BROOKESIA_CHECK_EXCEPTION_RETURN(
+@@ -227,16 +231,20 @@
+     BROOKESIA_CHECK_EXCEPTION_RETURN(
+         playback_iface = std::make_shared<AudioPlaybackImpl>(core), false, "Failed to create audio playback interface"
+     );
++#if BROOKESIA_HAL_ADAPTOR_AUDIO_ENABLE_CODEC_RECORDER_IMPL
+     BROOKESIA_CHECK_EXCEPTION_RETURN(
+         encoder_iface = std::make_shared<AudioEncoderImpl>(core), false, "Failed to create audio encoder interface"
+     );
++#endif
+     BROOKESIA_CHECK_EXCEPTION_RETURN(
+         decoder_iface = std::make_shared<AudioDecoderImpl>(core), false, "Failed to create audio decoder interface"
+     );
+ 
+     processor_core_ = core;
+     interfaces_.emplace(PLAYBACK_IMPL_NAME, playback_iface);
++#if BROOKESIA_HAL_ADAPTOR_AUDIO_ENABLE_CODEC_RECORDER_IMPL
+     interfaces_.emplace(ENCODER_IMPL_NAME, encoder_iface);
++#endif
+     interfaces_.emplace(DECODER_IMPL_NAME, decoder_iface);
+ 
+     iface_delete_guard.release();
+--- a/src/audio/processor_impl.cpp
++++ b/src/audio/processor_impl.cpp
+@@ -151,21 +151,23 @@
+     BROOKESIA_LOG_TRACE_GUARD_WITH_THIS();
+ 
+     BROOKESIA_CHECK_NULL_RETURN(player_iface_, false, "Invalid player interface");
+-    BROOKESIA_CHECK_NULL_RETURN(recorder_iface_, false, "Invalid recorder interface");
+-    const auto &recorder_info = recorder_iface_->get_info();
+     auto player_config = config_.playback.player;
+-    if ((player_config.bits != recorder_info.bits) ||
+-            (player_config.channels != recorder_info.channels) ||
+-            (player_config.sample_rate != recorder_info.sample_rate)) {
+-        BROOKESIA_LOGW(
+-            "Playback codec config(%1%) does not match audio manager output(bits=%2%, channels=%3%, rate=%4%); "
+-            "using audio manager output config",
+-            BROOKESIA_DESCRIBE_TO_STR(player_config), recorder_info.bits, recorder_info.channels,
+-            recorder_info.sample_rate
+-        );
+-        player_config.bits = recorder_info.bits;
+-        player_config.channels = recorder_info.channels;
+-        player_config.sample_rate = recorder_info.sample_rate;
++    if (recorder_iface_) {
++        const auto &recorder_info = recorder_iface_->get_info();
++        if ((player_config.bits != recorder_info.bits) ||
++                (player_config.channels != recorder_info.channels) ||
++                (player_config.sample_rate != recorder_info.sample_rate)) {
++            BROOKESIA_LOGW(
++                "Playback codec config(%1%) does not match audio manager output(bits=%2%, channels=%3%, rate=%4%); "
++                "using audio manager output config",
++                BROOKESIA_DESCRIBE_TO_STR(player_config), recorder_info.bits, recorder_info.channels,
++                recorder_info.sample_rate
++            );
++            player_config.bits = recorder_info.bits;
++            player_config.channels = recorder_info.channels;
++            player_config.sample_rate = recorder_info.sample_rate;
++        }
++
+     }
+ 
+     BROOKESIA_CHECK_FALSE_RETURN(player_iface_->open(player_config), false, "Failed to open audio DAC");
+@@ -173,9 +175,11 @@
+         player_iface_->close();
+     });
+ 
+-    BROOKESIA_CHECK_FALSE_RETURN(recorder_iface_->open(), false, "Failed to open audio ADC");
++    if (recorder_iface_) {
++        BROOKESIA_CHECK_FALSE_RETURN(recorder_iface_->open(), false, "Failed to open audio ADC");
++    }
+     lib_utils::FunctionGuard close_recorder_guard([this]() {
+-        recorder_iface_->close();
++        if (recorder_iface_) recorder_iface_->close();
+     });
+ 
+     auto player_write_cb = +[](uint8_t *data, int size, void *ctx) {
+@@ -204,19 +208,19 @@
+             .write_ctx = player_iface_.get(),
+         },
+         .rec_io = {
+-            .read_cb = recorder_read_cb,
+-            .read_ctx = this,
++            .read_cb = recorder_iface_ ? recorder_read_cb : nullptr,
++            .read_ctx = recorder_iface_ ? this : nullptr,
+             .write_cb = nullptr,
+             .write_ctx = nullptr,
+         },
+         .mic_layout = {0},
+-        .board_sample_rate = static_cast<int>(recorder_info.sample_rate),
+-        .board_bits = static_cast<int>(recorder_info.bits),
+-        .board_channels = static_cast<int>(recorder_info.channels),
++        .board_sample_rate = static_cast<int>(player_config.sample_rate),
++        .board_bits = static_cast<int>(player_config.bits),
++        .board_channels = static_cast<int>(player_config.channels),
+     };
+-    if (!recorder_info.mic_layout.empty()) {
++    if (recorder_iface_ && !recorder_iface_->get_info().mic_layout.empty()) {
+         std::strncpy(
+-            manager_config.mic_layout, recorder_info.mic_layout.c_str(), sizeof(manager_config.mic_layout) - 1
++            manager_config.mic_layout, recorder_iface_->get_info().mic_layout.c_str(), sizeof(manager_config.mic_layout) - 1
+         );
+         manager_config.mic_layout[sizeof(manager_config.mic_layout) - 1] = '\0';
+     }
+@@ -393,6 +397,7 @@
+ )
+ {
+     BROOKESIA_LOG_TRACE_GUARD_WITH_THIS();
++    BROOKESIA_CHECK_NULL_RETURN(recorder_iface_, false, "Recording is unavailable on playback-only core");
+ 
+     if (is_encoder_started()) {
+         BROOKESIA_LOGD("Encoder is already running");
