@@ -20,3 +20,4 @@
 ## Comments
 
 - 2026-10-02：原 ticket 同时要求 Native/Runtime Page/Back 与 Card 样例，且依赖 Card 生命周期 ticket 03。迁移后 Card 部分拆至新 ticket 05；本票只依赖 Navigator 与 Back，实现 Runtime 导航无需等待 Card 机制。没有把任何待验收路径标记为通过。
+- 2026-10-02（源码接缝审计）：锁定版 `runtime_manager` 的公开 `RuntimeFunctionProvider` 可注册 NativeModule，Runtime init 会 discover_registered_providers；System Core 公开 `get_current_runtime_app_owner()` 将运行时调用上下文映射为 Core App ID。因此后续从产品层 Provider 接入共同 Navigator 有现成公开入口，不需要因 HostBridge 实现私有而修改上游。真正的绑定仍须处理 App 声明安装、GUI Owner 调度、异步待决 Back 和上下文失效，当前未实现/未勾选。

@@ -76,6 +76,12 @@ PWR Home 不经过 App Back 回调，也不受确认界面阻塞：它取消待�
 
 ## App Card 生命周期
 
+当前提供 [CardSession](../../firmware/components/espocket_navigation/include/espocket/card_session.hpp) 的同步 C++ 生命周期组件，尚未接 Shell GUI 或 Native/Runtime Card 提供者。一个 Session 管理一个呈现槽位，状态为 Empty、Paused 或 Visible；不是 Core Running Instance，也不保存 Page 栈。`show(key)` 只接受已声明且已配置的 Card，首次创建内容，暂停后再次显示调用 `show` 和 `refresh` 请求新数据；已可见的重复 show 不重复刷新。切换 Card 先暂停并销毁旧内容。`pause()` 保留当前 UI，`release()` 和析构释放 UI 与订阅。
+
+App 绑定实现 `CardContent::show/refresh/pause`，析构负责资源回收。创建失败保持 Empty；显示或刷新失败暂停内容并报告明确错误，可由 Shell 再次 show 重试。`open_app(launcher)` 重新读取 Registry 的当前目标，先暂停，再调用完整 App 启动入口；启动失败保持 Paused，由 Shell 明确决定恢复呈现。Launcher 仍需使用现有 Navigator 建立 Root 和目标路径，这个组件不建立第二份栈。配置已删除或声明已卸载时拒绝启动并释放内容。
+
+System/Shell 装配应在 GUI Owner 任务串行调用 Session 和 Registry 更新，并把 Registry 的移除通知转发给 `invalidate(key)`；它仅释放匹配的 Card，不影响其他 Card。内容、工厂与启动回调不得抛异常或在回调中修改 Registry；重入 Session 操作返回 Busy。当前 refresh 是同步能力，未提供后台异步结果提交 API；线程调度、GUI 容器、真实提供者接入和持久配置仍由 014/03–05 完成，组件测试不代替实际界面验收。
+
 Card 与完整 App 使用同一 App 身份和持久业务数据，但可以是不同内存实例。ESPocket 管理 Card UI 的创建、可见、暂停与释放。离屏后 Card UI 可暂停或销毁；再次可见时框架请求新数据。App 提供 Card 内容、订阅来源和轻量操作；可靠计时、网络状态与其他长期业务放在 App 持久数据或 Service，不以 Card UI 常驻为前提。进入完整 App 时 Card 暂停，PWR Home 返回 Watch Face。
 
 Home Space 拥有 Card 横滑。Card 内点击、纵向滚动和轻量操作归 App；需要多级交互时打开完整 App。App 不通过 Card 拦截 PWR Home 或改变左右 Card 顺序。

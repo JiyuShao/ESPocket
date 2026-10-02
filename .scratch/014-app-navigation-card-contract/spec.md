@@ -66,6 +66,7 @@ Blocked by: [006/03 Home 与显示真机验收](../006-m6-home-display/issues/03
 ## 记录
 
 - [2026-10-02 Card Registry 配置组件](records/2026-10-02-card-registry.md)
+- [2026-10-02 CardSession 生命周期组件](records/2026-10-02-card-session.md)
 
 - [2026-10-02-default-back-prototype](records/2026-10-02-default-back-prototype.md)
 - [2026-10-02-page-navigator-source](records/2026-10-02-page-navigator-source.md)

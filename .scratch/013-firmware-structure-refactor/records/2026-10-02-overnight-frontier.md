@@ -85,6 +85,12 @@
 - 014/03 完成 CardRegistry 配置/迁移组件：稳定二元身份、左右排序/换侧、原子替换、更新删除/卸载清理与原因通知；复用 Navigator 声明校验，不复制页面栈。
 - 31 项 host unittest、M2 parser、Markdown 通过；最终构建和范围见 [Card Registry 证据](../../014-app-navigation-card-contract/records/2026-10-02-card-registry.md)。尚未接 Core/GUI/lifecycle/NVS，整票保持开放，不宣称用户已能动态配置设备 Card。
 
+## 第十一轮自动执行
+
+- 014/03 增加真实 C++ CardSession 生命周期组件：创建、可见刷新、离屏暂停、切换/释放、更新/卸载通知回收，打开完整 App 前暂停，并覆盖失败与重入。范围和检查见 [CardSession 证据](../../014-app-navigation-card-contract/records/2026-10-02-card-session.md)。尚未接真实 GUI、Core 与 Card 提供者；整票保持开放。
+- 014/04 审计到公开 RuntimeFunctionProvider 注册与 System Core 调用方身份接口，可作为后续语言绑定 seam；尚未实现绑定，不将私有 HostBridge 误报为必须改上游的 blocker。
+- 32 项 host unittest、M2 parser、163 个 Markdown 与完整 ESP-IDF 构建通过；未接入的组件没有改变最终镜像 identity，没有刷写或新增硬件 PASS。
+
 ## 晨间最小介入
 
 先回复已发出的单次 013 smoke 结果：Native Detail Edge Back；自动息屏唤醒保留 Detail；PWR Home/息屏/亮屏回表盘；Quick Settings 上滑、Launcher 顶部下拉返回。遇到异常停在该步即可。无需重做此前十轮资源验证。

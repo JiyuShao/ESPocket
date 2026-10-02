@@ -14,3 +14,4 @@
 ## Comments
 
 - 2026-10-02（夜间）：先完成真实 C++ CardRegistry 的声明身份、左右增删/排序、原子配置替换、更新/卸载删除与原因通知。与 PageNavigator 复用同一个声明校验，不建立第二份页面栈。组件尚未接 Core 安装/卸载、Shell Card 呈现、UI 可见生命周期和 NVS 配置；整体 acceptance 保持未勾选。详见 [Registry 组件证据](../records/2026-10-02-card-registry.md)。
+- 2026-10-02（夜间续）：完成同步 CardSession 生命周期组件：首次创建、重新可见刷新、离屏暂停、切换/释放销毁、打开完整 App 前暂停、失败和重入防护。Registry 移除通过 Owner 转发 invalidate；实际 Shell/Core/提供者/NVS 仍未连接，保持整票开放。见 [生命周期组件证据](../records/2026-10-02-card-session.md)。
