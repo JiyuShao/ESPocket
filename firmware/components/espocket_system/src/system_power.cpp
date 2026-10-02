@@ -92,6 +92,16 @@ void System::handle_power_short_press()
         heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL),
         heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM)
     );
+#ifdef CONFIG_BROOKESIA_RUNTIME_JS_ASYNC_STACK_SIZE
+    constexpr int async_stack_budget = CONFIG_BROOKESIA_RUNTIME_JS_ASYNC_STACK_SIZE;
+#else
+    constexpr int async_stack_budget = 8 * 1024;
+#endif
+    if (const auto worker = xTaskGetHandle("RuntimeJsAsync")) {
+        ESP_LOGI(TAG, "M8_RUNTIME_STACK sample=%" PRIu32 " budget=%d minimum_free=%u",
+                 resource_sample, async_stack_budget,
+                 static_cast<unsigned>(uxTaskGetStackHighWaterMark(worker)));
+    }
 #endif
 
     auto result = set_display_on(false);

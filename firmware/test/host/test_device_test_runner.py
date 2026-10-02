@@ -60,7 +60,7 @@ class DeviceTestRunnerTests(unittest.TestCase):
         return driver, transport, log
 
     def test_scenarios_reject_initial_busy_input_without_stimulus(self):
-        for scenario in (MODULE.navigation, MODULE.cards, MODULE.surfaces, MODULE.apps, MODULE.runtime_confirm):
+        for scenario in (MODULE.navigation, MODULE.cards, MODULE.surfaces, MODULE.apps, MODULE.runtime_confirm, MODULE.resources):
             with self.subTest(scenario=scenario.__name__):
                 driver, transport, _ = self.make(lambda _: {'snapshot': snapshot(1, inputBusy=True)})
                 with self.assertRaisesRegex(DeviceTestError, 'occupied input'):

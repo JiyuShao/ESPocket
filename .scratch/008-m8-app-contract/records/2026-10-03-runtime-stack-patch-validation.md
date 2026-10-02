@@ -38,3 +38,9 @@
 真实设备 ESPocket-Waveshare-A0F262E30B68 的 runtime-confirm attempt `20261002T165829Z-54c3701c-fe9a-4c50-8a66-a98db61fd856` PASS，7 步。时间编号为 UTC，上海本地日期为 2026-10-03。Confirmation On 和待决 Back 保留完整资源；没有复现 RuntimeJsAsync 栈溢出。release=ok，最终 seq=37、Watch Face 亮屏、App/Page 空、canBack/backPending/inputBusy 均 false。
 
 该证据为 synthetic-input；不证明文字视觉、物理触摸或 PWR GPIO，也不抹去原镜像的失败。原始 attempt 位于 `/private/tmp/espocket-runtime-patched-confirm/`。完整 apps 与资源/回收仍待独立结果。
+
+## 完整 App 自动路径
+
+普通 c8d56e5e2 的 apps attempt `20261002T165910Z-97893ee9-7013-4dbf-9be8-d989213cd12e` PASS，57 步。Native 与真实 Runtime 都通过 Root/Detail、普通横滑、未回收自动息屏/恢复、重复待决 Back、取消/允许/超时、过期确认拒绝和 PWR Home 后 Root 重启。release=ok，最终表盘亮屏且没有 App/Page、Back pending 或输入占用；无 panic/stack overflow。报告与串口位于 `/private/tmp/espocket-runtime-patched-apps/`。
+
+这是 synthetic-input；008/03 的 Runtime 物理和回收/资源条件仍独立保留。原镜像失败与本次修复后的 attempt 不合并计数。

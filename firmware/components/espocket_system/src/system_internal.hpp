@@ -22,6 +22,8 @@
 #include "brookesia/service_manager/helper/base.hpp"
 #if CONFIG_ESPOCKET_M6_RESOURCE_TRACE
 #include "esp_heap_caps.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #endif
 #include "esp_app_desc.h"
 #include "esp_log.h"
