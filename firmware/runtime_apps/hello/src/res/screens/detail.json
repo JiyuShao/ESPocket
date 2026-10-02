@@ -1,29 +1,156 @@
 {
   "type": "viewScreen",
   "id": "detail",
-  "commonProps": { "scrollable": false },
-  "style": { "bgColor": "#171129", "padding": 0 },
+  "commonProps": {
+    "scrollable": false
+  },
+  "style": {
+    "bgColor": "#171129",
+    "padding": 0
+  },
   "layout": {
     "type": "flex",
     "flexFlow": "column",
     "mainAlign": "center",
     "crossAlign": "center",
-    "gap": "18dp"
+    "gap": "10dp"
   },
   "children": [
     {
       "type": "label",
       "id": "title",
-      "labelProps": { "text": "Runtime Detail" },
-      "style": { "textColor": "#ffffff", "fontSize": "30sp" },
-      "placement": { "width": "280dp", "height": "44dp" }
+      "labelProps": {
+        "text": "Runtime Detail"
+      },
+      "style": {
+        "textColor": "#ffffff",
+        "fontSize": "26sp"
+      },
+      "placement": {
+        "width": "280dp",
+        "height": "44dp"
+      }
     },
     {
       "type": "label",
       "id": "hint",
-      "labelProps": { "text": "Edge Back returns to Root" },
-      "style": { "textColor": "#b8add6", "fontSize": "17sp", "textAlign": "center" },
-      "placement": { "width": "300dp", "height": "30dp" }
+      "labelProps": {
+        "text": "Edge Back returns to Root"
+      },
+      "style": {
+        "textColor": "#b8add6",
+        "fontSize": "17sp",
+        "textAlign": "center"
+      },
+      "placement": {
+        "width": "300dp",
+        "height": "30dp"
+      }
+    },
+    {
+      "type": "button",
+      "id": "confirm",
+      "events": [
+        {
+          "type": "clicked",
+          "action": "toggle_confirm"
+        }
+      ],
+      "style": {
+        "bgColor": "#7047eb",
+        "radius": "22dp"
+      },
+      "placement": {
+        "width": "230dp",
+        "height": "44dp"
+      },
+      "children": [
+        {
+          "type": "label",
+          "id": "label",
+          "labelProps": {
+            "text": "Confirm Back: Off"
+          },
+          "style": {
+            "textColor": "#ffffff",
+            "fontSize": "17sp"
+          },
+          "placement": {
+            "mode": "relative",
+            "align": "center"
+          }
+        }
+      ]
+    },
+    {
+      "type": "button",
+      "id": "allow",
+      "events": [
+        {
+          "type": "clicked",
+          "action": "allow_back"
+        }
+      ],
+      "style": {
+        "bgColor": "#7047eb",
+        "radius": "22dp"
+      },
+      "placement": {
+        "width": "230dp",
+        "height": "44dp"
+      },
+      "children": [
+        {
+          "type": "label",
+          "id": "label",
+          "labelProps": {
+            "text": "Allow Back"
+          },
+          "style": {
+            "textColor": "#ffffff",
+            "fontSize": "17sp"
+          },
+          "placement": {
+            "mode": "relative",
+            "align": "center"
+          }
+        }
+      ]
+    },
+    {
+      "type": "button",
+      "id": "cancel",
+      "events": [
+        {
+          "type": "clicked",
+          "action": "cancel_back"
+        }
+      ],
+      "style": {
+        "bgColor": "#7047eb",
+        "radius": "22dp"
+      },
+      "placement": {
+        "width": "230dp",
+        "height": "44dp"
+      },
+      "children": [
+        {
+          "type": "label",
+          "id": "label",
+          "labelProps": {
+            "text": "Cancel Back"
+          },
+          "style": {
+            "textColor": "#ffffff",
+            "fontSize": "17sp"
+          },
+          "placement": {
+            "mode": "relative",
+            "align": "center"
+          }
+        }
+      ]
     }
   ]
 }

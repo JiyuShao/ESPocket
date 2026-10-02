@@ -2,7 +2,7 @@
 
 本文规定 ESPocket 开发框架向 Native 与 Runtime App 提供的共同语义。能力尚未完整实现在固件中；实施顺序见[App 导航与 Card 工作项](../../.scratch/014-app-navigation-card-contract/spec.md)。产品约束见 [App 契约](../design/product/04-app-contract.md)，Owner 分工见[导航架构](../design/architecture/05-navigation-runtime.md)。此处的操作名用于表达接口，C++ 类型、JS 绑定和字段编码将在实现时固定。
 
-当前 Native 源码已提供 `PageDeclaration`、`PageNavigator` 和 `PageSnapshot` 的第一版 C++ 接口。Native 示例由 App 声明 Page，并把 Navigator 请求映射到自己的 Brookesia Screen Flow；ESPocket System 按 App ID 注册 Navigator，管理栈的启动、停止和 Back 请求。官方 Store 由产品层声明单个 `store.root`，其标签与弹窗属于 Root 内部状态。子页面默认可见 Back 与 Edge Back 已在 Native 样例接入；`request_back`、`complete_back`、`expire_back` 提供允许、取消、暂缓及超时语义。官方 Settings 已在源码接入限定版本的页面快照与 Back Adapter，保留上游导航事实源，不建立第二份栈；真机已确认 Settings 子页面 Edge Back 正常、没有可见 Back，按 App 自主呈现规则接受。Runtime 绑定、动态 Card 生命周期和生产级线程/参数编码仍按后续工作项实施，本页其余内容是目标契约。
+当前 Native 源码已提供 `PageDeclaration`、`PageNavigator` 和 `PageSnapshot` 的第一版 C++ 接口。Native 示例由 App 声明 Page，并把 Navigator 请求映射到自己的 Brookesia Screen Flow；ESPocket System 按 App ID 注册 Navigator，管理栈的启动、停止和 Back 请求。官方 Store 由产品层声明单个 `store.root`，其标签与弹窗属于 Root 内部状态。子页面默认可见 Back 与 Edge Back 已在 Native 样例接入；`request_back`、`complete_back`、`expire_back` 提供允许、取消、暂缓及超时语义。官方 Settings 已在源码接入限定版本的页面快照与 Back Adapter，保留上游导航事实源，不建立第二份栈；真机已确认 Settings 子页面 Edge Back 正常、没有可见 Back，按 App 自主呈现规则接受。Runtime v1 JSON 边界与 Owner 队列已进入源码；动态 Card 接入与页面参数交付仍按后续工作项实施，本页其余内容是目标契约。
 
 ## 职责边界
 
@@ -40,6 +40,29 @@ Native 产品装配使用 `System::install_navigated_app(app, declaration, prese
 | `requestBack()` | 可见 Back、Edge Back 和 App 自带 Back 的共同请求入口；由待决处理后执行一次 `pop()`。 |
 
 从 Card 打开目标 Page 时，ESPocket 先建立 Root，再让 App 构造到目标的路径；Root 始终是栈底。若 Card ID 已失效或目标 Page 在打开时呈现失败，ESPocket 保持 Root，并通过诊断回调记录 Card ID 与 `target_unavailable`。普通打开 App 和 PWR Home 后再次打开 App 从 Root 开始；息屏唤醒在实例有效时尽力恢复当前 Page。App 停止、崩溃或回收后，旧 Page 对象与待决 Back 均失效，后续启动建立新栈。首版不提供跨 App 返回链。
+
+## Runtime v1 绑定
+
+可见 Runtime App 在资源目录提供 `navigation.json`，格式见 [版本化 schema](schemas/runtime-pages-v1.schema.json)，完整样例见 [Hello Runtime 声明](../../firmware/runtime_apps/hello/src/res/navigation.json)。`version` 当前只能为整数 1；未知字段、类型错误和未声明目标被拒绝，Root 必须属于 pageIds，Card ID 与转移的 from/to 配对不能重复。App ID 必须与 package manifest 相同。缺少声明或校验失败使真实 Core 安装失败；不会回报一个假 Root。
+
+`presentation.screenFlow` 指向 App 的实际 Brookesia Screen Flow；v1 Page ID 与该 Flow 的 Screen ID 一致。`transitions` 为每个需要的 from/to 配对声明一个实际 action。启动核对 Flow 初始状态与 Root；转移前后核对实际 GUI 状态。Flow 不可读取或与 Navigator 不一致时，快照报 `invalid_state`，关闭该次系统 Back，不从 GUI 另建第二份栈。App 的页面动作调用 Navigator，不直接调用 TriggerScreenFlow 绕过它。
+
+JS 入口是 `espocketNavigation.dispatch(JSON.stringify(request))`，返回 Promise，成功值是 UTF-8 JSON 字符串，失败为下面的错误编码。对象与数组通过 JSON 字符串跨越官方 NativeValue 边界；不传 App ID，由官方 Runtime 调用上下文确定真实调用者。App 可包装为 `JSON.parse(await ...)`。当前 Native 与 Runtime 导航仅接受稳定 Page ID；业务参数保留在 App 数据中，Runtime 传入额外 parameters 返回 bad_request，不能静默丢弃。目标参数交付能力仍待扩展。
+
+| request | 作用 |
+|---|---|
+| `{operation:"push", pageId}` / `{operation:"replace", pageId}` | 使用共同 Navigator 压栈或替换页面 |
+| `{operation:"pop"}` / `{operation:"resetToRoot"}` | 页面业务主动导航；Root 不可 pop |
+| `{operation:"requestBack"}` | 与默认可见 Back、Edge Back 相同的确认入口 |
+| `{operation:"setBackDecision", decision:"allow"或"cancel"或"defer"}` | 设置本次运行的 Back 策略；待决期间不能更改 |
+| `{operation:"completeBack", token, allow}` | 允许或取消待决请求；token 是十进制字符串，allow 是 boolean |
+| `{operation:"snapshot"}` | 返回 appId、pageId、canBack、backPending 和 App 私有 pendingToken |
+
+`pendingToken` 没有待决时为 null，存在时为十进制 uint64 字符串，避免 JS Number 精度损失；它不进入 USB 的最小测试快照。每次运行默认 allow，重新打开不保留确认开关或旧 token。System 对普通 Back 计时 15,000ms，到期取消并记录 back_timeout；迟到确认返回 stale_request。15 秒起点是 Owner 收到 Back 的时间。
+
+Runtime 调用只入队，由现有 App 回调任务执行实际 Navigator/GUI 操作；不在 JS 调用线程等待 Owner。最多 16 个待处理请求，2,000ms 内未执行返回 timeout；无前台调用者返回 not_started，旧前台代次返回 stale_request。PWR 优先于队列消费。关闭 System 取消队列，卸载移除绑定。锁定 JS backend 在后续回调刷新 Promise completion，因此 ESPocket 为已绑定 Runtime 提供 50ms Core timer，名字保留为 espocket.navigation.completion；即使 App 没有用户输入或业务 timer，Promise 也能完成。Core 在停止时回收 timer。App 不自行实现 completion pump；样例的另一个 100ms timer 只刷新确认 UI，不拥有栈或超时。
+
+Navigator 的同源错误编码为 invalid_declaration、not_started、unknown_page、at_root、root_page、target_unavailable、presentation_failed、back_pending、back_cancelled、back_timeout、stale_request、declaration_in_use、identity_mismatch。绑定另区分 unsupported_version、bad_request、unsupported、busy、timeout、system_unavailable、page_adapter_unavailable、invalid_state。重复 Back 被拒绝，确认失败不 pop；普通 push/pop/replace/reset 可改变业务导航并使旧 token 失效，两种语言保持共同 Navigator 语义。
 
 ## 官方 Settings 兼容边界
 

@@ -33,6 +33,7 @@
 #include "espocket/test_input_queue.hpp"
 #include "espocket/touch_input_sequence.hpp"
 #include "espocket/page_navigator.hpp"
+#include "espocket/runtime_page_adapter.hpp"
 #include "espocket/settings_navigation_adapter.hpp"
 #include "espocket/power_key_monitor.hpp"
 

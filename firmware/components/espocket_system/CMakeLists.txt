@@ -2,13 +2,14 @@ idf_component_register(
     SRCS "src/system.cpp" "src/system_lifecycle.cpp" "src/system_navigation.cpp"
         "src/system_display.cpp" "src/system_power.cpp" "src/power_key_monitor.cpp" "src/settings_navigation_adapter.cpp"
         "src/native_page_installation.cpp" "src/system_test_input.cpp"
+        "src/system_runtime_navigation.cpp" "src/runtime_navigation_provider.cpp"
     INCLUDE_DIRS "include"
     REQUIRES brookesia_system_core brookesia_service_manager espocket_navigation freertos
     PRIV_REQUIRES
         hello espocket_test_adapter shell_circular
         brookesia_app_settings brookesia_app_store brookesia_gui_lvgl
         brookesia_service_display brookesia_service_helper brookesia_lib_utils
-        esp_driver_gpio esp_timer esp_app_format
+        esp_driver_gpio esp_timer esp_app_format brookesia_runtime_manager
 )
 
 target_compile_features(${COMPONENT_LIB} PUBLIC cxx_std_23)

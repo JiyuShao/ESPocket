@@ -41,7 +41,7 @@ idf.py -C firmware build
 python3 scripts/check.py
 ```
 
-它只检查工作区，不自动格式化、修复或写入构建产物。C++ 行为测试在临时目录编译，需要支持 C++23 的 host 编译器（默认 `clang++`，可用 `CXX` 指定）；Settings 兼容检查需要先按锁定版本物化 managed components。默认不运行 Chrome；显式加 `--diagrams` 才运行架构图检查。完整 ESP-IDF build、烧录与真机验收独立执行。
+它只检查工作区，不自动格式化、修复或写入构建产物。C++ 行为测试在临时目录编译，需要支持 C++23 的 host 编译器（默认 `clang++`，可用 `CXX` 指定）；Settings 兼容检查和 Runtime JSON 边界测试需要先按锁定版本物化 managed components；真实 Runtime 样例动作测试使用 Node.js 22。默认不运行 Chrome；显式加 `--diagrams` 才运行架构图检查。完整 ESP-IDF build、烧录与真机验收独立执行。
 
 例如，Shell 文档的结构测试运行方式为：
 
@@ -93,7 +93,7 @@ Circular Shell 与 Hello Native 各自以 `resources/gui.json` 为唯一 GUI 文
 
 [Host-check workflow](../.github/workflows/host-check.yml) 与本地使用同一 `scripts/check.py`，CI 显式增加图检查；[Firmware-build workflow](../.github/workflows/firmware-build.yml) 独立执行 ESP-IDF 配置、Board Manager 生成和完整构建，不烧录设备。
 
-没有物化依赖的 host-only checkout 可先安装与 ESP-IDF 6.0.1 相同的 Component Manager，再准备测试需要的锁定 Settings 组件：
+没有物化依赖的 host-only checkout 可先安装与 ESP-IDF 6.0.1 相同的 Component Manager，再准备测试需要的锁定 Settings 与 Boost 组件：
 
 ```bash
 python3 -m pip install idf-component-manager==3.0.3
@@ -101,4 +101,4 @@ python3 scripts/firmware/prepare_host_dependencies.py
 python3 scripts/check.py
 ```
 
-准备命令使用官方 Component Manager 从 dependencies.lock 获取组件并验证 hash；已有组件 hash 不匹配时失败，不覆盖本地改动。它只准备 host tests 的 Settings 资源，不解析或改写版本锁，也不替代固件依赖解析。统一检查本身仍只读，不隐式下载依赖。CI 的 GNU 编译器由 `CXX=g++` 选择；本地默认使用 clang++。
+准备命令使用官方 Component Manager 从 dependencies.lock 获取组件并验证 hash；已有组件 hash 不匹配时失败，不覆盖本地改动。它只准备 host tests 的 Settings 资源与 Runtime JSON 编码所用 Boost，不解析或改写版本锁，也不替代固件依赖解析。统一检查本身仍只读，不隐式下载依赖。CI 的 GNU 编译器由 `CXX=g++` 选择；本地默认使用 clang++。

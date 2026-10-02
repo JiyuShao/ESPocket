@@ -14,6 +14,7 @@ std::expected<void, std::string> System::on_app_uninstalled(
             removed = std::move(it->second);
             page_navigators_.erase(it);
         }
+        runtime_pages_.erase(app.app_id);
     }
     if (removed) {
         removed->stop();
@@ -35,9 +36,20 @@ std::expected<void, std::string> System::on_app_started(
     }
 
     if (auto navigator = navigator_for(app.app_id)) {
-        auto result = navigator->start();
+        const auto runtime = runtime_adapter_for(app.app_id);
+        auto result = runtime ? runtime->start() : navigator->start();
         if (!result) {
             return std::unexpected("Failed to start App Page Navigator");
+        }
+        if (runtime && !runtime_page_matches(app.app_id)) {
+            runtime->stop();
+            return std::unexpected("Runtime initial Screen Flow does not match Root Page");
+        }
+        if (runtime) {
+            // The locked JS backend drains Promise completions on a subsequent callback.
+            // Provide that callback even when the App has no timer or input activity.
+            const auto pump = timer_start_periodic(app.app_id, "espocket.navigation.completion", 50);
+            if (!pump) return std::unexpected("Failed to start Runtime completion pump: " + pump.error());
         }
     }
 
@@ -60,7 +72,9 @@ void System::on_app_start_failed(
     std::string_view reason
 )
 {
-    if (auto navigator = navigator_for(app.app_id)) {
+    if (auto runtime = runtime_adapter_for(app.app_id)) {
+        runtime->stop();
+    } else if (auto navigator = navigator_for(app.app_id)) {
         navigator->stop();
     }
     ESP_LOGW(
@@ -75,7 +89,9 @@ void System::on_app_start_failed(
 
 void System::on_app_stopped(const esp_brookesia::system::core::AppInfo &app)
 {
-    if (auto navigator = navigator_for(app.app_id)) {
+    if (auto runtime = runtime_adapter_for(app.app_id)) {
+        runtime->stop();
+    } else if (auto navigator = navigator_for(app.app_id)) {
         navigator->stop();
     }
     restore_home_after_lifecycle(app);
@@ -86,7 +102,9 @@ void System::on_app_stop_failed(
     std::string_view reason
 )
 {
-    if (auto navigator = navigator_for(app.app_id)) {
+    if (auto runtime = runtime_adapter_for(app.app_id)) {
+        runtime->stop();
+    } else if (auto navigator = navigator_for(app.app_id)) {
         navigator->stop();
     }
     ESP_LOGW(

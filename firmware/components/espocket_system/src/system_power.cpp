@@ -34,6 +34,7 @@ void System::poll_system_input()
     if (hardware_press && !synthetic_press) {
         handle_power_short_press();
     }
+    drain_runtime_navigation();
 }
 
 void System::handle_power_short_press()

@@ -25,6 +25,8 @@ class PageNavigator;
 class DeveloperMode;
 class InteractionTestAdapter;
 class SettingsNavigationAdapter;
+class RuntimePageAdapter;
+class NavigationRequestQueue;
 struct TestSnapshot;
 enum class ShellSurface : uint8_t;
 
@@ -46,6 +48,8 @@ protected:
     std::expected<void, std::string> on_start() override;
     void on_stop() override;
     void on_deinit() override;
+    std::expected<void, std::string> on_app_installed(
+        const esp_brookesia::system::core::AppInfo &app) override;
     std::expected<void, std::string> on_app_uninstalled(
         const esp_brookesia::system::core::AppInfo &app
     ) override;
@@ -72,6 +76,11 @@ protected:
     ) override;
 
 private:
+    void init_runtime_navigation();
+    void stop_runtime_navigation();
+    void drain_runtime_navigation();
+    std::shared_ptr<RuntimePageAdapter> runtime_adapter_for(esp_brookesia::system::core::AppId id) const;
+    bool runtime_page_matches(esp_brookesia::system::core::AppId id) const;
     std::expected<TestSnapshot, std::string> read_test_snapshot() const;
     std::expected<void, std::string> start_display();
     std::expected<void, std::string> start_test_touch(std::vector<TouchInputStep> steps);
@@ -100,6 +109,9 @@ private:
     esp_brookesia::system::core::AppId settings_id_ = esp_brookesia::system::core::INVALID_APP_ID;
     std::unordered_map<esp_brookesia::system::core::AppId, std::shared_ptr<PageNavigator>> page_navigators_;
     mutable std::mutex page_navigators_mutex_;
+    struct RuntimePages { std::shared_ptr<RuntimePageAdapter> adapter; std::string flow; };
+    std::unordered_map<esp_brookesia::system::core::AppId, RuntimePages> runtime_pages_;
+    std::shared_ptr<NavigationRequestQueue> runtime_requests_;
     std::shared_ptr<DeveloperMode> developer_mode_;
     std::unique_ptr<InteractionTestAdapter> test_adapter_;
     std::unique_ptr<PowerKeyMonitor> power_key_monitor_;

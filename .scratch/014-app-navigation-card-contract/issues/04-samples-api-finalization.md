@@ -4,13 +4,13 @@
 
 **Blocked by:** [01 Page Navigator](01-page-declaration-navigator.md)；[02 Back 分发](02-back-dispatch.md)；[003/01 Runtime 构建与 staging](../../003-m3-runtime-app/issues/01-build-and-stage-runtime-package.md)（已完成）。
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] Native 与 Runtime 样例具备 Root → Detail → Back → Root、Root 无 Back、PWR Home 和待决 Back 的可控路径。
-- [ ] Runtime Adapter 使用 ticket 01 的共同 Navigator；对声明、push/pop/replace/resetToRoot、快照和错误给出与 Native 相同的产品语义。
-- [ ] C++ 与 Runtime API 明确线程、参数编码、错误枚举和 Back 超时时长，并链接产品与架构权威文档。
-- [ ] 对相同声明、导航操作、重复/超时 Back、PWR token 失效与呈现失败，两种 Adapter 的组件验证得到相同结果。
-- [ ] 当前 Native 固件与真实 Runtime package 的 clean build/link/staging 通过；不将旧 Root Back 模型的构建结果算作新绑定验证。
+- [x] Native 与 Runtime 样例具备 Root → Detail → Back → Root、Root 无 Back、PWR Home 和待决 Back 的可控路径。
+- [x] Runtime Adapter 使用 ticket 01 的共同 Navigator；对声明、push/pop/replace/resetToRoot、快照和错误给出与 Native 相同的产品语义。
+- [x] C++ 与 Runtime API 明确线程、参数编码、错误枚举和 Back 超时时长，并链接产品与架构权威文档。
+- [x] 对相同声明、导航操作、重复/超时 Back、PWR token 失效与呈现失败，两种 Adapter 的组件验证得到相同结果。
+- [x] 当前 Native 固件与真实 Runtime package 的 clean build/link/staging 通过；不将旧 Root Back 模型的构建结果算作新绑定验证。
 - [x] 开发指导覆盖信息型、控制型、列表型和工具型页面，以及圆屏中部优先、单列列表、避免手机式 Bottom Navigation、不依赖后台驻留。
 
 ## 验证边界
@@ -23,3 +23,7 @@
 - 2026-10-02（源码接缝审计）：锁定版 `runtime_manager` 的公开 `RuntimeFunctionProvider` 可注册 NativeModule，Runtime init 会 discover_registered_providers；System Core 公开 `get_current_runtime_app_owner()` 将运行时调用上下文映射为 Core App ID。因此后续从产品层 Provider 接入共同 Navigator 有现成公开入口，不需要因 HostBridge 实现私有而修改上游。真正的绑定仍须处理 App 声明安装、GUI Owner 调度、异步待决 Back 和上下文失效，当前未实现/未勾选。
 - 2026-10-02：Native Detail 新增默认关闭的 Back 确认开关及允许/取消控件，使用现有 Navigator 待决 token；状态 timer 不拥有超时或页面栈。生产 HelloApp + 真实 Navigator 主机用例验证立即/暂缓/允许/取消、超时、失败和停止后 token 失效。Runtime 绑定、schema 与双方同等验证未完成，整票开放；见 [Native 确认样例证据](../records/2026-10-02-native-back-confirmation.md)。
 - 2026-10-02：开发 API 增加四种页面用途的布局、导航、真实 Owner 和生命周期指导，明确圆屏中部、单列、无 Bottom Navigation 和无后台驻留保证；勾选该独立文档条件，其余绑定/构建条件保持未完成。
+
+## Resolution
+
+2026-10-02：Native 与 Runtime 使用共同 Navigator，版本化 JSON schema、公开 Runtime Provider、真实 Owner 队列、生命周期和确认样例完成。39 个主机用例、真实 Toolkit BPK 与固件 clean build/link/staging 通过；见 [Runtime 绑定证据](../records/2026-10-02-runtime-navigation-binding.md)。真机路径仍由 008/03 验收，不将构建当成物理通过。Card API 与目标打开仍由 03/05 承接。

@@ -84,6 +84,12 @@ void System::handle_back()
         return;
     }
     if (auto navigator = navigator_for(active->app_id)) {
+        if (!runtime_page_matches(active->app_id)) {
+            default_back_visible_.store(false);
+            edge_back_enabled_.store(false);
+            ESP_LOGW(TAG, "Runtime Page and Screen Flow disagree; Back disabled");
+            return;
+        }
         if (!navigator->edge_back_enabled()) {
             return;
         }
@@ -176,6 +182,7 @@ std::expected<PageSnapshot, std::string> System::foreground_page_snapshot() cons
     if (app_id == settings_id_ && settings_adapter_) {
         result = settings_adapter_->snapshot();
     } else if (auto navigator = navigator_for(app_id)) {
+        if (!runtime_page_matches(app_id)) return std::unexpected("invalid_state");
         auto page = navigator->snapshot();
         result = page.page_id.empty() ? std::expected<PageSnapshot, std::string>(
             std::unexpected("not_started")) : std::expected<PageSnapshot, std::string>(std::move(page));

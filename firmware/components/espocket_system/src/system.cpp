@@ -7,7 +7,10 @@ System::System()
       lifecycle_restore_surface_(ShellSurface::WatchFace)
 {}
 
-System::~System() = default;
+System::~System()
+{
+    stop_runtime_navigation();
+}
 
 std::expected<void, std::string> System::init()
 {
@@ -41,6 +44,7 @@ std::expected<void, std::string> System::init()
 
     auto result = esp_brookesia::system::core::System::init(std::move(config));
     if (!result) {
+        stop_runtime_navigation();
         DisplaySource::get_instance().stop();
         display_binding_.release();
         display_started_ = false;
@@ -59,6 +63,7 @@ esp_brookesia::system::core::SystemInfo System::on_get_system_info() const
 
 std::expected<void, std::string> System::on_init()
 {
+    init_runtime_navigation();
     developer_mode_ = make_device_developer_mode();
     if (auto restored = developer_mode_->restore(); !restored) {
         ESP_LOGW(TAG, "Developer mode disabled after storage read failure: %s",
@@ -216,6 +221,7 @@ std::expected<void, std::string> System::on_init()
 
 std::expected<void, std::string> System::on_start()
 {
+    init_runtime_navigation();
     stopping_.store(false, std::memory_order_release);
     if (test_power_input_) { test_power_input_->cancel_pending(); }
     foreground_app_id_.store(
@@ -264,6 +270,7 @@ std::expected<void, std::string> System::on_start()
 void System::on_stop()
 {
     stopping_.store(true, std::memory_order_release);
+    stop_runtime_navigation();
     if (test_adapter_) {
         test_adapter_->stop();
     }
@@ -293,6 +300,7 @@ void System::on_stop()
 
 void System::on_deinit()
 {
+    stop_runtime_navigation();
     shell_.reset();
     settings_adapter_.reset();
     settings_id_ = esp_brookesia::system::core::INVALID_APP_ID;
@@ -300,6 +308,7 @@ void System::on_deinit()
     {
         std::lock_guard lock(page_navigators_mutex_);
         retired_navigators = std::move(page_navigators_);
+        runtime_pages_.clear();
     }
     for (const auto &[app_id, navigator] : retired_navigators) {
         navigator->stop();

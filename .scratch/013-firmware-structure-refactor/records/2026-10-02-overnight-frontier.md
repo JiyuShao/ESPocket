@@ -129,3 +129,7 @@
 | 005 生态剩余项 | package trust、Store 稳定性、Runtime keyboard 隔离和签名分发受上游/发布路径约束 | 不修改 managed_components、不绕过 Core trust；相关 Launcher/package lifecycle 按真实依赖保留。 |
 
 设备没有收到任何夜间刷写，仍为 013 identity `e8bbe74ff`。当前 build tree 的镜像不同；刷写前使用最新记录的 BIN/ELF hash 与 hello identity，不拿构建目录 ELF 误判旧设备。临时构建/Driver 日志与本地 commits 只记录源码或合成证据，不能自动关闭物理/视觉条件。
+
+## 用户恢复后的推进（2026-10-02）
+
+用户明确要求继续直到完成，覆盖此前 09:00 夜间截止。014/04 的 Runtime 绑定、schema、Owner 队列、确认样例、对等组件与 clean build/staging 已完成并 resolved；详见 [绑定证据](../../014-app-navigation-card-contract/records/2026-10-02-runtime-navigation-binding.md)。008 的这项源码前置已满足，008/03 真机门槛保留。下一步继续 014/03 实际 Card 呈现与持久配置，再按依赖推进 014/05、008；本记录之前的夜间状态保留为历史。
