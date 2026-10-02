@@ -161,3 +161,7 @@
 ## 013 人工验收解除
 
 2026-10-02 用户确认旧镜像 e8bbe74ff 的集中 smoke 全部正常。013/04、013/06 与 Spec 全部 resolved；不再请求该 smoke。012/03 的设备 Driver 验证可以按明确新镜像推进，014/05 Card 与 008/03 剩余物理条件仍分别保留。
+
+## USB 合成设备门槛解除
+
+013 smoke 之后已刷入新镜像并完成 012/03，最终 09e8eb00d 的独立 35 步 attempt PASS，012 Spec resolved。过程中实际捕获并修复测试 worker 栈容量/分配与导航滑动尾部误触，所有失败保留；见 [设备 Driver 记录](../../012-test-automation-contract/records/2026-10-02-device-driver-run.md)。007/008/014 的物理/视觉条件仍按各自证据区分，不重新要求十轮人工。

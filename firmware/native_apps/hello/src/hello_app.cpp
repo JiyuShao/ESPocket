@@ -175,6 +175,7 @@ std::expected<void, std::string> HelloApp::on_action(
             enabled ? "Back confirm: On" : "Back confirm: Off");
         if (!result) return std::unexpected(result.error());
         back_confirmation_->enabled.store(enabled);
+        ESP_LOGI(TAG, "Back confirmation: %s", enabled ? "enabled" : "disabled");
         back_status_.clear();
         return {};
     }

@@ -73,7 +73,7 @@ class Driver:
 
     @staticmethod
     def check_log(line):
-        markers = (b'Guru Meditation', b'panic_abort', b'abort() was called', b'ESP_RST_PANIC',
+        markers = (b'A stack overflow in task', b'Guru Meditation', b'panic_abort', b'abort() was called', b'ESP_RST_PANIC',
                    b'Synthetic input tick failed:', b'Input cleanup during stop failed:',
                    b'Synthetic PWR expired', b'Synthetic PWR cancelled',
                    b'USB Test Adapter response write failed', b'ESP-ROM:esp32', b'ESPocket started')

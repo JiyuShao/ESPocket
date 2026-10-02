@@ -2,7 +2,7 @@
 
 Sequence: 012
 
-Status: active
+Status: resolved
 Blocked by: none
 
 ## Problem Statement
@@ -62,3 +62,7 @@ Wi-Fi 测试通道、任意 App Action、应用安装、设置修改、物理执
 - [交互自动化架构](../../docs/design/architecture/08-interaction-test-seam.md)
 - [测试开发协议](../../docs/development/interaction-test-protocol.md)
 - [系统导航验收](../007-m7-navigation/issues/03-run-navigation-hardware-acceptance.md)
+
+## Resolution
+
+2026-10-02：三张 tickets 全部 resolved。设备协议、共享输入/快照和独立 Driver 的源码、主机与真实 USB 合成路径门槛完成；35 步设备 attempt 通过。物理触摸、GPIO 与视觉继续由 007/03、008/03、014/05 持有，不以本 Effort 结果替代，见 [运行证据](records/2026-10-02-device-driver-run.md)。

@@ -10,6 +10,8 @@
 #include "driver/usb_serial_jtag.h"
 #include "esp_app_desc.h"
 #include "esp_err.h"
+#include "esp_heap_caps.h"
+#include "freertos/idf_additions.h"
 #include "esp_log.h"
 
 namespace espocket {
@@ -18,6 +20,8 @@ namespace {
 constexpr char TAG[] = "ESPocket.Test";
 constexpr std::string_view FRAME_PREFIX = "@ESPTEST ";
 constexpr size_t MAX_LINE_SIZE = 1024;
+// JSON touch frames overflowed the former 4 KiB worker on ESP32-S3.
+constexpr uint32_t USB_TASK_STACK_BYTES = 8192;
 
 std::optional<uint64_t> unsigned_field(const boost::json::object &object, std::string_view key)
 {
@@ -93,7 +97,8 @@ std::expected<void, std::string> InteractionTestAdapter::start()
                                               power_short_, release_, touch_);
     running_.store(true, std::memory_order_release);
     driver_ready_.store(false, std::memory_order_release);
-    const auto created = xTaskCreate(task_entry, "espocket_test_usb", 4096, this, 3, &task_);
+    const auto created = xTaskCreateWithCaps(task_entry, "espocket_test_usb", USB_TASK_STACK_BYTES,
+                                             this, 3, &task_, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
     if (created != pdPASS) {
         running_.store(false, std::memory_order_release);
         protocol_.reset();
@@ -183,7 +188,7 @@ void InteractionTestAdapter::task_entry(void *context)
     auto *self = static_cast<InteractionTestAdapter *>(context);
     self->run();
     xSemaphoreGive(self->stopped_);
-    vTaskDelete(nullptr);
+    vTaskDeleteWithCaps(nullptr);
 }
 
 void InteractionTestAdapter::run()

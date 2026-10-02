@@ -4,12 +4,12 @@
 
 **Blocked by:** [02 共享输入与快照](02-shared-input-and-snapshot.md)（已完成）。
 
-**Status:** ready-for-human
+**Status:** resolved
 
 - [x] 失败和超时先执行 `release`，再采集最终快照及日志；重试作为新 attempt 保留原失败。
 - [x] 用例断言等待快照序号和目标状态，不以固定 sleep 或成功投递响应判 PASS。
 - [x] 报告明确 `synthetic-input` 不满足触摸硬件、PWR GPIO 或画面门槛。
-- [ ] 至少覆盖表盘到 Launcher/Card、子页面 Back、Root 无 Back、PWR Home 与息屏唤醒的自动化路径。
+- [x] 至少覆盖表盘到 Launcher/Card、子页面 Back、Root 无 Back、PWR Home 与息屏唤醒的自动化路径。
 
 ## Comments
 
@@ -22,3 +22,9 @@
 1. 收到既有 013 smoke 结果后，按统一安排刷入具有本票输入 capability 的明确镜像；开启设备开发者模式并核对 hello identity。
 2. 对单个设备清单 ID 跑一次 Driver，保留独立 attempt 的 report 与原始 serial.log。全部步骤及最终 cleanup/快照符合预期才勾选最后一项。
 3. 若坐标、状态或日志失败，保留失败 attempt；调整实现/profile 后作为新 attempt，不覆盖原结果。合成结果不勾选任何物理或视觉条件。
+
+- 2026-10-02（实际运行）：013 smoke 已通过，新镜像已刷写并校验；首套 Driver 失败于再次进 Launcher 时意外打开 Native，短路径诊断另捕获 4 KiB USB worker 栈溢出。独立失败和清理结果保留，尚不关闭设备条件；修复与后续结果见 [设备运行记录](../records/2026-10-02-device-driver-run.md)。
+
+## Resolution
+
+2026-10-02：实际设备 ESPocket-Waveshare-A0F262E30B68、镜像 09e8eb00d 的独立 attempt 20261002T085731Z-56520ddf-db93-42e4-844d-2ca468a28616 全部 35 步通过，最终 release 成功，快照为亮屏 Watch Face、无前台 App、inputBusy=false。修复测试 worker 栈溢出/内部栈分配失败和导航触摸尾部误触后，通过原坐标路径；此前失败均保留。只关闭 synthetic-input 条件，见 [设备运行记录](../records/2026-10-02-device-driver-run.md)。

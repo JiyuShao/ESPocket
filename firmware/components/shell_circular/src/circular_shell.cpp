@@ -284,6 +284,14 @@ std::expected<void, std::string> CircularShell::on_timer(
                                         std::memory_order_acq_rel
                                     )
                                 );
+            if (intent != GestureIntent::None) {
+                LvglLock lock;
+                if (!lock) return std::unexpected("Unable to consume navigation touch");
+                // A screen change must not turn the held swipe into a new button press.
+                for (auto *input = lv_indev_get_next(nullptr); input != nullptr; input = lv_indev_get_next(input)) {
+                    if (lv_indev_get_type(input) == LV_INDEV_TYPE_POINTER) lv_indev_wait_release(input);
+                }
+            }
             std::expected<void, std::string> result{};
             switch (intent) {
             case GestureIntent::WatchFace:

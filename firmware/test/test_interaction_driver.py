@@ -207,6 +207,10 @@ class DriverTests(unittest.TestCase):
         self.assertTrue(driver.request('release')['ok'])
         self.assertIn(b'ordinary device log', log.getvalue())
 
+    def test_stack_overflow_log_fails_before_reboot(self):
+        with self.assertRaisesRegex(MODULE.DriverError, 'device error observed'):
+            MODULE.Driver.check_log(b'***ERROR*** A stack overflow in task espocket_test_u has been detected.\n')
+
     def test_device_error_log_fails_current_operation(self):
         driver, _, log = self.make(lambda _: [b'Synthetic input tick failed: timeout\n'])
         with self.assertRaisesRegex(MODULE.DriverError, 'device error observed'):
