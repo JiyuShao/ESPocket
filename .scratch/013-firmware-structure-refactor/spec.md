@@ -2,7 +2,7 @@
 
 Sequence: 013
 
-Status: active
+Status: resolved
 Blocked by: None — baseline committed as 43159fb
 
 ## Problem Statement
@@ -156,3 +156,5 @@ firmware/
 - 2026-10-02：06 的 CI 与文档收尾、最终自动验证完成；已刷入重构镜像并核对 USB identity，04/06 等待一次集中 smoke 结果，见 [最终验证记录](records/2026-10-02-final-verification.md)。
 
 - 2026-10-02：用户授权睡眠期间继续检查与执行剩余 issues。04/06 人工条件保留，独立源码 frontier 与晨间最小介入见 [夜间执行记录](records/2026-10-02-overnight-frontier.md)。
+
+- 2026-10-02：用户确认最终镜像 e8bbe74ff 的集中 smoke 全部正常，04/06 resolved；范围内六张 tickets 全部关闭。本 Effort 完成，后续功能与测试仍由 014、012、007、008 各自持有。

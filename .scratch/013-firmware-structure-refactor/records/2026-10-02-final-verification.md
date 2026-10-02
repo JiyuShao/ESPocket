@@ -19,3 +19,7 @@
 只写 App 分区 0x60000，写入 hash 校验通过；没有改写 NVS、LittleFS 或分区表。USB hello 返回 ok:true、image_identity:e8bbe74ff，与最终 ELF SHA-256 前九位一致。
 
 已发出一次集中 smoke 请求：Native Detail Edge Back；自动息屏唤醒保留 Detail；PWR Home → 息屏 → Watch Face；Quick Settings 与 Launcher 的反向返回。当前尚待用户结果，不提前标记 04/06 硬件条件通过。
+
+## 真机 smoke 结果
+
+2026-10-02：用户回复「全部正常」，对应上面已发出的完整单次集中路径。Native Detail Edge Back、自动息屏唤醒保留 Detail、物理 PWR Home/息屏/亮屏回 Watch Face、Quick Settings 上滑与 Launcher 顶部下拉返回均通过。串口采集确认设备镜像 e8bbe74ff；连接时记录 USB_UART_CHIP_RESET，随后正常启动，没有捕获 panic。人工观察作为物理/视觉证据，串口启动日志不独立代替该观察。013/04、013/06 与 Spec resolved。

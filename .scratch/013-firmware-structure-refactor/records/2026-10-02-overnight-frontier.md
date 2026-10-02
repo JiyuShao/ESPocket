@@ -157,3 +157,7 @@
 用户已接受声明式 Runtime Card 首版并要求继续，范围选择不再待答复。已实现真实安装声明校验、Core 元数据刷新、独立 GUI 文档、summary/目标 Detail 样例、版本化 schema 和开发 API；没有创建独立 JS Runtime。见 [首版实施证据](../../014-app-navigation-card-contract/records/2026-10-02-declarative-runtime-card.md)。
 
 新增默认关闭的 Card 样例入口，仅在 Developer Mode On、空持久配置时使用 RAM 序列，保留既有 NVS。未刷写或新增硬件 PASS。014/03 package replacement 事务条件、014/05 硬件/迁移条件、013/04 与 013/06 既有单次 smoke、012/03 一次设备 Driver、008/03 各路径一次仍保留。早前已接受的亮度/Wi-Fi 与十轮资源结果不重复。
+
+## 013 人工验收解除
+
+2026-10-02 用户确认旧镜像 e8bbe74ff 的集中 smoke 全部正常。013/04、013/06 与 Spec 全部 resolved；不再请求该 smoke。012/03 的设备 Driver 验证可以按明确新镜像推进，014/05 Card 与 008/03 剩余物理条件仍分别保留。
