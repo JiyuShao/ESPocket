@@ -118,6 +118,7 @@ void System::drain_runtime_navigation()
     if (runtime_adapter_for(app) && !runtime_page_matches(app)) {
         default_back_visible_.store(false, std::memory_order_release);
         edge_back_enabled_.store(false, std::memory_order_release);
+        edge_back_reserved_.store(false, std::memory_order_release);
     }
 }
 } // namespace espocket

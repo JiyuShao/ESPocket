@@ -21,3 +21,7 @@
 - 2026-10-02（范围答复）：用户接受声明式 Runtime Card 首版并要求继续。按 ADR-0014 实现版本化 cards.json、真实安装校验/模型工厂与 Core 元数据刷新；不创建独立 JS 实例，不支持 JS 业务回调。API/schema 作者边界已明确，package 更新事务与硬件条件保持开放。
 
 - 2026-10-02（实施）：声明式 Runtime Card、实际安装模型工厂、两张参考 Card、默认关闭的 RAM 样例入口及组件检查已实现。见 [首版实施证据](../records/2026-10-02-declarative-runtime-card.md)；迁移事务和真机条件仍开放。
+
+- 2026-10-02（设备）：已新增真实 Native/Runtime Card Driver。首个 Card attempt 验证 Native 全部路径，Runtime Root 发现边缘滑动误点 Open Detail，修复默认手势责任与可 Back 分离；原失败保留，见 [Card 设备记录](../records/2026-10-02-card-device-run.md)。物理/视觉与更新事务条件保持开放。
+
+- 2026-10-02（最终合成证据）：c4dfa5af8 + 闭包修复 Runtime 资源的 37 步 Card attempt PASS，完整包/固件、源码主机与资源校验通过。实际发现并修复 Root 手势误点、USB 输出交叉、release 后误超时、Owner 停止采样竞争及样例重复加载；实验实现崩溃与所有失败保留。见 [Card 设备记录](../records/2026-10-02-card-device-run.md)。物理/视觉问题已一次性发给用户，整票仍不关闭。

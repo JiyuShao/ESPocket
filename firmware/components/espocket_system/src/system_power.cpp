@@ -36,6 +36,7 @@ void System::poll_system_input()
     }
     drain_runtime_navigation();
     drain_card_actions();
+    if (test_snapshots_) { test_snapshots_->drain(); }
 }
 
 void System::handle_power_short_press()

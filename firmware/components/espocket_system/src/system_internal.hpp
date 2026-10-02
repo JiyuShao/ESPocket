@@ -32,6 +32,7 @@
 #include "espocket/interaction_test_adapter.hpp"
 #include "espocket/test_input_queue.hpp"
 #include "espocket/touch_input_sequence.hpp"
+#include "espocket/owner_snapshot_queue.hpp"
 #include "espocket/page_navigator.hpp"
 #include "espocket/runtime_page_adapter.hpp"
 #include "espocket/card_configuration_store.hpp"

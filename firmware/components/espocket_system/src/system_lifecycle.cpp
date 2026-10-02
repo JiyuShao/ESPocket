@@ -77,6 +77,8 @@ std::expected<void, std::string> System::on_app_started(
                                std::memory_order_release);
     edge_back_enabled_.store(navigator && navigator->edge_back_enabled(),
                             std::memory_order_release);
+    edge_back_reserved_.store(navigator && navigator->framework_owns_back(),
+                             std::memory_order_release);
     lifecycle_restore_pending_ = false;
     return {};
 }

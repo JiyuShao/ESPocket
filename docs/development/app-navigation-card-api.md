@@ -1,6 +1,6 @@
 # App Page、Card 与 Back 开发 API（目标 v1）
 
-本文规定 ESPocket 开发框架向 Native 与 Runtime App 提供的共同语义。能力尚未完整实现在固件中；实施顺序见[App 导航与 Card 工作项](../../.scratch/014-app-navigation-card-contract/spec.md)。产品约束见 [App 契约](../design/product/04-app-contract.md)，Owner 分工见[导航架构](../design/architecture/05-navigation-runtime.md)。此处的操作名用于表达接口，C++ 类型、JS 绑定和字段编码将在实现时固定。
+本文规定 ESPocket 开发框架向 Native 与 Runtime App 提供的共同语义和首版接口。实现范围、未完成条件与证据见[App 导航与 Card 工作项](../../.scratch/014-app-navigation-card-contract/spec.md)。产品约束见 [App 契约](../design/product/04-app-contract.md)，Owner 分工见[导航架构](../design/architecture/05-navigation-runtime.md)。
 
 当前 Native 源码已提供 `PageDeclaration`、`PageNavigator` 和 `PageSnapshot` 的第一版 C++ 接口。Native 示例由 App 声明 Page，并把 Navigator 请求映射到自己的 Brookesia Screen Flow；ESPocket System 按 App ID 注册 Navigator，管理栈的启动、停止和 Back 请求。官方 Store 由产品层声明单个 `store.root`，其标签与弹窗属于 Root 内部状态。子页面默认可见 Back 与 Edge Back 已在 Native 样例接入；`request_back`、`complete_back`、`expire_back` 提供允许、取消、暂缓及超时语义。官方 Settings 已在源码接入限定版本的页面快照与 Back Adapter，保留上游导航事实源，不建立第二份栈；真机已确认 Settings 子页面 Edge Back 正常、没有可见 Back，按 App 自主呈现规则接受。Runtime v1 JSON 边界与 Owner 队列已进入源码；动态 Card 接入与页面参数交付仍按后续工作项实施，本页其余内容是目标契约。
 
@@ -164,6 +164,10 @@ Home Space 拥有 Card 横滑。Card 内点击、纵向滚动和轻量操作归 
 
 App 只维护业务数据和呈现对象，不维护供系统读取的第二份页面栈。开始时连接回调/订阅，暂停可停止只影响可见内容的工作，停止时释放 timer、订阅和 GUI 引用；迟到回调应检查运行身份或使用不会写入新运行的状态对象。后台驻留不作保证，App/Card UI 被释放后可靠业务仍由其持久状态或 Service 负责。Native Hello 的确认样例可参考 timer 与 token 清理；Runtime Page 绑定已提供版本化 JSON API；Card 模型的 C++ 回调不能直接当作现成 JS 导出。
 
+### Runtime App 生命周期
+
+Runtime 入口脚本在锁定 backend 中可能于同一 JS realm 再次执行。样例使用 IIFE 私有作用域，只导出 `globalThis.brookesia_app`；作者不要依赖 stop 清空顶层 `const/let` 声明。`on_start` 初始化瞬时确认状态，`on_stop` 使旧运行的异步结果失效；同一 realm 二次加载和迟到结果由真实样例测试覆盖。
+
 ## 观察与错误
 
 ESPocket 的只读页面语义至少包含 `appId`、当前 `pageId`、`canBack` 和 `backPending`。`canBack` 表示当前可接受一个 Back 请求；待决期间为 false，并同时显示 `backPending=true`。页面参数、表单值、私有 UI 树和完整栈不属于该接口。
@@ -178,3 +182,7 @@ ESPocket 的只读页面语义至少包含 `appId`、当前 `pageId`、`canBack`
 | Back 超时或 token 过期 | 保持页面并报告 `back_timeout` 或 `stale_request`。 |
 
 上述错误名是稳定语义类别；语言绑定中的精确枚举值、线程模型、参数编码和超时时长由实现工作项定版。Native 与 Runtime 对同一错误类别必须给出相同产品结果。
+
+## 默认边缘手势与 Root
+
+Root 的 canBack、默认 Back 和 edge_back_enabled 仍为 false。默认返回由框架负责时，框架消费达到阈值的边缘返回轨迹，避免滑动误点 Root 按钮，不发起页面返回。AppOwned 仍把自定义边缘手势交给 App；普通非边缘横滑、上下滚动不受此规则接管。C++ Navigator 的 framework_owns_back 查询该运行任务的默认返回责任，与实际 Back 可用性分开；System 只发布由 Owner 更新的手势标志给 Shell，不复制页面栈或更改快照字段。

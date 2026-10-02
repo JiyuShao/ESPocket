@@ -80,7 +80,15 @@ std::expected<void, std::string> System::on_init()
                             std::expected<void, std::string>{};
         });
     test_adapter_ = std::make_unique<InteractionTestAdapter>(
-        developer_mode_, [this]() { return read_test_snapshot(); },
+        developer_mode_, [this]() -> std::expected<TestSnapshot, std::string> {
+            auto sample = test_snapshots_->request();
+            const auto deadline = esp_timer_get_time() + 2'000'000;
+            while (esp_timer_get_time() < deadline) {
+                if (auto result = sample->result()) { return std::move(*result); }
+                vTaskDelay(pdMS_TO_TICKS(10));
+            }
+            return std::unexpected("snapshot_owner_timeout");
+        },
         [this]() -> std::expected<void, std::string> {
             if (stopping_.load(std::memory_order_acquire) || !test_power_input_ ||
                     !developer_mode_->enabled()) {
@@ -196,6 +204,8 @@ std::expected<void, std::string> System::on_init()
                                    default_back_visible_.load(std::memory_order_acquire),
                 .edge_enabled = registered_foreground &&
                                 edge_back_enabled_.load(std::memory_order_acquire),
+                .edge_reserved = registered_foreground &&
+                                 edge_back_reserved_.load(std::memory_order_acquire),
             };
         },
         .expire_back = [this]() {
@@ -240,6 +250,7 @@ std::expected<void, std::string> System::on_start()
         if (auto samples = init_card_samples(); !samples) return samples;
     }
     stopping_.store(false, std::memory_order_release);
+    test_snapshots_ = std::make_unique<OwnerSnapshotQueue>([this]() { return read_test_snapshot(); });
     if (test_power_input_) { test_power_input_->cancel_pending(); }
     foreground_app_id_.store(
         esp_brookesia::system::core::INVALID_APP_ID,
@@ -287,6 +298,7 @@ std::expected<void, std::string> System::on_start()
 void System::on_stop()
 {
     stopping_.store(true, std::memory_order_release);
+    if (test_snapshots_) { test_snapshots_->close(); }
     stop_runtime_navigation();
     pause_card();
     if (card_actions_) card_actions_->close();

@@ -92,6 +92,7 @@ public:
     PageSnapshot snapshot() const;
     bool show_default_back() const;
     bool edge_back_enabled() const;
+    bool framework_owns_back() const;
 
 private:
     PageNavigator(PageDeclaration declaration, Presenter presenter);

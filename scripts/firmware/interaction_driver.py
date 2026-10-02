@@ -255,18 +255,64 @@ class Driver:
         self.power('PWR screen off', {**home, 'display': False})
         self.power('PWR wake', home)
 
-    def attempt(self, profile, *, device_id, expected_image=None, attempt_id=None):
+    def card_suite(self, profile):
+        home = {'surface': 'watch_face', 'display': True, 'foregroundAppId': '', 'pageId': '',
+                'canBack': False, 'backPending': False}
+        initial = self.snapshot()
+        if initial['inputBusy']:
+            raise DriverError('device already has an occupied input sequence')
+        if not initial['display']:
+            self.power('initial wake', {'display': True})
+            initial = self.snapshot()
+        if initial['foregroundAppId'] or initial['surface'] != 'watch_face':
+            self.power('initial Home', home)
+        else:
+            self.wait(home, after=initial['seq'])
+        for model, app, side, outward, inward in (
+            ('Native', 'espocket.app.hello', 'left', 'right', 'left'),
+            ('Runtime', 'espocket.app.hello_runtime', 'right', 'left', 'right'),
+        ):
+            card = {**home, 'surface': 'app_card.' + side}
+            root = {'foregroundAppId': app, 'pageId': 'root', 'display': True,
+                    'canBack': False, 'backPending': False}
+            detail = {**root, 'pageId': 'detail', 'canBack': True}
+            self.touch(model + ' summary Card', card, *profile[outward])
+            self.touch(model + ' summary opens Root', root, profile['card_open_tap'])
+            self.touch(model + ' Root Edge Back stays Root', root, *profile['edge_back'])
+            self.observe(model + ' Root has no Back', root)
+            self.power(model + ' Root PWR Home', home)
+            self.touch(model + ' first Card after Home', card, *profile[outward])
+            self.touch(model + ' second Card', card, *profile[outward])
+            self.touch(model + ' sequence boundary stays on last Card', card, *profile[outward])
+            self.touch(model + ' target opens Detail', detail, profile['card_open_tap'])
+            self.touch(model + ' Detail Back to Root', root, *profile['edge_back'])
+            self.power(model + ' Detail task PWR Home', home)
+            self.touch(model + ' summary after Detail task', card, *profile[outward])
+            self.touch(model + ' reopen from Root', root, profile['card_open_tap'])
+            self.power(model + ' reopened Root PWR Home', home)
+            self.touch(model + ' summary Card for pause', card, *profile[outward])
+            self.await_state(model + ' Card automatic screen off', {**card, 'display': False},
+                             timeout=35, invariants={key: value for key, value in card.items() if key != 'display'})
+            self.power(model + ' Card wake restores Card', card)
+            self.touch(model + ' Card inward returns Home', home, *profile[inward])
+
+    def attempt(self, profile, *, device_id, expected_image=None, attempt_id=None, suite="navigation"):
         if self.attempt_started:
             raise DriverError('create a new Driver and output directory for each attempt')
         self.attempt_started = True
         report = {'attempt': attempt_id or str(uuid.uuid4()), 'startedAt': datetime.now(timezone.utc).isoformat(),
                   'deviceId': device_id, 'deviceIdentitySource': 'operator-inventory', 'transport': 'usb-serial-jtag', 'inputType': 'synthetic-input',
                   'physicalInputVerified': False, 'visualVerified': False, 'limitations': LIMITS,
-                  'profile': profile, 'status': 'RUNNING'}
+                  'profile': profile, 'testSuite': suite, 'status': 'RUNNING'}
         failed = None
         try:
             self.hello(expected_image)
-            self.suite(profile)
+            if suite == 'navigation':
+                self.suite(profile)
+            elif suite == 'cards':
+                self.card_suite(profile)
+            else:
+                raise DriverError('unknown test suite')
         except (Exception, KeyboardInterrupt) as error:
             failed = f'{type(error).__name__}: {error}'
         # Both success and failure release before the final snapshot. Never skip cleanup on an error.
@@ -304,6 +350,7 @@ class Driver:
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--suite', choices=('navigation', 'cards'), default='navigation')
     parser.add_argument('--port', required=True)
     parser.add_argument('--device-id', required=True, help='board identity from inventory, not the serial port name')
     parser.add_argument('--expected-image', required=True, help='exact hello image_identity for this build')
@@ -319,10 +366,10 @@ def main():
             with serial.Serial(args.port, 115200, timeout=0.05, write_timeout=1) as transport:
                 report = Driver(transport, raw_log).attempt(profile, device_id=args.device_id,
                                                          expected_image=args.expected_image,
-                                                         attempt_id=directory.name)
+                                                         attempt_id=directory.name, suite=args.suite)
         except Exception as error:
             report = {'status': 'FAIL', 'attempt': directory.name, 'deviceId': args.device_id,
-                      'expectedImage': args.expected_image, 'inputType': 'synthetic-input',
+                      'expectedImage': args.expected_image, 'testSuite': args.suite, 'inputType': 'synthetic-input',
                       'physicalInputVerified': False, 'visualVerified': False, 'limitations': LIMITS,
                       'error': f'{type(error).__name__}: {error}', 'cleanup': 'transport unavailable'}
     report['port'] = args.port

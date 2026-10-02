@@ -104,6 +104,8 @@ void process_shell_gesture(ShellGestureState &state, const ShellGestureEvent &ev
          event.direction == ShellGestureDirection::Left);
     if (app_visible && edge_back && context.edge_back_enabled) {
         intent = GestureIntent::Back;
+    } else if (app_visible && edge_back && context.edge_back_reserved) {
+        intent = GestureIntent::Consume;
     } else if (!app_visible) {
         switch (surface) {
         case ShellSurface::WatchFace:

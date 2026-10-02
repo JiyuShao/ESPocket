@@ -315,6 +315,7 @@ std::expected<void, std::string> CircularShell::on_timer(
                 }
                 break;
             case GestureIntent::None:
+            case GestureIntent::Consume:
                 break;
             case GestureIntent::LeftCardIn:
                 result = host_.card_step ? host_.card_step(true, true) : show_watch_face();

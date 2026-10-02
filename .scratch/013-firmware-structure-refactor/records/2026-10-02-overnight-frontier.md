@@ -165,3 +165,15 @@
 ## USB 合成设备门槛解除
 
 013 smoke 之后已刷入新镜像并完成 012/03，最终 09e8eb00d 的独立 35 步 attempt PASS，012 Spec resolved。过程中实际捕获并修复测试 worker 栈容量/分配与导航滑动尾部误触，所有失败保留；见 [设备 Driver 记录](../../012-test-automation-contract/records/2026-10-02-device-driver-run.md)。007/008/014 的物理/视觉条件仍按各自证据区分，不重新要求十轮人工。
+
+
+## Card 合成设备门槛与当前人工 frontier
+
+37 步 Native/真实 Runtime Card attempt PASS，详细镜像、资源 hash、前八次失败及修复见 [Card 设备记录](../../014-app-navigation-card-contract/records/2026-10-02-card-device-run.md)。新增真实重复加载回归，修复 Runtime 样例顶层绑定无法二次启动；Driver 不自动重试，不通过放宽 JSON/Owner 错误取得 PASS。
+
+设备当前 c4dfa5af8，RAM Card 样例开、reclaim 关，持久 Card 配置保持原样。两侧目标打开、普通横滑、Root 手势与 Card 息屏画面已合成验证，物理/视觉各侧一次的集中问题已发出；待回答期间不切换设备固件或注入手势。普通配置完整构建可继续准备，验收之后恢复。013 全部 resolved、012 既有 35 步普通配置 PASS 继续有效；新增 Owner 采样实现之后应在普通配置补一次 Driver 检查。
+
+014/03 package replacement 事务仍依赖 005/03；014/05 不能因合成 PASS 提前关闭物理与迁移条件。007/03 剩余路径与 008/03 两种模型恢复/回收仍是后续集中真机工作，009 按其依赖等待。未绕过上游阻塞，未 push。
+
+
+普通配置 71567f599 全量构建与最终 host checks 已通过，资源 hash 与 Card 测试资源一致；尚未刷入。用户回复当前 Card 集中问题后再恢复普通镜像、补一次新 Owner 采样的 navigation Driver，并汇总剩余 007/008 单次物理门槛，不再重复已接受的 013/亮度/Wi-Fi。

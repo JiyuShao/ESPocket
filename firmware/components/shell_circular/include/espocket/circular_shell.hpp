@@ -20,6 +20,7 @@ namespace espocket {
 struct ShellBackUiState {
     bool default_visible = false;
     bool edge_enabled = false;
+    bool edge_reserved = false;
 };
 
 struct ShellDeveloperModeControl {

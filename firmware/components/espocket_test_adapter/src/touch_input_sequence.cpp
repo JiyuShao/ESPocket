@@ -45,17 +45,22 @@ std::expected<void, std::string> TouchInputSequence::tick(uint64_t now_ms)
 {
     if (!active_) { return {}; }
     if (cleaning_) { return clean(); }
-    if (now_ms < started_ms_ || now_ms < delivered_ms_ ||
-            now_ms - started_ms_ > steps_.back().elapsed_ms + DEADLINE_GRACE_MS) {
+    if (now_ms < started_ms_ || now_ms < delivered_ms_) {
         auto result = cancel();
         return result ? std::unexpected("timeout") : result;
     }
     if (next_ == steps_.size()) {
+        // Release may start an App before this worker can clean up. No points
+        // remain to inject, so retain normal release rather than timing it out.
         if (now_ms - delivered_ms_ >= MIN_STEP_MS) {
             cleaning_ = true;
             return clean();
         }
         return {};
+    }
+    if (now_ms - started_ms_ > steps_.back().elapsed_ms + DEADLINE_GRACE_MS) {
+        auto result = cancel();
+        return result ? std::unexpected("timeout") : result;
     }
     // Never catch up multiple points in one tick: LVGL must observe press and release separately.
     if (next_ > 0 && now_ms - delivered_ms_ <

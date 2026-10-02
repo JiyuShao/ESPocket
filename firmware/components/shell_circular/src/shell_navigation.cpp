@@ -154,6 +154,7 @@ std::expected<void, std::string> CircularShell::configure_home_gesture()
             .display_on = !display_on_provider || display_on_provider(),
             .app_visible = app_visible_provider && app_visible_provider(),
             .edge_back_enabled = back_ui_provider && back_ui_provider().edge_enabled,
+            .edge_back_reserved = back_ui_provider && back_ui_provider().edge_reserved,
         });
     }
                           );
@@ -181,6 +182,7 @@ std::expected<void, std::string> CircularShell::handle_gesture(const ShellGestur
         .display_on = !host_.display_on || host_.display_on(),
         .app_visible = host_.app_visible && host_.app_visible(),
         .edge_back_enabled = host_.back_ui && host_.back_ui().edge_enabled,
+        .edge_back_reserved = host_.back_ui && host_.back_ui().edge_reserved,
     });
     return {};
 }

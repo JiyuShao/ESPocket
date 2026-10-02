@@ -81,6 +81,15 @@ int main()
         press(app, root);
         move(app, direction, root, !right_edge, right_edge);
         assert(pending(app) == GestureIntent::None);
+        const ShellGestureContext framework_root{.app_visible = true, .edge_back_reserved = true};
+        press(app, framework_root);
+        move(app, direction, framework_root, !right_edge, right_edge);
+        assert(pending(app) == GestureIntent::Consume); // No Back, no click-through.
+        assert(app.consumed);
+        reset_shell_gesture(app, true);
+        press(app, root); // AppOwned keeps its custom edge gesture.
+        move(app, direction, root, !right_edge, right_edge);
+        assert(pending(app) == GestureIntent::None);
         const ShellGestureContext detail{.app_visible = true, .edge_back_enabled = true};
         press(app, detail);
         move(app, direction, detail); // Normal horizontal App swipe is preserved.

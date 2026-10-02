@@ -89,6 +89,7 @@ void System::handle_back()
         if (!runtime_page_matches(active->app_id)) {
             default_back_visible_.store(false);
             edge_back_enabled_.store(false);
+            edge_back_reserved_.store(false);
             ESP_LOGW(TAG, "Runtime Page and Screen Flow disagree; Back disabled");
             return;
         }
@@ -209,12 +210,17 @@ void System::register_navigator(
     std::shared_ptr<PageNavigator> navigator
 )
 {
-    navigator->set_availability_handler([this, app_id](bool default_visible, bool edge_enabled) {
+    navigator->set_availability_handler(
+        [this, app_id, owner = std::weak_ptr<PageNavigator>(navigator)]
+        (bool default_visible, bool edge_enabled) {
         if (foreground_app_id_.load(std::memory_order_acquire) != app_id) {
             return;
         }
         default_back_visible_.store(default_visible, std::memory_order_release);
         edge_back_enabled_.store(edge_enabled, std::memory_order_release);
+        const auto navigator = owner.lock();
+        edge_back_reserved_.store(navigator && navigator->framework_owns_back(),
+                                  std::memory_order_release);
     });
     std::lock_guard lock(page_navigators_mutex_);
     page_navigators_.emplace(app_id, std::move(navigator));

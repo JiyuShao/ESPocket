@@ -23,6 +23,7 @@ class CircularShell;
 class PowerKeyMonitor;
 class TestInputQueue;
 class TouchInputSequence;
+class OwnerSnapshotQueue;
 struct TouchInputStep;
 class PageNavigator;
 class DeveloperMode;
@@ -143,6 +144,7 @@ private:
     std::optional<CardKey> pending_card_;
     std::shared_ptr<DeveloperMode> developer_mode_;
     std::unique_ptr<InteractionTestAdapter> test_adapter_;
+    std::unique_ptr<OwnerSnapshotQueue> test_snapshots_;
     std::unique_ptr<PowerKeyMonitor> power_key_monitor_;
     std::unique_ptr<TestInputQueue> test_power_input_;
     std::unique_ptr<TouchInputSequence> test_touch_input_;
@@ -153,6 +155,7 @@ private:
     esp_brookesia::system::core::AppId shell_id_ = esp_brookesia::system::core::INVALID_APP_ID;
     std::atomic_bool default_back_visible_ = false;
     std::atomic_bool edge_back_enabled_ = false;
+    std::atomic_bool edge_back_reserved_ = false;
     std::atomic<esp_brookesia::system::core::AppId> foreground_app_id_{
         esp_brookesia::system::core::INVALID_APP_ID
     };

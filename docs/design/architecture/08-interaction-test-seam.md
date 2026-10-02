@@ -33,6 +33,8 @@ CircularShell 的硬件手势订阅把 Brookesia 事件转换为 `ShellGestureEv
 
 ## 架构不变量
 
+快照请求通过单容量 `OwnerSnapshotQueue` 交给既有 App callback task，在 System 处理 PWR、Runtime 导航与 Card 动作之后只读采样。USB 线程不在 Core 停止操作中间拼接多个 Owner 状态；队列不缓存 Page，不重试错误。停止 Adapter 前关闭队列并解除等待，System 再启动时建立新队列。原有状态一致性检查继续保留。
+
 | ID | Invariant |
 |---|---|
 | TST-002 | 测试只通过 Owner Interface 驱动与观察，不复制 Surface、App Page 或 Display State。 |
@@ -52,6 +54,7 @@ Exposure Decision：测试协议是本地开发能力，不注册为 Assistant �
 
 - [ESPocket Test Adapter](../../../firmware/components/espocket_test_adapter/include/espocket/interaction_test_adapter.hpp)：产品层 USB Serial/JTAG 入口与版本化协议；Native 和 Runtime 共用这一入口。
 - [DeveloperMode](../../../firmware/components/espocket_test_adapter/include/espocket/developer_mode.hpp)：设备端持久准入开关。
+- [OwnerSnapshotQueue](../../../firmware/components/espocket_test_adapter/include/espocket/owner_snapshot_queue.hpp)：传输请求与 App Owner 采样之间的有界队列。
 - [CircularShell](../../../firmware/components/shell_circular/include/espocket/circular_shell.hpp)
 - [System](../../../firmware/components/espocket_system/include/espocket/system.hpp)
 - [Display Service](../../../firmware/managed_components/espressif__brookesia_service_display/include/brookesia/service_display/service_display.hpp)

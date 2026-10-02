@@ -3,11 +3,15 @@
 #include <string_view>
 #include <future>
 #include <algorithm>
+#include <sstream>
+
+#include "../src/usb_frame.hpp"
 
 #include "espocket/developer_mode.hpp"
 #include "espocket/test_protocol.hpp"
 #include "espocket/test_input_queue.hpp"
 #include "espocket/touch_input_sequence.hpp"
+#include "espocket/owner_snapshot_queue.hpp"
 
 void require(bool condition, std::string_view message)
 {
@@ -19,6 +23,59 @@ void require(bool condition, std::string_view message)
 
 int main()
 {
+    const std::string response = R"({"version":1,"request_id":42,"ok":true})";
+    std::istringstream console("Runtime initialized: " +
+        espocket::detail::encode_usb_response(response) + "remaining log\n");
+    std::string line;
+    bool found_response = false;
+    while (std::getline(console, line)) {
+        if (line.starts_with(espocket::detail::TEST_FRAME_PREFIX)) {
+            require(line == std::string(espocket::detail::TEST_FRAME_PREFIX) + response,
+                    "response framing preserves the JSON envelope");
+            found_response = true;
+        }
+    }
+    require(found_response, "USB response must start a new line after a partial console log");
+    int owner_reads = 0;
+    espocket::TestSnapshot owner_snapshot{.surface = "app_card.right", .page_id = "root"};
+    espocket::OwnerSnapshotQueue snapshots([&]() -> espocket::OwnerSnapshotQueue::Result {
+        ++owner_reads;
+        return owner_snapshot;
+    });
+    auto owner_reply = snapshots.request();
+    require(owner_reads == 0 && !owner_reply->result(),
+            "transport must not sample halfway through an Owner operation");
+    owner_snapshot = {.surface = "watch_face"}; // The PWR stop completes before the Owner pump.
+    snapshots.drain();
+    require(owner_reply->result()->value().surface == "watch_face" && owner_reads == 1,
+            "Owner samples committed state after its operation completes");
+    auto pending_snapshot = snapshots.request();
+    auto busy_snapshot = snapshots.request();
+    require(busy_snapshot->result()->error() == "busy", "only one pending snapshot is retained");
+    snapshots.close();
+    require(pending_snapshot->result()->error() == "system_unavailable" &&
+                snapshots.request()->result()->error() == "system_unavailable",
+            "close releases waiting transport and rejects new sampling");
+    snapshots.drain();
+    require(owner_reads == 1, "closed snapshots must not read retired Owner state");
+    std::promise<void> reading_snapshot;
+    std::promise<void> finish_snapshot;
+    auto finish_read = finish_snapshot.get_future();
+    espocket::OwnerSnapshotQueue concurrent_snapshots([&]() -> espocket::OwnerSnapshotQueue::Result {
+        reading_snapshot.set_value();
+        finish_read.wait();
+        return owner_snapshot;
+    });
+    auto concurrent_reply = concurrent_snapshots.request();
+    auto owner_pump = std::async(std::launch::async, [&] { concurrent_snapshots.drain(); });
+    reading_snapshot.get_future().wait();
+    require(concurrent_snapshots.request()->result()->error() == "busy",
+            "sampling in progress must not admit a second request");
+    concurrent_snapshots.close();
+    finish_snapshot.set_value();
+    owner_pump.get();
+    require(concurrent_reply->result()->error() == "system_unavailable",
+            "a read completing after close must not publish retired state");
     bool stored = false;
     espocket::DeveloperMode mode(
         [&]() -> std::expected<bool, std::string> { return stored; },
@@ -221,6 +278,13 @@ int main()
             "normal finish removes the override after a release hold, without aborting the gesture");
     require(touch.cancel().has_value() && cleanups == 1,
             "repeated cleanup after completion must be idempotent");
+    delivered.clear();
+    require(touch.start(swipe, 466, 466, 500).has_value() &&
+                touch.tick(500).has_value() && touch.tick(600).has_value() &&
+                touch.tick(680).has_value() && !delivered.back().pressed,
+            "delayed cleanup fixture must already have delivered normal release");
+    require(touch.tick(1300).has_value() && !power.busy() && !cancelled,
+            "delayed cleanup after delivered release must not report an undelivered trace timeout");
     delivered.clear();
     require(touch.start(swipe, 466, 466, 1000).has_value() && touch.tick(1000).has_value(),
             "cancel fixture should deliver an initial press");

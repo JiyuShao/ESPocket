@@ -1,4 +1,5 @@
 #include "espocket/interaction_test_adapter.hpp"
+#include "usb_frame.hpp"
 
 #include <array>
 #include <cstdint>
@@ -8,6 +9,7 @@
 
 #include "boost/json.hpp"
 #include "driver/usb_serial_jtag.h"
+#include "driver/usb_serial_jtag_vfs.h"
 #include "esp_app_desc.h"
 #include "esp_err.h"
 #include "esp_heap_caps.h"
@@ -18,7 +20,7 @@ namespace espocket {
 namespace {
 
 constexpr char TAG[] = "ESPocket.Test";
-constexpr std::string_view FRAME_PREFIX = "@ESPTEST ";
+constexpr std::string_view FRAME_PREFIX = detail::TEST_FRAME_PREFIX;
 constexpr size_t MAX_LINE_SIZE = 1024;
 // JSON touch frames overflowed the former 4 KiB worker on ESP32-S3.
 constexpr uint32_t USB_TASK_STACK_BYTES = 8192;
@@ -117,6 +119,9 @@ std::expected<void, std::string> InteractionTestAdapter::start()
                                esp_err_to_name(installed));
     }
     driver_owned_ = true;
+    // Direct console FIFO writes can interleave with the driver's TX ISR.
+    // Route console bytes and complete response frames through the same queue.
+    usb_serial_jtag_vfs_use_driver();
     driver_ready_.store(true, std::memory_order_release);
     ESP_LOGI(TAG, "USB Test Adapter ready; developer mode %s",
              mode_->enabled() ? "enabled" : "disabled");
@@ -150,6 +155,7 @@ void InteractionTestAdapter::stop()
         stopped_ = nullptr;
     }
     if (driver_owned_) {
+        usb_serial_jtag_vfs_use_nonblocking();
         usb_serial_jtag_driver_uninstall();
         driver_owned_ = false;
     }
@@ -333,7 +339,7 @@ void InteractionTestAdapter::handle_line(std::string_view line)
     } else {
         response["error_code"] = reply.error_code;
     }
-    send_line(std::string(FRAME_PREFIX) + boost::json::serialize(response) + "\n");
+    send_line(detail::encode_usb_response(boost::json::serialize(response)));
 }
 
 void InteractionTestAdapter::send_error(uint64_t request_id, std::string_view code)
@@ -344,7 +350,7 @@ void InteractionTestAdapter::send_error(uint64_t request_id, std::string_view co
         {"ok", false},
         {"error_code", code},
     };
-    send_line(std::string(FRAME_PREFIX) + boost::json::serialize(response) + "\n");
+    send_line(detail::encode_usb_response(boost::json::serialize(response)));
 }
 
 void InteractionTestAdapter::send_line(std::string_view line)

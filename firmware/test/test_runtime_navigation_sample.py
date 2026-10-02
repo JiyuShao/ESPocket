@@ -18,7 +18,9 @@ const scope = {
     return new Promise((resolve, reject) => pending.push({resolve, reject}));
   }}
 };
-vm.runInNewContext(fs.readFileSync(process.argv[1], 'utf8'), scope);
+const context = vm.createContext(scope);
+const source = fs.readFileSync(process.argv[1], 'utf8');
+vm.runInContext(source, context);
 const app = scope.brookesia_app;
 const state = (token = null) => JSON.stringify({appId:'espocket.app.hello_runtime', pageId:'detail', canBack:token === null, backPending:token !== null, pendingToken:token});
 (async () => {
@@ -53,6 +55,19 @@ const state = (token = null) => JSON.stringify({appId:'espocket.app.hello_runtim
   action = app.on_action('toggle_confirm');
   assert.equal(requests.at(-1).decision, 'defer'); // A failed change did not commit UI policy.
   pending.shift().resolve(state()); await action;
+  action = app.on_action('toggle_confirm');
+  app.on_stop();
+  vm.runInContext(source, context); // Core can reload the entry in the same JS realm.
+  const restarted = scope.brookesia_app;
+  assert.notEqual(restarted, app);
+  restarted.on_start();
+  const restartedUi = ui.length;
+  pending.shift().resolve(state()); await action;
+  assert.equal(ui.length, restartedUi); // Retired closure cannot write the new GUI.
+  action = restarted.on_action('toggle_confirm');
+  assert.equal(requests.at(-1).decision, 'defer');
+  pending.shift().resolve(state()); await action;
+  restarted.on_stop();
 })().catch(error => { console.error(error); process.exitCode = 1; });
 '''
 

@@ -4,7 +4,13 @@
 
 ## 当前 USB 帧格式
 
-USB Serial/JTAG 上的测试帧是以 `@ESPTEST ` 开头的一行 JSON，普通串口日志没有这个前缀。请求示例：
+USB Serial/JTAG 上的测试帧是以 `@ESPTEST ` 开头的一行 JSON，普通串口日志没有这个前缀。
+
+Adapter 在每个响应前写入换行，隔开尚未结束的普通日志行；Driver 忽略空行，但只接收行首带前缀且 request_id 匹配的响应。
+
+Adapter 安装 USB 驱动后，将控制台 VFS 切换到同一驱动发送队列；停止并卸载驱动前恢复直接控制台输出。普通日志不能通过硬件 FIFO 绕过响应帧队列，否则 ISR 输出与直接写入会交叉破坏 JSON。
+
+请求示例：
 
 ```text
 @ESPTEST {"version":1,"request_id":42,"op":"hello"}
@@ -57,7 +63,7 @@ swipe 至少增加一个移动中的按下点：例如从 `(233,350)` 按下，�
 
 ACK 只表示校验后预留了共同输入槽位；worker 按时逐点调用 Display 注入，并把同一轨迹转换为 Shell 正式仲裁事件。转换读取当前 Display 的方向与边缘配置，不复制导航规则。注入期间忽略硬件 Shell 手势事件，Display override 同时覆盖 LVGL 的触摸快照；不要混用人工触摸与合成序列。物理 PWR 仍有优先权，会取消未完成触摸。
 
-末点 release 后保留至少 40 ms，再清除 override。调度延迟不把多个点挤在一次 tick；超过声明总时长加 500 ms 则取消，不补发迟到点。App 任务 token 变化、息屏、关闭开发者模式、物理 USB 断连或响应写失败同样取消。`release` 在输入 worker 上重复安全；取消先清除 Shell 未消费 intent 和 pull 状态，并重置 LVGL 按压，再清除 Display override，避免用正常 release 提交 Launcher 返回或按钮点击。已经执行的导航和业务动作不能撤销。
+末点 release 后保留至少 40 ms，再清除 override。调度延迟不把多个点挤在一次 tick；仍有未发送点且超过声明总时长加 500 ms 则取消，不补发迟到点。末点已发送后，延迟的清理保持正常 release，不再报告未完成轨迹超时；清理成功前仍占用输入槽位。App 任务 token 变化、息屏、关闭开发者模式、物理 USB 断连或响应写失败同样取消。`release` 在输入 worker 上重复安全；取消先清除 Shell 未消费 intent 和 pull 状态，并重置 LVGL 按压，再清除 Display override，避免用正常 release 提交 Launcher 返回或按钮点击。已经执行的导航和业务动作不能撤销。
 
 清理失败返回错误并保留 inputBusy，后续 tick 或内部清理重试；Adapter 停止时最多重试五次并记录失败。Driver 不能把清理错误当成空闲，也不能忽略日志中的 tick/停止清理失败。USB API 无法检测仅关闭主机串口，仍应显式 release；轨迹绝对期限限制遗留注入。重启后旧内存序列及 override 不恢复。上述处理已接入源码，LVGL 实际点击、屏幕反馈与设备上的断连行为还需 Driver/真机证据。
 
@@ -67,7 +73,9 @@ ACK 只表示校验后预留了共同输入槽位；worker 按时逐点调用 Di
 
 当前请求为 `{"version":1,"request_id":43,"op":"snapshot"}`，仍使用 `@ESPTEST ` 行前缀。成功响应的 `snapshot` 对象包含上述七个字段及 `inputBusy`；后者表示 触摸序列占用、PWR 已排队或 System 正在消费，不表示页面转移已完成。布尔字段是 JSON boolean，身份是 string。`surface` 使用 `watch_face`、`launcher`、`quick_settings`、`shell.battery`、`shell.brightness`，表示 Shell 持有的 Home Space Surface；前台完整 App 存在时，它是保留的底层 Shell Surface，App 是否前台以 `foregroundAppId` 判断。无 App 时两个 ID 是空字符串，两个 Back 字段为 false。
 
-`seq` 从 Adapter 本次启动后的 1 开始，仅成功采样递增；重启或 Adapter 重启后建立新的采样序列。Owner 读取失败、未绑定 Runtime Page 或读取期间前台/Surface/显示状态改变时返回 `invalid_state`，不伪造 Root、不带成功快照。Settings 实时通过官方 GUI 任务读取 Flow；USB worker 不从 raw GUI 回调访问它。当前源码尚未刷写，设备能力以它的 `hello` 为准。
+System 的 USB reader 使用单容量 Owner 快照队列：传输线程提交，既有 App Owner tick 在处理 PWR、Runtime 导航和 Card 动作后执行真实采样。请求最多等待 2 秒；Owner 不可用、队列关闭或读取失败仍返回错误，不使用旧快照或自动重试。
+
+`seq` 从 Adapter 本次启动后的 1 开始，仅成功采样递增；重启或 Adapter 重启后建立新的采样序列。Owner 读取失败、未绑定 Runtime Page 或读取期间前台/Surface/显示状态改变时返回 `invalid_state`，不伪造 Root、不带成功快照。Settings 实时通过官方 GUI 任务读取 Flow；USB worker 不从 raw GUI 回调访问它。设备能力以它的 `hello` 为准，各 App 模型的设备证据由对应 ticket 记录。
 
 Home Space 的 `surface` 至少能区分 Watch Face、Launcher、Quick Settings 和具体 Card 身份。需要验证 Launcher 顶部拉伸时，Shell 可提供只读滚动到顶和拉动阶段；这些是 Owner 的交互反馈事实，不由 Test Driver 复制。Launcher 滚动与拉动阶段的扩展字段仍待输入路径实现时定版。
 
@@ -108,3 +116,9 @@ python scripts/firmware/interaction_driver.py \
 | `visual` | 屏幕上的箭头、拉伸、Back 控件与状态信息 | 输入电气链路和内部状态转移 |
 
 任务验收按 [.scratch](../../.scratch/README.md) 中对应 ticket 的证据条件判定；三类证据不能互相冒充。测试协议不注册为 Assistant 可调用能力，Assistant 的 Home、Back 和 App Action 仍使用正式语义接口。
+
+### App Card 样例套件
+
+`--suite navigation` 是默认套件。`--suite cards` 要求明确的 Card 样例镜像（CONFIG_ESPOCKET_M8_CARD_SAMPLE_TEST 开启）、设备 Developer Mode On 与空持久 Card 配置；不自动修改 NVS 或开启模式。该镜像在 RAM 中配置左 Native、右 Runtime 的 summary/detail。Driver 使用同一套 USB 原始轨迹和 Owner 快照验证两种真实 App 的 Root/目标 Detail、Root 无 Back、子页返回、PWR Home，以及 Card 自动息屏/唤醒恢复。
+
+Card ID 不新增到协议快照；第二张 Card 通过打开目标 Detail 的实际 Page 结果证明，而非仅凭相同 Surface。报告增加 testSuite 字段，全部结果仍为 synthetic-input，不满足视觉/触摸/GPIO 门槛。Card 按钮坐标来自样例 GUI，须保留首次实际 attempt 的校准结果。

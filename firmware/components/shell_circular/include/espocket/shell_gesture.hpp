@@ -26,6 +26,7 @@ enum class GestureIntent : uint8_t {
     Back,
     LeftCardIn,
     RightCardIn,
+    Consume,
 };
 
 enum class ShellGesturePhase { Press, Pressing, Release };
@@ -45,6 +46,7 @@ struct ShellGestureContext {
     bool display_on = true;
     bool app_visible = false;
     bool edge_back_enabled = false;
+    bool edge_back_reserved = false;
 };
 
 struct ShellGestureState {

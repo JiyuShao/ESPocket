@@ -346,6 +346,12 @@ bool PageNavigator::edge_back_enabled() const
     return snapshot().can_back && declaration_.back_presentation == BackPresentation::Framework;
 }
 
+bool PageNavigator::framework_owns_back() const
+{
+    std::lock_guard lock(*mutex_);
+    return !stack_.empty() && declaration_.back_presentation == BackPresentation::Framework;
+}
+
 void PageNavigator::publish_availability() const
 {
     std::lock_guard lock(*mutex_);

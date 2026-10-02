@@ -391,7 +391,7 @@ int main()
     );
     require(owned && owned->start() && owned->push("detail"),
             "multi-Page appOwned declaration should install");
-    require(!owned->show_default_back() && !owned->edge_back_enabled(),
+    require(!owned->show_default_back() && !owned->edge_back_enabled() && !owned->framework_owns_back(),
             "appOwned must disable both framework Back entry points");
 
     auto standard = PageNavigator::create(
@@ -403,10 +403,15 @@ int main()
         },
         [](std::string_view, std::string_view) { return true; }
     );
+    require(standard && !standard->framework_owns_back(), "stopped tasks do not own edge gestures");
     require(standard && standard->start() && standard->push("detail"),
             "standard-control declaration should install");
     require(!standard->show_default_back() && standard->edge_back_enabled(),
             "standard Back control should suppress duplicate overlay but retain Edge Back");
+    require(standard->pop() && standard->framework_owns_back() && !standard->edge_back_enabled() &&
+                !standard->snapshot().can_back, "Root reserves framework edge touch without enabling Back");
+    standard->stop();
+    require(!standard->framework_owns_back(), "stop releases framework gesture ownership");
 
     bool default_visible = false;
     bool edge_enabled = false;

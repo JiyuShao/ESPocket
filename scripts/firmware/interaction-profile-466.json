@@ -1,6 +1,6 @@
 {
-  "name": "Circular Shell 466px / Hello Native",
-  "calibration": "source-derived; device paths not yet verified",
+  "name": "Circular Shell 466px / Native and Runtime samples",
+  "calibration": "navigation verified on image 09e8eb00d; Card suite verified on c4dfa5af8 with Runtime main.js d7e27a802f1575934348b2d91821bd70ce5fae32c8f2e855f5caf48838063130",
   "width": 466,
   "height": 466,
   "up": [
@@ -82,5 +82,9 @@
   "cancel_back_tap": [
     233,
     340
+  ],
+  "card_open_tap": [
+    233,
+    290
   ]
 }
