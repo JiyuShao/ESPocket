@@ -15,3 +15,7 @@ HTTP-only HAL 候选完整构建通过：ELF `5428c2d7116fdfdf114be6a519c0f1c05a
 Exposure Decision：原始 HTTP transaction/cancel 是内部 HAL seam，保持 unexposed；修复不自动授予 Assistant 任意 URL 或安装包访问能力。
 
 候选可通过独立构建入口 `--patch-set hal-candidate` 准确重建；该集合现按顺序包含 HTTP 001 与 Audio 002，普通配置仍关闭 Processor。HTTP-only 已完成构建的历史输入 identity 单独保留，不与后来 Audio-enabled 镜像合并。
+
+## Retry and terminal host gate
+
+新增 `test_http_request_terminal.py` 编译并执行锁定 HTTP Service 的实际 execute_request、perform_request、finish_context，transaction seam 注入成功、retryable 503、失败重试耗尽、操作内取消、失败后的取消及执行前取消。全部六条路径检查每个请求只有一次 terminal event/统计/promise completion，取消不继续重试，request ID 保留。此门槛通过。它不执行真实 scheduler teardown、网络 timeout 或 Store UI，不关闭 stop/deinit 与在线 Refresh 门槛。

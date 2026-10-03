@@ -17,4 +17,4 @@
 
 ## 当前实施
 
-[2026-10-03 failed-stop 回归](../records/2026-10-03-core-failed-stop.md)已证明并修复生命周期失败跳过 Runtime cleanup 的控制流。补丁尚未接入产品构建，完整隔离门槛仍待完成。
+[2026-10-03 failed-stop 回归](../records/2026-10-03-core-failed-stop.md)已证明并修复生命周期失败跳过 Runtime cleanup 的控制流。补丁已接入独立 production patch-set 构建并通过普通 App 自动验收；恶意 Runtime 订阅与故意失败退出的完整隔离门槛仍待完成。
