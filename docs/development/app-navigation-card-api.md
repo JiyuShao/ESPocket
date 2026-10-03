@@ -194,3 +194,9 @@ App 可通过 Brookesia `AppContext::system_service()` 的 `show_message_dialog`
 当前呈现支持最多三个按钮、可滚动说明与 `auto_close_ms`。普通手势不穿透 modal；PWR Home 仍可结束前台 App，Core 随之关闭其弹窗。Shell 的 LVGL 回调只记录选择，结果在 App 任务中交给 Core，App 不应自己从 LVGL 回调调用生命周期操作。
 
 产品在安装会预载文档的 App 前注册 dark/light，并从 Core 的持久偏好恢复当前主题。锁定 GUI Runtime 的主题设置只作用于新文档；官方 Settings 选择主题时先保存偏好，再通过系统确认请求重启。选择“稍后”或通过 Home 关闭确认不撤销已保存的偏好。App 引用共享 `app.page`、`app.card` 等 styleRefs 时消费产品主题；App 的硬编码颜色与自有样式不会自动改写。具体设备验收和未完成显示检查保存在工作票与 records，不作为上述 API 的额外承诺。
+
+### Shell 与 App 的主题职责
+
+产品在安装 App 之前注册并恢复 Brookesia GUI 的主题。Shell 的 Watch Face、Launcher、Quick Settings 与 Shell 自有 Card 用 `styleRefs` 引用产品主题，不保存第二份主题偏好。App Page 与 App Card 同样可以引用 `app.page`、`app.cardTitle`、`app.caption` 等主题样式；尺寸、字体和布局仍由 App 声明。硬编码颜色的 App 需要自行适配，Shell 不递归改写它的控件。
+
+官方 Settings 当前保存主题后询问是否重启；Later 只推迟重启，已保存的主题偏好仍在。当前 GUI 不支持给已创建文档即时重套主题，因此完整切换在重启后生效。

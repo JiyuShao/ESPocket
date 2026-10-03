@@ -38,7 +38,7 @@ using namespace esp_brookesia::system::core;
 #define ESP_LOGI(...) ((void)0)
 #define ESP_LOGW(...) ((void)0)
 struct lv_event_t {void* data;};
-struct lv_obj_t {std::vector<lv_obj_t*> children;bool deleted=false;void(*click)(lv_event_t*)=nullptr;void* data=nullptr;std::string text;};
+struct lv_obj_t {std::vector<lv_obj_t*> children;bool deleted=false;void(*click)(lv_event_t*)=nullptr;void* data=nullptr;std::string text;int width=0,height=0,bg_opa=-1,max_height=0;};
 std::vector<std::unique_ptr<lv_obj_t>> allocated;
 int fail_after=-1,lock_depth=0;bool lock_fail=false;int64_t now=0;
 int64_t esp_timer_get_time() {return now;}
@@ -55,18 +55,24 @@ void* lv_event_get_user_data(lv_event_t* e){return e->data;}
 void lv_obj_add_event_cb(lv_obj_t* o,void(*cb)(lv_event_t*),int,void* data){o->click=cb;o->data=data;}
 void click(lv_obj_t* o){assert(!o->deleted && o->click);lv_event_t e{o->data};o->click(&e);}
 int lv_pct(int n){return n;}int lv_color_hex(int n){return n;}int lv_font_montserrat_18=0;
-constexpr int LV_OBJ_FLAG_SCROLLABLE=0,LV_OPA_80=0,LV_OPA_COVER=0,LV_OPA_TRANSP=0,
+constexpr int LV_OBJ_FLAG_SCROLLABLE=0,LV_OPA_80=0,LV_OPA_COVER=255,LV_OPA_TRANSP=0,LV_SIZE_CONTENT=-1,
     LV_FLEX_FLOW_COLUMN=0,LV_LABEL_LONG_MODE_WRAP=0,LV_LABEL_LONG_MODE_DOTS=0,LV_TEXT_ALIGN_CENTER=0,LV_EVENT_CLICKED=0;
 '''
-        for name in ('lv_obj_remove_flag', 'lv_obj_set_size', 'lv_obj_center', 'lv_obj_set_style_bg_color',
-                     'lv_obj_set_style_bg_opa', 'lv_obj_set_style_border_width', 'lv_obj_set_style_radius',
+        harness += '''
+void lv_obj_set_size(lv_obj_t* o,int w,int h){o->width=w;o->height=h;}
+void lv_obj_set_height(lv_obj_t* o,int h){o->height=h;}
+void lv_obj_set_style_max_height(lv_obj_t* o,int h,int){o->max_height=h;}
+void lv_obj_set_style_bg_opa(lv_obj_t* o,int opacity,int){o->bg_opa=opacity;}
+'''
+        for name in ('lv_obj_remove_flag', 'lv_obj_center', 'lv_obj_set_style_bg_color',
+                     'lv_obj_set_style_border_width', 'lv_obj_set_style_radius',
                      'lv_obj_set_style_pad_all', 'lv_obj_set_style_pad_row', 'lv_obj_set_flex_flow',
                      'lv_obj_set_width', 'lv_obj_set_flex_grow', 'lv_label_set_long_mode',
                      'lv_obj_set_style_text_color', 'lv_obj_set_style_text_font', 'lv_obj_set_style_text_align'):
             harness += f'template<class... T> void {name}(T...) {{}}\n'
         harness += r'''
 namespace espocket {
-struct Gui {std::string get_theme(){return "dark";}};struct Context {Gui g;Gui& gui(){return g;}};
+struct Gui {std::string theme="light";std::string get_theme(){return theme;}};struct Context {Gui g;Gui& gui(){return g;}};
 struct Gesture {std::atomic_bool modal_active=false;};
 struct CircularShell {
     struct MessageDialogState;
@@ -87,6 +93,10 @@ int main(){
     s.context_=&context;s.message_dialog_state_=std::make_shared<CircularShell::MessageDialogState>();
     assert(s.show_message_dialog(2,1,opts));assert(s.home_gesture_state_->modal_active);
     auto* original=s.message_dialog_state_->overlay;
+    auto* panel=original->children[0];
+    assert(panel->width<=316 && panel->height==LV_SIZE_CONTENT);
+    assert(panel->children[0]->max_height<=112);
+    for(size_t i=1;i<panel->children.size();++i) assert(panel->children[i]->bg_opa==255);
     assert(!s.show_message_dialog(3,2,opts));assert(!s.update_message_dialog(3,1,opts));
     s.hide_message_dialog(3,1);s.hide_message_dialog(2,2);assert(!original->deleted);
     fail_after=2;assert(!s.update_message_dialog(2,1,opts));fail_after=-1;assert(!original->deleted);

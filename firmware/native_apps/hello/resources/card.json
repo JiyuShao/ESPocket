@@ -8,7 +8,6 @@
         "scrollable": false
       },
       "style": {
-        "bgColor": "#101722",
         "padding": 0
       },
       "layout": {
@@ -26,14 +25,16 @@
             "text": "Hello Native Card"
           },
           "style": {
-            "textColor": "#f4f7fb",
             "fontSize": "32sp",
             "textAlign": "center"
           },
           "placement": {
             "width": "300dp",
             "height": "44dp"
-          }
+          },
+          "styleRefs": [
+            "app.cardTitle"
+          ]
         },
         {
           "type": "label",
@@ -42,14 +43,16 @@
             "text": "Version: 0.1.0"
           },
           "style": {
-            "textColor": "#cbd5e1",
             "fontSize": "20sp",
             "textAlign": "center"
           },
           "placement": {
             "width": "220dp",
             "height": "30dp"
-          }
+          },
+          "styleRefs": [
+            "app.caption"
+          ]
         },
         {
           "type": "button",
@@ -61,7 +64,6 @@
             }
           ],
           "style": {
-            "bgColor": "#334155",
             "radius": "24dp"
           },
           "placement": {
@@ -76,16 +78,24 @@
                 "text": "Open Detail"
               },
               "style": {
-                "textColor": "#ffffff",
                 "fontSize": "18sp"
               },
               "placement": {
                 "mode": "relative",
                 "align": "center"
-              }
+              },
+              "styleRefs": [
+                "app.actionText"
+              ]
             }
+          ],
+          "styleRefs": [
+            "app.action"
           ]
         }
+      ],
+      "styleRefs": [
+        "app.page"
       ]
     }
   ]

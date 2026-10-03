@@ -45,6 +45,40 @@ class ProductThemeTest(unittest.TestCase):
             for group, key in [('border', 'default'), ('text', 'default'), ('primary', 'fill')]:
                 self.assertTrue(colors[group][key])
 
+    def test_shell_surfaces_use_complete_theme_references(self):
+        shell = json.loads((ROOT / 'firmware/components/shell_circular/resources/gui.json').read_text())
+        refs = set(style_refs(shell))
+        self.assertTrue(refs)
+        def check(node):
+            if isinstance(node, dict):
+                self.assertFalse({'bgColor', 'textColor'} & node.get('style', {}).keys(),
+                                 'Shell colors must be owned by the product theme')
+                for value in node.values():
+                    check(value)
+            elif isinstance(node, list):
+                for value in node:
+                    check(value)
+        check(shell)
+        for name in ['dark', 'light']:
+            theme = json.loads((ROOT / f'firmware/components/espocket_system/resources/{name}_theme.json').read_text())
+            self.assertFalse(refs - theme['styles'].keys())
+            for asset in shell['assets']:
+                if asset.get('type') == 'viewScreen' and 'styleRefs' in asset:
+                    colors = [theme['styles'][ref].get('bgColor') for ref in asset['styleRefs']]
+                    if name == 'light':
+                        self.assertIn('#f3f6fa', colors)
+
+    def test_reference_app_cards_declare_theme_colors(self):
+        paths = ['firmware/native_apps/hello/resources/card.json',
+                 'firmware/runtime_apps/hello/src/res/cards.json']
+        for relative in paths:
+            resource = json.loads((ROOT / relative).read_text())
+            refs = set(style_refs(resource))
+            self.assertTrue({'app.page', 'app.action', 'app.actionText'} <= refs)
+            for name in ['dark', 'light']:
+                theme = json.loads((ROOT / f'firmware/components/espocket_system/resources/{name}_theme.json').read_text())
+                self.assertFalse(refs - theme['styles'].keys())
+
     def test_round_layout_keeps_entire_scroll_view_inside_screen(self):
         sys.path.insert(0, str(ROOT / 'scripts/firmware'))
         from prepare_patched_component import prepare

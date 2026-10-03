@@ -52,6 +52,7 @@ ESPocket 需要在圆形目标设备上提供官方 Settings 与真实设备 cap
 - [07 — 修复 playback 退出时重复关闭 I2S](issues/07-fix-audio-playback-teardown.md)
 - [08 — 修复 Settings 亮度滑块卡死](issues/08-fix-settings-brightness-freeze.md)
 - [09 — 核对并统一产品主题消费](issues/09-unify-product-theme-consumption.md)
+- [10 — Home Space 主题与紧凑弹窗](issues/10-refine-shell-theme-and-dialog-layout.md)
 
 ## 已接受结果
 
@@ -76,3 +77,5 @@ ESPocket 需要在圆形目标设备上提供官方 Settings 与真实设备 cap
 2026-10-03：用户在后续检查发现 Settings 亮度卡死与官方 App 白色主题，新增 08/09 独立缺陷；不改写此前 Sound/Storage/Debug 的已接受范围。
 
 2026-10-03：06 系统确认弹窗、09 产品主题与 011 返回字形已通过当前修正版验收；当前剩余工作由 07 playback teardown 与 08 亮度卡死独立承接。
+
+2026-10-03 后续反馈：弹窗布局和浅色按钮仍需改进，Home Space 需要适配 Light；由 10 承接，不把此前深色 App 验收扩展为整个系统已验收。08 新增“主题选择 → 取消 → 拖亮度”的实际失败序列。

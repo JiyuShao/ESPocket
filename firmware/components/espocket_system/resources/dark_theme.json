@@ -120,6 +120,96 @@
           "radius": "18dp"
         }
       }
+    },
+    "shell.bgColor.070a10": {
+      "bgColor": "#070a10"
+    },
+    "shell.textColor.718096": {
+      "textColor": "#718096"
+    },
+    "shell.textColor.f8fafc": {
+      "textColor": "#f8fafc"
+    },
+    "shell.textColor.cbd5e1": {
+      "textColor": "#cbd5e1"
+    },
+    "shell.bgColor.2dd4bf": {
+      "bgColor": "#2dd4bf"
+    },
+    "shell.bgColor.10251e": {
+      "bgColor": "#10251e"
+    },
+    "shell.textColor.9ae6b4": {
+      "textColor": "#9ae6b4"
+    },
+    "shell.textColor.ffffff": {
+      "textColor": "#ffffff"
+    },
+    "shell.textColor.86a89b": {
+      "textColor": "#86a89b"
+    },
+    "shell.bgColor.261c0b": {
+      "bgColor": "#261c0b"
+    },
+    "shell.textColor.fbd38d": {
+      "textColor": "#fbd38d"
+    },
+    "shell.bgColor.c47c14.action": {
+      "bgColor": "#c47c14"
+    },
+    "shell.textColor.ffffff.action": {
+      "textColor": "#ffffff"
+    },
+    "shell.bgColor.725018.action": {
+      "bgColor": "#725018"
+    },
+    "shell.textColor.a98b60": {
+      "textColor": "#a98b60"
+    },
+    "shell.bgColor.111827": {
+      "bgColor": "#111827"
+    },
+    "shell.textColor.aeb9c8": {
+      "textColor": "#aeb9c8"
+    },
+    "shell.bgColor.b7791f.action": {
+      "bgColor": "#b7791f"
+    },
+    "shell.bgColor.2563a9.action": {
+      "bgColor": "#2563a9"
+    },
+    "shell.bgColor.374151.action": {
+      "bgColor": "#374151"
+    },
+    "shell.bgColor.277b65.action": {
+      "bgColor": "#277b65"
+    },
+    "shell.textColor.94a3b8": {
+      "textColor": "#94a3b8"
+    },
+    "shell.textColor.64748b": {
+      "textColor": "#64748b"
+    },
+    "shell.bgColor.1d4ed8.action": {
+      "bgColor": "#1d4ed8"
+    },
+    "shell.bgColor.6d28d9.action": {
+      "bgColor": "#6d28d9"
+    },
+    "shell.bgColor.0f766e.action": {
+      "bgColor": "#0f766e"
+    },
+    "shell.bgColor.9a5a16.action": {
+      "bgColor": "#9a5a16"
+    },
+    "shell.bgColor.07090d": {
+      "bgColor": "#07090d"
+    },
+    "app.action": {
+      "bgColor": "#334155"
+    },
+    "app.actionText": {
+      "textColor": "#ffffff"
     }
   }
 }

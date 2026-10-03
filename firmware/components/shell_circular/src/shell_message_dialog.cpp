@@ -22,7 +22,7 @@ std::expected<void, std::string> CircularShell::render_message_dialog(
     if (!panel) { lv_obj_delete(overlay); return std::unexpected("Failed to create dialog panel"); }
     const bool light = context_->gui().get_theme() == "light";
     lv_obj_remove_flag(panel, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_set_size(panel, 326, 326);
+    lv_obj_set_size(panel, 316, LV_SIZE_CONTENT);
     lv_obj_center(panel);
     lv_obj_set_style_bg_color(panel, lv_color_hex(light ? 0xf2f5f8 : 0x202934), 0);
     lv_obj_set_style_bg_opa(panel, LV_OPA_COVER, 0);
@@ -35,7 +35,8 @@ std::expected<void, std::string> CircularShell::render_message_dialog(
     auto *text = body ? lv_label_create(body) : nullptr;
     if (!body || !text) { lv_obj_delete(overlay); return std::unexpected("Failed to create dialog text"); }
     lv_obj_set_width(body, lv_pct(100));
-    lv_obj_set_flex_grow(body, 1);
+    lv_obj_set_height(body, LV_SIZE_CONTENT);
+    lv_obj_set_style_max_height(body, 112, 0);
     lv_obj_set_style_bg_opa(body, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(body, 0, 0);
     lv_obj_set_style_pad_all(body, 0, 0);
@@ -60,6 +61,8 @@ std::expected<void, std::string> CircularShell::render_message_dialog(
         const bool destructive = options.buttons[i].role ==
                                  esp_brookesia::system::core::MessageDialogButtonRole::Destructive;
         lv_obj_set_style_bg_color(button, lv_color_hex(destructive ? 0xa52832 : 0x2157d5), 0);
+        lv_obj_set_style_bg_opa(button, LV_OPA_COVER, 0);
+        lv_obj_set_style_border_width(button, 0, 0);
         lv_label_set_text(label, options.buttons[i].text.c_str());
         lv_obj_set_style_text_color(label, lv_color_hex(0xffffff), 0);
         lv_obj_set_style_text_font(label, &lv_font_montserrat_18, 0);

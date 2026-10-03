@@ -5,7 +5,7 @@
       "type": "viewScreen",
       "id": "watch_face",
       "commonProps": { "scrollable": false },
-      "style": { "bgColor": "#070a10", "padding": 0 },
+      "styleRefs": ["shell.bgColor.070a10"], "style": {"padding": 0},
       "layout": {
         "type": "flex",
         "flexFlow": "column",
@@ -18,28 +18,28 @@
           "type": "label",
           "id": "eyebrow",
           "labelProps": { "text": "LOCAL TIME" },
-          "style": { "textColor": "#718096", "fontSize": "14sp", "textAlign": "center" },
+          "styleRefs": ["shell.textColor.718096"], "style": {"fontSize": "14sp", "textAlign": "center"},
           "placement": { "width": "220dp", "height": "22dp" }
         },
         {
           "type": "label",
           "id": "time",
           "labelProps": { "text": "--:--" },
-          "style": { "textColor": "#f8fafc", "fontSize": "76sp", "textAlign": "center" },
+          "styleRefs": ["shell.textColor.f8fafc"], "style": {"fontSize": "76sp", "textAlign": "center"},
           "placement": { "width": "340dp", "height": "100dp" }
         },
         {
           "type": "label",
           "id": "date",
           "labelProps": { "text": "Waiting for sync" },
-          "style": { "textColor": "#cbd5e1", "fontSize": "20sp", "textAlign": "center" },
+          "styleRefs": ["shell.textColor.cbd5e1"], "style": {"fontSize": "20sp", "textAlign": "center"},
           "placement": { "width": "280dp", "height": "32dp" }
         },
         {
           "type": "container",
           "id": "accent",
           "commonProps": { "clickable": false, "scrollable": false },
-          "style": { "bgColor": "#2dd4bf", "radius": "2dp", "padding": 0 },
+          "styleRefs": ["shell.bgColor.2dd4bf"], "style": {"radius": "2dp", "padding": 0},
           "placement": { "width": "38dp", "height": "4dp" }
         },
         { "type": "label", "id": "space", "labelProps": { "text": " " }, "placement": { "width": "160dp", "height": "22dp" } }
@@ -49,49 +49,49 @@
       "type": "viewScreen",
       "id": "battery_card",
       "commonProps": { "scrollable": false },
-      "style": { "bgColor": "#10251e", "padding": 0 },
+      "styleRefs": ["shell.bgColor.10251e"], "style": {"padding": 0},
       "layout": { "type": "flex", "flexFlow": "column", "mainAlign": "center", "crossAlign": "center", "gap": "18dp" },
       "children": [
-        { "type": "label", "id": "title", "labelProps": { "text": "Battery" }, "style": { "textColor": "#9ae6b4", "fontSize": "28sp" }, "placement": { "width": "250dp", "height": "40dp" } },
-        { "type": "label", "id": "value", "labelProps": { "text": "Battery: ?" }, "style": { "textColor": "#ffffff", "fontSize": "40sp", "textAlign": "center" }, "placement": { "width": "300dp", "height": "58dp" } },
-        { "type": "label", "id": "hint", "labelProps": { "text": "\uf053  Home" }, "style": { "textColor": "#86a89b", "fontSize": "18sp", "textAlign": "center" }, "placement": { "width": "300dp", "height": "26dp" } }
+        { "type": "label", "id": "title", "labelProps": { "text": "Battery" }, "styleRefs": ["shell.textColor.9ae6b4"], "style": {"fontSize": "28sp"}, "placement": { "width": "250dp", "height": "40dp" } },
+        { "type": "label", "id": "value", "labelProps": { "text": "Battery: ?" }, "styleRefs": ["shell.textColor.ffffff"], "style": {"fontSize": "40sp", "textAlign": "center"}, "placement": { "width": "300dp", "height": "58dp" } },
+        { "type": "label", "id": "hint", "labelProps": { "text": "\uf053  Home" }, "styleRefs": ["shell.textColor.86a89b"], "style": {"fontSize": "18sp", "textAlign": "center"}, "placement": { "width": "300dp", "height": "26dp" } }
       ]
     },
     {
       "type": "viewScreen",
       "id": "brightness_card",
       "commonProps": { "scrollable": false },
-      "style": { "bgColor": "#261c0b", "padding": 0 },
+      "styleRefs": ["shell.bgColor.261c0b"], "style": {"padding": 0},
       "layout": { "type": "flex", "flexFlow": "column", "mainAlign": "center", "crossAlign": "center", "gap": "14dp" },
       "children": [
-        { "type": "label", "id": "title", "labelProps": { "text": "Brightness" }, "style": { "textColor": "#fbd38d", "fontSize": "28sp" }, "placement": { "width": "250dp", "height": "40dp" } },
-        { "type": "label", "id": "value", "labelProps": { "text": "Brightness: ?" }, "style": { "textColor": "#ffffff", "fontSize": "28sp", "textAlign": "center" }, "placement": { "width": "300dp", "height": "44dp" } },
-        { "type": "button", "id": "step", "events": [ { "type": "clicked", "action": "shell.step_brightness" } ], "style": { "bgColor": "#c47c14", "radius": "26dp" }, "placement": { "width": "220dp", "height": "58dp" }, "children": [ { "type": "label", "id": "label", "labelProps": { "text": "Increase 20%" }, "style": { "textColor": "#ffffff", "fontSize": "18sp" }, "placement": { "mode": "relative", "align": "center" } } ] },
-        { "type": "button", "id": "settings", "events": [ { "type": "clicked", "action": "shell.open_settings_card" } ], "style": { "bgColor": "#725018", "radius": "22dp" }, "placement": { "width": "180dp", "height": "46dp" }, "children": [ { "type": "label", "id": "label", "labelProps": { "text": "Display Settings" }, "style": { "textColor": "#ffffff", "fontSize": "16sp" }, "placement": { "mode": "relative", "align": "center" } } ] },
-        { "type": "label", "id": "hint", "labelProps": { "text": "Home  \uf054" }, "style": { "textColor": "#a98b60", "fontSize": "18sp", "textAlign": "center" }, "placement": { "width": "260dp", "height": "26dp" } }
+        { "type": "label", "id": "title", "labelProps": { "text": "Brightness" }, "styleRefs": ["shell.textColor.fbd38d"], "style": {"fontSize": "28sp"}, "placement": { "width": "250dp", "height": "40dp" } },
+        { "type": "label", "id": "value", "labelProps": { "text": "Brightness: ?" }, "styleRefs": ["shell.textColor.ffffff"], "style": {"fontSize": "28sp", "textAlign": "center"}, "placement": { "width": "300dp", "height": "44dp" } },
+        { "type": "button", "id": "step", "events": [ { "type": "clicked", "action": "shell.step_brightness" } ], "styleRefs": ["shell.bgColor.c47c14.action"], "style": {"radius": "26dp"}, "placement": { "width": "220dp", "height": "58dp" }, "children": [ { "type": "label", "id": "label", "labelProps": { "text": "Increase 20%" }, "styleRefs": ["shell.textColor.ffffff.action"], "style": {"fontSize": "18sp"}, "placement": { "mode": "relative", "align": "center" } } ] },
+        { "type": "button", "id": "settings", "events": [ { "type": "clicked", "action": "shell.open_settings_card" } ], "styleRefs": ["shell.bgColor.725018.action"], "style": {"radius": "22dp"}, "placement": { "width": "180dp", "height": "46dp" }, "children": [ { "type": "label", "id": "label", "labelProps": { "text": "Display Settings" }, "styleRefs": ["shell.textColor.ffffff.action"], "style": {"fontSize": "16sp"}, "placement": { "mode": "relative", "align": "center" } } ] },
+        { "type": "label", "id": "hint", "labelProps": { "text": "Home  \uf054" }, "styleRefs": ["shell.textColor.a98b60"], "style": {"fontSize": "18sp", "textAlign": "center"}, "placement": { "width": "260dp", "height": "26dp" } }
       ]
     },
     {
       "type": "viewScreen",
       "id": "quick_settings",
       "commonProps": { "scrollable": false },
-      "style": { "bgColor": "#111827", "padding": 0 },
+      "styleRefs": ["shell.bgColor.111827"], "style": {"padding": 0},
       "layout": { "type": "flex", "flexFlow": "column", "mainAlign": "center", "crossAlign": "center", "gap": "10dp" },
       "children": [
-        { "type": "label", "id": "title", "labelProps": { "text": "Quick Settings" }, "style": { "textColor": "#ffffff", "fontSize": "26sp" }, "placement": { "width": "280dp", "height": "38dp" } },
-        { "type": "label", "id": "battery", "labelProps": { "text": "Battery: ?" }, "style": { "textColor": "#aeb9c8", "fontSize": "17sp" }, "placement": { "width": "250dp", "height": "26dp" } },
-        { "type": "button", "id": "brightness_action", "events": [ { "type": "clicked", "action": "shell.step_brightness_quick" } ], "style": { "bgColor": "#b7791f", "radius": "24dp" }, "placement": { "width": "230dp", "height": "52dp" }, "children": [ { "type": "label", "id": "brightness", "labelProps": { "text": "Brightness: ?" }, "style": { "textColor": "#ffffff", "fontSize": "17sp" }, "placement": { "mode": "relative", "align": "center" } } ] },
-        { "type": "button", "id": "wifi_action", "events": [ { "type": "clicked", "action": "shell.toggle_wifi" } ], "style": { "bgColor": "#2563a9", "radius": "24dp" }, "placement": { "width": "230dp", "height": "52dp" }, "children": [ { "type": "label", "id": "wifi", "labelProps": { "text": "Wi-Fi: ?" }, "style": { "textColor": "#ffffff", "fontSize": "17sp" }, "placement": { "mode": "relative", "align": "center" } } ] },
-        { "type": "button", "id": "developer_mode_action", "events": [ { "type": "clicked", "action": "shell.toggle_developer_mode" } ], "style": { "bgColor": "#374151", "radius": "24dp" }, "placement": { "width": "230dp", "height": "48dp" }, "children": [ { "type": "label", "id": "label", "labelProps": { "text": "Developer Mode: Off" }, "style": { "textColor": "#ffffff", "fontSize": "16sp" }, "placement": { "mode": "relative", "align": "center" } } ] },
-        { "type": "button", "id": "settings", "events": [ { "type": "clicked", "action": "shell.open_settings_quick" } ], "style": { "bgColor": "#277b65", "radius": "24dp" }, "placement": { "width": "230dp", "height": "52dp" }, "children": [ { "type": "label", "id": "label", "labelProps": { "text": "Open Settings" }, "style": { "textColor": "#ffffff", "fontSize": "17sp" }, "placement": { "mode": "relative", "align": "center" } } ] },
-        { "type": "label", "id": "hint", "labelProps": { "text": "\uf077  Home" }, "style": { "textColor": "#94a3b8", "fontSize": "18sp", "textAlign": "center" }, "placement": { "width": "230dp", "height": "24dp" } }
+        { "type": "label", "id": "title", "labelProps": { "text": "Quick Settings" }, "styleRefs": ["shell.textColor.ffffff"], "style": {"fontSize": "26sp"}, "placement": { "width": "280dp", "height": "38dp" } },
+        { "type": "label", "id": "battery", "labelProps": { "text": "Battery: ?" }, "styleRefs": ["shell.textColor.aeb9c8"], "style": {"fontSize": "17sp"}, "placement": { "width": "250dp", "height": "26dp" } },
+        { "type": "button", "id": "brightness_action", "events": [ { "type": "clicked", "action": "shell.step_brightness_quick" } ], "styleRefs": ["shell.bgColor.b7791f.action"], "style": {"radius": "24dp"}, "placement": { "width": "230dp", "height": "52dp" }, "children": [ { "type": "label", "id": "brightness", "labelProps": { "text": "Brightness: ?" }, "styleRefs": ["shell.textColor.ffffff.action"], "style": {"fontSize": "17sp"}, "placement": { "mode": "relative", "align": "center" } } ] },
+        { "type": "button", "id": "wifi_action", "events": [ { "type": "clicked", "action": "shell.toggle_wifi" } ], "styleRefs": ["shell.bgColor.2563a9.action"], "style": {"radius": "24dp"}, "placement": { "width": "230dp", "height": "52dp" }, "children": [ { "type": "label", "id": "wifi", "labelProps": { "text": "Wi-Fi: ?" }, "styleRefs": ["shell.textColor.ffffff.action"], "style": {"fontSize": "17sp"}, "placement": { "mode": "relative", "align": "center" } } ] },
+        { "type": "button", "id": "developer_mode_action", "events": [ { "type": "clicked", "action": "shell.toggle_developer_mode" } ], "styleRefs": ["shell.bgColor.374151.action"], "style": {"radius": "24dp"}, "placement": { "width": "230dp", "height": "48dp" }, "children": [ { "type": "label", "id": "label", "labelProps": { "text": "Developer Mode: Off" }, "styleRefs": ["shell.textColor.ffffff.action"], "style": {"fontSize": "16sp"}, "placement": { "mode": "relative", "align": "center" } } ] },
+        { "type": "button", "id": "settings", "events": [ { "type": "clicked", "action": "shell.open_settings_quick" } ], "styleRefs": ["shell.bgColor.277b65.action"], "style": {"radius": "24dp"}, "placement": { "width": "230dp", "height": "52dp" }, "children": [ { "type": "label", "id": "label", "labelProps": { "text": "Open Settings" }, "styleRefs": ["shell.textColor.ffffff.action"], "style": {"fontSize": "17sp"}, "placement": { "mode": "relative", "align": "center" } } ] },
+        { "type": "label", "id": "hint", "labelProps": { "text": "\uf077  Home" }, "styleRefs": ["shell.textColor.94a3b8"], "style": {"fontSize": "18sp", "textAlign": "center"}, "placement": { "width": "230dp", "height": "24dp" } }
       ]
     },
     {
       "type": "viewScreen",
       "id": "launcher",
       "commonProps": { "scrollable": true },
-      "style": { "bgColor": "#070a10", "padding": 0 },
+      "styleRefs": ["shell.bgColor.070a10"], "style": {"padding": 0},
       "layout": {
         "type": "flex",
         "flexFlow": "column",
@@ -105,47 +105,47 @@
           "id": "pull_hint",
           "bindings": { "placement.height": "pullHeight" },
           "labelProps": { "text": "\uf078  Pull for Home" },
-          "style": { "textColor": "#64748b", "fontSize": "18sp", "textAlign": "center" },
+          "styleRefs": ["shell.textColor.64748b"], "style": {"fontSize": "18sp", "textAlign": "center"},
           "placement": { "width": "260dp", "height": "28dp" }
         },
         {
           "type": "label",
           "id": "title",
           "labelProps": { "text": "Apps" },
-          "style": { "textColor": "#f8fafc", "fontSize": "34sp", "textAlign": "center" },
+          "styleRefs": ["shell.textColor.f8fafc"], "style": {"fontSize": "34sp", "textAlign": "center"},
           "placement": { "width": "220dp", "height": "44dp" }
         },
         {
           "type": "button",
           "id": "hello_native",
           "events": [ { "type": "clicked", "action": "shell.open_hello_native" } ],
-          "style": { "bgColor": "#1d4ed8", "radius": "30dp" },
+          "styleRefs": ["shell.bgColor.1d4ed8.action"], "style": {"radius": "30dp"},
           "placement": { "width": "290dp", "height": "96dp" },
-          "children": [ { "type": "label", "id": "label", "labelProps": { "text": "Native" }, "style": { "textColor": "#ffffff", "fontSize": "21sp" }, "placement": { "mode": "relative", "align": "center" } } ]
+          "children": [ { "type": "label", "id": "label", "labelProps": { "text": "Native" }, "styleRefs": ["shell.textColor.ffffff.action"], "style": {"fontSize": "21sp"}, "placement": { "mode": "relative", "align": "center" } } ]
         },
         {
           "type": "button",
           "id": "hello_runtime",
           "events": [ { "type": "clicked", "action": "shell.open_hello_runtime" } ],
-          "style": { "bgColor": "#6d28d9", "radius": "30dp" },
+          "styleRefs": ["shell.bgColor.6d28d9.action"], "style": {"radius": "30dp"},
           "placement": { "width": "290dp", "height": "96dp" },
-          "children": [ { "type": "label", "id": "label", "labelProps": { "text": "Runtime" }, "style": { "textColor": "#ffffff", "fontSize": "21sp" }, "placement": { "mode": "relative", "align": "center" } } ]
+          "children": [ { "type": "label", "id": "label", "labelProps": { "text": "Runtime" }, "styleRefs": ["shell.textColor.ffffff.action"], "style": {"fontSize": "21sp"}, "placement": { "mode": "relative", "align": "center" } } ]
         },
         {
           "type": "button",
           "id": "settings",
           "events": [ { "type": "clicked", "action": "shell.open_settings" } ],
-          "style": { "bgColor": "#0f766e", "radius": "30dp" },
+          "styleRefs": ["shell.bgColor.0f766e.action"], "style": {"radius": "30dp"},
           "placement": { "width": "290dp", "height": "96dp" },
-          "children": [ { "type": "label", "id": "label", "labelProps": { "text": "Settings" }, "style": { "textColor": "#ffffff", "fontSize": "21sp" }, "placement": { "mode": "relative", "align": "center" } } ]
+          "children": [ { "type": "label", "id": "label", "labelProps": { "text": "Settings" }, "styleRefs": ["shell.textColor.ffffff.action"], "style": {"fontSize": "21sp"}, "placement": { "mode": "relative", "align": "center" } } ]
         },
         {
           "type": "button",
           "id": "app_store",
           "events": [ { "type": "clicked", "action": "shell.open_app_store" } ],
-          "style": { "bgColor": "#9a5a16", "radius": "30dp" },
+          "styleRefs": ["shell.bgColor.9a5a16.action"], "style": {"radius": "30dp"},
           "placement": { "width": "290dp", "height": "96dp" },
-          "children": [ { "type": "label", "id": "label", "labelProps": { "text": "Store" }, "style": { "textColor": "#ffffff", "fontSize": "21sp" }, "placement": { "mode": "relative", "align": "center" } } ]
+          "children": [ { "type": "label", "id": "label", "labelProps": { "text": "Store" }, "styleRefs": ["shell.textColor.ffffff.action"], "style": {"fontSize": "21sp"}, "placement": { "mode": "relative", "align": "center" } } ]
         },
         { "type": "label", "id": "bottom_space", "labelProps": { "text": " " }, "placement": { "width": "160dp", "height": "44dp" } }
       ]
@@ -168,7 +168,7 @@
       "type": "viewScreen",
       "id": "app_card",
       "commonProps": { "scrollable": false },
-      "style": { "bgColor": "#07090d", "padding": 0 },
+      "styleRefs": ["shell.bgColor.07090d"], "style": {"padding": 0},
       "children": []
     },
     {
