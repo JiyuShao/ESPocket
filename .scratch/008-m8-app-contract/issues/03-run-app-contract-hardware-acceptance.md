@@ -63,3 +63,5 @@
 2026-10-03：普通 c8d56e5e2 的完整 apps 合成套件通过，包含此前崩溃的 Runtime confirmation 与全部待决 Back 分支，见[补丁设备验证](../records/2026-10-03-runtime-stack-patch-validation.md)。上表的旧 FAIL 保留为历史；当前自动分支 PASS，Runtime 物理及回收/资源仍待检，不关闭本票。
 
 2026-10-03：两种独立 reclaim 的 17 步设备路径各 PASS，包含另一模型不被回收和旧确认状态清理；有限资源数据未持续下降，栈余量最小 7400 bytes，缺失日志与测量范围明确保留。三条缺失物理路径见[晨间最小清单](../records/2026-10-03-overnight-frontier.md)，不重做已接受 Native 常规路径。
+
+2026-10-03：用户要求先验收。当前无测试音 Audio 修正镜像 `b9b4a413f` 的完整 apps 57 步再次 PASS，release 与最终 Home 正常；一次 Runtime 物理检查待回应，见[当前固件验收](../records/2026-10-03-current-firmware-acceptance.md)。未关闭剩余物理条件。
