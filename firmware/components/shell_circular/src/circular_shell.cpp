@@ -146,7 +146,15 @@ std::expected<void, std::string> CircularShell::on_action(
 )
 {
     (void)context;
-    // PROTOTYPE: a completed pull must not also open the touched list row.
+    // GUI actions are queued. A released pull may navigate Home before the
+    // clicked row reaches this callback; reject actions from the old Launcher.
+    const bool launcher_action = action == OPEN_HELLO_NATIVE_ACTION ||
+        action == OPEN_HELLO_RUNTIME_ACTION || action == OPEN_SETTINGS_ACTION ||
+        action == OPEN_APP_STORE_ACTION;
+    if (launcher_action && current_surface() != ShellSurface::Launcher) {
+        return {};
+    }
+    // A completed pull also suppresses the row while Launcher is still active.
     if (current_surface() == ShellSurface::Launcher && home_gesture_state_ &&
             home_gesture_state_->launcher_pull_distance.load(std::memory_order_acquire) >=
                 home_gesture_state_->launcher_return_threshold.load(std::memory_order_acquire)) {
@@ -169,14 +177,14 @@ std::expected<void, std::string> CircularShell::on_action(
         auto result = step_brightness();
         if (!result) {
             set_status_text(BRIGHTNESS_CARD_PATH, "Brightness: unavailable");
-            set_status_text(QUICK_BRIGHTNESS_PATH, "Brightness: unavailable");
+            set_status_text(QUICK_BRIGHTNESS_PATH, "Unavailable");
         }
         return result;
     }
     if (action == TOGGLE_WIFI_ACTION) {
         auto result = toggle_wifi();
         if (!result) {
-            set_status_text(QUICK_WIFI_PATH, "Wi-Fi: unavailable");
+            set_status_text(QUICK_WIFI_PATH, "Unavailable");
         }
         return result;
     }

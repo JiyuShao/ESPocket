@@ -215,7 +215,7 @@
       "stateStyles": {
         "pressed": {
           "bgColor": "${color.warning.soft}",
-          "borderColor": "${color.primary.fill}",
+          "borderColor": "${color.warning.fill}",
           "borderWidth": "2dp"
         }
       }
@@ -235,6 +235,18 @@
     },
     "shell.wifiActionText": {
       "textColor": "${color.info.fill}"
+    },
+    "shell.brightnessPrimary": {
+      "bgColor": "${color.warning.fill}",
+      "stateStyles": {
+        "pressed": {
+          "borderColor": "${color.warning.on}",
+          "borderWidth": "2dp"
+        }
+      }
+    },
+    "shell.brightnessPrimaryText": {
+      "textColor": "${color.warning.on}"
     }
   }
 }

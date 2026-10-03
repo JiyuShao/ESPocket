@@ -247,7 +247,7 @@
             }
           ],
           "styleRefs": [
-            "app.action"
+            "shell.brightnessPrimary"
           ],
           "style": {
             "radius": "26dp"
@@ -264,7 +264,7 @@
                 "text": "Increase 20%"
               },
               "styleRefs": [
-                "app.actionText"
+                "shell.brightnessPrimaryText"
               ],
               "style": {
                 "fontSize": "18sp"
@@ -286,7 +286,7 @@
             }
           ],
           "styleRefs": [
-            "app.action"
+            "shell.brightnessAction"
           ],
           "style": {
             "radius": "22dp"
@@ -303,7 +303,7 @@
                 "text": "Display Settings"
               },
               "styleRefs": [
-                "app.actionText"
+                "shell.brightnessActionText"
               ],
               "style": {
                 "fontSize": "16sp"
@@ -347,13 +347,6 @@
       "style": {
         "padding": 0
       },
-      "layout": {
-        "type": "flex",
-        "flexFlow": "column",
-        "mainAlign": "center",
-        "crossAlign": "center",
-        "gap": "10dp"
-      },
       "children": [
         {
           "type": "label",
@@ -365,10 +358,14 @@
             "shell.text"
           ],
           "style": {
-            "fontSize": "26sp"
+            "fontSize": "26sp",
+            "textAlign": "center"
           },
           "placement": {
-            "width": "280dp",
+            "mode": "absolute",
+            "x": "103dp",
+            "y": "78dp",
+            "width": "260dp",
             "height": "38dp"
           }
         },
@@ -382,9 +379,13 @@
             "shell.caption"
           ],
           "style": {
-            "fontSize": "17sp"
+            "fontSize": "17sp",
+            "textAlign": "center"
           },
           "placement": {
+            "mode": "absolute",
+            "x": "108dp",
+            "y": "120dp",
             "width": "250dp",
             "height": "26dp"
           }
@@ -402,28 +403,50 @@
             "shell.brightnessAction"
           ],
           "style": {
-            "radius": "24dp"
+            "radius": "20dp"
           },
           "placement": {
-            "width": "230dp",
-            "height": "52dp"
+            "mode": "absolute",
+            "x": "83dp",
+            "y": "165dp",
+            "width": "140dp",
+            "height": "96dp"
           },
           "children": [
             {
               "type": "label",
               "id": "brightness",
               "labelProps": {
-                "text": "Brightness: ?"
+                "text": "?%"
               },
               "styleRefs": [
                 "shell.brightnessActionText"
               ],
               "style": {
-                "fontSize": "17sp"
+                "fontSize": "22sp"
               },
               "placement": {
                 "mode": "relative",
-                "align": "center"
+                "align": "center",
+                "y": "12dp"
+              }
+            },
+            {
+              "type": "label",
+              "id": "caption",
+              "labelProps": {
+                "text": "Brightness"
+              },
+              "styleRefs": [
+                "shell.brightnessActionText"
+              ],
+              "style": {
+                "fontSize": "14sp"
+              },
+              "placement": {
+                "mode": "relative",
+                "align": "center",
+                "y": "-20dp"
               }
             }
           ]
@@ -441,28 +464,50 @@
             "shell.wifiAction"
           ],
           "style": {
-            "radius": "24dp"
+            "radius": "20dp"
           },
           "placement": {
-            "width": "230dp",
-            "height": "52dp"
+            "mode": "absolute",
+            "x": "243dp",
+            "y": "165dp",
+            "width": "140dp",
+            "height": "96dp"
           },
           "children": [
             {
               "type": "label",
               "id": "wifi",
               "labelProps": {
-                "text": "Wi-Fi: ?"
+                "text": "Unknown"
               },
               "styleRefs": [
                 "shell.wifiActionText"
               ],
               "style": {
-                "fontSize": "17sp"
+                "fontSize": "22sp"
               },
               "placement": {
                 "mode": "relative",
-                "align": "center"
+                "align": "center",
+                "y": "12dp"
+              }
+            },
+            {
+              "type": "label",
+              "id": "caption",
+              "labelProps": {
+                "text": "Wi-Fi"
+              },
+              "styleRefs": [
+                "shell.wifiActionText"
+              ],
+              "style": {
+                "fontSize": "14sp"
+              },
+              "placement": {
+                "mode": "relative",
+                "align": "center",
+                "y": "-20dp"
               }
             }
           ]
@@ -480,28 +525,50 @@
             "shell.row"
           ],
           "style": {
-            "radius": "24dp"
+            "radius": "20dp"
           },
           "placement": {
-            "width": "230dp",
-            "height": "48dp"
+            "mode": "absolute",
+            "x": "83dp",
+            "y": "277dp",
+            "width": "140dp",
+            "height": "96dp"
           },
           "children": [
             {
               "type": "label",
               "id": "label",
               "labelProps": {
-                "text": "Developer Mode: Off"
+                "text": "Off"
               },
               "styleRefs": [
                 "shell.rowText"
               ],
               "style": {
-                "fontSize": "16sp"
+                "fontSize": "22sp"
               },
               "placement": {
                 "mode": "relative",
-                "align": "center"
+                "align": "center",
+                "y": "12dp"
+              }
+            },
+            {
+              "type": "label",
+              "id": "caption",
+              "labelProps": {
+                "text": "Developer"
+              },
+              "styleRefs": [
+                "shell.rowText"
+              ],
+              "style": {
+                "fontSize": "14sp"
+              },
+              "placement": {
+                "mode": "relative",
+                "align": "center",
+                "y": "-20dp"
               }
             }
           ]
@@ -519,28 +586,50 @@
             "shell.row"
           ],
           "style": {
-            "radius": "24dp"
+            "radius": "20dp"
           },
           "placement": {
-            "width": "230dp",
-            "height": "52dp"
+            "mode": "absolute",
+            "x": "243dp",
+            "y": "277dp",
+            "width": "140dp",
+            "height": "96dp"
           },
           "children": [
             {
               "type": "label",
               "id": "label",
               "labelProps": {
-                "text": "Open Settings"
+                "text": "Open"
               },
               "styleRefs": [
                 "shell.rowText"
               ],
               "style": {
-                "fontSize": "17sp"
+                "fontSize": "22sp"
               },
               "placement": {
                 "mode": "relative",
-                "align": "center"
+                "align": "center",
+                "y": "12dp"
+              }
+            },
+            {
+              "type": "label",
+              "id": "caption",
+              "labelProps": {
+                "text": "Settings"
+              },
+              "styleRefs": [
+                "shell.rowText"
+              ],
+              "style": {
+                "fontSize": "14sp"
+              },
+              "placement": {
+                "mode": "relative",
+                "align": "center",
+                "y": "-20dp"
               }
             }
           ]
@@ -559,6 +648,9 @@
             "textAlign": "center"
           },
           "placement": {
+            "mode": "absolute",
+            "x": "118dp",
+            "y": "393dp",
             "width": "230dp",
             "height": "24dp"
           }
@@ -582,7 +674,7 @@
         "flexFlow": "column",
         "mainAlign": "start",
         "crossAlign": "center",
-        "gap": "16dp"
+        "gap": "12dp"
       },
       "children": [
         {
@@ -616,12 +708,12 @@
             "shell.text"
           ],
           "style": {
-            "fontSize": "34sp",
+            "fontSize": "28sp",
             "textAlign": "center"
           },
           "placement": {
             "width": "220dp",
-            "height": "44dp"
+            "height": "38dp"
           }
         },
         {
@@ -637,11 +729,11 @@
             "shell.row"
           ],
           "style": {
-            "radius": "30dp"
+            "radius": "18dp"
           },
           "placement": {
-            "width": "290dp",
-            "height": "96dp"
+            "width": "280dp",
+            "height": "72dp"
           },
           "children": [
             {
@@ -658,7 +750,26 @@
               },
               "placement": {
                 "mode": "relative",
-                "align": "center"
+                "align": "leftMid",
+                "x": "22dp"
+              }
+            },
+            {
+              "type": "label",
+              "id": "chevron",
+              "labelProps": {
+                "text": ""
+              },
+              "styleRefs": [
+                "shell.hint"
+              ],
+              "style": {
+                "fontSize": "16sp"
+              },
+              "placement": {
+                "mode": "relative",
+                "align": "rightMid",
+                "x": "-18dp"
               }
             }
           ]
@@ -676,11 +787,11 @@
             "shell.row"
           ],
           "style": {
-            "radius": "30dp"
+            "radius": "18dp"
           },
           "placement": {
-            "width": "290dp",
-            "height": "96dp"
+            "width": "280dp",
+            "height": "72dp"
           },
           "children": [
             {
@@ -697,7 +808,26 @@
               },
               "placement": {
                 "mode": "relative",
-                "align": "center"
+                "align": "leftMid",
+                "x": "22dp"
+              }
+            },
+            {
+              "type": "label",
+              "id": "chevron",
+              "labelProps": {
+                "text": ""
+              },
+              "styleRefs": [
+                "shell.hint"
+              ],
+              "style": {
+                "fontSize": "16sp"
+              },
+              "placement": {
+                "mode": "relative",
+                "align": "rightMid",
+                "x": "-18dp"
               }
             }
           ]
@@ -715,11 +845,11 @@
             "shell.row"
           ],
           "style": {
-            "radius": "30dp"
+            "radius": "18dp"
           },
           "placement": {
-            "width": "290dp",
-            "height": "96dp"
+            "width": "280dp",
+            "height": "72dp"
           },
           "children": [
             {
@@ -736,7 +866,26 @@
               },
               "placement": {
                 "mode": "relative",
-                "align": "center"
+                "align": "leftMid",
+                "x": "22dp"
+              }
+            },
+            {
+              "type": "label",
+              "id": "chevron",
+              "labelProps": {
+                "text": ""
+              },
+              "styleRefs": [
+                "shell.hint"
+              ],
+              "style": {
+                "fontSize": "16sp"
+              },
+              "placement": {
+                "mode": "relative",
+                "align": "rightMid",
+                "x": "-18dp"
               }
             }
           ]
@@ -754,11 +903,11 @@
             "shell.row"
           ],
           "style": {
-            "radius": "30dp"
+            "radius": "18dp"
           },
           "placement": {
-            "width": "290dp",
-            "height": "96dp"
+            "width": "280dp",
+            "height": "72dp"
           },
           "children": [
             {
@@ -775,7 +924,26 @@
               },
               "placement": {
                 "mode": "relative",
-                "align": "center"
+                "align": "leftMid",
+                "x": "22dp"
+              }
+            },
+            {
+              "type": "label",
+              "id": "chevron",
+              "labelProps": {
+                "text": ""
+              },
+              "styleRefs": [
+                "shell.hint"
+              ],
+              "style": {
+                "fontSize": "16sp"
+              },
+              "placement": {
+                "mode": "relative",
+                "align": "rightMid",
+                "x": "-18dp"
               }
             }
           ]

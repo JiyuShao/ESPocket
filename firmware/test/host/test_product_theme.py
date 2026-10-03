@@ -69,6 +69,19 @@ class ProductThemeTest(unittest.TestCase):
                         token = {'battery_card': 'success.soft', 'brightness_card': 'warning.soft'}.get(asset['id'], 'bg.quick' if asset['id'] == 'quick_settings' else 'bg.base')
                         self.assertIn('${color.' + token + '}', colors)
 
+    def test_compact_quick_controls_fit_round_viewport(self):
+        shell = json.loads((ROOT / 'firmware/components/shell_circular/resources/gui.json').read_text())
+        quick = next(asset for asset in shell['assets'] if asset['id'] == 'quick_settings')
+        controls = [child for child in quick['children'] if child['type'] == 'button']
+        self.assertEqual(len(controls), 4)
+        for child in controls:
+            rect = child['placement']
+            x, y, w, h = (int(rect[key][:-2]) for key in ('x', 'y', 'width', 'height'))
+            self.assertGreaterEqual(min(w, h), 48)
+            for px in (x, x+w):
+                for py in (y, y+h):
+                    self.assertLessEqual((px-233)**2+(py-233)**2, 233**2)
+
     def test_reference_app_cards_declare_theme_colors(self):
         paths = ['firmware/native_apps/hello/resources/card.json',
                  'firmware/runtime_apps/hello/src/res/cards.json']
@@ -148,7 +161,7 @@ class ThemeMigrationTest(unittest.TestCase):
             pairs = [(colors['text'][text], colors[group][background])
                      for text in ('default', 'muted', 'subtle')
                      for group, background in [('bg', 'base'), ('bg', 'quick'), ('surface', 'raised')]]
-            pairs += [(colors[role]['on'], colors[role]['fill']) for role in ('primary', 'danger')]
+            pairs += [(colors[role]['on'], colors[role]['fill']) for role in ('primary', 'danger', 'warning')]
             pairs += [(colors[role]['fill'], colors[role]['soft']) for role in ('success', 'warning')]
             for foreground, background in pairs:
                 a, b = sorted([luminance(foreground), luminance(background)])

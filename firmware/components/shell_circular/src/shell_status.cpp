@@ -23,12 +23,12 @@ void CircularShell::start_status()
                     ESP_LOGW(SHELL_TAG, "Wi-Fi reported unexpected event: %s", event.c_str());
                 }
                 if (event == "Connected") {
-                    state->owner->set_status_text(QUICK_WIFI_PATH, "Wi-Fi: linked (tap to stop)");
+                    state->owner->set_status_text(QUICK_WIFI_PATH, "Linked");
                 } else if (event == "Deinited" || event == "Inited" || event == "Stopped" ||
                            event == "Started" || event == "Disconnected") {
-                    state->owner->set_status_text(QUICK_WIFI_PATH, "Wi-Fi: off/unlinked (tap)");
+                    state->owner->set_status_text(QUICK_WIFI_PATH, "Unlinked");
                 } else {
-                    state->owner->set_status_text(QUICK_WIFI_PATH, "Wi-Fi: ?");
+                    state->owner->set_status_text(QUICK_WIFI_PATH, "Unknown");
                 }
             }
                                );
@@ -142,7 +142,7 @@ void CircularShell::refresh_developer_mode()
     set_status_text(
         QUICK_DEVELOPER_MODE_PATH,
         host_.developer_mode.enabled && host_.developer_mode.enabled() ?
-            "Developer Mode: On" : "Developer Mode: Off"
+            "On" : "Off"
     );
 }
 
@@ -164,20 +164,20 @@ void CircularShell::refresh_clock()
 void CircularShell::refresh_wifi()
 {
     if (!wifi_binding_.is_valid()) {
-        set_status_text(QUICK_WIFI_PATH, "Wi-Fi: ?");
+        set_status_text(QUICK_WIFI_PATH, "Unknown");
         return;
     }
     auto state = WifiHelper::call_function_sync<std::string>(WifiHelper::FunctionId::GetGeneralState);
     if (!state) {
-        set_status_text(QUICK_WIFI_PATH, "Wi-Fi: ?");
+        set_status_text(QUICK_WIFI_PATH, "Unknown");
     } else if (*state == "Connected") {
-        set_status_text(QUICK_WIFI_PATH, "Wi-Fi: linked (tap to stop)");
+        set_status_text(QUICK_WIFI_PATH, "Linked");
     } else if (*state == "Idle" || *state == "Initing" || *state == "Inited" || *state == "Deiniting" ||
                *state == "Starting" || *state == "Started" || *state == "Stopping" ||
                *state == "Connecting" || *state == "Disconnecting") {
-        set_status_text(QUICK_WIFI_PATH, "Wi-Fi: off/unlinked (tap)");
+        set_status_text(QUICK_WIFI_PATH, "Unlinked");
     } else {
-        set_status_text(QUICK_WIFI_PATH, "Wi-Fi: ?");
+        set_status_text(QUICK_WIFI_PATH, "Unknown");
     }
 }
 
@@ -210,7 +210,7 @@ void CircularShell::refresh_brightness()
     const auto text = value ? "Brightness: " + std::to_string(static_cast<int>(*value)) + "%" :
                              "Brightness: ?";
     set_status_text(BRIGHTNESS_CARD_PATH, text);
-    set_status_text(QUICK_BRIGHTNESS_PATH, text);
+    set_status_text(QUICK_BRIGHTNESS_PATH, value ? std::to_string(static_cast<int>(*value)) + "%" : "?%");
 }
 
 std::expected<void, std::string> CircularShell::step_brightness()

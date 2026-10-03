@@ -30,7 +30,8 @@ def run(runner, profile):
                    'display': True, 'canBack': False, 'backPending': False}, profile['quick_settings_app_tap'])
     runner.power('Settings PWR Home', home)
     runner.touch('Launcher', {**home, 'surface': 'launcher'}, *profile['up'])
-    runner.power('Launcher PWR Home', home)
+    runner.touch('Launcher pull cancels queued row click', home, *profile['launcher_pull'])
+    runner.observe('Returned Home has no launched App', home)
     runner.touch('Launcher for App swipe', {**home, 'surface': 'launcher'}, *profile['up'])
     root = {'foregroundAppId': 'espocket.app.hello', 'pageId': 'root', 'display': True,
             'canBack': False, 'backPending': False}
