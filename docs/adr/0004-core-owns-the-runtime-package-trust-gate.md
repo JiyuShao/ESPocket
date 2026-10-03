@@ -29,3 +29,7 @@ Runtime package 可以通过多个产品入口到达，也会在重启后被重�
 - 第二套 ESPocket package manager 或 Installer。
 
 参见 [Runtime package trust 契约](../design/product/05-runtime-package-trust.md)和 [应用生态任务与结果](../../.scratch/005-m5-application-ecosystem/spec.md)。
+
+## 开发者模式修订
+
+[ADR-0018](0018-developer-mode-allows-unsigned-packages.md) 对发行签名要求增加用户已接受的开发者模式例外；Core 统一安装边界、事务与重启验证职责保持有效。

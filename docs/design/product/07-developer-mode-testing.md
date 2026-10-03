@@ -20,6 +20,10 @@
 | DEV-004 | 快照必须提供 Home Space Surface、显示状态、前台 App ID，以及由 App 页面栈给出的当前 Page ID、能否 Back 和 Back 待确认状态；不得暴露页面参数、表单内容或整条栈。 |
 | DEV-005 | 测试报告必须分别标记合成输入、物理输入和视觉证据；合成测试通过不得自动计作触摸硬件或画面验收通过。 |
 
+## 开发者安装策略
+
+开发者模式同时作为未签名 Runtime 包安装的用户开关，规则见 [Runtime 包信任](05-runtime-package-trust.md#开发者安装例外)。安装仍通过正式 Core operation；首版 USB 合成输入协议不因此增加安装或任意 Action 命令。
+
 ## AI Native
 
 | ID | Requirement |

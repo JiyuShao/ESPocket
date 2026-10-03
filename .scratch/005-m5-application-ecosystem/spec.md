@@ -53,6 +53,7 @@ ESPocket 需要官方 Store 与远程 Runtime distribution path，但锁定的�
 - [06 — 采用并复验在线 Store 修复](issues/06-adopt-online-store-stability-fix.md)
 - [07 — 隔离 Runtime keyboard result](issues/07-isolate-runtime-keyboard-results.md)
 - [08 — 取得兼容签名包与发布路径](issues/08-publish-compatible-signed-package.md)
+- [09 — 开发者模式包准入与 Super 兼容运行](issues/09-allow-unsigned-developer-installation.md)
 
 ## Further Notes
 
@@ -79,3 +80,7 @@ ESPocket 需要官方 Store 与远程 Runtime distribution path，但锁定的�
 ## 当前功能优先级
 
 2026-10-04 用户明确 Store 不能稳定请求或安装，先推进 06 的实际 HTTP／Store 调度回归，再解除 08、03 的兼容包和统一信任事务前置。页面打开、缓存列表和 Home 正常不构成 Store 可用；[当前诊断](records/2026-10-04-store-availability.md)记录普通设备的容量拒绝与包不兼容。07 键盘隔离已通过独立门槛，不再作为尚未完成的隔离项。
+
+## 开发者安装策略修订
+
+2026-10-04 用户选择仅开发者模式允许未签名安装，见 [09](issues/09-allow-unsigned-developer-installation.md) 与 [ADR-0018](../../docs/adr/0018-developer-mode-allows-unsigned-packages.md)。08 仍持有正式签名发行包和发布路线；开发路径不再以取得正式发行签名作为前置，但仍依赖 03 的统一 Core 事务和实际兼容性。用户后续确认开发者模式允许所有声明 super 的包进入正常校验，外部旧包暂不要求导航契约；关闭模式保留安装、禁止启动并停止运行中的例外 App。安装提示与实施范围由 09 和 ADR-0018 持有；尚未实现或刷入。

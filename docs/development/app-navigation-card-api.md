@@ -13,6 +13,10 @@
 | Brookesia System Core / GUI / Service | App 安装与运行实例、GUI 与底层服务 | 由 ESPocket Adapter 使用；App 不为产品导航改动上游组件 |
 | Shell | Home Space Surface、Card 横滑、Launcher 与 Quick Settings 手势、临时 Overlay | 打开 App 或目标 Page，不写 App 页面栈 |
 
+## 外部旧包的开发者兼容运行
+
+[ADR-0018](../adr/0018-developer-mode-allows-unsigned-packages.md) 允许开发者模式下的外部旧包暂不接入本导航契约。平台只保证 App 生命周期与 PWR Home；内部页面与返回仍由 App 管理。缺少接入时页面快照必须明确不可用，不能伪造 Root、Page ID 或 canBack，也不能接受指定 Page 打开或统一页面 Back。此例外不改变新开发 ESPocket App 的声明要求，不把缺失声明与已经提供但无效的声明混为一类。
+
 ## 安装时声明
 
 每个 App 声明一个 `appId`、一个 `rootPageId` 和全部 Page 类型的稳定 `pageId`。`pageId` 在该 App 命名空间内唯一；同一页面类型的不同业务数据共用 ID。业务参数不作为 Page ID，也不进入系统快照。安装时缺 Root、ID 重复、Card 指向未声明 Page 或声明不一致时，安装校验失败并给出可诊断错误。
