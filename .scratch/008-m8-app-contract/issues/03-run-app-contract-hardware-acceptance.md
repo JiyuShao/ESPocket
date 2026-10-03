@@ -2,12 +2,12 @@
 
 **What to build:** 分别取得真机 evidence，证明 Native 与 Runtime App 满足 Page 导航、Root 无 Back、Home、wake、待决 Back 与 reclaim 行为。
 
-**Blocked by:** 剩余物理/视觉确认；[04 Runtime 异步栈修复](04-resolve-runtime-async-stack-overflow.md)的源码与自动门槛已通过； [007/03 系统导航真机验收](../../007-m7-navigation/issues/03-run-navigation-hardware-acceptance.md)；[014/04 Native/Runtime 导航绑定](../../014-app-navigation-card-contract/issues/04-samples-api-finalization.md)；[02 回收测试入口](02-add-app-reclaim-test-seams.md)；[003/02 Runtime lifecycle 与共存](../../003-m3-runtime-app/issues/02-prove-runtime-lifecycle-coexistence.md)（已完成）。
+**Blocked by:** 无；前置与剩余物理条件已完成。
 
-**Status:** ready-for-human
+**Status:** resolved
 
-- [ ] 四条 Native/Runtime path 各完成一次集中验收。
-- [ ] 两种模型的 Screen Off/Wake、horizontal swipe、Root 无 Back 与待决 Back 检查通过。
+- [x] 四条 Native/Runtime path 各完成一次集中验收。
+- [x] 两种模型的 Screen Off/Wake、horizontal swipe、Root 无 Back 与待决 Back 检查通过。
 - [x] Lifecycle 与 heap evidence 无持续 regression（当前有限工作负载的有效 checkpoint；采样缺项与范围见记录，不作为长期稳定性证明）。
 
 ## Comments
@@ -27,19 +27,19 @@
 | Native Root → Detail → Back → Root → PWR Home | 1 | 子页面 Back、Root 无 Back 与 PWR Home 均正确 | PASS（复用[已接受物理结果](../../014-app-navigation-card-contract/records/2026-10-02-default-back-prototype.md)，本次合成复核通过） |
 | Runtime Root → Detail → Back → Root → PWR Home | 1 | 子页面 Back、Root 无 Back 与 PWR Home 均正确 | PASS（普通修复镜像合成 PASS，2026-10-03 用户物理确认） |
 | Native background reclaim → relaunch | 1 | 从 App Root 启动，不恢复失效页面 | PASS（Native-only 合成 PASS，2026-10-03 用户物理确认） |
-| Runtime background reclaim → relaunch | 1 | 从 App Root 启动，不恢复失效页面 | PARTIAL（Runtime-only 合成 PASS，物理待检） |
+| Runtime background reclaim → relaunch | 1 | 从 App Root 启动，不恢复失效页面 | PASS（Runtime-only 合成 PASS，2026-10-03 用户确认完整物理路径） |
 
 ### Required one-pass checks
 
 | 检查项 | PASS 条件 | 状态 |
 |---|---|---|
 | Native App Screen Off / Wake | 未回收时恢复页面；回收时降级 Watch Face | PASS（未回收物理结果已接受，Native-only 回收合成及本次物理确认通过） |
-| Runtime App Screen Off / Wake | 未回收时恢复页面；回收时降级 Watch Face | PARTIAL（当前未回收合成及用户物理确认 PASS，回收物理待检） |
+| Runtime App Screen Off / Wake | 未回收时恢复页面；回收时降级 Watch Face | PASS（未回收与 Runtime-only 回收均有用户物理确认及独立合成证据） |
 | Native normal horizontal swipe | 不误触发 Edge Back | PASS（007/03 当前物理确认与本次合成复核） |
 | Runtime normal horizontal swipe | 不误触发 Edge Back | PASS（本次合成通过，2026-10-03 Runtime 用户物理确认） |
 | Root Back attempt | 两种执行模型都保持 Root 且无默认 Back | PASS（两种模型合成 PASS，Native 已接受、Runtime 本次物理确认） |
 | Deferred Back | 重复请求不重复提交；超时取消；PWR 可立即回表盘 | PASS（修复后两种模型合成 PASS，Native/Runtime 的确认反馈均获用户物理确认；超时及重复请求由自动路径验证，原 Runtime 栈溢出 FAIL 保留于[记录](../records/2026-10-02-app-device-frontier.md)） |
-| Failure scan | 无 panic、watchdog、assert、deadlock、错误 Back 或持续性资源下降 | PARTIAL（当前自动套件无 panic，独立回收 PASS，有限 heap/stack 已记录；物理待检，原栈溢出 FAIL 保留） |
+| Failure scan | 无 panic、watchdog、assert、deadlock、错误 Back 或持续性资源下降 | PASS（当前自动套件无 panic，两种独立回收及物理检查通过；有限 heap/stack 范围与原栈溢出 FAIL 保留） |
 
 ## 证据规则
 
@@ -69,3 +69,7 @@
 2026-10-03：用户对当前镜像 Runtime 一次集中物理路径回复“全部正常”，对应画面/触摸/PWR 条件通过；专用 Native/Runtime 回收物理检查仍独立待完成，详见当前固件验收记录。
 
 2026-10-03：Native-only 回收镜像 `01a86838e` 的确认反馈、Cancel、自动息屏后 PWR 表盘及重开 Root，用户回复“全部正常”；串口实见 `APP_RECLAIM_TEST stopped model=native` 与 Off/On/Wake，无匹配 panic/assert。Runtime-only 回收物理检查待完成。
+
+## Resolution
+
+2026-10-03：四条 Native/Runtime 导航与回收路径完成一次集中物理验收；未回收恢复、普通横滑、Root 无 Back、确认提示与取消/允许、PWR Home 均通过。重复请求与超时由完整真实设备自动套件覆盖。当前普通固件 apps 57 步 PASS，两个独立回收配置原有 17 步 PASS；资源证据限定于已记录工作负载。Runtime 回收用户澄清为“完整的”，采集窗口差异保留，见[当前固件验收](../records/2026-10-03-current-firmware-acceptance.md)。最终恢复无 fixture 普通镜像、身份与表盘快照通过。

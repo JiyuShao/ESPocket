@@ -41,3 +41,9 @@ Runtime 回收镜像原有 17 步自动 PASS 继续有效，不能替代本次�
 `b9b4a413f` 无测试音、关闭两种回收测试的 Audio 修正普通镜像已恢复，App-only 写入 hash 校验 PASS、启动 PASS。`/private/tmp/espocket-app-acceptance-final-state.json` 精确 hello 核对后 release=ok，最终 seq=1、watch_face/display=true，App/Page 为空、canBack/backPending/inputBusy=false。原始 flash/boot/state 日志同 `/private/tmp/espocket-app-acceptance-final-` 前缀。数据分区未刷写，无监听进程遗留。
 
 普通 Runtime 与 Native 回收物理条件已接受；Runtime 回收的回应与窗口内操作不一致，仍等澄清，008/03、008/04 不提前关闭。
+
+## Runtime 回收最终澄清
+
+用户进一步回复“完整的”，明确确认请求的 Runtime Detail → 等自动息屏 → 实体 PWR 表盘 → 重开 Runtime Root 的完整物理路径。该条件接受为用户直接物理观察；600 秒窗口内的提前 PWR 与 Native 操作仍原样保留，不声称串口证明了完整人工路径，也不补造操作时间。与已接受的同身份 Runtime-only 17 步自动回收证据共同完成验收，不要求重复人工操作。
+
+008/03 与 008/04 完成；普通 `b9b4a413f` 恢复及最终表盘状态已另有准确证据。有限 heap/stack 结论继续限于已测工作负载，不升级为长期稳定性保证。

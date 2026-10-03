@@ -2,8 +2,8 @@
 
 Sequence: 008
 
-Status: blocked
-Blocked by: [03 剩余物理/视觉验收](issues/03-run-app-contract-hardware-acceptance.md)；014/04 绑定与 04 栈配置修复的源码/自动门槛已通过。
+Status: resolved
+Blocked by: 无；范围内 tickets 均完成。
 
 ## Problem Statement
 
@@ -58,3 +58,5 @@ Native navigation model 必须成为 Native、Runtime 与 third-party App 共用
 - 2026-10-02：007/03 已完成；当前 apps 设备验收发现 RuntimeJsAsync 栈溢出，最小复现与诊断证据见[记录](records/2026-10-02-app-device-frontier.md)。03 等待 04 的上游能力，未关闭 M8，未推进依赖 M8 的 009。
 
 - 2026-10-03：用户接受限定 Runtime 源码补丁方案；完整锁定构建、最小/完整 App 自动套件、两种独立 reclaim 与有限资源路径通过。已恢复普通 c8d56e5e2，原失败与缺失日志保留；008 仍等待物理/视觉条件，009 按依赖等待。见[补丁验证](records/2026-10-03-runtime-stack-patch-validation.md)和[晨间 frontier](records/2026-10-03-overnight-frontier.md)。
+
+2026-10-03：008/03、04 的剩余物理条件完成，Effort resolved。原失败、有限资源范围和 Runtime 回收采集窗口差异保留，见[当前固件验收](records/2026-10-03-current-firmware-acceptance.md)。未验收的其他 Effort 不因本结论自动关闭。
