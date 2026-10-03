@@ -1,5 +1,10 @@
 #include "system_internal.hpp"
 
+extern const char dark_theme_start[] asm("_binary_espocket_dark_theme_json_start");
+extern const char dark_theme_end[] asm("_binary_espocket_dark_theme_json_end");
+extern const char light_theme_start[] asm("_binary_espocket_light_theme_json_start");
+extern const char light_theme_end[] asm("_binary_espocket_light_theme_json_end");
+
 namespace espocket {
 
 System::System()
@@ -49,6 +54,17 @@ std::expected<void, std::string> System::init()
         display_binding_.release();
         display_started_ = false;
         return result;
+    }
+    for (const auto theme : {
+        std::string_view(dark_theme_start, dark_theme_end - dark_theme_start - 1),
+        std::string_view(light_theme_start, light_theme_end - light_theme_start - 1),
+    }) {
+        if (auto loaded = system_gui().load_theme_json(theme); !loaded) {
+            DisplaySource::get_instance().stop();
+            display_binding_.release();
+            display_started_ = false;
+            return std::unexpected("Failed to register product GUI theme: " + loaded.error());
+        }
     }
     return {};
 }

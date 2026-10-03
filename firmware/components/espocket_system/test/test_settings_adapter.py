@@ -1,6 +1,7 @@
 """Locked Settings resource compatibility and production adapter behavior."""
 
 import json
+import hashlib
 from pathlib import Path
 import re
 import os
@@ -10,7 +11,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[4]
 COMPONENT = ROOT / "firmware/components/espocket_system"
-SETTINGS = ROOT / "firmware/managed_components/espressif__brookesia_app_settings"
+SETTINGS = Path(os.environ.get("ESPOCKET_SETTINGS_COMPONENT_DIR", str(ROOT / "firmware/managed_components/espressif__brookesia_app_settings")))
 
 
 class SettingsCompatibility(unittest.TestCase):
@@ -18,9 +19,28 @@ class SettingsCompatibility(unittest.TestCase):
         lock = (ROOT / "firmware/dependencies.lock").read_text()
         section = lock.split("  espressif/brookesia_app_settings:\n", 1)[1].split("\n  espressif/", 1)[0]
         self.assertRegex(section, r"(?m)^    version: 0\.8\.3$")
-        self.assertIn("component_hash: 46dd5de734a74672203240420fd52967b3f61f9882b600813d24b1fccd3204a5", section)
-        self.assertRegex((ROOT / "firmware/main/idf_component.yml").read_text(),
-                         r'brookesia_app_settings: "0\.8\.3"')
+        main = (ROOT / "firmware/main/idf_component.yml").read_text()
+        if "type: local" in section:
+            # A maintained override must match both the selected path and the full approved output.
+            block = re.search(r"(?ms)^  espressif/brookesia_app_settings:\n(.*?)(?=^  \S|\Z)", main)
+            self.assertIsNotNone(block)
+            self.assertRegex(block[1], r'(?m)^    version: "0\.8\.3"$')
+            override = re.search(r'(?m)^    override_path: "([^"\n]+)"$', block[1])
+            self.assertIsNotNone(override)
+            self.assertEqual((ROOT / "firmware/main" / override[1]).resolve(), SETTINGS.resolve())
+            source_path = re.search(r"(?m)^      path: (.+)$", section)
+            self.assertIsNotNone(source_path)
+            self.assertEqual((ROOT / "firmware" / source_path[1]).resolve(), SETTINGS.resolve())
+            manifest = json.loads((ROOT / "firmware/patches/espressif__brookesia_app_settings/0.8.3/manifest.json").read_text())
+            self.assertEqual(manifest["upstream_version"], "0.8.3")
+            self.assertEqual(manifest["registry_component_hash"], "46dd5de734a74672203240420fd52967b3f61f9882b600813d24b1fccd3204a5")
+            actual = {p.relative_to(SETTINGS).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
+                      for p in SETTINGS.rglob("*") if p.is_file()}
+            self.assertFalse(any(p.is_symlink() for p in SETTINGS.rglob("*")))
+            self.assertEqual(actual, manifest["patched_files"], "unapproved Settings source override")
+        else:
+            self.assertIn("component_hash: 46dd5de734a74672203240420fd52967b3f61f9882b600813d24b1fccd3204a5", section)
+            self.assertRegex(main, r'brookesia_app_settings: "0\.8\.3"')
         flow = json.loads((SETTINGS / "package/res/flows/content.json").read_text())
         source = (COMPONENT / "src/settings_navigation_adapter.cpp").read_text()
         mappings = dict(re.findall(r'\{"([a-z_]+)", "(settings\.[a-z_]+)"\}', source))
@@ -45,6 +65,38 @@ class SettingsCompatibility(unittest.TestCase):
             ("settings.back.debug", "my_device"),
         }
         self.assertTrue(required <= routes)
+
+    def test_approved_local_override_rejects_unexpected_source(self):
+        import shutil
+        import sys
+        sys.path.insert(0, str(ROOT / "scripts/firmware"))
+        from prepare_patched_component import prepare
+        with tempfile.TemporaryDirectory(prefix="espocket-settings-identity-") as directory:
+            checkout = Path(directory) / "checkout"
+            firmware = checkout / "firmware"
+            test_dir = firmware / "components/espocket_system/test"
+            test_dir.mkdir(parents=True)
+            shutil.copyfile(Path(__file__), test_dir / "test_settings_adapter.py")
+            (test_dir.parent / "src").mkdir()
+            shutil.copyfile(COMPONENT / "src/settings_navigation_adapter.cpp", test_dir.parent / "src/settings_navigation_adapter.cpp")
+            manifest = ROOT / "firmware/patches/espressif__brookesia_app_settings/0.8.3/manifest.json"
+            patch_dir = firmware / "patches/espressif__brookesia_app_settings/0.8.3"
+            patch_dir.mkdir(parents=True)
+            shutil.copyfile(manifest, patch_dir / "manifest.json")
+            selected = prepare(SETTINGS, manifest, checkout / "selected-settings")
+            (firmware / "main").mkdir()
+            (firmware / "main/idf_component.yml").write_text(
+                'dependencies:\n  espressif/brookesia_app_settings:\n    version: "0.8.3"\n    override_path: "../../selected-settings"\n')
+            (firmware / "dependencies.lock").write_text(
+                'dependencies:\n  espressif/brookesia_app_settings:\n    source:\n      type: local\n      path: ../selected-settings\n    version: 0.8.3\n')
+            env = {**os.environ, "ESPOCKET_SETTINGS_COMPONENT_DIR": str(selected)}
+            command = [sys.executable, str(test_dir / "test_settings_adapter.py"), "SettingsCompatibility.test_locked_resources_match_adapter"]
+            accepted = subprocess.run(command, env=env, capture_output=True, text=True)
+            self.assertEqual(accepted.returncode, 0, accepted.stderr)
+            (selected / "package/res/root.json").write_text("unexpected replacement\n")
+            rejected = subprocess.run(command, env=env, capture_output=True, text=True)
+            self.assertNotEqual(rejected.returncode, 0)
+            self.assertIn("unapproved Settings source override", rejected.stderr)
 
     def test_production_adapter_delegates_and_reads_live_page(self):
         with tempfile.TemporaryDirectory(prefix="espocket-settings-test-") as directory:

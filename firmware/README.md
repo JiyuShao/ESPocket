@@ -157,3 +157,5 @@ python3 scripts/check.py
 Runtime 异步确认故障最小设备回归使用 `--suite runtime-confirm`，与其他套件共用设备身份、镜像核对和失败报告规则。此套件通过不代表完整 App 契约验收；上游阻塞与诊断见[Runtime 异步 GUI 栈溢出](../.scratch/008-m8-app-contract/records/2026-10-02-runtime-js-async-stack-overflow.md)。
 
 Audio 候选当前使用 466px 板的 40 行双缓冲配置；普通生产配置不变。启动内存测量与验收见 [Audio 记录](../.scratch/004-m4-device-capabilities/records/2026-10-03-playback-only-patch.md)。
+
+系统级 App 样式由 [Product GUI themes](components/espocket_system/resources/README.md) 在启动时注册；布局缺失与圆屏裁切状态见 [004/05](../.scratch/004-m4-device-capabilities/issues/05-fix-settings-controls-rendering.md)。

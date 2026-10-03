@@ -18,7 +18,7 @@ PATCHES = ((COMPONENT, VERSION), ('espressif__brookesia_system_core', '0.8.4'))
 PATCH_SETS = {
     'production': PATCHES,
     'hal-candidate': PATCHES + (('espressif__brookesia_hal_adaptor', '0.8.4'),),
-    'audio-candidate': PATCHES + (('espressif__brookesia_hal_adaptor', '0.8.4'),),
+    'audio-candidate': PATCHES + (('espressif__brookesia_hal_adaptor', '0.8.4'), ('espressif__brookesia_app_settings', '0.8.3')),
 }
 
 

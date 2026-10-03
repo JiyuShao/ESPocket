@@ -1,0 +1,125 @@
+{
+  "type": "theme",
+  "id": "light",
+  "assets": [
+    {
+      "type": "constant",
+      "data": {
+        "colors": {
+          "border": {
+            "default": "#bbc7d5"
+          },
+          "text": {
+            "default": "#152233"
+          },
+          "primary": {
+            "fill": "#59a9ff",
+            "on": "#ffffff",
+            "soft": "#deedff"
+          },
+          "bg": {
+            "base": "#f3f6fa",
+            "overlay": "#ffffff"
+          },
+          "info": {
+            "soft": "#deedff"
+          },
+          "warning": {
+            "soft": "#fff0cc"
+          }
+        }
+      }
+    }
+  ],
+  "styles": {
+    "app.caption": {
+      "textColor": "#516174",
+      "fontSize": "20sp"
+    },
+    "app.card": {
+      "bgColor": "#ffffff",
+      "textColor": "#152233",
+      "radius": "18dp"
+    },
+    "app.cardSubtitle": {
+      "textColor": "#516174",
+      "fontSize": "20sp"
+    },
+    "app.cardTitle": {
+      "textColor": "#152233",
+      "fontSize": "20sp"
+    },
+    "app.iconBox": {
+      "textColor": "#152233",
+      "fontSize": "20sp"
+    },
+    "app.iconRecolor": {
+      "textColor": "#152233",
+      "fontSize": "20sp"
+    },
+    "app.listItem": {
+      "textColor": "#152233",
+      "fontSize": "20sp"
+    },
+    "app.listItemTitle": {
+      "textColor": "#152233",
+      "fontSize": "20sp"
+    },
+    "app.listItemValue": {
+      "textColor": "#152233",
+      "fontSize": "20sp"
+    },
+    "app.page": {
+      "bgColor": "#f2f5f8",
+      "textColor": "#152233"
+    },
+    "app.pageTitle": {
+      "textColor": "#152233",
+      "fontSize": "20sp"
+    },
+    "app.selectableCard": {
+      "textColor": "#152233",
+      "fontSize": "20sp"
+    },
+    "app.slider": {
+      "style": {
+        "bgColor": "#bbc7d5",
+        "radius": "10dp"
+      },
+      "partStyles": {
+        "indicator": {
+          "bgColor": "#59a9ff",
+          "radius": "10dp"
+        },
+        "knob": {
+          "bgColor": "#ffffff",
+          "radius": "16dp",
+          "padding": "4dp"
+        }
+      }
+    },
+    "app.switch": {
+      "style": {
+        "bgColor": "#bbc7d5",
+        "radius": "20dp"
+      },
+      "partStyles": {
+        "indicator": {
+          "style": {
+            "bgColor": "#bbc7d5",
+            "radius": "20dp"
+          },
+          "stateStyles": {
+            "checked": {
+              "bgColor": "#59a9ff"
+            }
+          }
+        },
+        "knob": {
+          "bgColor": "#ffffff",
+          "radius": "18dp"
+        }
+      }
+    }
+  }
+}

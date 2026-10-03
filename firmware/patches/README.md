@@ -10,6 +10,8 @@ Core 0.8.4 的 failed-stop、键盘 Owner 与 queued event 补丁依据 [ADR-001
 
 HAL 0.8.4 的 HTTP cooperative cancel 与 playback-only 差异当前属于候选，尚不在默认产品构建清单；状态分别见 [005/06](../../.scratch/005-m5-application-ecosystem/issues/06-adopt-online-store-stability-fix.md)与 [004/04](../../.scratch/004-m4-device-capabilities/issues/04-adopt-playback-only-audio.md)。
 
+Core 的 embedded-theme GUI task seam 与 Settings 0.8.3 的当前圆屏内容布局候选见 [004/05](../../.scratch/004-m4-device-capabilities/issues/05-fix-settings-controls-rendering.md)。Settings 布局仅加入 audio-candidate，未采纳为默认生产补丁。
+
 ## 组织约定
 
 ```text

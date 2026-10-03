@@ -88,10 +88,17 @@
     {
       "file": "003-revoke-queued-event-delivery.patch",
       "sha256": "1f1b91443416f73842f4d569b9ffcfa4c877b813aec3662fc86ffd068cd7b2eb"
+    },
+    {
+      "file": "004-load-embedded-theme-on-gui-task.patch",
+      "sha256": "47d329525ab265737a934116cfbf5e1da157644077b38bd842f2f7204240a475"
     }
   ],
   "issue": ".scratch/005-m5-application-ecosystem/issues/07-isolate-runtime-keyboard-results.md",
   "upstream_report": ".scratch/005-m5-application-ecosystem/records/2026-10-03-core-failed-stop.md",
   "upstream_submission": "not submitted",
-  "remove_when": "Core owner-scoped keyboard delivery and unconditional failed-stop cleanup pass equivalent regressions and remaining queued-instance gates."
+  "remove_when": "Core owner-scoped keyboard delivery and unconditional failed-stop cleanup pass equivalent regressions and remaining queued-instance gates. Embedded-theme loading must also have an equivalent public System GUI seam.",
+  "related_issues": [
+    ".scratch/004-m4-device-capabilities/issues/05-fix-settings-controls-rendering.md"
+  ]
 }

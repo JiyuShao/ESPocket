@@ -47,6 +47,7 @@ ESPocket 需要在圆形目标设备上提供官方 Settings 与真实设备 cap
 - [02 — 证明 keyboard、Wi-Fi 与 status capability](issues/02-prove-keyboard-wifi-and-status.md)
 - [03 — 验证 Storage 与 Developer control](issues/03-verify-storage-and-developer.md)
 - [04 — 采用官方 playback-only Audio path](issues/04-adopt-playback-only-audio.md)
+- [05 — 修复官方 Settings 控件渲染](issues/05-fix-settings-controls-rendering.md)
 
 ## 已接受结果
 
@@ -65,3 +66,5 @@ ESPocket 需要在圆形目标设备上提供官方 Settings 与真实设备 cap
 ## 记录
 
 - [2026-09-28-acceptance-report](records/2026-09-28-acceptance-report.md)
+
+后续实际缺陷：[06 — 系统确认弹窗](issues/06-support-settings-message-dialog.md)。

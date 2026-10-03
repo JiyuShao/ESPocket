@@ -1,0 +1,27 @@
+--- a/package/res/root.json
++++ b/package/res/root.json
+@@ -49,6 +49,24 @@
+             "assets": [
+                 "constants/portrait.json"
+             ]
++        },
++        {
++            "when": "${expr(${env.widthDp} == 466dp && ${env.heightDp} == 466dp)}",
++            "assets": [
++                {
++                    "type": "constant",
++                    "data": {
++                        "settings": {
++                            "layout": {
++                                "pageX": "70dp",
++                                "pageY": "70dp",
++                                "pageWidth": "326dp",
++                                "pageHeight": "326dp"
++                            }
++                        }
++                    }
++                }
++            ]
+         }
+     ]
+ }

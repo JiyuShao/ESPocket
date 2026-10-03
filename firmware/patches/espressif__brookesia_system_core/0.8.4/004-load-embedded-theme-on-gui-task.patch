@@ -1,0 +1,43 @@
+--- a/include/brookesia/system_core/system/gui_access.hpp
++++ b/include/brookesia/system_core/system/gui_access.hpp
+@@ -109,6 +109,11 @@
+         const gui::LivePreviewOptions &options = {}
+     ) const;
+     bool disable_live_preview(gui::DocumentId document_id) const;
++    // Register an embedded theme on the GUI task, with the same Owner as file themes.
++    std::expected<void, std::string> load_theme_json(
++        std::string_view json,
++        std::string_view base_dir = {}
++    ) const;
+     std::expected<void, std::string> load_theme_file(
+         std::string_view resource_dir,
+         std::string_view path
+--- a/src/system/gui_access.cpp
++++ b/src/system/gui_access.cpp
+@@ -645,6 +645,26 @@
+            );
+ }
+ 
++std::expected<void, std::string> SystemGuiAccess::load_theme_json(
++    std::string_view json,
++    std::string_view base_dir
++) const
++{
++    if (system_ == nullptr) {
++        return make_unavailable_error();
++    }
++    return system_->impl_->run_task_sync<std::expected<void, std::string>>(
++        SYSTEM_GUI_TASK_GROUP,
++        [this, json = std::string(json), base_dir = std::string(base_dir)]() -> std::expected<void, std::string> {
++            if (!system_->impl_->gui_runtime_) {
++                return std::unexpected("GUI runtime is not available");
++            }
++            return system_->impl_->gui_runtime_->load_theme_json(json, base_dir);
++        },
++        std::unexpected("Failed to post system GUI theme load task")
++    );
++}
++
+ std::expected<void, std::string> SystemGuiAccess::load_theme_file(
+     std::string_view resource_dir,
+     std::string_view path
