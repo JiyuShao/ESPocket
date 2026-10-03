@@ -61,3 +61,23 @@ V1 full build、依赖与播放配置校验通过，ELF `590cb24898d5c158ab1c55f
 测试后 Play STOPPED，自己的 V2 文件已由 Storage 删除；未认领 V1 的可能残留文件仍保留。临时 HAL DEBUG instrumentation 已恢复至备份原文，不提交诊断补丁。恢复无 probe 的已验收候选 `e7c095d3d`，写入校验与启动结果另补录。
 
 恢复结果：`/private/tmp/espocket-audio-probe-final-restore-flash.log` 写入校验通过，`/private/tmp/espocket-audio-probe-final-restore-boot.log` 启动 PASS。当前设备为无 probe 的 `e7c095d3d` 候选；Recorder/AFE 仍关闭。最终 80 项 host checks 与 200 Markdown 文档检查通过。此 slice 提交测试工具与失败证据，不声称修复扬声器无声，也不关闭 004/04。
+
+## Follow-up: no known successful speaker baseline
+
+用户说明此前“没确认过”本机出声；不是确认硬件损坏，也不能以官方型号内置 speaker 推断本机正常。
+
+对照 [Waveshare 官方 ES8311 示例](https://github.com/waveshareteam/ESP32-S3-Touch-AMOLED-1.75C/blob/main/examples/arduino/examples/07_ES8311/15_ES8311.ino)，当前 MCLK/BCLK/WS/DOUT 引脚、16 kHz/16 bit、256 倍 MCLK、非反相时钟、PA 高有效配置一致；实际 codec 输出配置为 stereo，与示例一致。其示例后续包含 microphone echo，不直接刷入，不据此启用本项目 Recorder。官方 driver 初始化主要 DAC power/format 寄存器亦与此次设备 dump 相符；旧驱动 DAC OSR 为 0x10，当前 esp_codec_dev 为 0x20，这一差异尚未判定为故障原因，不盲改。
+
+补查实际 I2S 写入：esp_codec_dev 的 data_if 写入在 out_reconfig 分支可能不调用 driver 而返回成功。现有 No paired data 日志不能完全代替真实 driver 写入证据。在独立 HAL 源码/CMake 加入临时 linker wrap，转发原 i2s_channel_write 不改参数或返回值，采集 requested/written/ret；同时只读 PA output latch/enable 和 GPIO 配置。它不改变输出电平、音频内容或产品 API，也不手改任何 managed_components。GPIO output latch 仍不是电压测量。
+
+### Actual I2S and PA result
+
+独立诊断完整构建、App-only 写入校验与启动通过；ELF `4c0ec9ab42099efcc6920c4d8373a2d99f77b8bafdc25514873ccbabdce9afb8`、BIN `3e2da5b866fc842426ea8689c740e684f88ad4f5468a200a2a2ab6e8861f0569`、hello `4c0ec9ab4`。额外源码与 CMake hash 保存 `/private/tmp/espocket-audio-i2s-probe-inputs.json`，不冒充已批准 manifest 的原样源码。
+
+`/private/tmp/espocket-audio-i2s-probe-owner-result.log` 的实际 i2s_channel_write 第 1/2/3/64/128 次调用全部 requested=1536、written=1536、ret=0；同时 PA output latch=1、output enable=1。实际 GPIO dump 显示 GPIO46 FuncSel=GPIO、SigOut ID=256/simple GPIO、InputEn=0，支持上轮 input sample 恒零不能代表 output 的解释。实际发送和 GPIO 配置已确认，物理波形、电压与出声仍未确认。Home 后官方 Stop 与 Storage 清理 PASS，临时 HAL cpp/CMake 已恢复。
+
+准备独立参考诊断：基于本地 ESP-IDF 6.0.1 官方 i2s_es8311 示例接口，保留当前锁定 esp_codec_dev 1.5.11，在 checkout 外只创建 TX、DAC/OUT codec，以同样 16 kHz/16 bit stereo、256 倍 MCLK 播放 10 秒 400 Hz 间歇音。临时 volume=85，不访问 NVS/文件系统，不打开 RX/Recorder，不写 AXP，仅读取原 power 状态；结束关闭 codec/PA。此诊断用来区分 Brookesia/Board Manager 与更低层路径，不等于厂商出厂镜像，也不能单独判定硬件损坏。未将其作为产品实现或新增 USB 能力。
+
+参考候选完整构建 `/private/tmp/espocket-audio-reference-build.log` PASS；ELF `529e046fcaa2327e08299bba8184620f37b70fc37328cf691269748be753cfbc`、BIN `484ac6ba3afbed85149ab2e006d9814e9c2e3c7e2bf275b7f6beb9f0b9a091d4`，输入 hash 单列 `/private/tmp/espocket-audio-reference/inputs.json`。源码与产物仅存 checkout 外，不采用为产品架构；设备启动、10 秒发送、关闭与物理听感尚未执行，不称为已知可出声镜像。已请求用户准备好后再开始这唯一一次听感，等待期间不刷参考镜像。
+
+I2S 诊断后的 `/private/tmp/espocket-audio-i2s-restore-flash.log` 校验 PASS，`/private/tmp/espocket-audio-i2s-restore-boot.log` 启动 PASS。当前设备已恢复无 probe `e7c095d3d`，参考候选尚未刷入。临时 linker wrap 和 cpp/CMake 改动均已清除。

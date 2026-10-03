@@ -2,9 +2,9 @@
 
 **What to build:** 通过上游支持的 `PlaybackIface` 提供 Sound 与 Volume，同时保持 Codec Recorder 禁用。
 
-**Blocked by:** playback-only candidate 的实际板级 Playback/Sound/Volume 验收；启动缓冲问题已有配置修复与启动通过证据。
+**Blocked by:** 等待一次已构建的独立参考播放听感，以缩小无声问题；真实 I2S 完整发送、PA 输出配置和 codec 解除静音已自动确认，物理路径仍未确认。
 
-**Status:** ready-for-agent
+**Status:** ready-for-human
 
 - [ ] 已发布或明确采用的上游 path 能提供 playback 且不启用 recorder。
 - [ ] 采用官方修复后重新执行相关 clean build，记录锁定依赖和镜像 identity。
