@@ -15,3 +15,11 @@
 ## Debug
 
 已请求在 My device 连点 Device name 三次进入官方 Debug，打开/关闭 GUI debug，观察布局边框，再 Edge Back 回 My device、PWR Home。结果仍待用户。新的有限监听 `/private/tmp/espocket-settings-debug-physical.log` 只读，不注入触摸/按键或开启设置；不以 Quick Settings Developer Mode 代替这项验收。
+
+## Debug 结果与收尾
+
+用户回复“gui debug 正常”，接受官方 Debug 控件的可见显示与操作效果。未将其扩大为 Thread/Memory debug 的验收。当前只读核对 hello `b9b4a413f`、release=ok，最终 seq=4、watch_face/display=false、App/Page 为空、Back pending/inputBusy=false，保存 `/private/tmp/espocket-settings-capabilities-final-state.json`。
+
+有限采集窗口仅记录初始表盘与之后息屏，没有抓到完整 Debug 操作；采集进程在收到结果后主动中断，exit 130 为 KeyboardInterrupt，不是设备崩溃。GUI 效果依据用户直接观察。Settings Edge Back 与 PWR Home 复用已接受的 [Settings 适配验收](../../014-app-navigation-card-contract/records/2026-10-02-settings-adapter.md) 和 [007/03 集中物理结果](../../007-m7-navigation/records/2026-10-02-remaining-paths.md)，当前最终快照独立确认已回表盘。没有新增“Debug → My device”完整串口或物理路径的虚假声明。
+
+004/03 范围内 Storage 可见能力、一个真实 Debug control 及既有 Settings 返回/Home 门槛完成；不证明容量、所有 debug 开关或未测试 Storage CRUD。监听已结束，普通固件保持无测试 fixture。

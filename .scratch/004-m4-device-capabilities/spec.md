@@ -63,7 +63,7 @@ ESPocket 需要在圆形目标设备上提供官方 Settings 与真实设备 cap
 
 ## 剩余工作与完成条件
 
-[04 playback-only Audio](issues/04-adopt-playback-only-audio.md) 的受维护候选验收已完成；默认 production 配置尚未合入。剩余检查由 [03 Storage/Developer 真机检查](issues/03-verify-storage-and-developer.md)、06 系统确认弹窗和 07 playback teardown 承接；不重做已经接受的 Settings、keyboard、Wi-Fi 与 status 工作。
+[04 playback-only Audio](issues/04-adopt-playback-only-audio.md) 的受维护候选验收已完成；默认 production 配置尚未合入。[03 Storage/Developer 真机检查](issues/03-verify-storage-and-developer.md) 已完成；剩余检查由 06 系统确认弹窗和 07 playback teardown 承接；不重做已经接受的 Settings、keyboard、Wi-Fi 与 status 工作。
 
 ## 记录
 
