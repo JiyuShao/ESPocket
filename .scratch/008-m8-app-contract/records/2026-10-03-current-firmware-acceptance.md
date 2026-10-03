@@ -29,3 +29,15 @@ Native-only 保存镜像重新核对 ELF/BIN hash 与单独回收配置后，App
 本次 Native 监听覆盖到实际 `APP_RECLAIM_TEST stopped model=native manifest=espocket.app.hello app_id=1` 及 Off/On/Wake；未匹配 Guru Meditation、Stack canary 或 assert failed。用户回复后主动终止只读监听，退出 130 为采集进程中断，不是设备崩溃。物理画面判定仍以用户反馈为准。
 
 Runtime-only 保存镜像 ELF/BIN 与回收配置核对通过，App-only 写入 hash 校验及启动 PASS；hello 精确匹配 `439f6431a`，初始为表盘亮屏、无 App/Page/pending/inputBusy。日志 `/private/tmp/espocket-runtime-reclaim-physical-flash.log`、`boot.log`、`capture.log`（后二者同 physical 前缀）。Runtime 自动息屏 → 实体 PWR 表盘 → 重开 Root 的一次物理观察待用户；当前设备为专用 Runtime 回收镜像。
+
+## Runtime 回收回应与采集差异
+
+用户对 Runtime 回收步骤回复“是的”。但复核有限 600 秒采集窗口：Runtime 启动后约 1.3 秒有实体 PWR 并 stop 回表盘，之后进入 Native Detail；窗口内没有 `APP_RECLAIM_TEST stopped model=runtime`。不能将该日志写成 Runtime 自动回收通过。已请求确认是否在采集窗口结束后完整执行 Runtime Detail → 自动息屏 → PWR 表盘 → 重开 Runtime Root；答复前该物理条件保持 pending。
+
+Runtime 回收镜像原有 17 步自动 PASS 继续有效，不能替代本次尚待澄清的物理结果。恢复无 fixture 普通 Audio 修正镜像已经开始，实际恢复结果待补录。
+
+## 普通镜像恢复
+
+`b9b4a413f` 无测试音、关闭两种回收测试的 Audio 修正普通镜像已恢复，App-only 写入 hash 校验 PASS、启动 PASS。`/private/tmp/espocket-app-acceptance-final-state.json` 精确 hello 核对后 release=ok，最终 seq=1、watch_face/display=true，App/Page 为空、canBack/backPending/inputBusy=false。原始 flash/boot/state 日志同 `/private/tmp/espocket-app-acceptance-final-` 前缀。数据分区未刷写，无监听进程遗留。
+
+普通 Runtime 与 Native 回收物理条件已接受；Runtime 回收的回应与窗口内操作不一致，仍等澄清，008/03、008/04 不提前关闭。
