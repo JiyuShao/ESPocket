@@ -150,3 +150,25 @@ class AudioCandidateConfigTest(unittest.TestCase):
             BUILDER.verify_audio_config(text.replace('BUFFER_HEIGHT=40', 'BUFFER_HEIGHT=50'))
         with self.assertRaisesRegex(ValueError, 'Unsafe'):
             BUILDER.verify_audio_config(text.replace('# CONFIG_AUDIO_AFE_ENABLE is not set', 'CONFIG_AUDIO_AFE_ENABLE=y'))
+
+
+    def test_decoder_output_must_match_playback_dac(self):
+        text = BUILDER.configure_audio_candidate('')
+        # Device trace reproduced 48 kHz mono feeding the locked 16 kHz stereo DAC.
+        for name, expected in [
+            ('CONFIG_ESP_AUDIO_SIMPLE_PLAYER_RESAMPLE_EN', 'y'),
+            ('CONFIG_AUDIO_SIMPLE_PLAYER_RESAMPLE_DEST_RATE', '16000'),
+            ('CONFIG_ESP_AUDIO_SIMPLE_PLAYER_CH_CVT_EN', 'y'),
+            ('CONFIG_AUDIO_SIMPLE_PLAYER_CH_CVT_DEST', '2'),
+            ('CONFIG_ESP_AUDIO_SIMPLE_PLAYER_BIT_CVT_EN', 'y'),
+            ('CONFIG_AUDIO_SIMPLE_PLAYER_BIT_CVT_DEST_16BIT', 'y'),
+        ]:
+            self.assertIn(name + '=' + expected, text.splitlines())
+        for old, wrong in [
+            ('RESAMPLE_DEST_RATE=16000', 'RESAMPLE_DEST_RATE=48000'),
+            ('CH_CVT_DEST=2', 'CH_CVT_DEST=1'),
+            ('CONFIG_ESP_AUDIO_SIMPLE_PLAYER_CH_CVT_EN=y', '# CONFIG_ESP_AUDIO_SIMPLE_PLAYER_CH_CVT_EN is not set'),
+            ('CONFIG_AUDIO_SIMPLE_PLAYER_BIT_CVT_DEST_16BIT=y', 'CONFIG_AUDIO_SIMPLE_PLAYER_BIT_CVT_DEST_32BIT=y'),
+        ]:
+            with self.subTest(wrong=wrong), self.assertRaisesRegex(ValueError, 'configuration'):
+                BUILDER.verify_audio_config(text.replace(old, wrong))

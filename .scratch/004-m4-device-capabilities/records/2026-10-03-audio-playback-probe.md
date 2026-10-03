@@ -81,3 +81,39 @@ V1 full build、依赖与播放配置校验通过，ELF `590cb24898d5c158ab1c55f
 参考候选完整构建 `/private/tmp/espocket-audio-reference-build.log` PASS；ELF `529e046fcaa2327e08299bba8184620f37b70fc37328cf691269748be753cfbc`、BIN `484ac6ba3afbed85149ab2e006d9814e9c2e3c7e2bf275b7f6beb9f0b9a091d4`，输入 hash 单列 `/private/tmp/espocket-audio-reference/inputs.json`。源码与产物仅存 checkout 外，不采用为产品架构；设备启动、10 秒发送、关闭与物理听感尚未执行，不称为已知可出声镜像。已请求用户准备好后再开始这唯一一次听感，等待期间不刷参考镜像。
 
 I2S 诊断后的 `/private/tmp/espocket-audio-i2s-restore-flash.log` 校验 PASS，`/private/tmp/espocket-audio-i2s-restore-boot.log` 启动 PASS。当前设备已恢复无 probe `e7c095d3d`，参考候选尚未刷入。临时 linker wrap 和 cpp/CMake 改动均已清除。
+
+### Reference device run
+
+用户回复“准备好了”后才 App-only 刷入已构建参考候选。`/private/tmp/espocket-audio-reference-device.log` 写入 hash 校验 PASS；实际 codec open OK，首笔真实 I2S 写入 3200 字节，约 10 秒后 STOPPED、codec closed/PA disabled，app_main 正常返回，没有崩溃或持续播放。完整发送检查使用实际 i2s_channel_write 返回与 bytes_written，每笔断言完整发送，当前 sdkconfig assertion level=2。日志附着时已错过最初 AXP 读取输出，因此不把未抓到的电源值报为实际证据；电源读取错误会由源码 ESP_ERROR_CHECK 中止，而本次已进入播放。
+
+本次没有 GUI 或 PWR Home 实现，是 checkout 外的临时板级参考诊断；只使用 OUT/DAC 与 TX，无 RX、Recorder、NVS/文件系统或 AXP 写入，volume=85 不持久化。已请求一次实际听感，结果尚待用户；软件发送通过不等于听感通过。结束后立即恢复无 probe 表盘镜像，恢复结果待补录。
+
+### User-requested repeat with explicit start
+
+用户请求“再来一次”，第一轮不判定听感。先完成上一轮恢复写入校验，再将同一参考 BIN App-only 刷入并以 --after no-reset 留在 bootloader，`/private/tmp/espocket-audio-reference-repeat-flash.log` 校验 PASS。明确提示“几秒后开始”后才 reset 触发，以避免自动刷入启动的听音时机不清晰。
+
+`/private/tmp/espocket-audio-reference-repeat-device.log` 再次记录 codec open OK、首笔 3200 字节发送、约 10 秒后 STOPPED/codec closed/PA disabled、app_main 正常返回。此次重复由用户直接要求，未因软件日志自动要求多轮听感。结果待用户；随后恢复表盘固件。
+
+### Reference hearing passed; real format mismatch found
+
+用户对明确提示后的第二次参考播放确认“听到了短音”。因此本机在当前独立 TX/DAC 参考路径可出声；不是所有 product Audio 路径已验收，也不关闭 004/04。参考镜像无 AXP/NVS 写入，实际 product volume 仍由此前用户保存值控制。
+
+复查旧 `/private/tmp/espocket-audio-probe-v2-user-capture.log`：HAL 实际 Set volume 到 93，并维持约 3.6 秒，期间继续 Playing；不能把 service text 或后来 volume=36 的 dump 当作 93 时的实际寄存器证据。旧实际播放器日志每轮 Get info, rate:48000, channels:1, bits:16；同时 I2S/DAC 是 16000/2/16。非零 PCM 统计及每轮约 1.5 秒发送时长支持格式不匹配，但声称其为完全无声的唯一原因仍需物理确认。
+
+锁定 AudioProcessorPlaybackConfig 的 player 默认为 16000/2/16，audio_manager_config 使用它；simple-player 默认启用重采样至 48000，未启用 channel/bit converter，av_processor 读取 compile-time destination 配置，导致未将 WAV 转为相同硬件格式。候选 staging 现在显式启用重采样至 16000、channel converter 到 2、bit converter 到 16。普通 production 配置与 managed_components 不改。CONFIG 选择只适用于当前锁定 playback candidate，不声称覆盖自定义 DAC format。
+
+新增实际 staging/verification seam 回归，旧实现 `/private/tmp/espocket-audio-format-red.log` FAIL（缺少输出约束）；修正后 `/private/tmp/espocket-audio-format-green.log` 9 tests PASS，并拒绝 48000/mono/禁用转换/32bit 输出。该回归锁住已实测的不匹配，不把它当扬声器听感回归。完整构建、真实 Get info 一致性与听感仍待验证。
+
+### Format candidate build
+
+81 项 host checks 和 200 Markdown 检查 PASS；完整 `/private/tmp/espocket-audio-format-build.log` 构建 PASS，SDK 与精确依赖校验 PASS。修正后的现有听感 fixture 候选 ELF `7a72035bddd0c55e8c25e410b73b5e01bc1884f55971d7be1c655fe83b4f0190`、BIN `5ee745c264152f4300d52e8febdffb238866a1e8c731095f79a8acf6b0038474`、hello `7a72035bd`，保存在 `/private/tmp/espocket-audio-format-preserved/`。配置 hash 单列 `/private/tmp/espocket-audio-format-inputs.json`。App-only 写入校验 PASS；该候选不再包含 PCM/register/I2S instrumentation。实际格式/听感待设备检查。
+
+同时已从隔离项目移除 fixture source、WAV 与 Adapter/CMake 注入，准备同样修正格式但无自动测试音的恢复候选；原始 checkout 的 App/资源不改。
+
+### Actual corrected output passed
+
+`/private/tmp/espocket-audio-format-boot.log` 启动 PASS；`/private/tmp/espocket-audio-format-owner-result.log` 自动门槛 PASS：实际连续 Get info, rate:16000, channels:2, bits:16，不再出现旧的 48000/mono；Owner Playing 正常、Home 后 STOPPED/Storage 删除自己的 fixture。每轮 WAV 发送恢复到约 1 秒，符合目标格式。此为格式、生命周期门槛，不代替 speaker 物理听感。现存重复 i2s_channel_disable 的 teardown 诊断仍存在，与格式修正分开跟踪。
+
+请求用户一次产品路径听感：Settings Sound 中将实际 Volume 调至约 85，听后降低音量，再 PWR Home；由用户通过真实 Settings Owner 调整，不由 fixture 更改或恢复其偏好。Serial 捕获 `/private/tmp/espocket-audio-format-user-capture.log`；听感尚待回应。
+
+无 fixture 的修正恢复候选 `/private/tmp/espocket-audio-format-clean-build.log` 完整构建 PASS，SDK/精确依赖校验 PASS，Adapter/CMake 与 checkout 原文相同。ELF `b9b4a413f7017313214a6b3f29a7f171201d4455f918c2a0a22e2a9ca0edd40c`、BIN `1be447353b882a636636b5358abf39b316ac6eb5d8a14c1b846741f126aa14d9`，保存在 `/private/tmp/espocket-audio-format-clean-preserved/`。尚未刷入，避免提前移除等待用户观察的 test tone。当前设备仍为修正 fixture `7a72035bd`，自动测试后处于 Watch Face，fixture 文件已清理；用户进入 Sound 才重新触发。120 秒串口监听窗口内未见本次人工操作，因此不补造听感/音量证据，保持问题 pending。该 slice 只提交配置修正与已验证的真实格式回归，不提前采用生产 Audio 依赖或关闭 004/04。

@@ -2,7 +2,7 @@
 
 **What to build:** 通过上游支持的 `PlaybackIface` 提供 Sound 与 Volume，同时保持 Codec Recorder 禁用。
 
-**Blocked by:** 等待一次已构建的独立参考播放听感，以缩小无声问题；真实 I2S 完整发送、PA 输出配置和 codec 解除静音已自动确认，物理路径仍未确认。
+**Blocked by:** 独立参考听感已通过；实际 player/DAC 16000/stereo/16bit 已自动验证一致，产品路径的真实听感及音量验收仍待完成。
 
 **Status:** ready-for-human
 
