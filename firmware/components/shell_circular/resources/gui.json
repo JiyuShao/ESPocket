@@ -764,7 +764,7 @@
                 "shell.hint"
               ],
               "style": {
-                "fontSize": "16sp"
+                "fontSize": "18sp"
               },
               "placement": {
                 "mode": "relative",
@@ -822,7 +822,7 @@
                 "shell.hint"
               ],
               "style": {
-                "fontSize": "16sp"
+                "fontSize": "18sp"
               },
               "placement": {
                 "mode": "relative",
@@ -880,7 +880,7 @@
                 "shell.hint"
               ],
               "style": {
-                "fontSize": "16sp"
+                "fontSize": "18sp"
               },
               "placement": {
                 "mode": "relative",
@@ -938,7 +938,7 @@
                 "shell.hint"
               ],
               "style": {
-                "fontSize": "16sp"
+                "fontSize": "18sp"
               },
               "placement": {
                 "mode": "relative",

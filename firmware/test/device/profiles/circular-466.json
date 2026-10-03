@@ -1,6 +1,6 @@
 {
   "name": "Circular Shell 466px / Native and Runtime samples",
-  "calibration": "navigation verified on image 09e8eb00d; Card suite verified on c4dfa5af8 with Runtime main.js d7e27a802f1575934348b2d91821bd70ce5fae32c8f2e855f5caf48838063130; surfaces verified on ordinary image 71567f599 (attempt 20261002T145324Z-ad0d0a4e-ad62-462a-a75e-8e4b1432f557); Settings slider coordinates reached actual Owner on ac2485543; brightness-only baseline failed on cycle 60; compact Launcher and two-column Quick Settings verified on ordinary image 24acc698e (/private/tmp/espocket-compact-device-fixed/report.json)",
+  "calibration": "navigation verified on image 09e8eb00d; Card suite verified on c4dfa5af8 with Runtime main.js d7e27a802f1575934348b2d91821bd70ce5fae32c8f2e855f5caf48838063130; surfaces verified on ordinary image 71567f599 (attempt 20261002T145324Z-ad0d0a4e-ad62-462a-a75e-8e4b1432f557); Settings slider coordinates reached actual Owner on ac2485543; brightness-only baseline failed on cycle 60; compact Launcher and two-column Quick Settings verified on ordinary image 24acc698e (/private/tmp/espocket-compact-device-fixed/report.json); Store Refresh reached online index write on ordinary candidate 5d6de3fd8",
   "width": 466,
   "height": 466,
   "up": [
@@ -139,5 +139,13 @@
   "settings_sound_tap": [
     233,
     279
+  ],
+  "store_tap": [
+    233,
+    378
+  ],
+  "store_refresh_tap": [
+    376,
+    72
   ]
 }

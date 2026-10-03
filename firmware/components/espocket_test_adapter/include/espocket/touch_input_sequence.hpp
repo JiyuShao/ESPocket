@@ -34,6 +34,7 @@ public:
     std::expected<void, std::string> tick(uint64_t now_ms);
     std::expected<void, std::string> cancel();
     bool active() const;
+    bool release_delivered() const;
 
 private:
     std::expected<void, std::string> clean();

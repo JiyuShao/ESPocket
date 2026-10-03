@@ -32,6 +32,7 @@ Shell 用旧色值命名主题样式，浅色模式丢失 Card 的颜色语义�
 
 - [01 — 迁移现有界面并验证主题契约](issues/01-migrate-maintained-surfaces.md)
 - [02 — 部署与普通态修复](issues/02-deploy-and-fix-default-control-colors.md)
+- [03 — 字体字形静态检查](issues/03-check-built-in-glyph-coverage.md)
 
 ## 记录
 

@@ -98,4 +98,9 @@ std::expected<void, std::string> TouchInputSequence::clean()
 
 bool TouchInputSequence::active() const { return active_; }
 
+bool TouchInputSequence::release_delivered() const
+{
+    return active_ && next_ == steps_.size() && !cancelled_;
+}
+
 } // namespace espocket

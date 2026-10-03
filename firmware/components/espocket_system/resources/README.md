@@ -23,3 +23,11 @@ Theme `styles.<name>` 的普通属性直接写在样式对象上，例如 `{"bgC
 | Brightness Card | 黄色弱底与黄色标题 |
 
 颜色只在两份产品主题中定义；Shell 资源引用对应语义样式，App 的主要操作继续使用 primary.fill/on。语义弱底按钮按下时加强边框，保持文字对比度。
+
+## 内置字体与图标检查
+
+维护资源的 literal label 使用的字符必须存在于实际选择的字体中。字号不是“最近大小”：锁定 GUI 先选择不大于请求字号的已启用 Montserrat，没有时使用 LV_FONT_DEFAULT。当前默认 UNSCII 8 不包含 FontAwesome 图标；图标 label 应使用已启用的 18sp/20sp/32sp 或显式支持它的字体。
+
+`python3 scripts/firmware/check_glyphs.py` 检查 Shell 与维护 Native/Runtime JSON，按两种主题的 styleRefs、内联样式与继承字号解析，用真实 LVGL cmap 验证字符。错误包含文件、节点、U+ 码点和实际字体。`python3 scripts/check.py` 包含对应主机门槛；独立补丁构建用生成后的 sdkconfig 再校验，避免本地 defaults 与构建配置不同。单独检查有效配置可用 `--sdkconfig <path>`。
+
+此门槛只证明这些 literal label 的内置字体码点覆盖；动态输入、翻译绑定、第三方 App、文件/image font 和实际排版像素需各自验证，不能据此宣称所有文本都能正确渲染。

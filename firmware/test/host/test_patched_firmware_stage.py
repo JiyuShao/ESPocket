@@ -21,9 +21,11 @@ class PatchedFirmwareStageTest(unittest.TestCase):
         self.assertNotIn(('espressif__brookesia_service_display', '0.8.2'),
                          BUILDER.PATCH_SETS['baseline'])
 
-    def test_production_promotes_validated_display_and_board_owner_fixes(self):
+    def test_production_promotes_validated_display_board_and_store_owner_fixes(self):
         self.assertEqual(BUILDER.PATCH_SETS['production'],
-                         BUILDER.PATCH_SETS['display-candidate'] + (('espressif__esp_board_manager', '0.5.15'),))
+                         BUILDER.PATCH_SETS['display-candidate'] + (('espressif__esp_board_manager', '0.5.15'),
+                         ('espressif__brookesia_app_store', '0.8.2')))
+        self.assertEqual(BUILDER.PATCH_SETS['store-candidate'], BUILDER.PATCH_SETS['production'])
 
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()

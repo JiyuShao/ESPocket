@@ -1,0 +1,46 @@
+--- a/src/network/http.ipp
++++ b/src/network/http.ipp
+@@ -1134,6 +1134,15 @@
+         entry.icon_download_path = output_path;
+     };
+     auto failure_handler = [this, output_path, icon_url](std::string error_message) {
++        // Admission pressure is temporary; preserve the current icon rather
++        // than permanently skipping it. The owned timer is revoked on stop.
++        if (error_message.find("Too many concurrent HTTP requests") != std::string::npos) {
++            remove_invalid_icon_file(output_path, "icon request deferred");
++            if (context_ != nullptr) {
++                schedule_refresh_icon_step(*context_, SIZE_METADATA_RETRY_DELAY_MS);
++            }
++            return;
++        }
+         BROOKESIA_LOGW(
+             "Failed to submit App Store icon request: url(%1%), error(%2%)",
+             icon_url, error_message
+@@ -1151,14 +1160,14 @@
+     return {};
+ }
+ 
+-void AppStoreApp::schedule_refresh_icon_step(system::core::AppContext &context)
++void AppStoreApp::schedule_refresh_icon_step(system::core::AppContext &context, uint32_t delay_ms)
+ {
+     if (refresh_icon_purpose_ == IconUpdatePurpose::None ||
+             refresh_icon_timer_id_ != system::core::INVALID_TIMER_ID) {
+         return;
+     }
+ 
+-    auto timer = context.timer().start_delayed(REFRESH_ICON_TIMER_NAME, REFRESH_ICON_STEP_DELAY_MS);
++    auto timer = context.timer().start_delayed(REFRESH_ICON_TIMER_NAME, delay_ms == 0 ? REFRESH_ICON_STEP_DELAY_MS : delay_ms);
+     if (!timer) {
+         BROOKESIA_LOGW("Failed to schedule App Store visible icon update: %1%", timer.error());
+         reset_refresh_icon_state();
+--- a/include/brookesia/app_store/app_store_app.hpp
++++ b/include/brookesia/app_store/app_store_app.hpp
+@@ -499,7 +499,7 @@
+     void advance_refresh_icon_step(system::core::AppContext &context);
+     void finish_refresh_icon_update(system::core::AppContext &context);
+     std::expected<void, std::string> process_refresh_icon_step(system::core::AppContext &context);
+-    void schedule_refresh_icon_step(system::core::AppContext &context);
++    void schedule_refresh_icon_step(system::core::AppContext &context, uint32_t delay_ms = 0);
+     void stop_refresh_icon_timer(system::core::AppContext &context);
+     bool submit_http_request_async(
+         system::core::AppContext &context,

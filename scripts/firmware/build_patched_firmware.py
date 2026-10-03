@@ -10,6 +10,7 @@ import subprocess
 import sys
 
 from prepare_patched_component import digest, inventory, prepare
+from check_glyphs import check as check_glyphs
 
 ROOT = Path(__file__).resolve().parents[2]
 COMPONENT = 'espressif__brookesia_runtime_js'
@@ -17,11 +18,14 @@ VERSION = '0.8.3'
 PATCHES = ((COMPONENT, VERSION), ('espressif__brookesia_system_core', '0.8.4'))
 PATCH_SETS = {
     'baseline': PATCHES,
-    'production': PATCHES + (('espressif__brookesia_hal_adaptor', '0.8.4'), ('espressif__brookesia_app_settings', '0.8.3'), ('espressif__brookesia_service_display', '0.8.2'), ('espressif__esp_board_manager', '0.5.15')),
+    'production': PATCHES + (('espressif__brookesia_hal_adaptor', '0.8.4'), ('espressif__brookesia_app_settings', '0.8.3'), ('espressif__brookesia_service_display', '0.8.2'), ('espressif__esp_board_manager', '0.5.15'), ('espressif__brookesia_app_store', '0.8.2')),
     'hal-candidate': PATCHES + (('espressif__brookesia_hal_adaptor', '0.8.4'),),
     'audio-candidate': PATCHES + (('espressif__brookesia_hal_adaptor', '0.8.4'), ('espressif__brookesia_app_settings', '0.8.3')),
     'display-candidate': PATCHES + (('espressif__brookesia_hal_adaptor', '0.8.4'), ('espressif__brookesia_app_settings', '0.8.3'), ('espressif__brookesia_service_display', '0.8.2')),
 }
+
+# Keep the explicit candidate entry for reproducible historical commands.
+PATCH_SETS['store-candidate'] = PATCH_SETS['production']
 
 
 AUDIO_OPTIONS = {
@@ -104,7 +108,7 @@ def pin_registry_dependencies(text, locked):
 def verify_registry_lock(original, generated, patch_set='production', root=ROOT):
     expected = registry_lock(original)
     actual = registry_lock(generated)
-    if patch_set in ('production', 'audio-candidate', 'display-candidate'):
+    if patch_set in ('production', 'audio-candidate', 'display-candidate', 'store-candidate'):
         extra = audio_dependencies(root)
         if set(expected) & set(extra):
             raise ValueError('Audio dependency constraints overlap production')
@@ -148,7 +152,7 @@ def stage(root, workspace, sdkconfig, patch_set='production'):
     shutil.copyfile(sdkconfig, firmware / 'sdkconfig')
     main_manifest = firmware / 'main/idf_component.yml'
     constraints = registry_lock(source / 'dependencies.lock')
-    audio_extra = audio_dependencies(root) if patch_set in ('production', 'audio-candidate', 'display-candidate') else {}
+    audio_extra = audio_dependencies(root) if patch_set in ('production', 'audio-candidate', 'display-candidate', 'store-candidate') else {}
     if set(constraints) & set(audio_extra):
         raise ValueError('Audio dependency constraints overlap production')
     constraints.update(audio_extra)
@@ -173,7 +177,7 @@ def stage(root, workspace, sdkconfig, patch_set='production'):
                              'patched_component': str(patched)})
     main_manifest.write_text(text)
     config = firmware / 'sdkconfig'
-    if patch_set in ('production', 'audio-candidate', 'display-candidate'):
+    if patch_set in ('production', 'audio-candidate', 'display-candidate', 'store-candidate'):
         config.write_text(configure_audio_candidate(config.read_text()))
     lines = [line for line in config.read_text().splitlines()
              if 'CONFIG_BROOKESIA_RUNTIME_JS_ASYNC_STACK_SIZE' not in line]
@@ -204,8 +208,11 @@ def main():
         if not args.prepare_only:
             subprocess.run(['idf.py', '-C', str(firmware), 'reconfigure'], check=True)
             verify_registry_lock(ROOT / 'firmware/dependencies.lock', firmware / 'dependencies.lock', args.patch_set)
-            if args.patch_set in ('production', 'audio-candidate', 'display-candidate'):
+            if args.patch_set in ('production', 'audio-candidate', 'display-candidate', 'store-candidate'):
                 verify_audio_config((firmware / 'sdkconfig').read_text())
+            glyph_errors = check_glyphs(args.workspace.resolve(), (firmware / 'sdkconfig').read_text())
+            if glyph_errors:
+                raise ValueError('Configured glyph coverage failed: ' + '\n'.join(glyph_errors))
             description = json.loads((firmware / 'build/project_description.json').read_text())
             for component, _ in PATCH_SETS[args.patch_set]:
                 selected = description['build_component_info'][component]['dir']

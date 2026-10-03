@@ -22,3 +22,7 @@
 ## Comments
 
 2026-10-04：用户报告 Store 实际不可用，作为优先功能故障处理。普通 24acc698e 的缓存启动实际捕获 4 次 HTTP 容量拒绝；部分 metadata 成功，不能归为全部网络请求失败。当前 1 worker / 1 request 与 Store 图标／metadata 调度需真实回归；HAL cooperative cancel 已在 production，在线手动 Refresh 等门槛仍未通过。详见[可用性诊断](../records/2026-10-04-store-availability.md)。
+
+2026-10-04 用户授权解决全链路：先补充[图标容量回归](../records/2026-10-04-store-icon-admission.md)，原版真实控制流失败，候选延后重试通过；完整网络与安装条件仍分别由本票及 03/08 持有。
+
+2026-10-04：普通候选 5bb555ca5 已通过实际 online Refresh、Home 和重进，cached/online 证据分开记录；另修复合成 release 被 App launch 重新取消的输入边界，原失败 attempt 保留。见[候选构建与结果](../records/2026-10-04-store-icon-admission.md#候选构建与真实在线结果)。活动请求取消、完整 shutdown/offline 等门槛仍独立核查，未关闭本票。

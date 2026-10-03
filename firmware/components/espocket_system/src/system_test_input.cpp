@@ -24,9 +24,12 @@ std::expected<void, std::string> System::tick_test_touch()
     if (stopping_.load(std::memory_order_acquire) || !developer_mode_->enabled() ||
             !display_on_.load(std::memory_order_acquire) ||
             cancel_test_touch_.exchange(false, std::memory_order_acq_rel) ||
-            foreground_token_->load(std::memory_order_acquire) != test_touch_foreground_token_) {
+            (foreground_token_->load(std::memory_order_acquire) != test_touch_foreground_token_ &&
+             !test_touch_input_->release_delivered())) {
         return test_touch_input_->cancel();
     }
+    // A delivered release can launch an App. No points remain to cross into
+    // the new task, so keep normal cleanup rather than manufacturing cancel.
     return test_touch_input_->tick(static_cast<uint64_t>(esp_timer_get_time() / 1000));
 }
 

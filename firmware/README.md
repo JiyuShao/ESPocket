@@ -192,3 +192,18 @@ python3 scripts/firmware/run_device_tests.py --suite settings-brightness \
 先备份设备当前 LittleFS 与普通固件。使用具有 littlefs-python 的构建环境执行 `scripts/firmware/prepare_keyboard_isolation_fixture.py --backup <backup.bin> --output <new-test-image.bin> --project <isolated-workspace>/firmware`，再构建此独立测试工程。输出路径必须新建且在 checkout 外；原文件 inventory 与测试变更 hash 写入同名 JSON。部署测试固件和对应文件系统后，用 IDF Python 执行 `scripts/firmware/run_keyboard_isolation_probe.py --port <port> --device-id <inventory-id> --expected-image <exact-identity> --output <new-report-directory>`。它复用 USB 客户端与 Owner 状态断言，不增加测试协议或生产权限。
 
 测试后恢复普通固件和备份的文件系统；不删除未知目录或文件，不修改 NVS，不解除 failed-stop keyboard latch。此夹具不宣称签名包安装、上架、真实触摸或正常固件的物理键验收。
+
+
+### Store 请求容量候选
+
+production 已包含 Store 0.8.2 的图标容量延后重试，共七个组件补丁；`--patch-set store-candidate` 保留为同一基线的显式入口。它保留 1 worker / 1 request 配置，不扩大并发、不关闭 TLS 验证、不修改包兼容性或信任判断。设备刷新及退出门槛由 [005/06](../.scratch/005-m5-application-ecosystem/issues/06-adopt-online-store-stability-fix.md) 持有；候选通过 host 回归不代表安装链路可用。
+
+### 内置字体字形门槛
+
+`python3 scripts/firmware/check_glyphs.py` 检查维护 JSON 的 literal label 是否由实际选定内置字体覆盖；有效固件配置可通过 `--sdkconfig` 指定。它已接入 host tests 与独立补丁构建的 reconfigure 后检查。范围与图标开发规则见 [资源说明](components/espocket_system/resources/README.md#内置字体与图标检查)。
+
+### Store 在线回归与签名测试输入
+
+`run_device_tests.py --suite store-online` 在普通候选固件上打开 Store、点击 Refresh，要求本次远程 index 真正写入缓存，再验证 Home 和重进。缓存启动不能独自满足这个门槛；此 suite 不安装或下载包，不证明信任、回滚与发布。
+
+安装链路的独立签名测试输入见 [Store release fixture](test/fixtures/store_release/README.md)。官方 SDK 生成两个兼容版本，输出到仓库外的新目录；临时测试 identity 不进入正式信任策略。
