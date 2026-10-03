@@ -145,5 +145,8 @@ class AudioCandidateConfigTest(unittest.TestCase):
         BUILDER.verify_audio_config(text)
         self.assertIn('CONFIG_EXISTING=y', text)
         self.assertNotIn('CONFIG_BROOKESIA_HAL_ADAPTOR_AUDIO_ENABLE_CODEC_RECORDER_IMPL=y', text)
+        self.assertIn('CONFIG_BROOKESIA_GUI_LVGL_DISPLAY_SOURCE_BUFFER_HEIGHT=40', text)
+        with self.assertRaisesRegex(ValueError, 'configuration'):
+            BUILDER.verify_audio_config(text.replace('BUFFER_HEIGHT=40', 'BUFFER_HEIGHT=50'))
         with self.assertRaisesRegex(ValueError, 'Unsafe'):
             BUILDER.verify_audio_config(text.replace('# CONFIG_AUDIO_AFE_ENABLE is not set', 'CONFIG_AUDIO_AFE_ENABLE=y'))

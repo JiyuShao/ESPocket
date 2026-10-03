@@ -31,6 +31,8 @@ AUDIO_OPTIONS = {
     'CONFIG_VIDEO_PROCESSOR_ENABLE': False,
     'CONFIG_AUDIO_AFE_ENABLE': False,
     'CONFIG_MEDIA_DUMP_ENABLE': False,
+    # 466px Generic output needs two internal buffers; keep them below the measured 80KiB block.
+    'CONFIG_BROOKESIA_GUI_LVGL_DISPLAY_SOURCE_BUFFER_HEIGHT': 40,
 }
 
 
@@ -47,14 +49,20 @@ def configure_audio_candidate(text):
         line.startswith(key + '=') or line.startswith('# ' + key + ' ')
         for key in AUDIO_OPTIONS)]
     for key, enabled in AUDIO_OPTIONS.items():
-        lines.append(key + '=y' if enabled else '# ' + key + ' is not set')
+        if type(enabled) is bool:
+            lines.append(key + '=y' if enabled else '# ' + key + ' is not set')
+        else:
+            lines.append(key + '=' + str(enabled))
     return '\n'.join(lines) + '\n'
 
 
 def verify_audio_config(text):
     for key, enabled in AUDIO_OPTIONS.items():
-        actual = key + '=y' in text.splitlines()
-        if actual != enabled:
+        if type(enabled) is bool:
+            valid = (key + '=y' in text.splitlines()) == enabled
+        else:
+            valid = key + '=' + str(enabled) in text.splitlines()
+        if not valid:
             raise ValueError(f'Unsafe or incomplete audio candidate configuration: {key}')
 
 
