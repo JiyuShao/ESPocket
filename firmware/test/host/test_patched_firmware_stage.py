@@ -14,6 +14,13 @@ SPEC.loader.exec_module(BUILDER)
 
 
 class PatchedFirmwareStageTest(unittest.TestCase):
+    def test_display_candidate_adds_only_the_display_patch_to_audio(self):
+        audio = BUILDER.PATCH_SETS['audio-candidate']
+        self.assertEqual(BUILDER.PATCH_SETS['display-candidate'],
+                         audio + (('espressif__brookesia_service_display', '0.8.2'),))
+        self.assertNotIn(('espressif__brookesia_service_display', '0.8.2'),
+                         BUILDER.PATCH_SETS['production'])
+
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
         self.addCleanup(self.temporary.cleanup)

@@ -1,6 +1,6 @@
 {
   "name": "Circular Shell 466px / Native and Runtime samples",
-  "calibration": "navigation verified on image 09e8eb00d; Card suite verified on c4dfa5af8 with Runtime main.js d7e27a802f1575934348b2d91821bd70ce5fae32c8f2e855f5caf48838063130; surfaces verified on ordinary image 71567f599 (attempt 20261002T145324Z-ad0d0a4e-ad62-462a-a75e-8e4b1432f557)",
+  "calibration": "navigation verified on image 09e8eb00d; Card suite verified on c4dfa5af8 with Runtime main.js d7e27a802f1575934348b2d91821bd70ce5fae32c8f2e855f5caf48838063130; surfaces verified on ordinary image 71567f599 (attempt 20261002T145324Z-ad0d0a4e-ad62-462a-a75e-8e4b1432f557); Settings slider coordinates reached actual Owner on ac2485543; brightness-only baseline failed on cycle 60",
   "width": 466,
   "height": 466,
   "up": [
@@ -108,5 +108,32 @@
   "runtime_detail_tap": [
     233,
     263
-  ]
+  ],
+  "settings_brightness": {
+    "rootTap": [
+      233,
+      312
+    ],
+    "scroll": [
+      [
+        370,
+        370
+      ],
+      [
+        370,
+        130
+      ]
+    ],
+    "slider": [
+      [
+        110,
+        380
+      ],
+      [
+        350,
+        380
+      ]
+    ],
+    "cycles": 100
+  }
 }

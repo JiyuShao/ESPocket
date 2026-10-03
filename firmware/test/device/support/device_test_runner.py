@@ -2,7 +2,7 @@
 from __future__ import annotations
 from datetime import datetime, timezone
 import uuid
-from ..e2e import navigation, cards, surfaces, apps, runtime_confirm, reclaim, resources
+from ..e2e import navigation, cards, surfaces, apps, runtime_confirm, reclaim, resources, settings_brightness
 from .usb_test_client import UsbTestClient, DeviceTestError
 
 LIMITS = 'Synthetic input does not verify touch hardware, PWR GPIO, or visual feedback.'
@@ -126,6 +126,8 @@ class DeviceTestRunner(UsbTestClient):
                 apps.run(self, profile)
             elif suite == 'runtime-confirm':
                 runtime_confirm.run(self, profile)
+            elif suite == 'settings-brightness':
+                settings_brightness.run(self, profile)
             elif suite == 'resources':
                 resources.run(self, profile)
             elif suite in ('reclaim-native', 'reclaim-runtime'):

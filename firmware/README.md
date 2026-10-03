@@ -167,3 +167,15 @@ Audio 候选当前使用 466px 板的 40 行双缓冲配置，并将官方 simpl
 进入官方 Settings Sound 后，fixture 通过官方 Storage Service 检查路径不存在，再写入自己的测试 WAV，调用官方 AudioPlayback Play（400 Hz 间歇短音、30 次循环，配置 35 秒播放超时；实际总时长受播放器处理影响）；音量与 Mute 继续由真实 Settings/Audio Owner 调整，probe 不改它们，也不提供 Assistant/USB 播放入口。Back 或 PWR Home 调用官方 Stop 后通过 Storage Service 删除已确认由本次创建的文件；同名未知文件阻止测试，不覆盖或删除。检查与写入依赖当前串行的单一 fixture，不承诺通用并发文件创建原子性。实际听感需一次人工确认，自动 Owner state 与日志不能替代。验收后恢复已保存、不含 probe 的镜像。
 
 Probe 的 Flash IO 必须交给 Storage Service 内部 RAM 工作线程；Native App 回调可能使用外部 RAM 栈，不能直接 open/write/remove Flash 文件。真实 fixture 的主机回归验证 Storage/Audio 所有权、拒绝已有数据及失败清理；实际 cache-safe 与播放仍以设备结果为准。
+
+### Settings 亮度压力回归
+
+概率性 Display IO 缺陷使用专门的自动套件，不增加人工 smoke 次数：
+
+```sh
+python3 scripts/firmware/run_device_tests.py --suite settings-brightness \
+  --port /dev/cu.usbmodem101 --device-id A0:F2:62:E3:0B:68 \
+  --expected-image <exact-image-identity> --output /private/tmp/espocket-brightness-stress
+```
+
+使用有 pyserial 的 IDF Python。466px profile 当前自动拖动 100 次（旧基线第 60 次失败），每次必须命中真实亮度 Owner，任何 timeout 即失败；末尾验证 Back 与 Home。此套件不操作主题、不验证物理触摸或像素。候选 `display-candidate` 继承 audio-candidate 并在独立副本中加上 Display 输出 IO 补丁；默认生产组合不变。
