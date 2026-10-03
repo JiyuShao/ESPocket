@@ -43,7 +43,7 @@ python3 scripts/firmware/build_patched_firmware.py \
 
 先加载 ESP-IDF 环境。workspace 必须不存在且位于源码 checkout 外；每次独立构建保留各自证据。入口复制工程和已物化依赖，准确应用 hash 锁定补丁，使用 Component Manager override_path 选择副本，再执行完整构建并核对选中的组件路径。原始 managed_components、sdkconfig 和 dependencies.lock 不写入。工程副本把全部 Registry 版本约束为原始 lock 的精确版本，构建后核对版本和 component hash，阻止切换 override 时顺带升级传递依赖。当前产品预算为 16 KiB，上游默认仍为 8 KiB。
 
-产物位于 `<workspace>/firmware/build/`，配置位于 `<workspace>/firmware/sdkconfig`，输入身份位于 `<workspace>/patch-inputs.json`。生成的 lock 只属于此次构建；registry lock 与补丁 manifest 共同限定产品输入。`--prepare-only` 只准备副本，不构建也不证明设备修复。默认 `--patch-set production` 使用已接入的 Runtime/Core 补丁；`--patch-set hal-candidate` 显式试做 HTTP/Audio HAL 候选（普通配置不打开 Audio Processor）；`--patch-set audio-candidate` 另外固定 playback-only 的新增依赖、开启 Player/Processor/Audio Service，并强制 Recorder/AFE/Media Dump/Video 关闭。Audio 候选在 reconfigure 后复核这些选项与精确版本/hash，再构建；实验依赖不改生产 lock。候选不等于设备门槛通过。升级源码/hash 不匹配时停止，不能绕过校验。
+产物位于 `<workspace>/firmware/build/`，配置位于 `<workspace>/firmware/sdkconfig`，输入身份位于 `<workspace>/patch-inputs.json`。生成的 lock 只属于此次构建；registry lock 与补丁 manifest 共同限定产品输入。`--prepare-only` 只准备副本，不构建也不证明设备修复。默认 `--patch-set production` 使用已验收的 Runtime/Core/HAL/Settings/Display/Board Manager 补丁及 playback-only 配置；`--patch-set hal-candidate` 显式试做 HTTP/Audio HAL 候选（普通配置不打开 Audio Processor）；`--patch-set audio-candidate` 另外固定 playback-only 的新增依赖、开启 Player/Processor/Audio Service，并强制 Recorder/AFE/Media Dump/Video 关闭。Audio 候选在 reconfigure 后复核这些选项与精确版本/hash，再构建；实验依赖不改生产 lock。候选不等于设备门槛通过。升级源码/hash 不匹配时停止，不能绕过校验。
 
 ## 测试
 
@@ -183,3 +183,12 @@ python3 scripts/firmware/run_device_tests.py --suite settings-brightness \
 ### Audio teardown 自动回归
 
 `--suite audio-playback` 仅用于显式加入上述 Audio probe 的独立测试镜像；普通固件不会自动播放短音。用真实 Owner Playing 与 Home 删除其自有 WAV 验证两次播放/退出/再打开，并拒绝 I2S 重复 disable；它不代替听感验收。测试完成后恢复不含 probe 的默认生产镜像。
+
+
+### Runtime 键盘隔离夹具
+
+`firmware/test/device/fixtures/keyboard_isolation/` 包含两个隐藏 Runtime 观察者、一个真实键盘 Owner 与临时 Native 协调器。观察者订阅 KeyboardClosed/Display.BacklightBrightnessChanged 并运行定时器，正常与故意抛错的 on_stop 均不主动清理；真实 Core 必须完成资源撤销。Owner 只校验固定的合成输入，不打印事件正文。Native 协调器通过真实 Core 生命周期 API 启动和停止观察者；Runtime 无权启动其他 App 的规则保持。
+
+先备份设备当前 LittleFS 与普通固件。使用具有 littlefs-python 的构建环境执行 `scripts/firmware/prepare_keyboard_isolation_fixture.py --backup <backup.bin> --output <new-test-image.bin> --project <isolated-workspace>/firmware`，再构建此独立测试工程。输出路径必须新建且在 checkout 外；原文件 inventory 与测试变更 hash 写入同名 JSON。部署测试固件和对应文件系统后，用 IDF Python 执行 `scripts/firmware/run_keyboard_isolation_probe.py --port <port> --device-id <inventory-id> --expected-image <exact-identity> --output <new-report-directory>`。它复用 USB 客户端与 Owner 状态断言，不增加测试协议或生产权限。
+
+测试后恢复普通固件和备份的文件系统；不删除未知目录或文件，不修改 NVS，不解除 failed-stop keyboard latch。此夹具不宣称签名包安装、上架、真实触摸或正常固件的物理键验收。
