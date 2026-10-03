@@ -13,3 +13,11 @@
 已请求一次 Runtime 集中物理检查：Root 无 Back、普通横滑保留 Detail、Confirm Back On 的可见反馈、pending/Cancel、自动息屏后实体 PWR 恢复 Detail、Allow 回 Root、PWR Home。结果待用户；监听日志 `/private/tmp/espocket-runtime-physical-20261003.log` 有限 600 秒，窗口结束后不能声称捕获了之后操作。
 
 Native-only/Runtime-only 回收物理条件与 Settings Storage/Debug、Launcher 手感仍未完成；不以本次普通固件 apps PASS 替代。
+
+## Runtime 物理结果
+
+用户对上述一次集中操作回复“全部正常”：Root 无 Back、普通横滑保持 Detail、Confirm On/pending/Cancel 的可见反馈、自动息屏后实体 PWR 恢复 Detail、Allow 回 Root、PWR Home 均通过。此为用户直接物理/视觉观察，不能等同于串口完整采集：600 秒监听已结束，日志仅有息屏输出，未抓到本次完整人工步骤。对应自动 57 步记录独立保留。
+
+随后进入既有 Native-only/Runtime-only 回收镜像的单次人工验收；它们是保存的专用旧镜像，不包含本次 Audio/Settings 候选，不用来宣称当前普通固件开启回收。完成后恢复 `b9b4a413f`。
+
+Native-only 保存镜像重新核对 ELF/BIN hash 与单独回收配置后，App-only 写入校验 PASS，启动 PASS，hello 精确匹配 `01a86838e`；初始 snapshot 为表盘亮屏、无 App/Page/pending/inputBusy。日志 `/private/tmp/espocket-native-reclaim-physical-flash.log`、`boot.log` 与 `capture.log`（后二者同 physical 前缀）。已请求一次 Native 确认提示 → Cancel → 自动息屏回收 → PWR 表盘 → 重开 Root 的物理检查，结果待用户；当前设备为该专用测试镜像。
