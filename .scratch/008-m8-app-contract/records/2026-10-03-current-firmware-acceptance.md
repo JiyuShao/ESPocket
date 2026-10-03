@@ -21,3 +21,11 @@ Native-only/Runtime-only 回收物理条件与 Settings Storage/Debug、Launcher
 随后进入既有 Native-only/Runtime-only 回收镜像的单次人工验收；它们是保存的专用旧镜像，不包含本次 Audio/Settings 候选，不用来宣称当前普通固件开启回收。完成后恢复 `b9b4a413f`。
 
 Native-only 保存镜像重新核对 ELF/BIN hash 与单独回收配置后，App-only 写入校验 PASS，启动 PASS，hello 精确匹配 `01a86838e`；初始 snapshot 为表盘亮屏、无 App/Page/pending/inputBusy。日志 `/private/tmp/espocket-native-reclaim-physical-flash.log`、`boot.log` 与 `capture.log`（后二者同 physical 前缀）。已请求一次 Native 确认提示 → Cancel → 自动息屏回收 → PWR 表盘 → 重开 Root 的物理检查，结果待用户；当前设备为该专用测试镜像。
+
+## Native 回收物理结果
+
+用户对一次 Native 确认 On/pending/Cancel → 自动息屏回收 → 实体 PWR 表盘 → 重开 Root 的集中检查回复“全部正常”。Native 待决返回反馈与回收后的物理恢复条件通过；依据为用户直接观察，串口窗口实际覆盖情况独立核对。旧镜像只证明这一已构建回收配置的路径，不代表普通 Audio 修正镜像开启回收。
+
+本次 Native 监听覆盖到实际 `APP_RECLAIM_TEST stopped model=native manifest=espocket.app.hello app_id=1` 及 Off/On/Wake；未匹配 Guru Meditation、Stack canary 或 assert failed。用户回复后主动终止只读监听，退出 130 为采集进程中断，不是设备崩溃。物理画面判定仍以用户反馈为准。
+
+Runtime-only 保存镜像 ELF/BIN 与回收配置核对通过，App-only 写入 hash 校验及启动 PASS；hello 精确匹配 `439f6431a`，初始为表盘亮屏、无 App/Page/pending/inputBusy。日志 `/private/tmp/espocket-runtime-reclaim-physical-flash.log`、`boot.log`、`capture.log`（后二者同 physical 前缀）。Runtime 自动息屏 → 实体 PWR 表盘 → 重开 Root 的一次物理观察待用户；当前设备为专用 Runtime 回收镜像。

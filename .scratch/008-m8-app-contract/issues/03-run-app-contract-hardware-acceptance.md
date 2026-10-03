@@ -26,19 +26,19 @@
 |---|---:|---|---|
 | Native Root → Detail → Back → Root → PWR Home | 1 | 子页面 Back、Root 无 Back 与 PWR Home 均正确 | PASS（复用[已接受物理结果](../../014-app-navigation-card-contract/records/2026-10-02-default-back-prototype.md)，本次合成复核通过） |
 | Runtime Root → Detail → Back → Root → PWR Home | 1 | 子页面 Back、Root 无 Back 与 PWR Home 均正确 | PASS（普通修复镜像合成 PASS，2026-10-03 用户物理确认） |
-| Native background reclaim → relaunch | 1 | 从 App Root 启动，不恢复失效页面 | PARTIAL（Native-only 合成 PASS，物理待检） |
+| Native background reclaim → relaunch | 1 | 从 App Root 启动，不恢复失效页面 | PASS（Native-only 合成 PASS，2026-10-03 用户物理确认） |
 | Runtime background reclaim → relaunch | 1 | 从 App Root 启动，不恢复失效页面 | PARTIAL（Runtime-only 合成 PASS，物理待检） |
 
 ### Required one-pass checks
 
 | 检查项 | PASS 条件 | 状态 |
 |---|---|---|
-| Native App Screen Off / Wake | 未回收时恢复页面；回收时降级 Watch Face | PARTIAL（未回收物理结果已接受；当前合成通过，回收待检） |
+| Native App Screen Off / Wake | 未回收时恢复页面；回收时降级 Watch Face | PASS（未回收物理结果已接受，Native-only 回收合成及本次物理确认通过） |
 | Runtime App Screen Off / Wake | 未回收时恢复页面；回收时降级 Watch Face | PARTIAL（当前未回收合成及用户物理确认 PASS，回收物理待检） |
 | Native normal horizontal swipe | 不误触发 Edge Back | PASS（007/03 当前物理确认与本次合成复核） |
 | Runtime normal horizontal swipe | 不误触发 Edge Back | PASS（本次合成通过，2026-10-03 Runtime 用户物理确认） |
 | Root Back attempt | 两种执行模型都保持 Root 且无默认 Back | PASS（两种模型合成 PASS，Native 已接受、Runtime 本次物理确认） |
-| Deferred Back | 重复请求不重复提交；超时取消；PWR 可立即回表盘 | PARTIAL（修复后两种模型合成 PASS，物理待检；原 Runtime 栈溢出 FAIL 保留于[记录](../records/2026-10-02-app-device-frontier.md)） |
+| Deferred Back | 重复请求不重复提交；超时取消；PWR 可立即回表盘 | PASS（修复后两种模型合成 PASS，Native/Runtime 的确认反馈均获用户物理确认；超时及重复请求由自动路径验证，原 Runtime 栈溢出 FAIL 保留于[记录](../records/2026-10-02-app-device-frontier.md)） |
 | Failure scan | 无 panic、watchdog、assert、deadlock、错误 Back 或持续性资源下降 | PARTIAL（当前自动套件无 panic，独立回收 PASS，有限 heap/stack 已记录；物理待检，原栈溢出 FAIL 保留） |
 
 ## 证据规则
@@ -67,3 +67,5 @@
 2026-10-03：用户要求先验收。当前无测试音 Audio 修正镜像 `b9b4a413f` 的完整 apps 57 步再次 PASS，release 与最终 Home 正常；一次 Runtime 物理检查待回应，见[当前固件验收](../records/2026-10-03-current-firmware-acceptance.md)。未关闭剩余物理条件。
 
 2026-10-03：用户对当前镜像 Runtime 一次集中物理路径回复“全部正常”，对应画面/触摸/PWR 条件通过；专用 Native/Runtime 回收物理检查仍独立待完成，详见当前固件验收记录。
+
+2026-10-03：Native-only 回收镜像 `01a86838e` 的确认反馈、Cancel、自动息屏后 PWR 表盘及重开 Root，用户回复“全部正常”；串口实见 `APP_RECLAIM_TEST stopped model=native` 与 Off/On/Wake，无匹配 panic/assert。Runtime-only 回收物理检查待完成。
