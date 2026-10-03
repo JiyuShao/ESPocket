@@ -75,3 +75,7 @@ ESPocket 需要官方 Store 与远程 Runtime distribution path，但锁定的�
 ## 记录
 
 - [2026-09-28-acceptance-report](records/2026-09-28-acceptance-report.md)
+
+## 当前功能优先级
+
+2026-10-04 用户明确 Store 不能稳定请求或安装，先推进 06 的实际 HTTP／Store 调度回归，再解除 08、03 的兼容包和统一信任事务前置。页面打开、缓存列表和 Home 正常不构成 Store 可用；[当前诊断](records/2026-10-04-store-availability.md)记录普通设备的容量拒绝与包不兼容。07 键盘隔离已通过独立门槛，不再作为尚未完成的隔离项。

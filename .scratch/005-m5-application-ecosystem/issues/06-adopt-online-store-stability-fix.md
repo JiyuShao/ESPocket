@@ -18,3 +18,7 @@
 历史事实见 [Store 报告](../records/2026-09-28-acceptance-report.md)，源码诊断见 [HTTP race 草稿](../records/2026-09-28-http-cancel-race.md)及[上游状态快照](../records/2026-09-28-upstream-status.md)。这些快照不证明当前上游已经修复。
 
 候选补丁与确定性 open/read 回归见 [2026-10-03 记录](../records/2026-10-03-http-cancel-patch.md)。尚未接入产品，不将 HAL 回归通过等同 Store 稳定性通过。
+
+## Comments
+
+2026-10-04：用户报告 Store 实际不可用，作为优先功能故障处理。普通 24acc698e 的缓存启动实际捕获 4 次 HTTP 容量拒绝；部分 metadata 成功，不能归为全部网络请求失败。当前 1 worker / 1 request 与 Store 图标／metadata 调度需真实回归；HAL cooperative cancel 已在 production，在线手动 Refresh 等门槛仍未通过。详见[可用性诊断](../records/2026-10-04-store-availability.md)。

@@ -14,3 +14,7 @@
 ## 证据边界
 
 [2026-09-28 报告](../records/2026-09-28-acceptance-report.md#known-official-packages)中检查的官方 Calculator 包只声明 `super`，且缺少 release signature；该历史事实不代表后续包已经核查。本 ticket 关闭前需重新检查实际候选。
+
+## Comments
+
+2026-10-04：当前设备缓存 Flappy Bird 0.3.0 由实际包扫描拒绝，错误为 `Package does not support system type: espocket`。本轮未发起下载／安装，不将这个缓存包的结果推广到全部最新官方包。见[当前可用性诊断](../records/2026-10-04-store-availability.md)。
