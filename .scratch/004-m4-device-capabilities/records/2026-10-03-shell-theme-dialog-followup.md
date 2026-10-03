@@ -22,3 +22,9 @@
 候选 `ac2485543`：ELF SHA256 `ac248554361c987fdf5cf1abdf84b6a0731a4fcc6fc0ddd5ae376c9d49ce5bf0`，App BIN SHA256 `0d3ca09cb19a4a696d07fd40d719e21694c2ed21902c6fa6b16144adb55bcb1d`。仅刷写 App offset 0x60000 并校验；未覆盖 NVS 或文件系统。启动恢复 Light，主题在零文档时应用，ESPocket started 正常。
 
 自动进入 Settings/Display，选择 Dark，取消紧凑确认弹窗；继续滚动并拖动实际亮度 Owner，通过日志确认亮度调用和 Display 快照响应。未发现 panic；原卡死没有获得失败回归，仍未关闭 08。布局/按钮真实像素与 Home Space Light 可读性尚待有限观察。Runtime 新主题包仅构建，未安装；不能将源资源适配算作旧设备包已更新。
+
+## 用户再次报告的顺序与加强检查
+
+用户明确顺序为点击切换主题、弹出确认、Later、再调亮度。本次只读现场身份 ac2485543，display=false，前台 settings.display，hello/snapshot 成功；未重启设备。该状态不能排除此前的触摸或显示冻结，也不等价于现场已正常。
+
+加强脚本 `/private/tmp/espocket_later_brightness_delayed.py` 已运行：主题请求及 Later 均由真实日志确认，亮度调用由 set_brightness_internal 确认；额外观察 12 秒后通过实际合成边缘触摸返回 settings.root。输出为 `PASS: actual brightness Owner, 12-second observation, and subsequent touch Back`。这验证合成输入路径在延迟后仍工作，不验证触摸硬件或像素，不将缺陷标成修复。原始证据为 `/private/tmp/espocket-later-brightness-delayed-serial.log`，当前设备停在 Settings Root。
