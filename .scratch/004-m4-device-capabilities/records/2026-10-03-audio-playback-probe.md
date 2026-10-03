@@ -117,3 +117,11 @@ I2S 诊断后的 `/private/tmp/espocket-audio-i2s-restore-flash.log` 校验 PASS
 请求用户一次产品路径听感：Settings Sound 中将实际 Volume 调至约 85，听后降低音量，再 PWR Home；由用户通过真实 Settings Owner 调整，不由 fixture 更改或恢复其偏好。Serial 捕获 `/private/tmp/espocket-audio-format-user-capture.log`；听感尚待回应。
 
 无 fixture 的修正恢复候选 `/private/tmp/espocket-audio-format-clean-build.log` 完整构建 PASS，SDK/精确依赖校验 PASS，Adapter/CMake 与 checkout 原文相同。ELF `b9b4a413f7017313214a6b3f29a7f171201d4455f918c2a0a22e2a9ca0edd40c`、BIN `1be447353b882a636636b5358abf39b316ac6eb5d8a14c1b846741f126aa14d9`，保存在 `/private/tmp/espocket-audio-format-clean-preserved/`。尚未刷入，避免提前移除等待用户观察的 test tone。当前设备仍为修正 fixture `7a72035bd`，自动测试后处于 Watch Face，fixture 文件已清理；用户进入 Sound 才重新触发。120 秒串口监听窗口内未见本次人工操作，因此不补造听感/音量证据，保持问题 pending。该 slice 只提交配置修正与已验证的真实格式回归，不提前采用生产 Audio 依赖或关闭 004/04。
+
+### Product hearing and volume accepted
+
+用户对修正 fixture `7a72035bd` 的一次产品检查回复“都正常”：Settings → Sound 实际听到短音，降低 Volume 后声音大小变化，PWR Home 后停止。此为用户物理观察；120 秒串口窗口在操作前已结束，不能声称抓到了对应人工操作日志。此前自动 Owner 日志独立证明 16000/stereo/16bit、Playing、Home STOPPED 与 fixture 清理。两类证据分别保留。
+
+004/04 接受维护的 playback-only 路径；默认 production patch set/依赖配置不因本次候选验收自动提升。现存重复 I2S disable 告警转入 004/07，不能视为已经修复。随后恢复无 fixture 的修正镜像 `b9b4a413f`；实际刷入与启动结果另补录。
+
+无 fixture 修正镜像已 App-only 写入（0x60000，7,559,936 bytes），`/private/tmp/espocket-audio-format-clean-restore-flash.log` 返回 0 且 Hash of data verified；`/private/tmp/espocket-audio-format-clean-restore-boot.log` 返回 0、PASS: ESPocket completed startup。恢复 ELF `b9b4a413f7017313214a6b3f29a7f171201d4455f918c2a0a22e2a9ca0edd40c`、BIN `1be447353b882a636636b5358abf39b316ac6eb5d8a14c1b846741f126aa14d9`。该镜像不包含自动听感 fixture；未写入 NVS 或文件系统分区，不恢复用户自行调整的音量值。
