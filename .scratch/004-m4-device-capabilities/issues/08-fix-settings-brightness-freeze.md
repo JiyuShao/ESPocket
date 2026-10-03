@@ -2,14 +2,14 @@
 
 **What to build:** 在实际 Settings/Display/GUI Owner 边界修复拖动亮度后页面卡死，不以屏蔽亮度功能代替修复。
 
-**Blocked by:** 一次有限实体触摸观察；候选修复、构建与设备自动回归全部通过。
+**Blocked by:** None
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 - [x] 建立能触发实际 SetBacklightBrightness 并检查 Display 页面响应的失败回归，区别坐标未命中与真实卡死。
 - [x] 定位同一 LCD SPI 设备的背光/刷屏并发与输出锁缺口；真实 Owner Display 0.8.2 修复按 ADR-0016 维护。
 - [x] 必要 host checks、完整构建、真实设备自动滑块重放 100 次与 Back/PWR Home 通过。
-- [ ] 只做一次必要实体触摸复核；当前自动输入不冒充物理验收。
+- [x] 一次必要实体触摸复核通过；用户确认“确实没问题了”，与自动输入证据分别记录。
 
 用户于 2026-10-03 报告 Settings → Display 滑块卡死。只读 hello 仍响应 `b9b4a413f`，snapshot 返回 invalid_state；没有采集到 panic。现场保存后已重启恢复；不把 USB 可响应当作 GUI 正常。证据见 [缺陷记录](../records/2026-10-03-display-glyph-theme-defects.md)。
 
@@ -22,3 +22,7 @@
 2026-10-03 更正与最小化：主题/Later 不必要；旧 ac2485543 仅左右拖动滑块在第 60 次实际服务 timeout、快照随后 timeout。Display frame/backlight 方法的同一 LCD IO 重叠有稳定主机失败，候选在输出 draw_mutex 下串行化并检查锁顺序。完整证据、JTAG 自动复位限制和未完成设备门槛见[IO 串行化记录](../records/2026-10-03-display-io-serialization.md)。
 
 候选 e15f52712 已刷入：旧 ac2485543 第 60 次失败，修正版同一最小路径 100 次通过，每次命中 Owner，Back/Home 与清理通过。保留上述唯一物理观察，未虚报为已验收；原始源码保持未修改。
+
+## Resolution
+
+2026-10-03：用户确认当前 e15f52712 修正版实体操作“确实没问题了”。结合实际 Owner 主机回归、完整构建及同一路径 100 次自动设备回归，关闭 08。修复代码已提交于 947cf7b；此次确认只覆盖亮度卡死，不扩展为 10 的浅色主题、弹窗与 Runtime Card 验收，也不自动合入默认 production 配置。

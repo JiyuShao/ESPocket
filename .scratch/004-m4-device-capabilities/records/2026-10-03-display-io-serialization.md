@@ -33,3 +33,7 @@ Display 0.8.2 的刷屏方法在 output.draw_mutex 下、Display mutex 外进入
 自动设备报告：`/private/tmp/espocket-display-lock-device/20261003T150518Z-448dd3a6-3cd0-4c0f-ac59-0274cc47a46b/report.json`（输入类型 synthetic-input；physicalInputVerified=false、visualVerified=false）。当前候选已刷入并停在表盘。相比旧固件第 60 次卡死，原最小硬件驱动路径的新 100 次全部通过；不宣称任意压力下永不失败。实体触摸仅待一次有限观察，不增加人工多轮测试。
 
 没有新增固件 debug 探针或关闭内存保护；原始依赖源码未改，上游提交仍未进行。
+
+## 实体验收
+
+2026-10-03：用户在当前候选 e15f52712 上确认“确实没问题了”。004/08 的唯一剩余实体触摸门槛通过，票据关闭。此项用户观察独立于上述 synthetic-input 报告，未更改其 physicalInputVerified=false / visualVerified=false。默认 production 合入和其他视觉票据仍按各自门槛执行。
