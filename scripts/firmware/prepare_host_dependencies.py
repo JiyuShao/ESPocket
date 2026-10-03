@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Materialize locked Settings and Boost dependencies needed by host checks.
+"""Materialize locked Settings, Boost and LVGL dependencies needed by host checks.
 
 Separate from read-only checks. Uses IDF Component Manager 3.0.3, as in IDF 6.0.1.
 """
@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parents[2]
 def main():
     solution = LockManager(ROOT / 'firmware/dependencies.lock').load()
     destination = ROOT / 'firmware/managed_components'
-    for name in ('espressif/brookesia_app_settings', 'espressif/esp-boost'):
+    for name in ('espressif/brookesia_app_settings', 'espressif/esp-boost', 'lvgl/lvgl'):
         component = next(item for item in solution.dependencies if item.name == name)
         existing = destination / name.replace('/', '__')
         if not existing.exists():

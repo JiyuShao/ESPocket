@@ -50,6 +50,8 @@ ESPocket 需要在圆形目标设备上提供官方 Settings 与真实设备 cap
 - [05 — 修复官方 Settings 控件渲染](issues/05-fix-settings-controls-rendering.md)
 - [06 — 系统确认弹窗](issues/06-support-settings-message-dialog.md)
 - [07 — 修复 playback 退出时重复关闭 I2S](issues/07-fix-audio-playback-teardown.md)
+- [08 — 修复 Settings 亮度滑块卡死](issues/08-fix-settings-brightness-freeze.md)
+- [09 — 核对并统一产品主题消费](issues/09-unify-product-theme-consumption.md)
 
 ## 已接受结果
 
@@ -70,3 +72,5 @@ ESPocket 需要在圆形目标设备上提供官方 Settings 与真实设备 cap
 - [2026-09-28-acceptance-report](records/2026-09-28-acceptance-report.md)
 
 后续实际缺陷由 06 系统确认弹窗与 07 playback teardown 承接；04 的候选物理验收已经通过，整个 Effort 仍保持开放。
+
+2026-10-03：用户在后续检查发现 Settings 亮度卡死与官方 App 白色主题，新增 08/09 独立缺陷；不改写此前 Sound/Storage/Debug 的已接受范围。

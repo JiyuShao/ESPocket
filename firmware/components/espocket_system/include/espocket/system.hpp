@@ -89,7 +89,20 @@ protected:
         esp_brookesia::system::core::KeyboardRequestId request_id
     ) override;
 
+    std::expected<void, std::string> on_show_message_dialog(
+        esp_brookesia::system::core::AppId app_id,
+        esp_brookesia::system::core::MessageDialogRequestId request_id,
+        const esp_brookesia::system::core::MessageDialogOptions &options) override;
+    std::expected<void, std::string> on_update_message_dialog(
+        esp_brookesia::system::core::AppId app_id,
+        esp_brookesia::system::core::MessageDialogRequestId request_id,
+        const esp_brookesia::system::core::MessageDialogOptions &options) override;
+    void on_hide_message_dialog(esp_brookesia::system::core::AppId app_id,
+        esp_brookesia::system::core::MessageDialogRequestId request_id) override;
+
 private:
+    std::expected<void, std::string> init_product_theme();
+    std::expected<void, std::string> restore_product_theme();
     void init_cards();
     std::expected<void, std::string> init_card_samples();
     std::expected<void, std::string> step_card(bool left, bool inward);

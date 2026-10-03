@@ -36,6 +36,9 @@ struct ShellHost {
     std::function<void()> back;
     std::function<void(esp_brookesia::system::core::AppId,
                        esp_brookesia::system::core::KeyboardRequestId, bool, std::string)> keyboard_result;
+    std::function<void(esp_brookesia::system::core::AppId,
+                       esp_brookesia::system::core::MessageDialogRequestId, int32_t,
+                       esp_brookesia::system::core::MessageDialogCloseReason)> message_dialog_result;
     std::function<ShellBackUiState()> back_ui;
     std::function<void()> expire_back;
     ShellDeveloperModeControl developer_mode;
@@ -96,6 +99,17 @@ public:
         esp_brookesia::system::core::KeyboardRequestId request_id
     );
 
+    std::expected<void, std::string> show_message_dialog(
+        esp_brookesia::system::core::AppId app_id,
+        esp_brookesia::system::core::MessageDialogRequestId request_id,
+        const esp_brookesia::system::core::MessageDialogOptions &options);
+    std::expected<void, std::string> update_message_dialog(
+        esp_brookesia::system::core::AppId app_id,
+        esp_brookesia::system::core::MessageDialogRequestId request_id,
+        const esp_brookesia::system::core::MessageDialogOptions &options);
+    void hide_message_dialog(esp_brookesia::system::core::AppId app_id,
+                             esp_brookesia::system::core::MessageDialogRequestId request_id);
+
 private:
     struct CallbackState {
         std::mutex mutex;
@@ -105,6 +119,7 @@ private:
     using HomeGestureState = ShellGestureState;
 
     struct KeyboardState;
+    struct MessageDialogState;
     struct BackOverlayState;
 
     std::expected<void, std::string> configure_home_gesture();
@@ -112,6 +127,9 @@ private:
         std::string_view manifest_id,
         std::string_view display_name
     );
+    std::expected<void, std::string> render_message_dialog(
+        const esp_brookesia::system::core::MessageDialogOptions &options);
+    void poll_message_dialog();
     void sync_default_back(bool visible);
     void sync_card_hint(bool visible);
 
@@ -133,6 +151,7 @@ private:
     std::string touch_output_name_;
     ShellTouchTracker synthetic_touch_tracker_;
     std::shared_ptr<KeyboardState> keyboard_state_;
+    std::shared_ptr<MessageDialogState> message_dialog_state_;
     std::shared_ptr<BackOverlayState> back_overlay_state_;
     std::shared_ptr<CallbackState> callback_state_;
     esp_brookesia::system::core::AppContext *context_ = nullptr;

@@ -3,7 +3,7 @@ configure_file("${CMAKE_CURRENT_LIST_DIR}/resources/light_theme.json" "${CMAKE_C
 
 idf_component_register(
     SRCS "src/system.cpp" "src/system_lifecycle.cpp" "src/system_navigation.cpp"
-        "src/system_display.cpp" "src/system_timeout.cpp" "src/system_power.cpp" "src/power_key_monitor.cpp" "src/settings_navigation_adapter.cpp"
+        "src/system_display.cpp" "src/system_message_dialog.cpp" "src/system_timeout.cpp" "src/system_power.cpp" "src/power_key_monitor.cpp" "src/settings_navigation_adapter.cpp"
         "src/native_page_installation.cpp" "src/system_test_input.cpp"
         "src/system_runtime_navigation.cpp" "src/runtime_navigation_provider.cpp"
         "src/system_cards.cpp" "src/card_document.cpp"

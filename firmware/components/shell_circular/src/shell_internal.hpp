@@ -215,6 +215,19 @@ struct CircularShell::KeyboardState {
     std::string text;
 };
 
+struct CircularShell::MessageDialogState {
+    std::mutex mutex;
+    esp_brookesia::system::core::AppId app_id = esp_brookesia::system::core::INVALID_APP_ID;
+    esp_brookesia::system::core::MessageDialogRequestId request_id =
+        esp_brookesia::system::core::INVALID_MESSAGE_DIALOG_REQUEST_ID;
+    lv_obj_t *overlay = nullptr;
+    bool result_pending = false;
+    int32_t button_index = -1;
+    int64_t deadline_us = 0;
+    struct Button { MessageDialogState *state; int32_t index; };
+    std::array<Button, 3> buttons{{{this, 0}, {this, 1}, {this, 2}}};
+};
+
 struct CircularShell::BackOverlayState {
     lv_obj_t *button = nullptr;
     lv_obj_t *card_hint = nullptr;

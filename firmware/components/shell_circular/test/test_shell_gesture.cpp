@@ -131,6 +131,23 @@ int main()
     reset_shell_gesture(cancelled, false);
     assert(pending(cancelled) == GestureIntent::WatchFace);
 
+    ShellGestureState modal;
+    modal.surface = ShellSurface::Launcher;
+    modal.launcher_scroll_top = 0;
+    modal.launcher_return_threshold = 93;
+    modal.modal_active = true;
+    press(modal);
+    move(modal, ShellGestureDirection::Down);
+    process_shell_gesture(modal, {.phase = ShellGesturePhase::Release}, {});
+    assert(pending(modal) == GestureIntent::None);
+    move(modal, ShellGestureDirection::Right, {.app_visible = true, .edge_back_enabled = true}, true);
+    assert(pending(modal) == GestureIntent::None);
+    modal.modal_active = false;
+    press(modal);
+    move(modal, ShellGestureDirection::Down);
+    process_shell_gesture(modal, {.phase = ShellGesturePhase::Release}, {});
+    assert(pending(modal) == GestureIntent::WatchFace);
+
     ShellTouchTracker tracker;
     tracker.geometry = {.width = 466, .horizontal_edge = 27, .vertical_edge = 37,
                         .horizontal_threshold = 77, .vertical_threshold = 77};

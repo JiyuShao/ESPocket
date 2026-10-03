@@ -144,7 +144,7 @@ Circular Shell 与 Hello Native 以 `resources/gui.json` 为完整 App/Shell 的
 
 [Host-check workflow](../.github/workflows/host-check.yml) 与本地使用同一 `scripts/check.py`，CI 显式增加图检查；[Firmware-build workflow](../.github/workflows/firmware-build.yml) 独立执行 ESP-IDF 配置、Board Manager 生成和完整构建，不烧录设备。
 
-没有物化依赖的 host-only checkout 可先安装与 ESP-IDF 6.0.1 相同的 Component Manager，再准备测试需要的锁定 Settings 与 Boost 组件：
+没有物化依赖的 host-only checkout 可先安装与 ESP-IDF 6.0.1 相同的 Component Manager，再准备测试需要的锁定 Settings、Boost 与 LVGL 组件：
 
 ```bash
 python3 -m pip install idf-component-manager==3.0.3
@@ -152,7 +152,7 @@ python3 scripts/firmware/prepare_host_dependencies.py
 python3 scripts/check.py
 ```
 
-准备命令使用官方 Component Manager 从 dependencies.lock 获取组件并验证 hash；已有组件 hash 不匹配时失败，不覆盖本地改动。它只准备 host tests 的 Settings 资源与 Runtime JSON 编码所用 Boost，不解析或改写版本锁，也不替代固件依赖解析。统一检查本身仍只读，不隐式下载依赖。CI 的 GNU 编译器由 `CXX=g++` 选择；本地默认使用 clang++。
+准备命令使用官方 Component Manager 从 dependencies.lock 获取组件并验证 hash；已有组件 hash 不匹配时失败，不覆盖本地改动。它只准备 host tests 的 Settings 资源、Runtime JSON 编码所用 Boost 和 Shell 提示字形检查所用 LVGL 字体数据，不解析或改写版本锁，也不替代固件依赖解析。统一检查本身仍只读，不隐式下载依赖。CI 的 GNU 编译器由 `CXX=g++` 选择；本地默认使用 clang++。
 
 Runtime 异步确认故障最小设备回归使用 `--suite runtime-confirm`，与其他套件共用设备身份、镜像核对和失败报告规则。此套件通过不代表完整 App 契约验收；上游阻塞与诊断见[Runtime 异步 GUI 栈溢出](../.scratch/008-m8-app-contract/records/2026-10-02-runtime-js-async-stack-overflow.md)。
 

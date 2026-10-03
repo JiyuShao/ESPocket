@@ -54,7 +54,7 @@
       "children": [
         { "type": "label", "id": "title", "labelProps": { "text": "Battery" }, "style": { "textColor": "#9ae6b4", "fontSize": "28sp" }, "placement": { "width": "250dp", "height": "40dp" } },
         { "type": "label", "id": "value", "labelProps": { "text": "Battery: ?" }, "style": { "textColor": "#ffffff", "fontSize": "40sp", "textAlign": "center" }, "placement": { "width": "300dp", "height": "58dp" } },
-        { "type": "label", "id": "hint", "labelProps": { "text": "‹  Home" }, "style": { "textColor": "#86a89b", "fontSize": "15sp", "textAlign": "center" }, "placement": { "width": "300dp", "height": "26dp" } }
+        { "type": "label", "id": "hint", "labelProps": { "text": "\uf053  Home" }, "style": { "textColor": "#86a89b", "fontSize": "18sp", "textAlign": "center" }, "placement": { "width": "300dp", "height": "26dp" } }
       ]
     },
     {
@@ -68,7 +68,7 @@
         { "type": "label", "id": "value", "labelProps": { "text": "Brightness: ?" }, "style": { "textColor": "#ffffff", "fontSize": "28sp", "textAlign": "center" }, "placement": { "width": "300dp", "height": "44dp" } },
         { "type": "button", "id": "step", "events": [ { "type": "clicked", "action": "shell.step_brightness" } ], "style": { "bgColor": "#c47c14", "radius": "26dp" }, "placement": { "width": "220dp", "height": "58dp" }, "children": [ { "type": "label", "id": "label", "labelProps": { "text": "Increase 20%" }, "style": { "textColor": "#ffffff", "fontSize": "18sp" }, "placement": { "mode": "relative", "align": "center" } } ] },
         { "type": "button", "id": "settings", "events": [ { "type": "clicked", "action": "shell.open_settings_card" } ], "style": { "bgColor": "#725018", "radius": "22dp" }, "placement": { "width": "180dp", "height": "46dp" }, "children": [ { "type": "label", "id": "label", "labelProps": { "text": "Display Settings" }, "style": { "textColor": "#ffffff", "fontSize": "16sp" }, "placement": { "mode": "relative", "align": "center" } } ] },
-        { "type": "label", "id": "hint", "labelProps": { "text": "Home  ›" }, "style": { "textColor": "#a98b60", "fontSize": "15sp", "textAlign": "center" }, "placement": { "width": "260dp", "height": "26dp" } }
+        { "type": "label", "id": "hint", "labelProps": { "text": "Home  \uf054" }, "style": { "textColor": "#a98b60", "fontSize": "18sp", "textAlign": "center" }, "placement": { "width": "260dp", "height": "26dp" } }
       ]
     },
     {
@@ -84,7 +84,7 @@
         { "type": "button", "id": "wifi_action", "events": [ { "type": "clicked", "action": "shell.toggle_wifi" } ], "style": { "bgColor": "#2563a9", "radius": "24dp" }, "placement": { "width": "230dp", "height": "52dp" }, "children": [ { "type": "label", "id": "wifi", "labelProps": { "text": "Wi-Fi: ?" }, "style": { "textColor": "#ffffff", "fontSize": "17sp" }, "placement": { "mode": "relative", "align": "center" } } ] },
         { "type": "button", "id": "developer_mode_action", "events": [ { "type": "clicked", "action": "shell.toggle_developer_mode" } ], "style": { "bgColor": "#374151", "radius": "24dp" }, "placement": { "width": "230dp", "height": "48dp" }, "children": [ { "type": "label", "id": "label", "labelProps": { "text": "Developer Mode: Off" }, "style": { "textColor": "#ffffff", "fontSize": "16sp" }, "placement": { "mode": "relative", "align": "center" } } ] },
         { "type": "button", "id": "settings", "events": [ { "type": "clicked", "action": "shell.open_settings_quick" } ], "style": { "bgColor": "#277b65", "radius": "24dp" }, "placement": { "width": "230dp", "height": "52dp" }, "children": [ { "type": "label", "id": "label", "labelProps": { "text": "Open Settings" }, "style": { "textColor": "#ffffff", "fontSize": "17sp" }, "placement": { "mode": "relative", "align": "center" } } ] },
-        { "type": "label", "id": "hint", "labelProps": { "text": "↑  Home" }, "style": { "textColor": "#94a3b8", "fontSize": "15sp", "textAlign": "center" }, "placement": { "width": "230dp", "height": "24dp" } }
+        { "type": "label", "id": "hint", "labelProps": { "text": "\uf077  Home" }, "style": { "textColor": "#94a3b8", "fontSize": "18sp", "textAlign": "center" }, "placement": { "width": "230dp", "height": "24dp" } }
       ]
     },
     {
@@ -104,8 +104,8 @@
           "type": "label",
           "id": "pull_hint",
           "bindings": { "placement.height": "pullHeight" },
-          "labelProps": { "text": "↓  Pull for Home" },
-          "style": { "textColor": "#64748b", "fontSize": "16sp", "textAlign": "center" },
+          "labelProps": { "text": "\uf078  Pull for Home" },
+          "style": { "textColor": "#64748b", "fontSize": "18sp", "textAlign": "center" },
           "placement": { "width": "260dp", "height": "28dp" }
         },
         {

@@ -55,17 +55,35 @@ std::expected<void, std::string> System::init()
         display_started_ = false;
         return result;
     }
+    return {};
+}
+
+std::expected<void, std::string> System::init_product_theme()
+{
     for (const auto theme : {
         std::string_view(dark_theme_start, dark_theme_end - dark_theme_start - 1),
         std::string_view(light_theme_start, light_theme_end - light_theme_start - 1),
     }) {
         if (auto loaded = system_gui().load_theme_json(theme); !loaded) {
-            DisplaySource::get_instance().stop();
-            display_binding_.release();
-            display_started_ = false;
             return std::unexpected("Failed to register product GUI theme: " + loaded.error());
         }
     }
+    return restore_product_theme();
+}
+
+std::expected<void, std::string> System::restore_product_theme()
+{
+    const auto theme = get_stored_gui_theme_id().value_or("dark");
+    if (theme != "dark" && theme != "light") {
+        return std::unexpected("Unsupported saved product theme: " + theme);
+    }
+    begin_gui_preferences_restore();
+    auto result = system_gui().set_theme(theme, false);
+    if (!result) {
+        return std::unexpected("Failed to restore product GUI theme: " + result.error());
+    }
+    mark_gui_preferences_restored();
+    ESP_LOGI(TAG, "Product GUI theme active: %s", theme.c_str());
     return {};
 }
 
@@ -79,6 +97,8 @@ esp_brookesia::system::core::SystemInfo System::on_get_system_info() const
 
 std::expected<void, std::string> System::on_init()
 {
+    // Register and select the product theme before any App can load a document.
+    if (auto theme = init_product_theme(); !theme) return theme;
     init_runtime_navigation();
     developer_mode_ = make_device_developer_mode();
     if (auto restored = developer_mode_->restore(); !restored) {
@@ -205,6 +225,13 @@ std::expected<void, std::string> System::on_init()
             if (!result) {
                 ESP_LOGW(TAG, "Failed to complete keyboard request: %s", result.error().c_str());
             }
+        },
+        .message_dialog_result = [this](
+            esp_brookesia::system::core::AppId app_id,
+            esp_brookesia::system::core::MessageDialogRequestId request_id,
+            int32_t index, esp_brookesia::system::core::MessageDialogCloseReason reason) {
+            auto result = complete_app_message_dialog(app_id, request_id, index, reason);
+            if (!result) ESP_LOGW(TAG, "Failed to complete message dialog: %s", result.error().c_str());
         },
         .back_ui = [this]() {
             const auto foreground = foreground_app_id_.load(std::memory_order_acquire);

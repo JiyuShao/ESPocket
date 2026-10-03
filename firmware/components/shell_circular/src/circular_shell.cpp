@@ -31,6 +31,7 @@ std::expected<void, std::string> CircularShell::on_start(
 {
     context_ = &context;
     keyboard_state_ = std::make_shared<KeyboardState>();
+    message_dialog_state_ = std::make_shared<MessageDialogState>();
     back_overlay_state_ = std::make_shared<BackOverlayState>();
 
     for (const auto action : {
@@ -107,6 +108,16 @@ std::expected<void, std::string> CircularShell::on_stop(
             hide_keyboard(app_id, request_id);
         }
     }
+    if (message_dialog_state_) {
+        esp_brookesia::system::core::AppId app_id;
+        esp_brookesia::system::core::MessageDialogRequestId request_id;
+        {
+            std::lock_guard lock(message_dialog_state_->mutex);
+            app_id = message_dialog_state_->app_id;
+            request_id = message_dialog_state_->request_id;
+        }
+        hide_message_dialog(app_id, request_id);
+    }
     sync_default_back(false);
     sync_card_hint(false);
     gesture_connection_.disconnect();
@@ -119,6 +130,7 @@ std::expected<void, std::string> CircularShell::on_stop(
     display_binding_.release();
     context_ = nullptr;
     keyboard_state_.reset();
+    message_dialog_state_.reset();
     back_overlay_state_.reset();
     callback_state_.reset();
     return {};
@@ -199,11 +211,13 @@ std::expected<void, std::string> CircularShell::on_timer(
                 keyboard_active = keyboard_state_->request_id !=
                                   esp_brookesia::system::core::INVALID_KEYBOARD_REQUEST_ID;
             }
+            const bool modal_active = home_gesture_state_ &&
+                home_gesture_state_->modal_active.load(std::memory_order_acquire);
             const bool visible = host_.back_ui && host_.back_ui().default_visible &&
-                                 !keyboard_active;
+                                 !keyboard_active && !modal_active;
             sync_default_back(visible);
             const auto surface = current_surface();
-            sync_card_hint(!keyboard_active && !(host_.app_visible && host_.app_visible()) &&
+            sync_card_hint(!keyboard_active && !modal_active && !(host_.app_visible && host_.app_visible()) &&
                 (surface == ShellSurface::LeftAppCard || surface == ShellSurface::RightAppCard));
         }
         if (keyboard_state_ && host_.keyboard_result) {
@@ -228,6 +242,7 @@ std::expected<void, std::string> CircularShell::on_timer(
                 host_.keyboard_result(app_id, request_id, confirmed, std::move(text));
             }
         }
+        poll_message_dialog();
         if (host_.tick) {
             host_.tick();
         }
@@ -261,8 +276,8 @@ std::expected<void, std::string> CircularShell::on_timer(
                     launcher_pull_visual_ = visual;
                     set_status_text(
                         LAUNCHER_PULL_PATH,
-                        visual == 2 ? "↓  Release for Home" :
-                        visual == 1 ? "↓  Keep pulling" : "↓  Pull for Home"
+                        visual == 2 ? LV_SYMBOL_DOWN "  Release for Home" :
+                        visual == 1 ? LV_SYMBOL_DOWN "  Keep pulling" : LV_SYMBOL_DOWN "  Pull for Home"
                     );
                 }
                 const int32_t height = 28 + std::min<int32_t>(32, pull / 3);

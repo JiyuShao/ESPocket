@@ -49,6 +49,13 @@ ShellGestureEvent ShellTouchTracker::sample(int32_t x, int32_t y, bool pressed, 
 void process_shell_gesture(ShellGestureState &state, const ShellGestureEvent &event,
                            const ShellGestureContext &context)
 {
+    if (state.modal_active.load(std::memory_order_acquire)) {
+        reset_shell_gesture(state, true);
+        if (event.phase == ShellGesturePhase::Press && context.display_on) {
+            state.activity_generation.fetch_add(1, std::memory_order_acq_rel);
+        }
+        return;
+    }
     const auto exit_distance_px = state.launcher_return_threshold.load(std::memory_order_acquire);
     if (event.phase == ShellGesturePhase::Press) {
         state.consumed.store(false, std::memory_order_release);
