@@ -194,6 +194,11 @@ std::expected<void, std::string> System::on_init()
     shell_ = std::make_shared<CircularShell>(
         display_output_id_,
         ShellHost{
+        .theme_resource = [](std::string_view theme) -> std::expected<std::string_view, std::string> {
+            if (theme == "light") return std::string_view(light_theme_start, light_theme_end - light_theme_start - 1);
+            if (theme == "dark") return std::string_view(dark_theme_start, dark_theme_end - dark_theme_start - 1);
+            return std::unexpected("Unsupported product theme: " + std::string(theme));
+        },
         .display_on = [this]() {
             return display_on_.load(std::memory_order_acquire);
         },

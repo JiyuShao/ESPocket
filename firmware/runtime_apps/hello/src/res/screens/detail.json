@@ -5,7 +5,6 @@
     "scrollable": false
   },
   "style": {
-    "bgColor": "#171129",
     "padding": 0
   },
   "layout": {
@@ -23,13 +22,15 @@
         "text": "Runtime Detail"
       },
       "style": {
-        "textColor": "#ffffff",
         "fontSize": "26sp"
       },
       "placement": {
         "width": "280dp",
         "height": "44dp"
-      }
+      },
+      "styleRefs": [
+        "app.cardTitle"
+      ]
     },
     {
       "type": "label",
@@ -38,14 +39,16 @@
         "text": "Edge Back returns to Root"
       },
       "style": {
-        "textColor": "#b8add6",
         "fontSize": "17sp",
         "textAlign": "center"
       },
       "placement": {
         "width": "300dp",
         "height": "30dp"
-      }
+      },
+      "styleRefs": [
+        "app.caption"
+      ]
     },
     {
       "type": "button",
@@ -57,7 +60,6 @@
         }
       ],
       "style": {
-        "bgColor": "#7047eb",
         "radius": "22dp"
       },
       "placement": {
@@ -72,14 +74,19 @@
             "text": "Confirm Back: Off"
           },
           "style": {
-            "textColor": "#ffffff",
             "fontSize": "17sp"
           },
           "placement": {
             "mode": "relative",
             "align": "center"
-          }
+          },
+          "styleRefs": [
+            "app.actionText"
+          ]
         }
+      ],
+      "styleRefs": [
+        "app.action"
       ]
     },
     {
@@ -92,7 +99,6 @@
         }
       ],
       "style": {
-        "bgColor": "#7047eb",
         "radius": "22dp"
       },
       "placement": {
@@ -107,14 +113,19 @@
             "text": "Allow Back"
           },
           "style": {
-            "textColor": "#ffffff",
             "fontSize": "17sp"
           },
           "placement": {
             "mode": "relative",
             "align": "center"
-          }
+          },
+          "styleRefs": [
+            "app.actionText"
+          ]
         }
+      ],
+      "styleRefs": [
+        "app.action"
       ]
     },
     {
@@ -127,7 +138,6 @@
         }
       ],
       "style": {
-        "bgColor": "#7047eb",
         "radius": "22dp"
       },
       "placement": {
@@ -142,15 +152,23 @@
             "text": "Cancel Back"
           },
           "style": {
-            "textColor": "#ffffff",
             "fontSize": "17sp"
           },
           "placement": {
             "mode": "relative",
             "align": "center"
-          }
+          },
+          "styleRefs": [
+            "app.actionText"
+          ]
         }
+      ],
+      "styleRefs": [
+        "app.action"
       ]
     }
+  ],
+  "styleRefs": [
+    "app.page"
   ]
 }

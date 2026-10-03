@@ -30,6 +30,10 @@ std::expected<void, std::string> CircularShell::on_start(
 )
 {
     context_ = &context;
+    if (auto colors = load_theme_colors(); !colors) {
+        context_ = nullptr;
+        return colors;
+    }
     keyboard_state_ = std::make_shared<KeyboardState>();
     message_dialog_state_ = std::make_shared<MessageDialogState>();
     back_overlay_state_ = std::make_shared<BackOverlayState>();

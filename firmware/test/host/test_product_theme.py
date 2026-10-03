@@ -32,7 +32,7 @@ class ProductThemeTest(unittest.TestCase):
             self.assertFalse(required - theme['styles'].keys(), 'official App uses undeclared theme tokens')
             for control in ['app.slider', 'app.switch']:
                 style = theme['styles'][control]
-                self.assertTrue(style['style']['bgColor'])
+                self.assertTrue(style['bgColor'])
                 self.assertTrue(style['partStyles']['knob']['bgColor'])
                 self.assertTrue(style['partStyles']['indicator'])
             colors = theme['assets'][0]['data']['colors']
@@ -66,7 +66,8 @@ class ProductThemeTest(unittest.TestCase):
                 if asset.get('type') == 'viewScreen' and 'styleRefs' in asset:
                     colors = [theme['styles'][ref].get('bgColor') for ref in asset['styleRefs']]
                     if name == 'light':
-                        self.assertIn('#f3f6fa', colors)
+                        token = {'battery_card': 'success.soft', 'brightness_card': 'warning.soft'}.get(asset['id'], 'bg.quick' if asset['id'] == 'quick_settings' else 'bg.base')
+                        self.assertIn('${color.' + token + '}', colors)
 
     def test_reference_app_cards_declare_theme_colors(self):
         paths = ['firmware/native_apps/hello/resources/card.json',
@@ -97,3 +98,58 @@ class ProductThemeTest(unittest.TestCase):
             self.assertEqual(target['when'], '${expr(${env.widthDp} == 466dp && ${env.heightDp} == 466dp)}')
             layout = target['assets'][0]['data']['settings']['layout']
             self.assertTrue(inside(layout), 'content rectangle clips circle corners')
+
+
+class ThemeMigrationTest(unittest.TestCase):
+    def test_theme_normal_styles_use_the_flat_gui_schema(self):
+        # GUI parse_style_set_object passes the theme entry itself to
+        # parse_style_object; unlike view assets, nested "style" is ignored.
+        for mode in ('light', 'dark'):
+            theme = json.loads((ROOT / f'firmware/components/espocket_system/resources/{mode}_theme.json').read_text())
+            for name, style in theme['styles'].items():
+                self.assertNotIn('style', style, f'{mode}/{name}: normal state is ignored by GUI')
+            self.assertEqual(theme['styles']['app.action']['bgColor'], '${color.primary.fill}')
+
+    def test_maintained_pages_and_overlays_use_declared_theme_tokens(self):
+        paths = [ROOT / 'firmware/components/shell_circular/resources/gui.json']
+        paths += list((ROOT / 'firmware/native_apps/hello/resources').glob('*.json'))
+        paths += list((ROOT / 'firmware/runtime_apps/hello/src/res').rglob('*.json'))
+        refs = set()
+        for path in paths:
+            source = path.read_text()
+            refs.update(style_refs(json.loads(source)))
+            self.assertNotRegex(source, r'"(?:bgColor|textColor|borderColor)"\s*:\s*"#')
+            self.assertNotRegex(source, r'shell\.(?:bgColor|textColor)\.')
+        native_tokens = set()
+        for path in (ROOT / 'firmware/components/shell_circular/src').glob('*.cpp'):
+            source = path.read_text()
+            self.assertNotRegex(source, r'lv_color_hex\(0x')
+            native_tokens.update(re.findall(r'theme_color\("([^"\n]+)"\)', source))
+        native_tokens.update(['danger.fill', 'danger.on', 'primary.fill', 'primary.on'])
+        for mode in ('light', 'dark'):
+            theme = json.loads((ROOT / f'firmware/components/espocket_system/resources/{mode}_theme.json').read_text())
+            self.assertFalse(refs - theme['styles'].keys())
+            colors = theme['assets'][0]['data']['colors']
+            tokens = native_tokens | set(re.findall(r'\$\{color\.([^}]+)\}', json.dumps(theme['styles'])))
+            for token in tokens:
+                value = colors
+                for key in token.split('.'):
+                    self.assertIn(key, value, f'{mode}: missing {token}')
+                    value = value[key]
+                self.assertRegex(value, r'^#[0-9a-fA-F]{6}$')
+
+    def test_theme_text_pairs_have_readable_contrast(self):
+        def luminance(color):
+            channels = [int(color[i:i+2], 16) / 255 for i in (1, 3, 5)]
+            channels = [v / 12.92 if v <= .04045 else ((v + .055) / 1.055) ** 2.4 for v in channels]
+            return sum(v * weight for v, weight in zip(channels, (.2126, .7152, .0722)))
+        for mode in ('light', 'dark'):
+            colors = json.loads((ROOT / f'firmware/components/espocket_system/resources/{mode}_theme.json').read_text())['assets'][0]['data']['colors']
+            pairs = [(colors['text'][text], colors[group][background])
+                     for text in ('default', 'muted', 'subtle')
+                     for group, background in [('bg', 'base'), ('bg', 'quick'), ('surface', 'raised')]]
+            pairs += [(colors[role]['on'], colors[role]['fill']) for role in ('primary', 'danger')]
+            pairs += [(colors[role]['fill'], colors[role]['soft']) for role in ('success', 'warning')]
+            for foreground, background in pairs:
+                a, b = sorted([luminance(foreground), luminance(background)])
+                self.assertGreaterEqual((b + .05) / (a + .05), 4.5, f'{mode}: {foreground} on {background}')

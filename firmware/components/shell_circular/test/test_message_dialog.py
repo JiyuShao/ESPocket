@@ -56,7 +56,7 @@ void lv_obj_add_event_cb(lv_obj_t* o,void(*cb)(lv_event_t*),int,void* data){o->c
 void click(lv_obj_t* o){assert(!o->deleted && o->click);lv_event_t e{o->data};o->click(&e);}
 int lv_pct(int n){return n;}int lv_color_hex(int n){return n;}int lv_font_montserrat_18=0;
 constexpr int LV_OBJ_FLAG_SCROLLABLE=0,LV_OPA_80=0,LV_OPA_COVER=255,LV_OPA_TRANSP=0,LV_SIZE_CONTENT=-1,
-    LV_FLEX_FLOW_COLUMN=0,LV_LABEL_LONG_MODE_WRAP=0,LV_LABEL_LONG_MODE_DOTS=0,LV_TEXT_ALIGN_CENTER=0,LV_EVENT_CLICKED=0;
+    LV_FLEX_FLOW_COLUMN=0,LV_LABEL_LONG_MODE_WRAP=0,LV_LABEL_LONG_MODE_DOTS=0,LV_TEXT_ALIGN_CENTER=0,LV_EVENT_CLICKED=0,LV_STATE_PRESSED=1;
 '''
         harness += '''
 void lv_obj_set_size(lv_obj_t* o,int w,int h){o->width=w;o->height=h;}
@@ -75,6 +75,10 @@ namespace espocket {
 struct Gui {std::string theme="light";std::string get_theme(){return theme;}};struct Context {Gui g;Gui& gui(){return g;}};
 struct Gesture {std::atomic_bool modal_active=false;};
 struct CircularShell {
+    uint32_t theme_color(std::string_view token) const {
+        assert(!token.empty());
+        return 0x123456;
+    }
     struct MessageDialogState;
     Context* context_=nullptr;std::shared_ptr<MessageDialogState> message_dialog_state_;
     std::shared_ptr<Gesture> home_gesture_state_=std::make_shared<Gesture>();

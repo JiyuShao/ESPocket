@@ -1,8 +1,12 @@
 {
   "type": "viewScreen",
   "id": "root",
-  "commonProps": { "scrollable": false },
-  "style": { "bgColor": "#07090d", "padding": 0 },
+  "commonProps": {
+    "scrollable": false
+  },
+  "style": {
+    "padding": 0
+  },
   "layout": {
     "type": "flex",
     "flexFlow": "column",
@@ -14,25 +18,61 @@
     {
       "type": "label",
       "id": "title",
-      "labelProps": { "text": "Hello from JavaScript" },
-      "style": { "textColor": "#f4f7fb", "fontSize": "20sp" },
-      "placement": { "width": "280dp", "height": "40dp" }
+      "labelProps": {
+        "text": "Hello from JavaScript"
+      },
+      "style": {
+        "fontSize": "20sp"
+      },
+      "placement": {
+        "width": "280dp",
+        "height": "40dp"
+      },
+      "styleRefs": [
+        "app.cardTitle"
+      ]
     },
     {
       "type": "button",
       "id": "detail",
-      "events": [ { "type": "clicked", "action": "open_detail" } ],
-      "style": { "bgColor": "#7047eb", "radius": "26dp" },
-      "placement": { "width": "210dp", "height": "62dp" },
+      "events": [
+        {
+          "type": "clicked",
+          "action": "open_detail"
+        }
+      ],
+      "style": {
+        "radius": "26dp"
+      },
+      "placement": {
+        "width": "210dp",
+        "height": "62dp"
+      },
       "children": [
         {
           "type": "label",
           "id": "label",
-          "labelProps": { "text": "Open Detail" },
-          "style": { "textColor": "#ffffff", "fontSize": "18sp" },
-          "placement": { "mode": "relative", "align": "center" }
+          "labelProps": {
+            "text": "Open Detail"
+          },
+          "style": {
+            "fontSize": "18sp"
+          },
+          "placement": {
+            "mode": "relative",
+            "align": "center"
+          },
+          "styleRefs": [
+            "app.actionText"
+          ]
         }
+      ],
+      "styleRefs": [
+        "app.action"
       ]
     }
+  ],
+  "styleRefs": [
+    "app.page"
   ]
 }

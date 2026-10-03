@@ -19,7 +19,7 @@ void CircularShell::sync_card_hint(bool visible)
         label = lv_label_create(lv_layer_top());
         if (!label) return;
         lv_obj_remove_flag(label, LV_OBJ_FLAG_CLICKABLE);
-        lv_obj_set_style_text_color(label, lv_color_hex(0x9aa9bd), 0);
+        lv_obj_set_style_text_color(label, lv_color_hex(theme_color("text.muted")), 0);
         lv_obj_set_style_text_font(label, &lv_font_montserrat_18, 0);
         lv_obj_align(label, LV_ALIGN_BOTTOM_MID, 0, -24);
     }
@@ -51,7 +51,8 @@ void CircularShell::sync_default_back(bool visible)
     }
     lv_obj_set_size(button, 98, 52);
     lv_obj_align(button, LV_ALIGN_TOP_MID, -78, 26);
-    lv_obj_set_style_bg_color(button, lv_color_hex(0x34465f), 0);
+    lv_obj_set_style_bg_color(button, lv_color_hex(theme_color("primary.fill")), 0);
+    lv_obj_set_style_bg_color(button, lv_color_hex(theme_color("primary.hover")), LV_STATE_PRESSED);
     lv_obj_set_style_radius(button, 24, 0);
     auto *label = lv_label_create(button);
     if (label == nullptr) {
@@ -59,7 +60,7 @@ void CircularShell::sync_default_back(bool visible)
         return;
     }
     lv_label_set_text(label, "< Back");
-    lv_obj_set_style_text_color(label, lv_color_hex(0xffffff), 0);
+    lv_obj_set_style_text_color(label, lv_color_hex(theme_color("primary.on")), 0);
     lv_obj_set_style_text_font(label, &lv_font_montserrat_18, 0);
     lv_obj_center(label);
     lv_obj_add_event_cb(

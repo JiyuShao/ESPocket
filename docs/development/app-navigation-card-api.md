@@ -197,6 +197,30 @@ App 可通过 Brookesia `AppContext::system_service()` 的 `show_message_dialog`
 
 ### Shell 与 App 的主题职责
 
-产品在安装 App 之前注册并恢复 Brookesia GUI 的主题。Shell 的 Watch Face、Launcher、Quick Settings 与 Shell 自有 Card 用 `styleRefs` 引用产品主题，不保存第二份主题偏好。App Page 与 App Card 同样可以引用 `app.page`、`app.cardTitle`、`app.caption` 等主题样式；尺寸、字体和布局仍由 App 声明。硬编码颜色的 App 需要自行适配，Shell 不递归改写它的控件。
+产品在安装 App 之前注册并恢复 Brookesia GUI 的主题。Shell 的 Watch Face、Launcher、Quick Settings 与 Shell 自有 Card 用 `styleRefs` 引用产品主题，不保存第二份主题偏好。App Page 与 App Card 优先引用 `app.page`、`app.cardTitle`、`app.caption` 等主题样式，遵循下文主题开发规范；尺寸、字体和布局仍由 App 声明。硬编码颜色的 App 需要自行适配，Shell 不递归改写它的控件。
 
 官方 Settings 当前保存主题后询问是否重启；Later 只推迟重启，已保存的主题偏好仍在。当前 GUI 不支持给已创建文档即时重套主题，因此完整切换在重启后生效。
+
+### 主题开发规范
+
+本规范适用于新建或修改的 Shell Surface、Shell Overlay、Native/Runtime App Page 与 App Card。默认界面应消费当前主题，让浅色与深色模式共享同一份界面声明。
+
+1. 优先复用产品已提供的语义样式，通过 `styleRefs` 引用 `app.page`、`app.card`、`app.cardTitle`、`app.cardSubtitle`、`app.caption`、`app.action` 和 `app.actionText` 等。局部样式可以调整尺寸与布局；不得用固定颜色覆盖主题样式以实现普通背景、文字、边框或交互状态。
+2. 现有样式不满足需求时，优先使用 `${color.<语义路径>}` 颜色变量。普通界面按用途选择背景、表面、文字、边框、主色或状态色；不要依赖某个色阶恰好在当前主题中呈现的颜色。按钮背景与其文字必须成对定义，包括按下、禁用和选中等实际使用的状态。
+3. 引用前确认变量或样式在产品支持的 dark/light 两份主题中都有定义。上游默认主题提供某个变量，不代表当前 ESPocket 产品主题已提供该变量；不得依赖未验证的回退。缺少通用 token 时，在产品主题中补充同名语义定义，再由界面引用。当前配置入口是 [light_theme.json](../../firmware/components/espocket_system/resources/light_theme.json) 与 [dark_theme.json](../../firmware/components/espocket_system/resources/dark_theme.json)。
+4. 新增样式或变量按用途命名，例如卡片背景、辅助文字或成功状态；不要以十六进制颜色或 light/dark 命名。两种主题保持相同的语义和状态含义，分别调整明度、对比度与层次；产品主题中的具体色值可以自定义，不要求沿用上游默认配色。
+5. 品牌标识、照片、插画和业务数据中具有固定含义的颜色可以保留固定色值。App 自有配色仍须适配两种模式，检查周围背景、文字与操作的可读性；在资源旁说明固定颜色的用途。普通界面颜色不得以品牌或装饰为由绕过主题适配。
+
+复用样式的最小示例：
+
+```json
+{
+  "type": "label",
+  "id": "subtitle",
+  "styleRefs": ["app.cardSubtitle"],
+  "labelProps": {"text": "最近更新"},
+  "style": {"textAlign": "center"}
+}
+```
+
+开发验收应检查两种主题中的页面背景、主次文字、按钮及其状态、图标和边框；App Page 与 App Card 分别检查，不能只验证其中一种形态。确认所有新增引用在两份主题中可解析，并检查局部样式是否覆盖了主题颜色。设备视觉验收按当前实现，在保存主题并重启后进行；使用 token 不代表已创建文档支持即时切换。上述要求是开发规范，既有界面的迁移与真机结果仍由对应工作票记录。

@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <expected>
 #include <functional>
+#include <map>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -29,6 +30,8 @@ struct ShellDeveloperModeControl {
 };
 
 struct ShellHost {
+    // Immutable product theme resource already registered with GUI Runtime.
+    std::function<std::expected<std::string_view, std::string>(std::string_view)> theme_resource;
     std::function<bool()> display_on;
     std::function<bool()> app_visible;
     std::function<void()> screen_timeout;
@@ -111,6 +114,9 @@ public:
                              esp_brookesia::system::core::MessageDialogRequestId request_id);
 
 private:
+    std::expected<void, std::string> load_theme_colors();
+    uint32_t theme_color(std::string_view token) const;
+    std::map<std::string, uint32_t, std::less<>> theme_colors_;
     struct CallbackState {
         std::mutex mutex;
         CircularShell *owner = nullptr;

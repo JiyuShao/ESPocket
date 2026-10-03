@@ -7,25 +7,58 @@
       "data": {
         "colors": {
           "border": {
-            "default": "#bbc7d5"
+            "default": "#bbc7d5",
+            "muted": "#e5ebf2",
+            "strong": "#617085"
           },
           "text": {
-            "default": "#152233"
+            "default": "#152233",
+            "muted": "#516174",
+            "subtle": "#617085",
+            "inverse": "#ffffff"
           },
           "primary": {
-            "fill": "#59a9ff",
+            "fill": "#2157d5",
             "on": "#ffffff",
-            "soft": "#deedff"
+            "soft": "#deedff",
+            "hover": "#1944aa"
           },
           "bg": {
             "base": "#f3f6fa",
-            "overlay": "#ffffff"
+            "overlay": "#ffffff",
+            "app": "#f3f6fa",
+            "scrim": "#07090d",
+            "quick": "#edf3fb"
           },
           "info": {
-            "soft": "#deedff"
+            "fill": "#2157d5",
+            "soft": "#deedff",
+            "on": "#ffffff"
           },
           "warning": {
-            "soft": "#fff0cc"
+            "fill": "#875500",
+            "soft": "#fff0cc",
+            "on": "#ffffff"
+          },
+          "surface": {
+            "base": "#f3f6fa",
+            "raised": "#ffffff",
+            "muted": "#e5ebf2",
+            "pressed": "#deedff",
+            "inverse": "#152233"
+          },
+          "success": {
+            "fill": "#187642",
+            "soft": "#e0f2e7",
+            "on": "#ffffff"
+          },
+          "danger": {
+            "fill": "#a52832",
+            "soft": "#fde8ea",
+            "on": "#ffffff"
+          },
+          "control": {
+            "knob": "#ffffff"
           }
         }
       }
@@ -33,183 +66,175 @@
   ],
   "styles": {
     "app.caption": {
-      "textColor": "#516174",
+      "textColor": "${color.text.muted}",
       "fontSize": "20sp"
     },
     "app.card": {
-      "bgColor": "#ffffff",
-      "textColor": "#152233",
+      "bgColor": "${color.surface.raised}",
+      "textColor": "${color.text.default}",
       "radius": "18dp"
     },
     "app.cardSubtitle": {
-      "textColor": "#516174",
+      "textColor": "${color.text.muted}",
       "fontSize": "20sp"
     },
     "app.cardTitle": {
-      "textColor": "#152233",
+      "textColor": "${color.text.default}",
       "fontSize": "20sp"
     },
     "app.iconBox": {
-      "textColor": "#152233",
+      "textColor": "${color.text.default}",
       "fontSize": "20sp"
     },
     "app.iconRecolor": {
-      "textColor": "#152233",
+      "textColor": "${color.text.default}",
       "fontSize": "20sp"
     },
     "app.listItem": {
-      "textColor": "#152233",
+      "textColor": "${color.text.default}",
       "fontSize": "20sp"
     },
     "app.listItemTitle": {
-      "textColor": "#152233",
+      "textColor": "${color.text.default}",
       "fontSize": "20sp"
     },
     "app.listItemValue": {
-      "textColor": "#152233",
+      "textColor": "${color.text.default}",
       "fontSize": "20sp"
     },
     "app.page": {
-      "bgColor": "#f2f5f8",
-      "textColor": "#152233"
+      "bgColor": "${color.bg.base}",
+      "textColor": "${color.text.default}"
     },
     "app.pageTitle": {
-      "textColor": "#152233",
+      "textColor": "${color.text.default}",
       "fontSize": "20sp"
     },
     "app.selectableCard": {
-      "textColor": "#152233",
+      "textColor": "${color.text.default}",
       "fontSize": "20sp"
     },
     "app.slider": {
-      "style": {
-        "bgColor": "#bbc7d5",
-        "radius": "10dp"
-      },
       "partStyles": {
         "indicator": {
-          "bgColor": "#59a9ff",
+          "bgColor": "${color.primary.fill}",
           "radius": "10dp"
         },
         "knob": {
-          "bgColor": "#ffffff",
+          "bgColor": "${color.control.knob}",
           "radius": "16dp",
           "padding": "4dp"
         }
-      }
+      },
+      "bgColor": "${color.border.default}",
+      "radius": "10dp"
     },
     "app.switch": {
-      "style": {
-        "bgColor": "#bbc7d5",
-        "radius": "20dp"
-      },
       "partStyles": {
         "indicator": {
           "style": {
-            "bgColor": "#bbc7d5",
+            "bgColor": "${color.border.default}",
             "radius": "20dp"
           },
           "stateStyles": {
             "checked": {
-              "bgColor": "#59a9ff"
+              "bgColor": "${color.primary.fill}"
             }
           }
         },
         "knob": {
-          "bgColor": "#ffffff",
+          "bgColor": "${color.control.knob}",
           "radius": "18dp"
+        }
+      },
+      "bgColor": "${color.border.default}",
+      "radius": "20dp"
+    },
+    "app.action": {
+      "stateStyles": {
+        "pressed": {
+          "bgColor": "${color.primary.hover}"
+        }
+      },
+      "bgColor": "${color.primary.fill}"
+    },
+    "app.actionText": {
+      "textColor": "${color.primary.on}"
+    },
+    "shell.page": {
+      "bgColor": "${color.bg.base}"
+    },
+    "shell.text": {
+      "textColor": "${color.text.default}"
+    },
+    "shell.caption": {
+      "textColor": "${color.text.muted}"
+    },
+    "shell.hint": {
+      "textColor": "${color.text.subtle}"
+    },
+    "shell.accent": {
+      "bgColor": "${color.primary.fill}"
+    },
+    "shell.batteryPage": {
+      "bgColor": "${color.success.soft}"
+    },
+    "shell.batteryTitle": {
+      "textColor": "${color.success.fill}"
+    },
+    "shell.brightnessPage": {
+      "bgColor": "${color.warning.soft}"
+    },
+    "shell.brightnessTitle": {
+      "textColor": "${color.warning.fill}"
+    },
+    "shell.watchPage": {
+      "bgColor": "${color.bg.base}"
+    },
+    "shell.quickPage": {
+      "bgColor": "${color.bg.quick}"
+    },
+    "shell.launcherPage": {
+      "bgColor": "${color.bg.base}"
+    },
+    "shell.row": {
+      "bgColor": "${color.surface.raised}",
+      "borderColor": "${color.border.default}",
+      "borderWidth": "1dp",
+      "stateStyles": {
+        "pressed": {
+          "bgColor": "${color.surface.pressed}"
         }
       }
     },
-    "shell.bgColor.070a10": {
-      "bgColor": "#f3f6fa"
+    "shell.rowText": {
+      "textColor": "${color.text.default}"
     },
-    "shell.textColor.718096": {
-      "textColor": "#516174"
+    "shell.brightnessAction": {
+      "bgColor": "${color.warning.soft}",
+      "stateStyles": {
+        "pressed": {
+          "bgColor": "${color.warning.soft}",
+          "borderColor": "${color.primary.fill}",
+          "borderWidth": "2dp"
+        }
+      }
     },
-    "shell.textColor.f8fafc": {
-      "textColor": "#152233"
+    "shell.brightnessActionText": {
+      "textColor": "${color.warning.fill}"
     },
-    "shell.textColor.cbd5e1": {
-      "textColor": "#516174"
+    "shell.wifiAction": {
+      "bgColor": "${color.info.soft}",
+      "stateStyles": {
+        "pressed": {
+          "bgColor": "${color.info.soft}",
+          "borderColor": "${color.primary.fill}",
+          "borderWidth": "2dp"
+        }
+      }
     },
-    "shell.bgColor.2dd4bf": {
-      "bgColor": "#2dd4bf"
-    },
-    "shell.bgColor.10251e": {
-      "bgColor": "#f3f6fa"
-    },
-    "shell.textColor.9ae6b4": {
-      "textColor": "#516174"
-    },
-    "shell.textColor.ffffff": {
-      "textColor": "#152233"
-    },
-    "shell.textColor.86a89b": {
-      "textColor": "#516174"
-    },
-    "shell.bgColor.261c0b": {
-      "bgColor": "#f3f6fa"
-    },
-    "shell.textColor.fbd38d": {
-      "textColor": "#516174"
-    },
-    "shell.bgColor.c47c14.action": {
-      "bgColor": "#2157d5"
-    },
-    "shell.textColor.ffffff.action": {
-      "textColor": "#ffffff"
-    },
-    "shell.bgColor.725018.action": {
-      "bgColor": "#2157d5"
-    },
-    "shell.textColor.a98b60": {
-      "textColor": "#516174"
-    },
-    "shell.bgColor.111827": {
-      "bgColor": "#f3f6fa"
-    },
-    "shell.textColor.aeb9c8": {
-      "textColor": "#516174"
-    },
-    "shell.bgColor.b7791f.action": {
-      "bgColor": "#2157d5"
-    },
-    "shell.bgColor.2563a9.action": {
-      "bgColor": "#2157d5"
-    },
-    "shell.bgColor.374151.action": {
-      "bgColor": "#2157d5"
-    },
-    "shell.bgColor.277b65.action": {
-      "bgColor": "#2157d5"
-    },
-    "shell.textColor.94a3b8": {
-      "textColor": "#516174"
-    },
-    "shell.textColor.64748b": {
-      "textColor": "#516174"
-    },
-    "shell.bgColor.1d4ed8.action": {
-      "bgColor": "#2157d5"
-    },
-    "shell.bgColor.6d28d9.action": {
-      "bgColor": "#2157d5"
-    },
-    "shell.bgColor.0f766e.action": {
-      "bgColor": "#2157d5"
-    },
-    "shell.bgColor.9a5a16.action": {
-      "bgColor": "#2157d5"
-    },
-    "shell.bgColor.07090d": {
-      "bgColor": "#f3f6fa"
-    },
-    "app.action": {
-      "bgColor": "#2157d5"
-    },
-    "app.actionText": {
-      "textColor": "#ffffff"
+    "shell.wifiActionText": {
+      "textColor": "${color.info.fill}"
     }
   }
 }
