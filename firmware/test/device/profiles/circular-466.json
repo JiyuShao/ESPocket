@@ -135,5 +135,9 @@
       ]
     ],
     "cycles": 100
-  }
+  },
+  "settings_sound_tap": [
+    233,
+    279
+  ]
 }

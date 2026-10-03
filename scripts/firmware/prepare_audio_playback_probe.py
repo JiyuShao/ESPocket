@@ -5,11 +5,24 @@ import hashlib
 import json
 import math
 from pathlib import Path
-import shutil
 import struct
 import wave
+import uuid
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+def copy_fixture(source, target, token=None):
+    token = token or uuid.uuid4().hex
+    if len(token) != 32 or any(c not in '0123456789abcdef' for c in token):
+        raise ValueError('Probe identity must be 32 lowercase hexadecimal characters')
+    text = source.read_text()
+    original = '.espocket-audio-probe-v2.wav'
+    if text.count(original) != 2:
+        raise ValueError('Unexpected fixture path/URI seam')
+    basename = '.espocket-audio-probe-' + token + '.wav'
+    target.write_text(text.replace(original, basename))
+    return '/littlefs/' + basename
 
 
 def prepare(project):
@@ -29,7 +42,7 @@ def prepare(project):
     if cmake.read_bytes() != (ROOT / 'firmware/components/espocket_system/CMakeLists.txt').read_bytes():
         raise ValueError('Component CMake must match the checkout')
     fixture = component / 'audio_playback_probe.hpp'
-    shutil.copyfile(ROOT / 'firmware/test/device/fixtures/audio_playback_probe.hpp', fixture)
+    probe_path = copy_fixture(ROOT / 'firmware/test/device/fixtures/audio_playback_probe.hpp', fixture)
     wav = component / 'espocket_audio_probe.wav'
     # 0.5 s quiet sine, then 0.5 s silence. No network or copyrighted recording.
     with wave.open(str(wav), 'wb') as output:
@@ -46,6 +59,7 @@ def prepare(project):
     cmake.write_text(cmake.read_text().replace('    EMBED_TXTFILES', '    EMBED_FILES "espocket_audio_probe.wav"\n    EMBED_TXTFILES', 1))
     (project.parent / 'audio-probe-inputs.json').write_text(json.dumps({
         'purpose': 'temporary playback/volume hearing gate; never production',
+        'owned_path': probe_path,
         'fixture_sha256': hashlib.sha256(fixture.read_bytes()).hexdigest(),
         'wav_sha256': hashlib.sha256(wav.read_bytes()).hexdigest(),
         'loop_count': 30, 'configured_timeout_ms': 35000,

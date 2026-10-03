@@ -32,3 +32,7 @@ manifest 记录原始组件版本、源码 commit/hash、按顺序排列的补�
 依赖升级时一起审查版本锁、补丁适用性及对应测试/构建/真机证据；上游提供等价修复后移除本地补丁。源码差异持续扩大时，单独决定是否维护 fork，不在补丁目录内复制整套组件源码。
 
 Display 0.8.2 的同一输出背光与刷屏 IO 串行化补丁属于 `display-candidate`，实际 API 并发回归、完整构建和 100 次纯滑块自动设备压力验证已通过，剩余实体触摸观察由 [004/08](../../.scratch/004-m4-device-capabilities/issues/08-fix-settings-brightness-freeze.md)持有；不得因主机通过宣布设备修复。
+
+## 默认组合合入
+
+2026-10-03 用户授权将已验收候选纳入默认产品构建。默认 `production` 组合包含 Runtime/Core、HAL HTTP 与 playback-only、Settings 圆屏布局、Display IO 串行化，以及 Board Manager I2S teardown 修复。`baseline` 保留此前 Runtime/Core 组合，其他显式 candidate 为诊断子集。Audio 补充依赖仍准确绑定相邻清单中的版本/hash，原 registry lock 不改写；生产构建同样校验 Recorder/AFE 关闭与 DAC 输出格式。此次完整构建、设备与视觉结果见 [收尾记录](../../.scratch/004-m4-device-capabilities/records/2026-10-03-production-followup.md)，未通过的门槛不能因默认值已切换而关闭。

@@ -83,3 +83,5 @@ ESPocket 需要在圆形目标设备上提供官方 Settings 与真实设备 cap
 2026-10-03 亮度最小化回归：08 已定位同一 LCD SPI IO 的背光/刷屏并发，Display 候选补丁完成构建与 100 次自动滑块/Back/Home 回归；当前仅待一次有限实体触摸观察，不重复主题循环。
 
 2026-10-03 实体验收：用户确认 e15f52712 亮度修正版正常，08 关闭。当前后续工作为 07 Audio teardown、10 Home Space 浅色/弹窗视觉与 Runtime Card 新包验收，以及受维护候选进入默认 production 的独立合入门槛；不重复此前已通过的硬件检查。
+
+2026-10-04 收尾：07 I2S teardown 的真实 Owner 修复与两轮 Play/Home/replay 自动门槛通过，10 紧凑弹窗及部署后的 Runtime Card 有限视觉门槛通过，均关闭。用户授权的默认 production 组合已完整构建、准确组件/配置校验及普通 App 回归通过；收尾与普通镜像恢复见 [默认构建记录](records/2026-10-03-production-followup.md)。017 主题变量迁移由另一聊天独立持有，未纳入此次产物，不据此关闭其他 Effort 或正式签名发布门槛。

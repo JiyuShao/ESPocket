@@ -19,7 +19,11 @@ class PatchedFirmwareStageTest(unittest.TestCase):
         self.assertEqual(BUILDER.PATCH_SETS['display-candidate'],
                          audio + (('espressif__brookesia_service_display', '0.8.2'),))
         self.assertNotIn(('espressif__brookesia_service_display', '0.8.2'),
-                         BUILDER.PATCH_SETS['production'])
+                         BUILDER.PATCH_SETS['baseline'])
+
+    def test_production_promotes_validated_display_and_board_owner_fixes(self):
+        self.assertEqual(BUILDER.PATCH_SETS['production'],
+                         BUILDER.PATCH_SETS['display-candidate'] + (('espressif__esp_board_manager', '0.5.15'),))
 
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
@@ -67,7 +71,7 @@ class PatchedFirmwareStageTest(unittest.TestCase):
 
     def test_stage_isolates_lock_cache_and_config(self):
         before = BUILDER.inventory(self.firmware)
-        staged = BUILDER.stage(self.root, self.workspace, self.config)
+        staged = BUILDER.stage(self.root, self.workspace, self.config, 'baseline')
         self.assertEqual(BUILDER.inventory(self.firmware), before)
         self.assertTrue((staged / 'managed_components/vendor/littlefs/lfs.h').exists())
         self.assertEqual((staged / 'main/idf_component.yml').read_text().count('override_path:'), 2)
@@ -83,15 +87,15 @@ class PatchedFirmwareStageTest(unittest.TestCase):
     def test_rejects_changed_upstream_before_staging(self):
         (self.registry / 'source.txt').write_text('new upstream\n')
         with self.assertRaisesRegex(ValueError, 'inventory/hash'):
-            BUILDER.stage(self.root, self.workspace, self.config)
+            BUILDER.stage(self.root, self.workspace, self.config, 'baseline')
         self.assertFalse(self.workspace.exists())
 
     def test_rejects_existing_or_nested_workspace(self):
         self.workspace.mkdir()
         with self.assertRaisesRegex(ValueError, 'new'):
-            BUILDER.stage(self.root, self.workspace, self.config)
+            BUILDER.stage(self.root, self.workspace, self.config, 'baseline')
         with self.assertRaisesRegex(ValueError, 'outside'):
-            BUILDER.stage(self.root, self.root / 'nested', self.config)
+            BUILDER.stage(self.root, self.root / 'nested', self.config, 'baseline')
 
     def test_explicit_hal_candidate_isolated_from_production(self):
         component, version = BUILDER.PATCH_SETS['hal-candidate'][-1]
@@ -108,12 +112,14 @@ class PatchedFirmwareStageTest(unittest.TestCase):
             'patches': [{'file': patch.name, 'sha256': BUILDER.digest(patch)}],
         }))
         main = self.firmware / 'main/idf_component.yml'
-        main.write_text(main.read_text() + '  espressif/brookesia_hal_adaptor: "0.8.4"\n')
+        main.write_text(main.read_text() + '  espressif/brookesia_hal_adaptor:\n    version: "0.8.4"\n    require: no\n')
         before = BUILDER.inventory(self.firmware)
         staged = BUILDER.stage(self.root, self.workspace, self.config, 'hal-candidate')
         self.assertEqual((staged / 'main/idf_component.yml').read_text().count('override_path:'), 3)
         inputs = json.loads((self.workspace / 'patch-inputs.json').read_text())
         self.assertEqual(inputs['patch_set'], 'hal-candidate')
+        self.assertIn('override_path: "../../patched_components/espressif__brookesia_hal_adaptor"\n    require: no',
+                      (staged / 'main/idf_component.yml').read_text())
         self.assertEqual(inputs['patches'][-1]['component'], component)
         self.assertEqual(BUILDER.inventory(self.firmware), before)
 
@@ -131,10 +137,10 @@ class RegistryLockTest(unittest.TestCase):
             text = 'dependencies:\n  vendor/lib:\n    component_hash: abc\n    version: 1.0\n'
             original.write_text(text)
             generated.write_text(text)
-            BUILDER.verify_registry_lock(original, generated)
+            BUILDER.verify_registry_lock(original, generated, 'baseline')
             generated.write_text(text.replace('abc', 'changed'))
             with self.assertRaisesRegex(ValueError, 'drift'):
-                BUILDER.verify_registry_lock(original, generated)
+                BUILDER.verify_registry_lock(original, generated, 'baseline')
 
     def test_hal_registry_exclusion_requires_explicit_candidate(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -142,7 +148,7 @@ class RegistryLockTest(unittest.TestCase):
             original.write_text('dependencies:\n  espressif/brookesia_hal_adaptor:\n    component_hash: abc\n    version: 0.8.4\n')
             generated.write_text('dependencies:\n')
             with self.assertRaisesRegex(ValueError, 'drift'):
-                BUILDER.verify_registry_lock(original, generated)
+                BUILDER.verify_registry_lock(original, generated, 'baseline')
             BUILDER.verify_registry_lock(original, generated, 'hal-candidate')
 
 

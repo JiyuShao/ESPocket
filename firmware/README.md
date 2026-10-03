@@ -156,7 +156,7 @@ python3 scripts/check.py
 
 Runtime 异步确认故障最小设备回归使用 `--suite runtime-confirm`，与其他套件共用设备身份、镜像核对和失败报告规则。此套件通过不代表完整 App 契约验收；上游阻塞与诊断见[Runtime 异步 GUI 栈溢出](../.scratch/008-m8-app-contract/records/2026-10-02-runtime-js-async-stack-overflow.md)。
 
-Audio 候选当前使用 466px 板的 40 行双缓冲配置，并将官方 simple-player 输出转换为锁定 DAC 的 16 kHz、双声道、16 bit，构建校验拒绝输出格式漂移；普通生产配置不变。启动内存测量与验收见 [Audio 记录](../.scratch/004-m4-device-capabilities/records/2026-10-03-playback-only-patch.md)。
+Audio 候选当前使用 466px 板的 40 行双缓冲配置，并将官方 simple-player 输出转换为锁定 DAC 的 16 kHz、双声道、16 bit，构建校验拒绝输出格式漂移；默认 production 构建也使用已验收的 playback-only 配置，Recorder/AFE 关闭。启动内存测量与验收见 [Audio 记录](../.scratch/004-m4-device-capabilities/records/2026-10-03-playback-only-patch.md)。
 
 系统级 App 样式由 [Product GUI themes](components/espocket_system/resources/README.md) 在启动时注册；布局缺失与圆屏裁切状态见 [004/05](../.scratch/004-m4-device-capabilities/issues/05-fix-settings-controls-rendering.md)。
 
@@ -164,7 +164,7 @@ Audio 候选当前使用 466px 板的 40 行双缓冲配置，并将官方 simpl
 
 [Audio probe preparer](../scripts/firmware/prepare_audio_playback_probe.py) 仅接受 checkout 外的既有 audio-candidate，校验 Recorder/AFE 关闭且 Adapter/CMake 未加探针，再装配 [临时 Native fixture](test/device/fixtures/audio_playback_probe.hpp)。显式运行 `python3 scripts/firmware/prepare_audio_playback_probe.py --project <workspace>/firmware` 后构建并记录新的 image identity；普通构建不包含该 fixture。
 
-进入官方 Settings Sound 后，fixture 通过官方 Storage Service 检查路径不存在，再写入自己的测试 WAV，调用官方 AudioPlayback Play（400 Hz 间歇短音、30 次循环，配置 35 秒播放超时；实际总时长受播放器处理影响）；音量与 Mute 继续由真实 Settings/Audio Owner 调整，probe 不改它们，也不提供 Assistant/USB 播放入口。Back 或 PWR Home 调用官方 Stop 后通过 Storage Service 删除已确认由本次创建的文件；同名未知文件阻止测试，不覆盖或删除。检查与写入依赖当前串行的单一 fixture，不承诺通用并发文件创建原子性。实际听感需一次人工确认，自动 Owner state 与日志不能替代。验收后恢复已保存、不含 probe 的镜像。
+进入官方 Settings Sound 后，fixture 使用每次装配生成并记录的唯一测试路径，通过官方 Storage Service 检查路径不存在，再写入自己的测试 WAV，调用官方 AudioPlayback Play（400 Hz 间歇短音、30 次循环，配置 35 秒播放超时；实际总时长受播放器处理影响）；音量与 Mute 继续由真实 Settings/Audio Owner 调整，probe 不改它们，也不提供 Assistant/USB 播放入口。Back 或 PWR Home 调用官方 Stop 后通过 Storage Service 删除已确认由本次创建的文件；同名未知文件阻止测试，不覆盖或删除。检查与写入依赖当前串行的单一 fixture，不承诺通用并发文件创建原子性。实际听感需一次人工确认，自动 Owner state 与日志不能替代。验收后恢复已保存、不含 probe 的镜像。
 
 Probe 的 Flash IO 必须交给 Storage Service 内部 RAM 工作线程；Native App 回调可能使用外部 RAM 栈，不能直接 open/write/remove Flash 文件。真实 fixture 的主机回归验证 Storage/Audio 所有权、拒绝已有数据及失败清理；实际 cache-safe 与播放仍以设备结果为准。
 
@@ -178,4 +178,8 @@ python3 scripts/firmware/run_device_tests.py --suite settings-brightness \
   --expected-image <exact-image-identity> --output /private/tmp/espocket-brightness-stress
 ```
 
-使用有 pyserial 的 IDF Python。466px profile 当前自动拖动 100 次（旧基线第 60 次失败），每次必须命中真实亮度 Owner，任何 timeout 即失败；末尾验证 Back 与 Home。此套件不操作主题、不验证物理触摸或像素。候选 `display-candidate` 继承 audio-candidate 并在独立副本中加上 Display 输出 IO 补丁；默认生产组合不变。
+使用有 pyserial 的 IDF Python。466px profile 当前自动拖动 100 次（旧基线第 60 次失败），每次必须命中真实亮度 Owner，任何 timeout 即失败；末尾验证 Back 与 Home。此套件不操作主题、不验证物理触摸或像素。候选 `display-candidate` 继承 audio-candidate 并在独立副本中加上 Display 输出 IO 补丁；默认 production 组合现包含已验收 Display 补丁；原最小组合可显式选 baseline。
+
+### Audio teardown 自动回归
+
+`--suite audio-playback` 仅用于显式加入上述 Audio probe 的独立测试镜像；普通固件不会自动播放短音。用真实 Owner Playing 与 Home 删除其自有 WAV 验证两次播放/退出/再打开，并拒绝 I2S 重复 disable；它不代替听感验收。测试完成后恢复不含 probe 的默认生产镜像。

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "purpose": "playback-only experiment; not production dependency lock",
+  "purpose": "Pinned supplemental registry dependencies for playback-only builds, including production",
   "dependencies": {
     "espressif/cjson": {
       "version": "1.7.19~2",

@@ -1,0 +1,75 @@
+--- a/peripherals/periph_i2s/periph_i2s.c
++++ b/peripherals/periph_i2s/periph_i2s.c
+@@ -6,6 +6,7 @@
+  */
+ 
+ #include "esp_log.h"
++#include "esp_idf_version.h"
+ #include "esp_board_manager_err.h"
+ #include "periph_i2s.h"
+ 
+@@ -216,6 +217,23 @@
+     return 0;
+ }
+ 
++/* Codec consumers may stop a channel without updating Board Manager's init flags.
++ * Query the driver on IDF 6 before release; retain handles when release fails. */
++static int periph_i2s_release_channel(i2s_chan_handle_t handle, bool enabled_at_init)
++{
++#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 0, 0)
++    i2s_chan_info_t info;
++    if (i2s_channel_get_info(handle, &info) != ESP_OK) {
++        return -1;
++    }
++    enabled_at_init = info.is_enabled;
++#endif
++    if (enabled_at_init && i2s_channel_disable(handle) != ESP_OK) {
++        return -1;
++    }
++    return i2s_del_channel(handle) == ESP_OK ? 0 : -1;
++}
++
+ int periph_i2s_deinit(void *periph_handle)
+ {
+     if (!periph_handle) {
+@@ -225,30 +243,32 @@
+     i2s_chan_handle_t handle = (i2s_chan_handle_t)periph_handle;
+     for (size_t i = 0; i < SOC_I2S_NUM; i++) {
+         if (i2s_chan_handles[i].chan_out == handle) {
+-            if (i2s_chan_handles[i].out_en) {
+-                i2s_channel_disable(i2s_chan_handles[i].chan_out);
++            if (periph_i2s_release_channel(handle, i2s_chan_handles[i].out_en) != 0) {
++                return -1;
+             }
+             ESP_LOGW(TAG, "Caution: Releasing TX (%p).", i2s_chan_handles[i].chan_out);
+-            i2s_del_channel(i2s_chan_handles[i].chan_out);
+             i2s_chan_handles[i].chan_out = NULL;
+             i2s_chan_handles[i].out_en = false;
+             if (i2s_chan_handles[i].chan_in != NULL && i2s_chan_handles[i].in_en == false) {
+                 ESP_LOGW(TAG, "Caution: RX (%p) forced to stop.", i2s_chan_handles[i].chan_in);
+-                i2s_del_channel(i2s_chan_handles[i].chan_in);
++                if (periph_i2s_release_channel(i2s_chan_handles[i].chan_in, false) != 0) {
++                    return -1;
++                }
+                 i2s_chan_handles[i].chan_in = NULL;
+             }
+         }
+         if (i2s_chan_handles[i].chan_in == handle) {
+-            if (i2s_chan_handles[i].in_en) {
+-                i2s_channel_disable(i2s_chan_handles[i].chan_in);
++            if (periph_i2s_release_channel(handle, i2s_chan_handles[i].in_en) != 0) {
++                return -1;
+             }
+             ESP_LOGW(TAG, "Caution: Releasing RX (%p).", i2s_chan_handles[i].chan_in);
+-            i2s_del_channel(i2s_chan_handles[i].chan_in);
+             i2s_chan_handles[i].chan_in = NULL;
+             i2s_chan_handles[i].in_en = false;
+             if (i2s_chan_handles[i].chan_out != NULL && i2s_chan_handles[i].out_en == false) {
+                 ESP_LOGW(TAG, "Caution: TX (%p) forced to stop.", i2s_chan_handles[i].chan_out);
+-                i2s_del_channel(i2s_chan_handles[i].chan_out);
++                if (periph_i2s_release_channel(i2s_chan_handles[i].chan_out, false) != 0) {
++                    return -1;
++                }
+                 i2s_chan_handles[i].chan_out = NULL;
+             }
+         }

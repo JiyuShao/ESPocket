@@ -16,7 +16,8 @@ COMPONENT = 'espressif__brookesia_runtime_js'
 VERSION = '0.8.3'
 PATCHES = ((COMPONENT, VERSION), ('espressif__brookesia_system_core', '0.8.4'))
 PATCH_SETS = {
-    'production': PATCHES,
+    'baseline': PATCHES,
+    'production': PATCHES + (('espressif__brookesia_hal_adaptor', '0.8.4'), ('espressif__brookesia_app_settings', '0.8.3'), ('espressif__brookesia_service_display', '0.8.2'), ('espressif__esp_board_manager', '0.5.15')),
     'hal-candidate': PATCHES + (('espressif__brookesia_hal_adaptor', '0.8.4'),),
     'audio-candidate': PATCHES + (('espressif__brookesia_hal_adaptor', '0.8.4'), ('espressif__brookesia_app_settings', '0.8.3')),
     'display-candidate': PATCHES + (('espressif__brookesia_hal_adaptor', '0.8.4'), ('espressif__brookesia_app_settings', '0.8.3'), ('espressif__brookesia_service_display', '0.8.2')),
@@ -103,7 +104,7 @@ def pin_registry_dependencies(text, locked):
 def verify_registry_lock(original, generated, patch_set='production', root=ROOT):
     expected = registry_lock(original)
     actual = registry_lock(generated)
-    if patch_set in ('audio-candidate', 'display-candidate'):
+    if patch_set in ('production', 'audio-candidate', 'display-candidate'):
         extra = audio_dependencies(root)
         if set(expected) & set(extra):
             raise ValueError('Audio dependency constraints overlap production')
@@ -147,7 +148,7 @@ def stage(root, workspace, sdkconfig, patch_set='production'):
     shutil.copyfile(sdkconfig, firmware / 'sdkconfig')
     main_manifest = firmware / 'main/idf_component.yml'
     constraints = registry_lock(source / 'dependencies.lock')
-    audio_extra = audio_dependencies(root) if patch_set in ('audio-candidate', 'display-candidate') else {}
+    audio_extra = audio_dependencies(root) if patch_set in ('production', 'audio-candidate', 'display-candidate') else {}
     if set(constraints) & set(audio_extra):
         raise ValueError('Audio dependency constraints overlap production')
     constraints.update(audio_extra)
@@ -157,18 +158,22 @@ def stage(root, workspace, sdkconfig, patch_set='production'):
         patched = prepare(registry, manifest, workspace / 'patched_components' / component)
         dependency = component.replace('__', '/')
         original = f'  {dependency}: "{version}"\n'
-        if text.count(original) != 1:
+        structured = f'  {dependency}:\n    version: "{version}"\n    require: no\n'
+        override = (f'  {dependency}:\n'
+                    f'    version: "{version}"\n'
+                    f'    override_path: "../../patched_components/{component}"\n')
+        if text.count(original) == 1:
+            text = text.replace(original, override)
+        elif text.count(structured) == 1:
+            text = text.replace(structured, override + '    require: no\n')
+        else:
             raise ValueError(f'Main manifest no longer matches locked patch version: {dependency}')
-        text = text.replace(original,
-                            f'  {dependency}:\n'
-                            f'    version: "{version}"\n'
-                            f'    override_path: "../../patched_components/{component}"\n')
         patch_inputs.append({'component': component, 'version': version,
                              'manifest_sha256': digest(manifest), 'source_files': locked['source_files'],
                              'patched_component': str(patched)})
     main_manifest.write_text(text)
     config = firmware / 'sdkconfig'
-    if patch_set in ('audio-candidate', 'display-candidate'):
+    if patch_set in ('production', 'audio-candidate', 'display-candidate'):
         config.write_text(configure_audio_candidate(config.read_text()))
     lines = [line for line in config.read_text().splitlines()
              if 'CONFIG_BROOKESIA_RUNTIME_JS_ASYNC_STACK_SIZE' not in line]
@@ -191,7 +196,7 @@ def main():
                         help='existing board-configured sdkconfig; copied with documented patch-set settings')
     parser.add_argument('--prepare-only', action='store_true')
     parser.add_argument('--patch-set', choices=PATCH_SETS, default='production',
-                        help='production is the accepted baseline; hal-candidate applies HAL fixes; audio-candidate also pins playback-only dependencies')
+                        help='production includes accepted display/audio fixes; baseline preserves the prior minimal patch set; candidates are explicit subsets')
     args = parser.parse_args()
     try:
         firmware = stage(ROOT, args.workspace, args.sdkconfig.resolve(), args.patch_set)
@@ -199,7 +204,7 @@ def main():
         if not args.prepare_only:
             subprocess.run(['idf.py', '-C', str(firmware), 'reconfigure'], check=True)
             verify_registry_lock(ROOT / 'firmware/dependencies.lock', firmware / 'dependencies.lock', args.patch_set)
-            if args.patch_set in ('audio-candidate', 'display-candidate'):
+            if args.patch_set in ('production', 'audio-candidate', 'display-candidate'):
                 verify_audio_config((firmware / 'sdkconfig').read_text())
             description = json.loads((firmware / 'build/project_description.json').read_text())
             for component, _ in PATCH_SETS[args.patch_set]:
