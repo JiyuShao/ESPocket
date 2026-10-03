@@ -159,3 +159,11 @@ Runtime 异步确认故障最小设备回归使用 `--suite runtime-confirm`，�
 Audio 候选当前使用 466px 板的 40 行双缓冲配置；普通生产配置不变。启动内存测量与验收见 [Audio 记录](../.scratch/004-m4-device-capabilities/records/2026-10-03-playback-only-patch.md)。
 
 系统级 App 样式由 [Product GUI themes](components/espocket_system/resources/README.md) 在启动时注册；布局缺失与圆屏裁切状态见 [004/05](../.scratch/004-m4-device-capabilities/issues/05-fix-settings-controls-rendering.md)。
+
+### Audio playback hearing fixture
+
+[Audio probe preparer](../scripts/firmware/prepare_audio_playback_probe.py) 仅接受 checkout 外的既有 audio-candidate，校验 Recorder/AFE 关闭且 Adapter/CMake 未加探针，再装配 [临时 Native fixture](test/device/fixtures/audio_playback_probe.hpp)。显式运行 `python3 scripts/firmware/prepare_audio_playback_probe.py --project <workspace>/firmware` 后构建并记录新的 image identity；普通构建不包含该 fixture。
+
+进入官方 Settings Sound 后，fixture 通过官方 Storage Service 检查路径不存在，再写入自己的测试 WAV，调用官方 AudioPlayback Play（400 Hz 间歇短音、30 次循环，配置 35 秒播放超时；实际总时长受播放器处理影响）；音量与 Mute 继续由真实 Settings/Audio Owner 调整，probe 不改它们，也不提供 Assistant/USB 播放入口。Back 或 PWR Home 调用官方 Stop 后通过 Storage Service 删除已确认由本次创建的文件；同名未知文件阻止测试，不覆盖或删除。检查与写入依赖当前串行的单一 fixture，不承诺通用并发文件创建原子性。实际听感需一次人工确认，自动 Owner state 与日志不能替代。验收后恢复已保存、不含 probe 的镜像。
+
+Probe 的 Flash IO 必须交给 Storage Service 内部 RAM 工作线程；Native App 回调可能使用外部 RAM 栈，不能直接 open/write/remove Flash 文件。真实 fixture 的主机回归验证 Storage/Audio 所有权、拒绝已有数据及失败清理；实际 cache-safe 与播放仍以设备结果为准。
