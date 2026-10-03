@@ -2,7 +2,7 @@
 
 Sequence: 011
 
-Status: active
+Status: resolved
 Blocked by: None；样机观察不自动关闭正式导航验收 ticket。
 
 ## Problem Statement
@@ -48,3 +48,5 @@ Blocked by: None；样机观察不自动关闭正式导航验收 ticket。
 ## 记录
 
 - [2026-09-30-home-space-prototype](records/2026-09-30-home-space-prototype.md)
+
+2026-10-03：01 的剩余返回字形显示由用户确认通过，Effort 关闭；参见[缺陷修正与验收](../004-m4-device-capabilities/records/2026-10-03-display-glyph-theme-defects.md)。

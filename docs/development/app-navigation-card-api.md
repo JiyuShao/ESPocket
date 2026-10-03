@@ -186,3 +186,11 @@ ESPocket 的只读页面语义至少包含 `appId`、当前 `pageId`、`canBack`
 ## 默认边缘手势与 Root
 
 Root 的 canBack、默认 Back 和 edge_back_enabled 仍为 false。默认返回由框架负责时，框架消费达到阈值的边缘返回轨迹，避免滑动误点 Root 按钮，不发起页面返回。AppOwned 仍把自定义边缘手势交给 App；普通非边缘横滑、上下滚动不受此规则接管。C++ Navigator 的 framework_owns_back 查询该运行任务的默认返回责任，与实际 Back 可用性分开；System 只发布由 Owner 更新的手势标志给 Shell，不复制页面栈或更改快照字段。
+
+## 系统消息弹窗与主题
+
+App 可通过 Brookesia `AppContext::system_service()` 的 `show_message_dialog`、`update_message_dialog`、`hide_message_dialog` 请求系统消息弹窗。保存返回的 Request ID，并在结果回调中处理按钮索引、角色与关闭原因；不能把弹窗当作 Page 或修改页面栈。Core 管理请求归属、排队与 App 停止清理，ESPocket System 转发公开 hooks，Circular Shell 提供圆屏 Overlay 呈现。
+
+当前呈现支持最多三个按钮、可滚动说明与 `auto_close_ms`。普通手势不穿透 modal；PWR Home 仍可结束前台 App，Core 随之关闭其弹窗。Shell 的 LVGL 回调只记录选择，结果在 App 任务中交给 Core，App 不应自己从 LVGL 回调调用生命周期操作。
+
+产品在安装会预载文档的 App 前注册 dark/light，并从 Core 的持久偏好恢复当前主题。锁定 GUI Runtime 的主题设置只作用于新文档；官方 Settings 选择主题时先保存偏好，再通过系统确认请求重启。选择“稍后”或通过 Home 关闭确认不撤销已保存的偏好。App 引用共享 `app.page`、`app.card` 等 styleRefs 时消费产品主题；App 的硬编码颜色与自有样式不会自动改写。具体设备验收和未完成显示检查保存在工作票与 records，不作为上述 API 的额外承诺。

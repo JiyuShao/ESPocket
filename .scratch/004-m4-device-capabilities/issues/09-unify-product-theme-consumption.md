@@ -2,13 +2,13 @@
 
 **What to build:** 核对官方 Settings/Store 的白色页面是否来自主题选择、持久偏好或解析/应用缺口；让遵循主题 token 的 App 使用真实系统主题，保留 App 自有界面的边界。
 
-**Blocked by:** [06 系统确认弹窗](06-support-settings-message-dialog.md) 的设备确认/重启路径；主题像素效果仍待验收。
+**Blocked by:** None
 
-**Status:** ready-for-human
+**Status:** resolved
 
-- [ ] 记录当前 theme ID、持久偏好与实际 Settings/Store 解析/应用结果，不凭资源存在宣称全局主题生效。
-- [ ] 在实际 Owner seam 修复确定的缺口并补充真实解析或渲染契约回归，避免另一套主题状态。
-- [ ] 完整构建、系统页面及官方 App 的有限视觉验收通过；硬编码颜色的 App 不冒充已自动跟随主题。
+- [x] 记录当前 theme ID、持久偏好与实际 Settings/Store 解析/应用结果，不凭资源存在宣称全局主题生效。
+- [x] 在实际 Owner seam 修复确定的缺口并补充真实解析或渲染契约回归，避免另一套主题状态。
+- [x] 完整构建、系统页面及官方 App 的有限视觉验收通过；硬编码颜色的 App 不冒充已自动跟随主题。
 
 系统已注册 dark/light 资源，GUI Runtime/Core 持有主题；当前用户报告 Settings/Store Root 白色。实际原因仍待验证。见 [缺陷记录](../records/2026-10-03-display-glyph-theme-defects.md)。
 
@@ -19,3 +19,7 @@
 2026-10-03 更新：旧保存的 Light 恢复与经 Settings 确认后的 Dark 恢复均有真实启动日志，确认后 Settings 仍可导航。还需一次 Settings/Store 背景视觉观察；不凭日志代替像素验收。
 
 2026-10-03 用户确认：Settings → Display 背景深色，文字与控件显示正常。Store 背景仍待独立观察，整票暂不关闭。
+
+## Resolution
+
+2026-10-03：产品主题在 App DOM 预载前注册与恢复；真实启动日志验证 Light/Dark 保存与恢复，System 方法的主机行为回归覆盖选择、顺序与失败。完整构建和确认重启后导航通过；用户分别确认 Settings → Display 与 Store 均为深色、显示正常。共享 styleRefs 跟随产品主题，硬编码界面保持 App 自有边界。修正提交 `de10dde`，具体镜像身份及限制见[记录](../records/2026-10-03-display-glyph-theme-defects.md)。

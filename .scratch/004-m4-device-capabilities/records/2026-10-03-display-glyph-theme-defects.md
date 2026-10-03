@@ -40,3 +40,7 @@ System 实现锁定 Core 的公开 show/update/hide hooks，Shell 在圆屏安�
 自动真实设备重放：Later 关闭确认并保留 settings.display；再次选择主题后 PWR Home 关闭 dialog 并回 Watch Face。之后正常点击 Dark 的立即重启按钮，HAL restart 执行，启动读取 Dark 并记录 Product GUI theme active: dark；Watch Face 和重新进入 Settings → Display 通过。原始结果在 `/private/tmp/espocket-theme-later-home-result.log`、theme-dark-result.log 及相应 serial.log；诊断脚本 theme_dialog_e2e.py 为临时校准重放。保留上游“选择时保存偏好”的行为，Later/Home 只关闭当前确认，不声称撤销已保存的主题。当前设备停在 Dark 的 Display 页，颜色/字形视觉门槛待一次用户反馈；合成输入不验证真实触摸硬件。004/08 的原始卡死尚未复现，不能借主题修正关闭。
 
 用户已确认修正版 Settings → Display 为深色、显示正常。Store 自动点击先落在列表间隙，追加滚动后的点击也未命中 App（快照仍为 launcher）；这是坐标校准失败，不是 Store 崩溃或通过。设备留在 Launcher，待用户一次观察 Store 背景与返回字形。日志 theme-store-result.log/serial.log 仅代表最后一次未命中尝试。
+
+## 最终显示验收
+
+用户确认修正版“箭头正常，Store 也是深色”，并已确认 Settings → Display 深色、显示正常。字形条件与两个官方 App 的 Dark 呈现通过；源码与 host/build/设备业务证据对应本地提交 `de10dde`。004/09 与 011/01 关闭，011 Effort 关闭；不扩张为所有硬编码 App/Shell 界面都实时跟随主题。原 Settings 亮度卡死保持 004/08 开放。
