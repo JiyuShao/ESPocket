@@ -65,12 +65,16 @@
     {
       "file": "001-retry-icon-admission-pressure.patch",
       "sha256": "df0b8f19ffdb3e2e33423da3a2d126451c4e07e2fb12effe15636ed72b56157b"
+    },
+    {
+      "file": "002-developer-install-confirmation.patch",
+      "sha256": "4d53540434a25865a8ede493c45443f9e05163618640ddf472940ded77ffd519"
     }
   ],
   "issue": ".scratch/005-m5-application-ecosystem/issues/06-adopt-online-store-stability-fix.md",
   "upstream_report": ".scratch/005-m5-application-ecosystem/records/2026-10-04-store-icon-admission.md",
   "upstream_submission": "not submitted",
-  "remove_when": "Pinned upstream Store preserves icons on temporary HTTP admission pressure and stop/generation/device regressions pass.",
+  "remove_when": "Pinned upstream Store preserves icons on temporary HTTP admission pressure and stop/generation/device regressions pass. Runtime package admission, developer exceptions, receipt validation and recoverable update must retain equivalent regressions.",
   "patched_files": {
     ".component_hash": "2ec3f58f3850d23dd1c5882e2020b049c5ed5d0c774b4d5876c9c89e9515998f",
     "CHANGELOG.md": "db97c9f6de251f2e707d0a2d8f4d12f1b007c426d94fc132f0856c37001d5ea7",
@@ -127,5 +131,9 @@
     "src/storage/icons.ipp": "271191dbc4fc1ede1c654b6e163a048ee3e4dfd6167a52d8907351b902ff8f4e",
     "src/storage/storage.ipp": "35ce0bb50435e666783a3df293228acbc6d06eff36df83beffc613f5349afa14",
     "src/storage/storage_catalog_icons.cpp": "c144e7d461d1ae7b9fa29c5144116b5c4b671e3172110d9844b5494b9225fc97"
-  }
+  },
+  "related_issues": [
+    ".scratch/005-m5-application-ecosystem/issues/03-enforce-core-package-trust.md",
+    ".scratch/005-m5-application-ecosystem/issues/09-allow-unsigned-developer-installation.md"
+  ]
 }

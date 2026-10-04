@@ -92,13 +92,19 @@
     {
       "file": "004-load-embedded-theme-on-gui-task.patch",
       "sha256": "47d329525ab265737a934116cfbf5e1da157644077b38bd842f2f7204240a475"
+    },
+    {
+      "file": "005-runtime-package-admission.patch",
+      "sha256": "d171d78e3a678b35bea352bb4e8187d839c636c9c4dd5b3597eddc96d01bc771"
     }
   ],
   "issue": ".scratch/005-m5-application-ecosystem/issues/07-isolate-runtime-keyboard-results.md",
   "upstream_report": ".scratch/005-m5-application-ecosystem/records/2026-10-03-core-failed-stop.md",
   "upstream_submission": "not submitted",
-  "remove_when": "Core owner-scoped keyboard delivery and unconditional failed-stop cleanup pass equivalent regressions and remaining queued-instance gates. Embedded-theme loading must also have an equivalent public System GUI seam.",
+  "remove_when": "Core owner-scoped keyboard delivery and unconditional failed-stop cleanup pass equivalent regressions and remaining queued-instance gates. Embedded-theme loading must also have an equivalent public System GUI seam. Runtime package admission, developer exceptions, receipt validation and recoverable update must retain equivalent regressions.",
   "related_issues": [
-    ".scratch/004-m4-device-capabilities/issues/05-fix-settings-controls-rendering.md"
+    ".scratch/004-m4-device-capabilities/issues/05-fix-settings-controls-rendering.md",
+    ".scratch/005-m5-application-ecosystem/issues/03-enforce-core-package-trust.md",
+    ".scratch/005-m5-application-ecosystem/issues/09-allow-unsigned-developer-installation.md"
   ]
 }

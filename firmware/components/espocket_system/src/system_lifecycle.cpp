@@ -30,6 +30,34 @@ std::expected<void, std::string> System::on_app_uninstalled(
     return {};
 }
 
+std::expected<void, std::string> System::on_app_replaced(
+    const esp_brookesia::system::core::AppInfo &old_app,
+    const esp_brookesia::system::core::AppInfo &)
+{
+    card_factories_.erase(old_app.app_id);
+    std::shared_ptr<PageNavigator> removed;
+    {
+        std::lock_guard lock(page_navigators_mutex_);
+        const auto it = page_navigators_.find(old_app.app_id);
+        if (it != page_navigators_.end()) {
+            removed = std::move(it->second);
+            page_navigators_.erase(it);
+        }
+        runtime_pages_.erase(old_app.app_id);
+    }
+    if (removed) {
+        removed->stop();
+        removed->set_availability_handler({});
+    }
+    clear_foreground(old_app);
+    if (cards_ && !card_samples_active_) {
+        if (auto saved = card_store_->save_current(); !saved) {
+            return std::unexpected("Card update persistence failed: " + saved.error());
+        }
+    }
+    return {};
+}
+
 std::expected<void, std::string> System::on_app_started(
     const esp_brookesia::system::core::AppInfo &app
 )

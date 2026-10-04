@@ -65,6 +65,21 @@ std::expected<void, std::string> System::on_app_installed(
     using namespace esp_brookesia::system::core;
     if (app.manifest.kind != AppKind::Runtime || !app.manifest.visible) return {};
     const auto path = std::filesystem::path(app.manifest.app_path) / app.manifest.resource_dir / "navigation.json";
+    auto status = esp_brookesia::service::helper::Storage::fs_stat(path.generic_string(), 5000);
+    if (!status) return std::unexpected(status.error());
+    if (!status->exists) {
+        // Only an admitted external developer package may omit navigation.
+        const auto pending = esp_brookesia::service::helper::Storage::fs_stat(
+            (std::filesystem::path(app.manifest.app_path) / ".brookesia-install.pending").generic_string(), 5000);
+        if (!pending) return std::unexpected(pending.error());
+        auto admission = validate_installed_runtime_package(app.manifest.app_path, get_system_type(),
+            runtime_package_policy(), false, pending->exists);
+        if (admission && admission->requires_developer()) {
+            ESP_LOGI(TAG, "Runtime navigation unavailable: %s (developer package)", app.manifest.id.c_str());
+            return {};
+        }
+        return std::unexpected("Runtime navigation declaration missing");
+    }
     auto json = esp_brookesia::service::helper::Storage::fs_read_text(path.generic_string(), 5000);
     if (!json) return std::unexpected("Runtime navigation declaration missing: " + json.error());
     auto definition = decode_runtime_pages(*json);
@@ -95,7 +110,14 @@ std::expected<void, std::string> System::on_app_installed(
             return after && *after == to;
         });
     if (!adapter) return std::unexpected(adapter.error());
-    if (!cards_ || !cards_->register_app(card_declaration)) return std::unexpected("card_declaration_registration_failed");
+    if (!cards_) return std::unexpected("card_registry_unavailable");
+    auto registered = cards_->register_app(card_declaration);
+    if (!registered && registered.error() != CardError::AlreadyRegistered) {
+        return std::unexpected("card_declaration_registration_failed");
+    }
+    if (!registered && !cards_->update_app(card_declaration)) {
+        return std::unexpected("card_declaration_update_failed");
+    }
     if (card_factory) card_factories_.emplace(app.app_id, std::move(card_factory));
     register_navigator(app.app_id, (*adapter)->navigator());
     { std::lock_guard lock(page_navigators_mutex_); runtime_pages_.emplace(app.app_id, RuntimePages{*adapter, flow}); }

@@ -1,0 +1,225 @@
+--- a/include/brookesia/app_store/app_store_app.hpp
++++ b/include/brookesia/app_store/app_store_app.hpp
+@@ -85,6 +85,7 @@
+         Uninstall,
+         DeleteLocalPackage,
+         TimeSyncRetry,
++        DeveloperInstall,
+     };
+ 
+     enum class LocalPackageAction {
+@@ -219,6 +220,7 @@
+         std::filesystem::path package_path;
+         std::string app_name;
+         std::string manifest_id;
++        system::core::PackageInstallOptions install_options;
+     };
+ 
+     using HttpRequestSubmitSuccessHandler = std::function<void(uint64_t)>;
+@@ -386,7 +388,8 @@
+     std::expected<void, std::string> install_package(
+         system::core::AppContext &context,
+         const std::filesystem::path &path,
+-        std::string_view name
++        std::string_view name,
++        const system::core::PackageInstallOptions &options
+     );
+     void install_local_package(system::core::AppContext &context, size_t index);
+     void install_store_package(system::core::AppContext &context, size_t index, const std::filesystem::path &path);
+@@ -397,7 +400,9 @@
+         DeferredOperationType type,
+         size_t index,
+         std::string manifest_id = {},
+-        uint64_t download_request_id = 0
++        uint64_t download_request_id = 0,
++        bool developer_confirmed = false,
++        std::string confirmed_sha256 = {}
+     );
+     void uninstall_installed_app(system::core::AppContext &context, size_t index);
+     void uninstall_installed_app(
+--- a/src/app/lifecycle.ipp
++++ b/src/app/lifecycle.ipp
+@@ -76,6 +76,7 @@
+ {
+     BROOKESIA_LOG_TRACE_GUARD_WITH_THIS();
+     ++async_generation_;
++    developer_install_.reset();
+     cancel_deferred_operation(context);
+     cancel_startup_load(context);
+     cancel_local_package_scan(context);
+@@ -520,7 +521,7 @@
+             0,
+             MessageDialogPurpose::Install
+         );
+-        auto result = install_package(context, operation.package_path, operation.app_name);
++        auto result = install_package(context, operation.package_path, operation.app_name, operation.install_options);
+         if (!result && operation.index < local_packages_.size()) {
+             local_packages_[operation.index].schema_error = result.error();
+             (void)refresh_ui(context);
+@@ -536,7 +537,7 @@
+             0,
+             MessageDialogPurpose::Install
+         );
+-        auto result = install_package(context, operation.package_path, operation.app_name);
++        auto result = install_package(context, operation.package_path, operation.app_name, operation.install_options);
+         if (!result && operation.index < entries_.size() &&
+                 entries_[operation.index].package_name == operation.manifest_id) {
+             entries_[operation.index].schema_error = result.error();
+--- a/src/install/download.ipp
++++ b/src/install/download.ipp
+@@ -413,12 +413,13 @@
+ std::expected<void, std::string> AppStoreApp::install_package(
+     system::core::AppContext &context,
+     const std::filesystem::path &path,
+-    std::string_view name
++    std::string_view name,
++    const system::core::PackageInstallOptions &options
+ )
+ {
+     const std::string app_name(name);
+     prefer_external_install_storage(context);
+-    auto result = context.system_service().install_runtime_app_package(path.generic_string(), true);
++    auto result = context.system_service().install_runtime_app_package(path.generic_string(), options);
+     if (!result) {
+         status_text_ = result.error();
+         ensure_message_dialog(
+@@ -507,9 +508,54 @@
+     DeferredOperationType type,
+     size_t index,
+     std::string manifest_id,
+-    uint64_t download_request_id
+-)
+-{
++    uint64_t download_request_id,
++    bool developer_confirmed,
++    std::string confirmed_sha256
++)
++{
++    system::core::PackageInstallOptions options;
++    if (type == DeferredOperationType::InstallPackage) {
++        if (index >= entries_.size() || entries_[index].package_name != manifest_id) return false;
++        options.expected_sha256 = entries_[index].sha256;
++        options.expected_version = entries_[index].latest_version;
++        // Online metadata must provide its declared content digest.
++        if (options.expected_sha256.empty()) {
++            status_text_ = "Catalog package digest missing";
++            return false;
++        }
++    }
++    if (!confirmed_sha256.empty()) options.expected_sha256 = confirmed_sha256;
++    options.expected_id = manifest_id;
++    auto admission = context.system_service().inspect_runtime_package(path.generic_string(), options.expected_sha256);
++    if (!admission || (!manifest_id.empty() && admission->manifest.id != manifest_id) ||
++        (!options.expected_version.empty() && admission->manifest.version != options.expected_version)) {
++        const auto error = admission ? std::string("Catalog package identity mismatch") : admission.error();
++        status_text_ = error;
++        ensure_message_dialog(context, tr("dialog.install_failed_prefix") + app_name, error,
++            system::core::MessageDialogIcon::Warning, 0, MessageDialogPurpose::Install,
++            {{tr("action.close"), system::core::MessageDialogButtonRole::Reject}});
++        return false;
++    }
++    options.expected_sha256 = admission->artifact_sha256;
++    options.expected_version = admission->manifest.version;
++    options.developer_confirmed = developer_confirmed;
++    if (admission->requires_developer() && !developer_confirmed) {
++        developer_install_ = DeferredOperation{
++            .type = type, .generation = async_generation_, .index = index,
++            .package_path = path, .app_name = app_name, .manifest_id = manifest_id,
++            .install_options = options};
++        std::string message;
++        if (admission->super_exception)
++            message = "This app targets Brookesia Super. Compatibility with ESPocket has not been verified; some features or display may not work correctly. ";
++        message += "Turning off Developer Mode stops this app and prevents it from starting. Installed content is retained.";
++        if (admission->unsigned_exception) message += " This app is unsigned. Publisher identity has not been verified.";
++        ensure_message_dialog(context, "Developer compatibility install", message,
++            system::core::MessageDialogIcon::Warning, 0, MessageDialogPurpose::DeveloperInstall,
++            {{"Cancel", system::core::MessageDialogButtonRole::Reject},
++             {"Continue install", system::core::MessageDialogButtonRole::Accept}});
++        return true;
++    }
++
+     if (download_request_id == 0 ||
+             !transition_download_dialog_to_install_if_current(context, download_request_id, app_name, path)) {
+         ensure_message_dialog(
+@@ -531,6 +577,7 @@
+             .package_path = path,
+             .app_name = std::move(app_name),
+             .manifest_id = std::move(manifest_id),
++            .install_options = options,
+         }
+     );
+     if (!scheduled) {
+--- a/src/network/http.ipp
++++ b/src/network/http.ipp
+@@ -1517,6 +1517,9 @@
+ void AppStoreApp::clear_message_dialog_state()
+ {
++    if (message_dialog_purpose_ == MessageDialogPurpose::DeveloperInstall) {
++        developer_install_.reset();
++    }
+     message_dialog_request_id_ = system::core::INVALID_MESSAGE_DIALOG_REQUEST_ID;
+     message_dialog_purpose_ = MessageDialogPurpose::None;
+     download_dialog_request_id_ = 0;
+ }
+@@ -1539,6 +1542,9 @@
+     const uint64_t pending_download_request_id =
+         purpose == MessageDialogPurpose::Download ? download_dialog_request_id_ : 0;
+     refresh_dialog_message_ = text;
++    if (message_dialog_purpose_ == MessageDialogPurpose::DeveloperInstall && purpose != MessageDialogPurpose::DeveloperInstall) {
++        developer_install_.reset();
++    }
+     message_dialog_purpose_ = purpose;
+     if (purpose != MessageDialogPurpose::Download) {
+         download_dialog_request_id_ = 0;
+@@ -1651,6 +1657,17 @@
+         return;
+     }
+ 
++    if (message_dialog_purpose_ == MessageDialogPurpose::DeveloperInstall) {
++        auto pending = std::move(developer_install_);
++        developer_install_.reset();
++        clear_message_dialog_state();
++        if (!pending || !context_ || pending->generation != async_generation_ ||
++            result.button_role != system::core::MessageDialogButtonRole::Accept) return;
++        schedule_package_install(*context_, pending->package_path, pending->app_name,
++            pending->type, pending->index, pending->manifest_id, 0, true,
++            pending->install_options.expected_sha256);
++        return;
++    }
+     const auto purpose = message_dialog_purpose_;
+     clear_message_dialog_state();
+     if (context_ == nullptr) {
+--- a/src/private/app_store_impl.hpp
++++ b/src/private/app_store_impl.hpp
+@@ -73,6 +73,7 @@
+     std::optional<service::helper::Http::GeneralState> http_general_state;
+     std::optional<ViewMode> pending_view_mode;
+     std::deque<DeferredOperation> pending_deferred_operations;
++    std::optional<DeferredOperation> developer_install;
+     MessageDialogPurpose message_dialog_purpose = MessageDialogPurpose::None;
+     PendingRefreshResultType pending_refresh_result_type = PendingRefreshResultType::None;
+     IconUpdatePurpose refresh_icon_purpose = IconUpdatePurpose::None;
+--- a/src/private/app_store_impl_access.hpp
++++ b/src/private/app_store_impl_access.hpp
+@@ -86,3 +86,5 @@
+ #define local_package_scan_in_progress_ impl_->local_package_scan_in_progress
+ #define local_package_scan_refresh_view_ impl_->local_package_scan_refresh_view
+ #define pending_http_events_mutex_ impl_->pending_http_events_mutex
++
++#define developer_install_ impl_->developer_install
+--- a/src/storage/storage.ipp
++++ b/src/storage/storage.ipp
+@@ -819,10 +819,9 @@
+     package.file_name = package.package_path.filename().generic_string();
+     package.file_size = candidate.file_size;
+ 
+-    auto manifest = system::core::read_app_package_manifest(
+-                        package.package_path.generic_string(),
+-                        context.system_service().get_system_type()
+-                    );
++    auto admission = context.system_service().inspect_runtime_package(package.package_path.generic_string());
++    auto manifest = admission ? std::expected<system::core::AppManifest, std::string>(admission->manifest)
++        : std::expected<system::core::AppManifest, std::string>(std::unexpected(admission.error()));
+     if (!manifest) {
+         BROOKESIA_LOGW(
+             "Skip invalid App Store local package: path(%1%), error(%2%)",

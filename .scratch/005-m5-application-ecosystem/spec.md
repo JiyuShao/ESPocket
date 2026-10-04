@@ -83,4 +83,13 @@ ESPocket 需要官方 Store 与远程 Runtime distribution path，但锁定的�
 
 ## 开发者安装策略修订
 
-2026-10-04 用户选择仅开发者模式允许未签名安装，见 [09](issues/09-allow-unsigned-developer-installation.md) 与 [ADR-0018](../../docs/adr/0018-developer-mode-allows-unsigned-packages.md)。08 仍持有正式签名发行包和发布路线；开发路径不再以取得正式发行签名作为前置，但仍依赖 03 的统一 Core 事务和实际兼容性。用户后续确认开发者模式允许所有声明 super 的包进入正常校验，外部旧包暂不要求导航契约；关闭模式保留安装、禁止启动并停止运行中的例外 App。安装提示与实施范围由 09 和 ADR-0018 持有；尚未实现或刷入。
+2026-10-04 用户选择仅开发者模式允许未签名安装，见 [09](issues/09-allow-unsigned-developer-installation.md) 与 [ADR-0018](../../docs/adr/0018-developer-mode-allows-unsigned-packages.md)。08 仍持有正式签名发行包和发布路线；开发路径不再以取得正式发行签名作为前置，但仍依赖 03 的统一 Core 事务和实际兼容性。用户后续确认开发者模式允许所有声明 super 的包进入正常校验，外部旧包暂不要求导航契约；关闭模式保留安装、禁止启动并停止运行中的例外 App。安装提示与实施范围由 09 和 ADR-0018 持有。2026-10-04 已完成代码与 host matrix；完整构建因磁盘空间不足失败，尚未刷入或进行设备验收，详见 [实施证据](records/2026-10-04-package-implementation-evidence.md)。
+
+## Handoff
+
+- Executor: Claude Code implementation session。
+- 授权范围：先执行 [03](issues/03-enforce-core-package-trust.md) 的统一 Core gate、receipt、事务与恢复基础，再完成 [09](issues/09-allow-unsigned-developer-installation.md) 的开发准入与实际 Store 安装。03 的正式发行签名证据依赖 08，不虚报完成；本次不执行 08 或其他 Effort。
+- 读取入口：本 Spec、03/09、ADR-0004、ADR-0016、ADR-0018、product/05-runtime-package-trust、product/07-developer-mode、development/app-navigation 与 [实现交接记录](records/2026-10-04-package-implementation-handoff.md)。
+- 修改范围：ESPocket 产品 policy 接入、Core/Store 版本锁定补丁及 manifest、对应 host/device tests、相关接口文档与本 Effort 状态/证据。禁止修改 managed_components；保留其他聊天的暂存与未提交改动，不自动 push。
+- 验证：最终完整 scripts/check.py 与 Markdown 检查；精确补丁输入、registry lock、Audio config 核对及完整固件构建；app-only 刷机前备份当前设备镜像与 LittleFS，实际 Store 取消/安装、启动、PWR 退出、重启发现、更新失败回滚、开发模式关闭/重新开启。已有有效证据不重复，视觉或物理门槛最多集中请求一次。
+- 停止条件：09 全部验收通过，03 可执行基础完成且发行阻塞明确保留；或剩余工作确实需要人工/新设计/外部条件。设备未验证不得勾选通过。既定设计内修复持续执行，真实设计缺口按 questions 协议回流。

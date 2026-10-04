@@ -1,4 +1,5 @@
 #include "system_internal.hpp"
+#include "espocket_builtin_packages.hpp"
 
 extern const char dark_theme_start[] asm("_binary_espocket_dark_theme_json_start");
 extern const char dark_theme_end[] asm("_binary_espocket_dark_theme_json_end");
@@ -46,6 +47,11 @@ std::expected<void, std::string> System::init()
     config.start_service_manager = true;
     config.install_registered_apps = false;
     config.install_package_apps = true;
+    config.package_policy.enforce = true;
+    config.package_policy.developer_enabled = [this] { return developer_mode_ && developer_mode_->enabled(); };
+    config.package_policy.platform_baseline = "core-0.8.4_js-0.8.3_package-policy-v1";
+    // No release key is provisioned yet: signed external packages fail closed.
+    configure_builtin_packages(config.package_policy);
 
     auto result = esp_brookesia::system::core::System::init(std::move(config));
     if (!result) {

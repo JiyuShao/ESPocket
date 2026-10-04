@@ -9,6 +9,12 @@ void System::poll_system_input()
     if (stopping_.load(std::memory_order_acquire)) {
         return;
     }
+    const bool package_developer_enabled = developer_mode_ && developer_mode_->enabled();
+    if (!package_developer_enabled && package_developer_was_enabled_) {
+        auto enforced = enforce_runtime_package_policy();
+        package_developer_was_enabled_ = false;
+        if (!enforced) ESP_LOGE(TAG, "Developer package stop failed: %s", enforced.error().c_str());
+    } else if (package_developer_enabled) package_developer_was_enabled_ = true;
     const bool hardware_press = power_key_monitor_ && power_key_monitor_->take_short_press();
     if (hardware_press) {
         cancel_test_touch_.store(true, std::memory_order_release);

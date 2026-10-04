@@ -67,6 +67,10 @@ protected:
     std::expected<void, std::string> on_app_uninstalled(
         const esp_brookesia::system::core::AppInfo &app
     ) override;
+    std::expected<void, std::string> on_app_replaced(
+        const esp_brookesia::system::core::AppInfo &old_app,
+        const esp_brookesia::system::core::AppInfo &new_app
+    ) override;
     std::expected<void, std::string> on_app_started(
         const esp_brookesia::system::core::AppInfo &app
     ) override;
@@ -179,6 +183,7 @@ private:
     uint32_t display_output_id_ = 0;
     std::unique_ptr<semantic::Brightness> brightness_;
     bool display_started_ = false;
+    bool package_developer_was_enabled_ = true;
     std::atomic_bool display_on_ = true;
     esp_brookesia::system::core::AppId resume_app_id_ =
         esp_brookesia::system::core::INVALID_APP_ID;
