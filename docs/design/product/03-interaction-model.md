@@ -33,6 +33,11 @@
 | INT-024 | App Card 上的横滑由 Home Space 处理；Card 内纵向交互与轻量操作归 App。Card 打开完整 App 后，PWR Home 直接返回 Watch Face。 |
 | INT-025 | 完整 App 页面的 Back 请求可由 App 暂缓确认；待决期间不得重复执行 Back，超时必须取消并报告错误。PWR Home、App 停止或崩溃使待决请求失效。 |
 | INT-026 | Quick Settings 的直接切换必须立即生效并停留在原 Surface；进入完整 Settings App 后遵守 App Page 栈与 Root 无 Back 的规则。 |
+| INT-028 | 确认弹窗、键盘与 Loading 同时存在时，确认弹窗优先接收输入；键盘暂停输入并保留草稿，仅在弹窗结束且原请求仍有效时恢复；Loading 为最低优先级反馈。 |
+| INT-029 | 键盘呈现期间的 Back 必须取消当前输入，不得导航底层 App 页面；这不产生 App Page 栈的 pop，App Root 无页面 Back 的规则保持有效。 |
+| INT-030 | 同一处理周期内，PWR 必须先于尚未提交的确认或输入结果处理；已提交的操作继续按真实 Owner 结果核实，不得报告为已撤销。 |
+| INT-031 | 系统拥有的提示可以在 Home 后继续呈现；Watch Face 上的 PWR 仍按 INT-004 息屏。息屏期间暂停提示的自动关闭呈现计时，唤醒后仅恢复仍有效的提示。 |
+| INT-032 | 提示呈现计时暂停不得延长操作超时、授权期限或 Owner 生命周期；请求失效后不得因为唤醒而重新获得执行资格。 |
 
 旧要求的替代关系：INT-005 → INT-022、INT-023；INT-009 → INT-023、INT-024；INT-012 → INT-026；INT-014 → INT-027。旧 ID 保留在 Git 历史中，不再表示当前产品要求。
 

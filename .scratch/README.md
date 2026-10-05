@@ -23,6 +23,7 @@
 | 015 | [测试目录与设备测试职责重构](015-test-layout-refactor/spec.md) | 用户确认测试分层设计后要求整体实施 |
 | 016 | [上游文档与兼容目录整理](016-upstream-maintenance-layout/spec.md) | 用户确认 compat 与 patches 分开并要求整理 upstream |
 | 017 | [现有界面主题变量迁移](017-theme-token-migration/spec.md) | 用户要求现有页面按主题开发规范迁移 |
+| 018 | [System 与 CircularShell 参考审计](018-system-super-reference-audit/spec.md) | 2026-10-04 用户在 grill-with-docs 中选择完整系统审计 |
 
 ## 当前工作入口
 

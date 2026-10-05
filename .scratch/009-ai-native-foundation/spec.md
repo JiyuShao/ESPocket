@@ -58,4 +58,6 @@ ESPocket 需要让 AI access 成为产品与架构设计的一部分，同时不
 
 架构见 [AI Native](../../docs/design/architecture/07-ai-native.md)，决策见 [ADR index](../../docs/adr/README.md)。
 
+官方 0.8 examples 的源码范围、迁移价值与兼容限制见 [2026-10-04 examples 核查](records/2026-10-04-brookesia-examples-review.md)；该调查不表示已接受迁移或升级依赖。
+
 原 A0–A5 顺序保留为 ticket group：A0 = 01、A1 = 02、A2 = 03–05、A3 = 06、A4 = 07、A5 = 08。A1 → A2 是最小 mainline；A3–A5 在各自依赖可用时分支推进。

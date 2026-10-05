@@ -27,3 +27,6 @@ ADR 记录替代方案代价显著、需要长期保持可追溯的 ESPocket 决
 决策变更时新增 superseding ADR，并让新旧记录相互链接。不得静默改写已接受 ADR 的决定。
 
 | [0016](0016-maintained-upstream-fixes.md) | accepted | 允许维护真实 Owner 内的上游 bug 修复，精确应用锁定版本补丁。 |
+| [0017](0017-overlay-arbitration-preserves-request-ownership.md) | accepted | Shell 仲裁 Overlay 输入；Core 保持请求身份、队列与期限。 |
+
+| [0018](0018-developer-mode-allows-unsigned-packages.md) | accepted | 仅开发者模式允许未签名 Runtime 包；Core 安装边界与其余验证要求继续有效。 |
