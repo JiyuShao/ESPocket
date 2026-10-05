@@ -1,4 +1,5 @@
 #include "espocket/test_protocol.hpp"
+#include <array>
 
 #include <utility>
 #include <chrono>
@@ -67,7 +68,7 @@ TestReply TestProtocol::dispatch(uint32_t version, std::string_view operation, s
         auto captured = screenshot_reader_();
         if (!captured) return {.ok = false, .error_code = captured.error()};
         if (!mode_.enabled()) return {.ok = false, .error_code = "developer_mode_off"};
-        if (!captured->pixels || captured->width == 0 || captured->height == 0 ||
+        if (!captured->pixels || captured->pixels->size() != captured->size || captured->width == 0 || captured->height == 0 ||
                 captured->width > 1024 || captured->height > 1024 ||
                 captured->size != static_cast<size_t>(captured->width) * captured->height * 2 ||
                 captured->sha256.size() != 64) return {.ok = false, .error_code = "internal"};
@@ -84,8 +85,11 @@ TestReply TestProtocol::dispatch(uint32_t version, std::string_view operation, s
         constexpr char hex[] = "0123456789abcdef";
         std::string pixels;
         pixels.reserve(static_cast<size_t>(length) * 2);
+        std::array<uint8_t, 512> bytes;
+        if (!screenshot_->pixels->read(offset, std::span(bytes).first(length)))
+            return {.ok = false, .error_code = "internal"};
         for (size_t i = static_cast<size_t>(offset); i < offset + length; ++i) {
-            const auto byte = screenshot_->pixels.get()[i];
+            const auto byte = bytes[i - offset];
             pixels += hex[byte >> 4]; pixels += hex[byte & 15];
         }
         return {.ok = true, .capture_id = capture_id_, .offset = static_cast<size_t>(offset),

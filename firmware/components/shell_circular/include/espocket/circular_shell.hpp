@@ -167,6 +167,7 @@ private:
     std::shared_ptr<BackOverlayState> back_overlay_state_;
     std::shared_ptr<CallbackState> callback_state_;
     esp_brookesia::system::core::AppContext *context_ = nullptr;
+    bool status_refresh_deferred_ = false;
     esp_brookesia::system::core::TimerId home_intent_timer_id_ =
         esp_brookesia::system::core::INVALID_TIMER_ID;
     esp_brookesia::system::core::TimerId status_timer_id_ =

@@ -18,11 +18,14 @@ VERSION = '0.8.3'
 PATCHES = ((COMPONENT, VERSION), ('espressif__brookesia_system_core', '0.8.4'))
 PATCH_SETS = {
     'baseline': PATCHES,
-    'production': PATCHES + (('espressif__brookesia_hal_adaptor', '0.8.4'), ('espressif__brookesia_app_settings', '0.8.3'), ('espressif__brookesia_service_display', '0.8.2'), ('espressif__esp_board_manager', '0.5.15'), ('espressif__brookesia_app_store', '0.8.2'), ('espressif__brookesia_lib_utils', '0.8.2'), ('espressif__brookesia_service_storage', '0.8.3')),
+    'production': PATCHES + (('espressif__brookesia_hal_adaptor', '0.8.4'), ('espressif__brookesia_app_settings', '0.8.3'), ('espressif__brookesia_service_display', '0.8.2'), ('espressif__esp_board_manager', '0.5.15'), ('espressif__brookesia_app_store', '0.8.2'), ('espressif__brookesia_lib_utils', '0.8.2'), ('espressif__brookesia_service_storage', '0.8.3'), ('espressif__brookesia_gui_lvgl', '0.8.5'), ('espressif__brookesia_gui_interface', '0.8.2')),
     'hal-candidate': PATCHES + (('espressif__brookesia_hal_adaptor', '0.8.4'),),
     'audio-candidate': PATCHES + (('espressif__brookesia_hal_adaptor', '0.8.4'), ('espressif__brookesia_app_settings', '0.8.3')),
     'display-candidate': PATCHES + (('espressif__brookesia_hal_adaptor', '0.8.4'), ('espressif__brookesia_app_settings', '0.8.3'), ('espressif__brookesia_service_display', '0.8.2')),
 }
+
+PATCH_SETS['gui-candidate'] = PATCH_SETS['production']
+PATCH_SETS['scheduler-candidate'] = PATCH_SETS['gui-candidate']
 
 # Keep the explicit candidate entry for reproducible historical commands.
 PATCH_SETS['store-candidate'] = PATCH_SETS['production']
@@ -60,11 +63,18 @@ def audio_dependencies(root):
     return document['dependencies']
 
 
-def configure_audio_candidate(text):
+def display_options(display_buffer_height):
+    if display_buffer_height not in (40, 80):
+        raise ValueError('Unsupported display buffer height')
+    return {**AUDIO_OPTIONS, 'CONFIG_BROOKESIA_GUI_LVGL_DISPLAY_SOURCE_BUFFER_HEIGHT': display_buffer_height}
+
+
+def configure_audio_candidate(text, *, display_buffer_height=40):
+    options = display_options(display_buffer_height)
     lines = [line for line in text.splitlines() if not any(
         line.startswith(key + '=') or line.startswith('# ' + key + ' ')
-        for key in AUDIO_OPTIONS)]
-    for key, enabled in AUDIO_OPTIONS.items():
+        for key in options)]
+    for key, enabled in options.items():
         if type(enabled) is bool:
             lines.append(key + '=y' if enabled else '# ' + key + ' is not set')
         else:
@@ -72,8 +82,9 @@ def configure_audio_candidate(text):
     return '\n'.join(lines) + '\n'
 
 
-def verify_audio_config(text):
-    for key, enabled in AUDIO_OPTIONS.items():
+def verify_audio_config(text, *, display_buffer_height=40):
+    options = display_options(display_buffer_height)
+    for key, enabled in options.items():
         if type(enabled) is bool:
             valid = (key + '=y' in text.splitlines()) == enabled
         else:
@@ -108,7 +119,7 @@ def pin_registry_dependencies(text, locked):
 def verify_registry_lock(original, generated, patch_set='production', root=ROOT):
     expected = registry_lock(original)
     actual = registry_lock(generated)
-    if patch_set in ('production', 'audio-candidate', 'display-candidate', 'store-candidate'):
+    if patch_set in ('production', 'audio-candidate', 'display-candidate', 'store-candidate', 'gui-candidate', 'scheduler-candidate'):
         extra = audio_dependencies(root)
         if set(expected) & set(extra):
             raise ValueError('Audio dependency constraints overlap production')
@@ -121,7 +132,12 @@ def verify_registry_lock(original, generated, patch_set='production', root=ROOT)
         raise ValueError(f'Unexpected registry dependency drift: {changed}')
 
 
-def stage(root, workspace, sdkconfig, patch_set='production'):
+def patch_manifest(root, component, version, patch_set):
+    filename = 'scheduler-candidate.json' if patch_set == 'scheduler-candidate' and component == 'espressif__brookesia_system_core' else 'manifest.json'
+    return root / 'firmware/patches' / component / version / filename
+
+
+def stage(root, workspace, sdkconfig, patch_set='production', *, display_buffer_height=40, display_single_buffer=False):
     root = root.resolve()
     source = root / 'firmware'
     workspace = workspace.resolve()
@@ -132,7 +148,7 @@ def stage(root, workspace, sdkconfig, patch_set='production'):
     manifests = []
     for component, version in PATCH_SETS[patch_set]:
         registry = source / 'managed_components' / component
-        manifest = source / 'patches' / component / version / 'manifest.json'
+        manifest = patch_manifest(root, component, version, patch_set)
         locked = json.loads(manifest.read_text())
         if locked['component'] != component or locked['upstream_version'] != version:
             raise ValueError('Unexpected patch identity')
@@ -152,7 +168,7 @@ def stage(root, workspace, sdkconfig, patch_set='production'):
     shutil.copyfile(sdkconfig, firmware / 'sdkconfig')
     main_manifest = firmware / 'main/idf_component.yml'
     constraints = registry_lock(source / 'dependencies.lock')
-    audio_extra = audio_dependencies(root) if patch_set in ('production', 'audio-candidate', 'display-candidate', 'store-candidate') else {}
+    audio_extra = audio_dependencies(root) if patch_set in ('production', 'audio-candidate', 'display-candidate', 'store-candidate', 'gui-candidate', 'scheduler-candidate') else {}
     if set(constraints) & set(audio_extra):
         raise ValueError('Audio dependency constraints overlap production')
     constraints.update(audio_extra)
@@ -173,18 +189,30 @@ def stage(root, workspace, sdkconfig, patch_set='production'):
         else:
             raise ValueError(f'Main manifest no longer matches locked patch version: {dependency}')
         patch_inputs.append({'component': component, 'version': version,
-                             'manifest_sha256': digest(manifest), 'source_files': locked['source_files'],
+                             'manifest_sha256': digest(manifest), 'manifest_file': manifest.name, 'source_files': locked['source_files'],
                              'patched_component': str(patched)})
     main_manifest.write_text(text)
     config = firmware / 'sdkconfig'
-    if patch_set in ('production', 'audio-candidate', 'display-candidate', 'store-candidate'):
-        config.write_text(configure_audio_candidate(config.read_text()))
+    if patch_set in ('production', 'audio-candidate', 'display-candidate', 'store-candidate', 'gui-candidate', 'scheduler-candidate'):
+        config.write_text(configure_audio_candidate(config.read_text(), display_buffer_height=display_buffer_height))
+    elif display_buffer_height != 40:
+        display_options(display_buffer_height)
+        lines = [line for line in config.read_text().splitlines()
+                 if 'CONFIG_BROOKESIA_GUI_LVGL_DISPLAY_SOURCE_BUFFER_HEIGHT' not in line]
+        config.write_text('\n'.join(lines) + f'\nCONFIG_BROOKESIA_GUI_LVGL_DISPLAY_SOURCE_BUFFER_HEIGHT={display_buffer_height}\n')
+    if display_single_buffer:
+        lines = [line for line in config.read_text().splitlines()
+                 if 'CONFIG_BROOKESIA_GUI_LVGL_DISPLAY_SOURCE_REQUIRE_DOUBLE_BUFFER' not in line]
+        config.write_text('\n'.join(lines) + '\n# CONFIG_BROOKESIA_GUI_LVGL_DISPLAY_SOURCE_REQUIRE_DOUBLE_BUFFER is not set\n')
     lines = [line for line in config.read_text().splitlines()
              if 'CONFIG_BROOKESIA_RUNTIME_JS_ASYNC_STACK_SIZE' not in line]
     config.write_text('\n'.join(lines) + '\nCONFIG_BROOKESIA_RUNTIME_JS_ASYNC_STACK_SIZE=16384\n')
     (workspace / 'patch-inputs.json').write_text(json.dumps({
         'patch_set': patch_set,
         'audio_candidate_dependencies': audio_extra,
+        'display_buffer_height': next((int(line.split('=')[1]) for line in config.read_text().splitlines()
+                                      if line.startswith('CONFIG_BROOKESIA_GUI_LVGL_DISPLAY_SOURCE_BUFFER_HEIGHT=')), None),
+        'display_single_buffer': display_single_buffer,
         'patches': patch_inputs,
         'sdkconfig_input_sha256': digest(sdkconfig), 'async_stack_bytes': 16384,
         'original_registry_lock_sha256': digest(source / 'dependencies.lock'),
@@ -201,15 +229,17 @@ def main():
     parser.add_argument('--prepare-only', action='store_true')
     parser.add_argument('--patch-set', choices=PATCH_SETS, default='production',
                         help='production includes accepted display/audio fixes; baseline preserves the prior minimal patch set; candidates are explicit subsets')
+    parser.add_argument('--display-buffer-height', type=int, choices=(40, 80), default=40, help='explicit display buffer trial; product default is 40')
+    parser.add_argument('--display-single-buffer', action='store_true', help='explicit single-buffer trial; otherwise preserve board buffering')
     args = parser.parse_args()
     try:
-        firmware = stage(ROOT, args.workspace, args.sdkconfig.resolve(), args.patch_set)
+        firmware = stage(ROOT, args.workspace, args.sdkconfig.resolve(), args.patch_set, display_buffer_height=args.display_buffer_height, display_single_buffer=args.display_single_buffer)
         print(f'Prepared firmware: {firmware}', flush=True)
         if not args.prepare_only:
             subprocess.run(['idf.py', '-C', str(firmware), 'reconfigure'], check=True)
             verify_registry_lock(ROOT / 'firmware/dependencies.lock', firmware / 'dependencies.lock', args.patch_set)
-            if args.patch_set in ('production', 'audio-candidate', 'display-candidate', 'store-candidate'):
-                verify_audio_config((firmware / 'sdkconfig').read_text())
+            if args.patch_set in ('production', 'audio-candidate', 'display-candidate', 'store-candidate', 'gui-candidate', 'scheduler-candidate'):
+                verify_audio_config((firmware / 'sdkconfig').read_text(), display_buffer_height=args.display_buffer_height)
             glyph_errors = check_glyphs(args.workspace.resolve(), (firmware / 'sdkconfig').read_text())
             if glyph_errors:
                 raise ValueError('Configured glyph coverage failed: ' + '\n'.join(glyph_errors))

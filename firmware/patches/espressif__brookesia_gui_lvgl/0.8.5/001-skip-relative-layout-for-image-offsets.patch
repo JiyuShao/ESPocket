@@ -1,0 +1,17 @@
+--- a/src/backend.cpp
++++ b/src/backend.cpp
+@@ -376,7 +376,13 @@
+     }
+ 
+     lvgl::apply_props(*this, *record, node, mask);
+-    lvgl::refresh_relative_placements(*this);
++    // Image offsets scroll pixels inside the existing object bounds. They do
++    // not change an anchor used by relative placement, so keep them on the
++    // drawing path without rebuilding every known layer layout.
++    constexpr auto pixel_offsets = PropsApplyMask::ImageOffsetX | PropsApplyMask::ImageOffsetY;
++    if ((static_cast<uint64_t>(mask) & ~static_cast<uint64_t>(pixel_offsets)) != 0) {
++        lvgl::refresh_relative_placements(*this);
++    }
+ }
+ 
+ std::expected<void, std::string> BackendImpl::preload_image_resource(const RuntimeImageResource &resource)

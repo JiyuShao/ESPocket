@@ -77,9 +77,9 @@ menu "ESPocket"
     config ESPOCKET_RUNTIME_IMAGE_CACHE_BYTES
         int "Bounded LVGL decoded image cache in bytes"
         range 0 2097152
-        default 0
+        default 524288
         help
-            Zero preserves the baseline; one MiB is a measured trial budget.
+            The validated default is 512 KiB; zero disables retained decoding.
             Decoded buffers use the upstream allocator (prefers PSRAM).
             Oversized images bypass the cache and PNG decoding releases
             retained entries under memory pressure. This budget excludes

@@ -8,6 +8,31 @@ void require(bool ok, const char *message) {
     if (!ok) { std::cerr << message << '\n'; std::exit(1); }
 }
 int main() {
+    const auto allocate = [](size_t n) {
+        require(n <= 1024, "no full-frame allocation under fragmentation");
+        return std::shared_ptr<uint8_t>(new uint8_t[n], std::default_delete<uint8_t[]>());
+    };
+    espocket::ScreenshotPixels compact(466, 466, allocate);
+    std::array<uint8_t, 932> solid{};
+    for (size_t p = 0; p < 466; ++p) solid[p * 2 + 1] = 248;
+    for (size_t y = 0; y < 466; ++y) require(compact.write(y * solid.size(), solid), "solid frame capture");
+    require(compact.stored_size() == 466 * 4, "flat rows use lossless runs");
+    std::array<uint8_t, 512> chunk{};
+    require(compact.read(931, chunk) && chunk[0] == 248 && chunk[1] == 0 && chunk[511] == 0,
+            "unaligned cross-row protocol chunk preserves RGB565 order");
+    for (size_t i = 0; i < solid.size(); ++i) solid[i] = static_cast<uint8_t>(i);
+    require(compact.write(932, solid), "high entropy row switches to raw");
+    std::array<uint8_t, 932> decoded{};
+    require(compact.read(932, decoded) && decoded == solid, "raw fallback is lossless");
+    const std::array<uint8_t, 4> overlap{19, 20, 21, 22};
+    require(compact.write(931, overlap) && compact.read(931, chunk) &&
+            std::equal(overlap.begin(), overlap.end(), chunk.begin()), "overlapping partial flush can edit compressed and raw rows");
+    require(!compact.write(SIZE_MAX, solid) && !compact.read(compact.size() - 1, chunk), "storage range overflow rejected");
+    espocket::ScreenshotPixels exhausted(3, 2, [](size_t) { return std::shared_ptr<uint8_t>{}; });
+    std::array<uint8_t, 1> failed_coverage{};
+    espocket::ScreenshotAssembly failed_storage(3, 2, exhausted, failed_coverage);
+    require(!failed_storage.append(0, 0, 2, 1, solid, 6) && !failed_storage.complete(), "allocation failure cannot report complete frame");
+
     std::array<uint8_t, 12> pixels{};
     std::array<uint8_t, 1> coverage{};
     espocket::ScreenshotAssembly assembly(3, 2, pixels, coverage);
@@ -23,11 +48,15 @@ int main() {
         [](bool) { return std::expected<void, std::string>{}; });
     uint64_t now = 100;
     int calls = 0;
-    std::weak_ptr<uint8_t> retained;
+    std::weak_ptr<espocket::ScreenshotPixels> retained;
     espocket::TestProtocol visual(mode, "visual-image", {}, {}, [] { return std::expected<void, std::string>{}; }, {},
         [&]() -> std::expected<espocket::TestScreenshot, std::string> {
             ++calls;
-            auto bytes = std::shared_ptr<uint8_t>(new uint8_t[12]{0,248,224,7,31,0}, std::default_delete<uint8_t[]>());
+            auto bytes = std::make_shared<espocket::ScreenshotPixels>(3, 2, [](size_t n) {
+                return std::shared_ptr<uint8_t>(new uint8_t[n], std::default_delete<uint8_t[]>());
+            });
+            const std::array<uint8_t, 12> raw{0,248,224,7,31,0};
+            require(bytes->write(0, raw), "fixture writes pixels");
             retained = bytes;
             return espocket::TestScreenshot{3, 2, 12, bytes, std::string(64, 'a')};
         }, [&] { return now; });

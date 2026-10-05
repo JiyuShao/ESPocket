@@ -5,6 +5,9 @@ namespace espocket {
 void CircularShell::refresh_launcher()
 {
     if (!context_ || !host_.launcher_apps) return;
+    // Reconcile on return to the Shell. A hidden Launcher must not wait for
+    // the GUI behind each foreground App frame on the shared App callback task.
+    if (host_.app_visible && host_.app_visible()) return;
     const auto now = esp_timer_get_time();
     const bool developer = host_.developer_mode.enabled && host_.developer_mode.enabled();
     const auto generation = host_.launcher_generation ? host_.launcher_generation() : 0;

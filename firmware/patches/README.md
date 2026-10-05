@@ -2,6 +2,8 @@
 
 本目录保存已经接受的上游源码修改。自有兼容头文件与编译适配放在[compat](../compat/README.md)；managed_components 是依赖解析产物，不手工修改。
 
+GUI Interface 0.8.2 的[预加载资源归属补丁](espressif__brookesia_gui_interface/0.8.2/001-preserve-declared-image-preloads.patch)已纳入默认 `production`，`gui-candidate`／`scheduler-candidate` 保留为兼容入口。动画切帧保留文档声明的 `preload: true` 资源，普通自动加载资源仍按引用释放，文档卸载仍释放全部资源。真实资源更新／释放方法的主机回归验证 200 次切帧无重复加载、非声明资源释放和失败回滚；构建及真机联合门槛见 [005/10](../../.scratch/005-m5-application-ecosystem/issues/10-reduce-runtime-startup-blocking.md)，原包联合回归与默认构建采纳结果见该工作票。
+
 ## 当前清单
 
 已接受 [Runtime JS 0.8.3 异步栈配置补丁](espressif__brookesia_runtime_js/0.8.3/001-configure-async-stack.patch)，由 [ADR-0015](../../docs/adr/0015-runtime-async-stack-patch-exception.md)限定授权。manifest 锁定完整原始源码与补丁 hash，上游问题尚未提交。构建与设备验收状态以 [008/04](../../.scratch/008-m8-app-contract/issues/04-resolve-runtime-async-stack-overflow.md)为准。
@@ -46,3 +48,9 @@ Store 0.8.2 的 `004-owner-service-completions.patch` 将 Storage/Device/HTTP �
 Store `005-avoid-local-scan-during-remote-refresh.patch` 保留 startup/Local 的扫描，远程 index Refresh 不启动重复本地扫描；真实 deferred-refresh 方法回归覆盖三个 tab。Core `006-bound-recursive-package-removal.patch` 仅将递归目录删除的等待期限设为 30 秒，stat/read 保留 5 秒，并继续核对删除后目录不存在。主机真实 filesystem helper 覆盖慢后端、超出上限、目录仍存在与空路径拒绝；设备完整删除仍需独立门槛，不把延长期限等同成功。上游提供等价边界并通过相同回归后移除。
 
 Storage 0.8.3 的 [单次元数据读取补丁](espressif__brookesia_service_storage/0.8.3/001-read-file-metadata-once.patch) 将每条类型／时间／大小查询合并到同一次 VFS lookup，保留 file-clock 和软链接语义；Core `007-count-package-admission-in-startup.patch` 将包校验纳入真实启动计时。完整校验保留，性能设备门槛由 [005/10](../../.scratch/005-m5-application-ecosystem/issues/10-reduce-runtime-startup-blocking.md) 持有。移除条件为上游等价实现通过相同元数据语义、包信任和设备性能回归。
+
+GUI LVGL 0.8.5 的 [图片内部滚动补丁](espressif__brookesia_gui_lvgl/0.8.5/001-skip-relative-layout-for-image-offsets.patch) 已纳入 `production`，`gui-candidate` 保留为同组合入口。仅 ImageOffsetX/Y 更新跳过相对布局重算，图片来源、文字、几何与混合更新保持原路径。真实 Backend 方法 host 回归覆盖两条路径；原包性能、截图和 Apps 真机联合门槛已通过；持续流畅性仍由工作票验收。结果由 [005/10](../../.scratch/005-m5-application-ecosystem/issues/10-reduce-runtime-startup-blocking.md) 持有。
+
+Core [同域队列候选](espressif__brookesia_system_core/0.8.4/010-share-task-domain-strands.patch) 已纳入 canonical manifest，同目录 `scheduler-candidate.json` 保留相同补丁组合；显式 `--patch-set scheduler-candidate` 在 GUI 候选上使 App／App Input、GUI／GUI Input 各共用一个 strand，保留原 gate 和 callback context。真实 group callback 与 Boost strand 回归验证独立 timer 的进展；原包压力、截图和完整 Apps 回归通过后已纳入默认 manifest。显示缓冲实验另用 `--display-buffer-height 80 --display-single-buffer`，保持默认 40 行及原双缓冲选择；实验配置和源码身份随 patch-inputs 保存。两项状态由同一工作票持有。
+
+Core 图片来源背压候选 [011](espressif__brookesia_system_core/0.8.4/011-bound-image-source-dispatch.patch) 已纳入默认 manifest：`SetViewSrc` 通过既有同步 GUI Owner 队列按序完成，避免周期 App 在 GUI 变慢时持续创建任务／promise。真实 call site 和 run_task_sync 模板覆盖慢 Owner、有界任务、全序更新与错误传播；真机 mutex 分配 abort 回溯及候选状态仍由 005/10 持有，原包联合回归通过后已纳入默认 manifest。

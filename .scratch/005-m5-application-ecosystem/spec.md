@@ -90,9 +90,9 @@ ESPocket 需要官方 Store 与远程 Runtime distribution path，但锁定的�
 
 ## 实施范围与验收
 
-当前检查点：已完成真实 Store 安装／卸载、动态 Launcher、例外包模式切换与隔离测试签名矩阵的可执行部分，历史结果与未通过项见[生命周期记录](records/2026-10-04-launcher-and-lifecycle-acceptance.md)。持久验证在 2698534d2 完成首次迁移与受控重启复用，Hello Runtime 打开约 0.9–1.0 秒、Flappy admission 约 6 ms。缓存候选 329ad8074 已完成四项探针、两轮无截图原包 A/B 与完整 Apps 回归；游玩阶段 PNG 解码约少 71%、绘制平均约少 50%，game timer 仍约 74 ms／13.5 Hz，流畅性未结案。1 MiB 试验仍出现截图分配回归，清缓存重试未通过；已撤回默认启用与该修复，恢复已验证零缓存镜像 a2df08485。探针和缓存配置保留，默认 0，后续须解决截图连续内存约束后再采纳。原 Store 1.5 秒退出与活动取消门槛仍未通过；正式发布身份、目录和 Catalog 权限尚缺，物理掉电仍未验。详见[性能记录](records/2026-10-05-runtime-startup-performance.md)与 03／04／06／08／09／10 的未完成条件。
+当前检查点：已完成真实 Store 安装／卸载、动态 Launcher、例外包模式切换与隔离测试签名矩阵的可执行部分，历史结果与未通过项见[生命周期记录](records/2026-10-04-launcher-and-lifecycle-acceptance.md)。持久验证在 2698534d2 完成首次迁移与受控重启复用，Hello Runtime 打开约 0.9–1.0 秒、Flappy admission 约 6 ms。后续原包优化修复声明预加载资源被切帧释放、source 异步任务积累和隐藏 Shell 查询；逐行截图避免连续整帧分配。512 KiB 缓存／GUI／Core 联合候选 fb7055e85 的性能、70 秒前台压力、五图和完整 Apps 回归通过，独立滚动样本约 25–33 FPS，预热后 PNG 解码为 0。已纳入默认构建，最终 canonical 输入复核通过且 ELF／BIN 与已验收 fb7055e85 完全相同；不承诺持续稳定 30 FPS。原 Store 1.5 秒退出与活动取消门槛仍未通过；正式发布身份、目录和 Catalog 权限尚缺，物理掉电仍未验。详见[分阶段优化记录](records/2026-10-05-runtime-optimization.md)与 03／04／06／08／09／10 的未完成条件。
 
-硬件／软件隔离诊断已完成：同机原生小范围刷新 48–49 FPS、全屏 15 FPS；原包主要可见成本为 PNG 解码／绘制与负载下的锁等待、调度，未发现要求换硬件的故障证据，但当前全屏显示实现也有性能约束。诊断不等于可玩性修复；临时 overlay 已清理，设备恢复 a2df08485，原包保持不改。详见[诊断记录](records/2026-10-05-runtime-bottleneck-diagnosis.md)，后续验收仍由 10 持有。
+硬件／软件隔离诊断已完成：同机原生小范围刷新 48–49 FPS、全屏 15 FPS；原包主要可见成本为 PNG 解码／绘制与负载下的锁等待、调度，未发现要求换硬件的故障证据，但当前全屏显示实现也有性能约束。该阶段诊断不等于可玩性修复；临时 overlay 已清理，当时恢复 a2df08485，后续普通优化镜像见上面的当前检查点，原包保持不改。详见[诊断记录](records/2026-10-05-runtime-bottleneck-diagnosis.md)，后续验收仍由 10 持有。
 
 - 授权范围：先执行 [03](issues/03-enforce-core-package-trust.md) 的统一 Core gate、receipt、事务与恢复基础，再完成 [09](issues/09-allow-unsigned-developer-installation.md) 的开发准入与实际 Store 安装。03 的正式发行签名证据依赖 08，不虚报完成；后续用户已明确授权全部剩余工作，范围扩至 04/05/06/08/09；正式发行仍需真实发布者密钥和发布路线，测试签名不替代。
 - 读取入口：本 Spec、03/09、ADR-0004、ADR-0016、ADR-0018、product/05-runtime-package-trust、product/07-developer-mode、development/app-navigation 与 [实现交接记录](records/2026-10-04-package-implementation-handoff.md)。

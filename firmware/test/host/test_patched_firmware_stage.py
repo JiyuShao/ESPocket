@@ -14,6 +14,18 @@ SPEC.loader.exec_module(BUILDER)
 
 
 class PatchedFirmwareStageTest(unittest.TestCase):
+    def test_gui_candidate_aliases_validated_production(self):
+        self.assertEqual(BUILDER.PATCH_SETS['gui-candidate'], BUILDER.PATCH_SETS['production'])
+        self.assertIn(('espressif__brookesia_gui_lvgl', '0.8.5'), BUILDER.PATCH_SETS['production'])
+        self.assertIn(('espressif__brookesia_gui_interface', '0.8.2'), BUILDER.PATCH_SETS['production'])
+
+    def test_scheduler_candidate_selects_only_explicit_core_manifest(self):
+        self.assertEqual(BUILDER.PATCH_SETS['scheduler-candidate'], BUILDER.PATCH_SETS['gui-candidate'])
+        for patch_set in ('production', 'gui-candidate', 'scheduler-candidate'):
+            for component, version in BUILDER.PATCH_SETS[patch_set]:
+                expected = 'scheduler-candidate.json' if patch_set == 'scheduler-candidate' and component == 'espressif__brookesia_system_core' else 'manifest.json'
+                self.assertEqual(BUILDER.patch_manifest(ROOT, component, version, patch_set).name, expected)
+
     def test_display_candidate_adds_only_the_display_patch_to_audio(self):
         audio = BUILDER.PATCH_SETS['audio-candidate']
         self.assertEqual(BUILDER.PATCH_SETS['display-candidate'],
@@ -26,7 +38,9 @@ class PatchedFirmwareStageTest(unittest.TestCase):
                          BUILDER.PATCH_SETS['display-candidate'] + (('espressif__esp_board_manager', '0.5.15'),
                          ('espressif__brookesia_app_store', '0.8.2'),
                          ('espressif__brookesia_lib_utils', '0.8.2'),
-                         ('espressif__brookesia_service_storage', '0.8.3')))
+                         ('espressif__brookesia_service_storage', '0.8.3'),
+                         ('espressif__brookesia_gui_lvgl', '0.8.5'),
+                         ('espressif__brookesia_gui_interface', '0.8.2')))
         self.assertEqual(BUILDER.PATCH_SETS['store-candidate'], BUILDER.PATCH_SETS['production'])
 
     def setUp(self):
@@ -77,6 +91,7 @@ class PatchedFirmwareStageTest(unittest.TestCase):
         before = BUILDER.inventory(self.firmware)
         staged = BUILDER.stage(self.root, self.workspace, self.config, 'baseline')
         self.assertEqual(BUILDER.inventory(self.firmware), before)
+
         self.assertTrue((staged / 'managed_components/vendor/littlefs/lfs.h').exists())
         self.assertEqual((staged / 'main/idf_component.yml').read_text().count('override_path:'), 2)
         self.assertEqual(len(json.loads((self.workspace / 'patch-inputs.json').read_text())['patches']), 2)
@@ -87,6 +102,19 @@ class PatchedFirmwareStageTest(unittest.TestCase):
         (staged / 'dependencies.lock').write_text('changed lock')
         (staged / 'managed_components' / BUILDER.COMPONENT / 'source.txt').unlink()
         self.assertEqual(BUILDER.inventory(self.firmware), before)
+
+    def test_explicit_display_trial_changes_only_copied_configuration(self):
+        self.config.write_text(self.config.read_text() + 'CONFIG_BROOKESIA_GUI_LVGL_DISPLAY_SOURCE_REQUIRE_DOUBLE_BUFFER=y\n')
+        original = self.config.read_text()
+        staged = BUILDER.stage(self.root, self.workspace, self.config, 'baseline',
+                               display_buffer_height=80, display_single_buffer=True)
+        text = (staged / 'sdkconfig').read_text()
+        self.assertIn('BUFFER_HEIGHT=80', text)
+        self.assertNotIn('CONFIG_BROOKESIA_GUI_LVGL_DISPLAY_SOURCE_REQUIRE_DOUBLE_BUFFER=y', text)
+        self.assertEqual(self.config.read_text(), original)
+        inputs = json.loads((self.workspace / 'patch-inputs.json').read_text())
+        self.assertEqual(inputs['display_buffer_height'], 80)
+        self.assertTrue(inputs['display_single_buffer'])
 
     def test_rejects_changed_upstream_before_staging(self):
         (self.registry / 'source.txt').write_text('new upstream\n')
@@ -157,6 +185,17 @@ class RegistryLockTest(unittest.TestCase):
 
 
 class AudioCandidateConfigTest(unittest.TestCase):
+    def test_display_trial_requires_explicit_expected_height_and_keeps_audio_checks(self):
+        text = BUILDER.configure_audio_candidate('', display_buffer_height=80)
+        BUILDER.verify_audio_config(text, display_buffer_height=80)
+        with self.assertRaisesRegex(ValueError, 'configuration'):
+            BUILDER.verify_audio_config(text)
+        with self.assertRaisesRegex(ValueError, 'Unsupported'):
+            BUILDER.configure_audio_candidate('', display_buffer_height=50)
+        with self.assertRaisesRegex(ValueError, 'configuration'):
+            BUILDER.verify_audio_config(text.replace('# CONFIG_AUDIO_AFE_ENABLE is not set',
+                                                    'CONFIG_AUDIO_AFE_ENABLE=y'), display_buffer_height=80)
+
     def test_candidate_overrides_recording_and_preserves_board_settings(self):
         text = BUILDER.configure_audio_candidate('CONFIG_EXISTING=y\nCONFIG_BROOKESIA_HAL_ADAPTOR_AUDIO_ENABLE_CODEC_RECORDER_IMPL=y\nCONFIG_AUDIO_AFE_ENABLE=y\n')
         BUILDER.verify_audio_config(text)

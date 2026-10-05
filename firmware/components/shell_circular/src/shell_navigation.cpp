@@ -7,6 +7,7 @@ namespace espocket {
 void CircularShell::sync_card_hint(bool visible)
 {
     if (!back_overlay_state_) return;
+    if (!visible && !back_overlay_state_->card_hint) return;
     LvglLock lock;
     if (!lock) return;
     auto *&label = back_overlay_state_->card_hint;

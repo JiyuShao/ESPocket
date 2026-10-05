@@ -27,6 +27,10 @@ int main() {
    if(fail_snapshot)return std::unexpected("snapshot failed");return apps;};
  shell.host_.launcher_generation=[&]{return generation;};
  shell.host_.developer_mode.enabled=[]{return true;};
+ bool active=true;shell.host_.app_visible=[&]{return active;};
+ for(int i=0;i<200;++i){test_clock_us+=50'000;shell.refresh_launcher();}
+ check(context.view.language_reads==0 && context.view.preparations==0,"hidden Launcher acquired GUI during foreground App");
+ active=false;
  shell.refresh_launcher();
  check(shell.launcher_entries_.size()==1 && context.view.regions.size()==1,"initial full projection");
  const auto first=shell.launcher_region_; const auto stable=shell.launcher_entries_[0].instance;

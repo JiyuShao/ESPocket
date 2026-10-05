@@ -17,6 +17,7 @@ class ProtocolHostTest(unittest.TestCase):
                 os.environ.get('CXX', 'clang++'), '-std=c++23', '-pthread', '-I', str(COMPONENT / 'include'),
                 str(COMPONENT / 'src/developer_mode.cpp'),
                 str(COMPONENT / 'src/test_protocol.cpp'),
+                str(COMPONENT / 'src/screenshot.cpp'),
                 str(COMPONENT / 'src/test_input_queue.cpp'),
                 str(COMPONENT / 'src/touch_input_sequence.cpp'),
                 str(COMPONENT / 'src/owner_snapshot_queue.cpp'),

@@ -1,0 +1,34 @@
+--- a/src/system/gui.cpp
++++ b/src/system/gui.cpp
+@@ -1214,18 +1214,24 @@
+     std::string_view src
+ )
+ {
+-    return impl_->post_gui_input_task(
+-    [this, app_id, absolute_path = std::string(absolute_path), src = std::string(src)]() {
++    // Source changes are ordered mutations, not an unbounded frame queue.
++    // Wait for the real GUI owner so a periodic App cannot allocate another
++    // task handle/promise while a previous image mutation is still pending.
++    return impl_->run_task_sync<std::expected<void, std::string>>(
++               SYSTEM_GUI_INPUT_TASK_GROUP,
++    [this, app_id, absolute_path = std::string(absolute_path), src = std::string(src)]()
++        -> std::expected<void, std::string> {
+         auto record_result = impl_->get_record(app_id);
+         if (!record_result || !impl_->gui_runtime_ || !record_result.value()->document_id.has_value()) {
+-            BROOKESIA_LOGW("Skip GUI image source update: app_id(%1%), path(%2%)", app_id, absolute_path);
+-            return;
++            return std::unexpected("App GUI document is not loaded");
+         }
+         impl_->flush_pending_gui_bindings(app_id);
+         if (!impl_->gui_runtime_->set_view_src(*record_result.value()->document_id, absolute_path, src)) {
+-            BROOKESIA_LOGW("Failed to set GUI image source: app_id(%1%), path(%2%)", app_id, absolute_path);
+-        }
+-    }
++            return std::unexpected("Failed to set GUI image source");
++        }
++        return {};
++    },
++    std::unexpected("Failed to post GUI image source task")
+            );
+ }
+ 

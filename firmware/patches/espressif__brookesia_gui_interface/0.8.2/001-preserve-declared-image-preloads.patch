@@ -1,0 +1,21 @@
+--- a/src/runtime_document.cpp
++++ b/src/runtime_document.cpp
+@@ -700,7 +700,17 @@
+         }
+     }
+ 
+-    if (!previous_src.empty() && previous_src != image_props.src &&
++    // A declared preload belongs to the document, not just its current views.
++    // Keep its descriptor stable across animation frames; unload still releases
++    // every resource, while non-declared automatic resources remain transient.
++    const bool declared_preload = std::any_of(
++        tree.preloaded_images.begin(), tree.preloaded_images.end(),
++        [&previous_resource](const PreloadedImageRecord &preloaded) {
++            return preloaded.resource.preload &&
++                   is_same_image_resource(preloaded.resource, previous_resource);
++        }
++    );
++    if (!declared_preload && !previous_src.empty() && previous_src != image_props.src &&
+             !is_same_image_resource(previous_resource, next_resource) &&
+             !tree_references_image_resource_except(tree, record, previous_src, previous_resource)) {
+         release_image_resource_from_tree(tree, previous_resource, ImagePreloadOwner::Automatic);

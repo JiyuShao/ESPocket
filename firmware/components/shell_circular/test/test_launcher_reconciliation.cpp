@@ -28,7 +28,8 @@ struct FakeGui {
     std::string fail;
     int preparations = 0;
     bool fixed_available = true;
-    std::string get_language() const { return "en"; }
+    mutable int language_reads = 0;
+    std::string get_language() const { ++language_reads; return "en"; }
     std::expected<void, std::string> create_view(const char *type, const std::string &parent, const std::string &instance) {
         ++preparations;
         if (fail == type) return std::unexpected("injected create failure");

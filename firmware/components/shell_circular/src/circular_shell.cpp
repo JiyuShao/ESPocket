@@ -275,6 +275,7 @@ std::expected<void, std::string> CircularShell::on_timer(
             host_.tick();
         }
         refresh_launcher();
+        if (status_refresh_deferred_) refresh_status();
         dispatch_launcher();
         if (home_gesture_state_) {
             const auto activity = home_gesture_state_->activity_generation.load(std::memory_order_acquire);

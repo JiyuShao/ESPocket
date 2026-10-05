@@ -1,0 +1,32 @@
+--- a/src/system/task.cpp
++++ b/src/system/task.cpp
+@@ -114,13 +114,19 @@
+     if (!task_scheduler_ || !task_scheduler_->is_running()) {
+         return false;
+     }
++    // These pairs already share a domain gate. Sharing their strand prevents
++    // a worker from blocking on that gate while unrelated timers need dispatch.
++    auto gui_input = make_task_group_config(SYSTEM_GUI_INPUT_TASK_GROUP, true, true);
++    gui_input.parent_group = SYSTEM_GUI_TASK_GROUP;
++    auto app_input = make_task_group_config(SYSTEM_APP_INPUT_TASK_GROUP, false, false, true);
++    app_input.parent_group = SYSTEM_APP_TASK_GROUP;
+     return task_scheduler_->configure_group(
+                SYSTEM_GUI_TASK_GROUP,
+                make_task_group_config(SYSTEM_GUI_TASK_GROUP, true, true)
+            ) &&
+            task_scheduler_->configure_group(
+                SYSTEM_GUI_INPUT_TASK_GROUP,
+-               make_task_group_config(SYSTEM_GUI_INPUT_TASK_GROUP, true, true)
++               gui_input
+            ) &&
+            task_scheduler_->configure_group(
+                SYSTEM_APP_TASK_GROUP,
+@@ -128,7 +134,7 @@
+            ) &&
+            task_scheduler_->configure_group(
+                SYSTEM_APP_INPUT_TASK_GROUP,
+-               make_task_group_config(SYSTEM_APP_INPUT_TASK_GROUP, false, false, true)
++               app_input
+            ) &&
+            task_scheduler_->configure_group(
+                SYSTEM_TIMER_TASK_GROUP,
