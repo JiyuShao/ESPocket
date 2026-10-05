@@ -1,11 +1,20 @@
 #include "system_internal.hpp"
+#include "runtime_render_probe.hpp"
 
 namespace espocket {
+
+void System::on_app_content_invalidated(const esp_brookesia::system::core::AppInfo &app)
+{
+    launcher_generation_.fetch_add(1, std::memory_order_release);
+    ESP_LOGI(TAG, "Runtime content invalidated: %s", app.manifest.id.c_str());
+}
 
 std::expected<void, std::string> System::on_app_uninstalled(
     const esp_brookesia::system::core::AppInfo &app
 )
 {
+    launcher_admissions_.erase(app.app_id);
+    launcher_generation_.fetch_add(1, std::memory_order_release);
     if (cards_ && cards_->uninstall_app(app.manifest.id) && !card_samples_active_) {
         if (auto saved = card_store_->save_current(); !saved) {
             ESP_LOGE(TAG, "Card uninstall persistence failed: %s", saved.error().c_str());
@@ -30,6 +39,12 @@ std::expected<void, std::string> System::on_app_uninstalled(
     return {};
 }
 
+void System::on_app_replacement_prepared(
+    const esp_brookesia::system::core::AppInfo &old_app)
+{
+    remember_replaced_card_state(old_app.manifest.id);
+}
+
 std::expected<void, std::string> System::on_app_replaced(
     const esp_brookesia::system::core::AppInfo &old_app,
     const esp_brookesia::system::core::AppInfo &)
@@ -50,18 +65,42 @@ std::expected<void, std::string> System::on_app_replaced(
         removed->set_availability_handler({});
     }
     clear_foreground(old_app);
+    return {};
+}
+
+std::expected<void, std::string> System::on_app_replacement_committed(
+    const esp_brookesia::system::core::AppInfo &,
+    const esp_brookesia::system::core::AppInfo &)
+{
     if (cards_ && !card_samples_active_) {
         if (auto saved = card_store_->save_current(); !saved) {
             return std::unexpected("Card update persistence failed: " + saved.error());
         }
     }
+    replaced_card_state_.reset();
+    launcher_generation_.fetch_add(1, std::memory_order_release);
     return {};
+}
+
+std::expected<void, std::string> System::on_app_replacement_rolled_back(
+    const esp_brookesia::system::core::AppInfo &failed_app,
+    const esp_brookesia::system::core::AppInfo &restored_app)
+{
+    auto migrated = on_app_replaced(failed_app, restored_app);
+    auto restored = restore_replaced_card_state(restored_app.manifest.id);
+    if (!migrated && !restored) {
+        return std::unexpected(migrated.error() + "; card_restore_failed: " + restored.error());
+    }
+    if (!restored) return restored;
+    return migrated;
 }
 
 std::expected<void, std::string> System::on_app_started(
     const esp_brookesia::system::core::AppInfo &app
 )
 {
+    if (app.manifest.kind == esp_brookesia::system::core::AppKind::Runtime) begin_runtime_render_probe(app.manifest.id);
+    else end_runtime_render_probe();
     if (stopping_.load(std::memory_order_acquire)) {
         return std::unexpected("ESPocket System is stopping");
     }
@@ -133,6 +172,7 @@ void System::on_app_start_failed(
 
 void System::on_app_stopped(const esp_brookesia::system::core::AppInfo &app)
 {
+    end_runtime_render_probe();
     if (auto runtime = runtime_adapter_for(app.app_id)) {
         runtime->stop();
     } else if (auto navigator = navigator_for(app.app_id)) {

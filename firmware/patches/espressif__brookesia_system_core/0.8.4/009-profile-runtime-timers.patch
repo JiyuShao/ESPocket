@@ -1,0 +1,114 @@
+--- a/src/runtime/host_bridge.cpp
++++ b/src/runtime/host_bridge.cpp
+@@ -890,7 +890,7 @@
+ #if BROOKESIA_SYSTEM_CORE_ENABLE_PROFILE_LOG
+     const auto call_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+         std::chrono::steady_clock::now() - call_started).count();
+-    if (call_ms >= 20) BROOKESIA_LOGI(
++    if (call_ms >= 20 && function_name != "SetBindings" && function_name != "SetViewSrc") BROOKESIA_LOGI(
+         "Runtime service profile: app(%1%), service(%2%), function(%3%), elapsed_ms(%4%)",
+         app_id.value(), service_name, function_name, call_ms);
+ #endif
+--- a/src/system/timer.cpp
++++ b/src/system/timer.cpp
+@@ -10,8 +10,39 @@
+ #include "brookesia/lib_utils/function_guard.hpp"
+ #include "private/utils.hpp"
+ #include "private/system/impl.hpp"
++#include <chrono>
++#include <atomic>
+ 
+ namespace esp_brookesia::system::core {
++#if BROOKESIA_SYSTEM_CORE_ENABLE_PROFILE_LOG
++namespace {
++int64_t timer_probe_now()
++{
++    return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
++}
++struct TimerProbe {
++    bool enabled;
++    int64_t next_due, interval_us, window_start=timer_probe_now(), last_dispatch=0;
++    uint64_t callbacks=0, wake_us=0, wake_max_us=0, queue_us=0, queue_max_us=0,
++        callback_us=0, callback_max_us=0, period_us=0, period_max_us=0, periods=0;
++    std::atomic<uint32_t> coalesced{0};
++    void record(AppId app, std::string_view name, int64_t enqueued, uint64_t wake_delay, int64_t start, int64_t end) {
++        if (!enabled) return;
++        const auto queued=static_cast<uint64_t>(std::max<int64_t>(0,start-enqueued));
++        const auto elapsed=static_cast<uint64_t>(std::max<int64_t>(0,end-start));
++        ++callbacks;wake_us+=wake_delay;wake_max_us=std::max(wake_max_us,wake_delay);
++        queue_us+=queued;queue_max_us=std::max(queue_max_us,queued);
++        callback_us+=elapsed;callback_max_us=std::max(callback_max_us,elapsed);
++        if(last_dispatch){const auto period=static_cast<uint64_t>(start-last_dispatch);++periods;period_us+=period;period_max_us=std::max(period_max_us,period);}
++        last_dispatch=start;
++        if (end-window_start<2000000) return;
++        BROOKESIA_LOGI("Runtime timer profile: app(%1%), name(%2%), window_us(%3%), requested_us(%4%), callbacks(%5%), coalesced(%6%), wake_total_us(%7%), wake_max_us(%8%), queue_total_us(%9%), queue_max_us(%10%), callback_total_us(%11%), callback_max_us(%12%), periods(%13%), period_total_us(%14%), period_max_us(%15%)",
++            app,name,end-window_start,interval_us,callbacks,coalesced.exchange(0),wake_us,wake_max_us,queue_us,queue_max_us,callback_us,callback_max_us,periods,period_us,period_max_us);
++        window_start=end;callbacks=wake_us=wake_max_us=queue_us=queue_max_us=callback_us=callback_max_us=period_us=period_max_us=periods=0;
++    }
++};
++}
++#endif
+ 
+ void System::Impl::cancel_app_timers(AppRecord &record)
+ {
+@@ -100,7 +131,22 @@
+     }
+     auto &record = *record_result.value();
+     auto timer_id_holder = std::make_shared<TimerId>(INVALID_TIMER_ID);
+-    auto timer_task = [this, app_id, timer_id_holder, name = std::string(name)]() -> bool {
++#if BROOKESIA_SYSTEM_CORE_ENABLE_PROFILE_LOG
++    auto probe=std::make_shared<TimerProbe>();
++    probe->enabled=record.info.manifest.kind==AppKind::Runtime;
++    probe->interval_us=static_cast<int64_t>(interval_ms)*1000;
++    probe->next_due=timer_probe_now()+probe->interval_us;
++#endif
++    auto timer_task = [this, app_id, timer_id_holder, name = std::string(name)
++#if BROOKESIA_SYSTEM_CORE_ENABLE_PROFILE_LOG
++        , probe
++#endif
++    ]() -> bool {
++#if BROOKESIA_SYSTEM_CORE_ENABLE_PROFILE_LOG
++        const auto enqueued=timer_probe_now();
++        const auto wake_delay=static_cast<uint64_t>(std::max<int64_t>(0,enqueued-probe->next_due));
++        probe->next_due=enqueued+probe->interval_us;
++#endif
+         {
+             std::lock_guard lock(impl_->timer_mutex_);
+             const bool already_pending = std::any_of(
+@@ -113,6 +159,9 @@
+             );
+             if (already_pending)
+             {
++#if BROOKESIA_SYSTEM_CORE_ENABLE_PROFILE_LOG
++                if(probe->enabled) ++probe->coalesced;
++#endif
+                 return true;
+             }
+             impl_->pending_timers_.push_back({
+@@ -123,7 +172,11 @@
+         }
+         auto post_result = impl_->post_task(
+             SYSTEM_APP_TASK_GROUP,
+-            [this, app_id, timer_id = *timer_id_holder, name]()
++            [this, app_id, timer_id = *timer_id_holder, name
++#if BROOKESIA_SYSTEM_CORE_ENABLE_PROFILE_LOG
++                , probe, enqueued, wake_delay
++#endif
++            ]()
+         {
+             lib_utils::FunctionGuard clear_pending_guard([this, app_id, timer_id]() {
+                 std::lock_guard lock(impl_->timer_mutex_);
+@@ -131,7 +184,13 @@
+                     return (timer.app_id == app_id) && (timer.timer_id == timer_id);
+                 });
+             });
++#if BROOKESIA_SYSTEM_CORE_ENABLE_PROFILE_LOG
++            const auto started=timer_probe_now();
++#endif
+             auto result = impl_->dispatch_timer(app_id, timer_id, name);
++#if BROOKESIA_SYSTEM_CORE_ENABLE_PROFILE_LOG
++            probe->record(app_id,name,enqueued,wake_delay,started,timer_probe_now());
++#endif
+             if (!result) {
+                 BROOKESIA_LOGW(
+                     "Dispatch app timer failed: app_id(%1%), timer_id(%2%), name(%3%), error(%4%)",

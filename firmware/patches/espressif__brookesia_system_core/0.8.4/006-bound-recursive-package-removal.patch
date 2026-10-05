@@ -1,0 +1,40 @@
+--- a/src/private/filesystem.hpp
++++ b/src/private/filesystem.hpp
+@@ -18,6 +18,9 @@
+ namespace detail {
+ 
+ inline constexpr uint32_t STORAGE_FS_TIMEOUT_MS = 5000;
++// A recursive tree deletion spans many filesystem operations. Keep stat/read
++// deadlines short, but wait for the real deletion before reporting completion.
++inline constexpr uint32_t STORAGE_FS_REMOVE_TIMEOUT_MS = 30000;
+ 
+ } // namespace detail
+ 
+@@ -39,7 +42,7 @@
+     }
+     const bool existed_before = before->exists;
+ 
+-    auto remove_result = service::helper::Storage::fs_remove(path.generic_string(), detail::STORAGE_FS_TIMEOUT_MS);
++    auto remove_result = service::helper::Storage::fs_remove(path.generic_string(), detail::STORAGE_FS_REMOVE_TIMEOUT_MS);
+     if (!remove_result) {
+         return std::unexpected(
+                    "Failed to remove " + std::string(label) + " '" + path.generic_string() + "': " +
+--- a/src/app/package.cpp
++++ b/src/app/package.cpp
+@@ -37,6 +37,7 @@
+ #include "brookesia/service_helper/system/storage.hpp"
+ #include "private/app/service_requirement.hpp"
+ #include "private/utils.hpp"
++#include "private/filesystem.hpp"
+ 
+ namespace esp_brookesia::system::core {
+ namespace {
+@@ -1139,7 +1140,7 @@
+     auto stat = service::helper::Storage::fs_stat(path.generic_string(), STORAGE_FS_TIMEOUT_MS);
+     if (!stat) return std::unexpected(stat.error());
+     if (!stat->exists) return {};
+-    auto result = service::helper::Storage::fs_remove(path.generic_string(), STORAGE_FS_TIMEOUT_MS);
++    auto result = service::helper::Storage::fs_remove(path.generic_string(), detail::STORAGE_FS_REMOVE_TIMEOUT_MS);
+     if (!result) return std::unexpected(result.error());
+     return {};
+ }

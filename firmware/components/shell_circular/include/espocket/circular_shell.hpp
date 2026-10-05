@@ -15,6 +15,7 @@
 #include "brookesia/service_manager/service/manager.hpp"
 #include "brookesia/system_core.hpp"
 #include "espocket/shell_gesture.hpp"
+#include "espocket/launcher_projection.hpp"
 
 namespace espocket {
 
@@ -51,6 +52,8 @@ struct ShellHost {
     std::function<void(ShellSurface)> surface_changed;
     std::function<std::expected<double, std::string>()> brightness_read;
     std::function<std::expected<double, std::string>(double)> brightness_set;
+    std::function<std::expected<std::vector<LauncherApp>, std::string>(std::string_view)> launcher_apps;
+    std::function<uint64_t()> launcher_generation;
 };
 
 class CircularShell final : public esp_brookesia::system::core::IApp {
@@ -138,6 +141,9 @@ private:
     void poll_message_dialog();
     void sync_default_back(bool visible);
     void sync_card_hint(bool visible);
+    void refresh_launcher();
+    void dispatch_launcher();
+    void stop_launcher();
 
     void start_status();
     void stop_status();
@@ -170,6 +176,17 @@ private:
     bool screen_timeout_latched_ = false;
     uint8_t launcher_pull_visual_ = 0;
     int32_t launcher_pull_height_ = 28;
+    std::vector<LauncherEntry> launcher_entries_;
+    std::string launcher_region_;
+    std::vector<std::string> launcher_images_;
+    std::mutex launcher_intent_mutex_;
+    std::string launcher_intent_;
+    esp_brookesia::gui::ScopedConnection launcher_connection_;
+    uint64_t launcher_generation_ = UINT64_MAX;
+    uint64_t launcher_view_generation_ = 0;
+    int64_t launcher_refresh_at_us_ = 0;
+    bool launcher_developer_enabled_ = false;
+    std::string launcher_language_;
 
     esp_brookesia::service::ServiceBinding display_binding_;
     esp_brookesia::service::ServiceBinding wifi_binding_;

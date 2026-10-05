@@ -6,18 +6,25 @@ idf_component_register(
         "src/system_display.cpp" "src/system_message_dialog.cpp" "src/system_timeout.cpp" "src/system_power.cpp" "src/power_key_monitor.cpp" "src/settings_navigation_adapter.cpp"
         "src/native_page_installation.cpp" "src/system_test_input.cpp"
         "src/system_runtime_navigation.cpp" "src/runtime_navigation_provider.cpp"
-        "src/system_cards.cpp" "src/card_document.cpp"
+        "src/system_cards.cpp" "src/card_document.cpp" "src/system_package_acceptance.cpp" "src/runtime_render_probe.cpp"
     EMBED_TXTFILES "${CMAKE_CURRENT_BINARY_DIR}/espocket_dark_theme.json" "${CMAKE_CURRENT_BINARY_DIR}/espocket_light_theme.json"
     INCLUDE_DIRS "include"
     REQUIRES brookesia_system_core brookesia_service_manager espocket_navigation espocket_semantics freertos
     PRIV_REQUIRES
-        hello espocket_test_adapter shell_circular
+        hello espocket_test_adapter shell_circular esp_lvgl_adapter
         brookesia_app_settings brookesia_app_store brookesia_gui_lvgl
         brookesia_service_display brookesia_service_helper brookesia_lib_utils
         esp_driver_gpio esp_timer esp_app_format brookesia_runtime_manager nvs_flash
 )
 
 target_compile_features(${COMPONENT_LIB} PUBLIC cxx_std_23)
+
+if(CONFIG_ESPOCKET_PACKAGE_ACCEPTANCE_TEST)
+    if(NOT EXISTS "${CONFIG_ESPOCKET_PACKAGE_ACCEPTANCE_INPUTS}/package_acceptance_inputs.hpp")
+        message(FATAL_ERROR "Package acceptance requires explicit external public test inputs")
+    endif()
+    target_include_directories(${COMPONENT_LIB} PRIVATE "${CONFIG_ESPOCKET_PACKAGE_ACCEPTANCE_INPUTS}")
+endif()
 
 idf_component_get_property(espocket_settings_component_dir espressif__brookesia_app_settings COMPONENT_DIR)
 

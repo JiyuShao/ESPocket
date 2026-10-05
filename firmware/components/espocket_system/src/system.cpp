@@ -1,4 +1,5 @@
 #include "system_internal.hpp"
+#include "runtime_render_probe.hpp"
 #include "espocket_builtin_packages.hpp"
 
 extern const char dark_theme_start[] asm("_binary_espocket_dark_theme_json_start");
@@ -12,6 +13,26 @@ System::System()
     : launch_source_(ShellSurface::WatchFace),
       lifecycle_restore_surface_(ShellSurface::WatchFace)
 {}
+
+std::expected<std::vector<LauncherApp>, std::string> System::launcher_apps(std::string_view language) const
+{
+    // Called on the existing App Owner task, including dispatch. The
+    // complete Core list is authoritative; cache-only artifacts do not appear.
+    if (stopping_.load(std::memory_order_acquire)) return std::unexpected("system_stopping");
+    std::vector<LauncherApp> result;
+    for (const auto &app : list_apps()) {
+        const auto admission = launcher_admissions_.find(app.app_id);
+        const bool admitted = admission != launcher_admissions_.end() &&
+            admission->second.manifest_id == app.manifest.id && admission->second.version == app.manifest.version &&
+            esp_brookesia::system::core::is_runtime_package_validation_current(app.manifest.app_path, runtime_package_policy());
+        result.push_back({app.app_id, app.manifest.id,
+            esp_brookesia::system::core::resolve_app_display_name(app.manifest, language),
+            esp_brookesia::system::core::has_app_icon_image(app.manifest) ? app.manifest.id : "",
+            app.manifest.kind == esp_brookesia::system::core::AppKind::Runtime,
+            app.manifest.visible, admitted, admitted && admission->second.requires_developer});
+    }
+    return result;
+}
 
 System::~System()
 {
@@ -48,9 +69,13 @@ std::expected<void, std::string> System::init()
     config.install_registered_apps = false;
     config.install_package_apps = true;
     config.package_policy.enforce = true;
+    config.package_policy.reuse_verified_installations = true;
     config.package_policy.developer_enabled = [this] { return developer_mode_ && developer_mode_->enabled(); };
     config.package_policy.platform_baseline = "core-0.8.4_js-0.8.3_package-policy-v1";
     // No release key is provisioned yet: signed external packages fail closed.
+#if CONFIG_ESPOCKET_PACKAGE_ACCEPTANCE_TEST
+    config.package_policy.public_key_pem_path = "/littlefs/.espocket-package-acceptance/public.pem";
+#endif
     configure_builtin_packages(config.package_policy);
 
     auto result = esp_brookesia::system::core::System::init(std::move(config));
@@ -103,6 +128,7 @@ esp_brookesia::system::core::SystemInfo System::on_get_system_info() const
 
 std::expected<void, std::string> System::on_init()
 {
+    if (auto probe=initialize_runtime_render_probe();!probe) return probe;
     // Register and select the product theme before any App can load a document.
     if (auto theme = init_product_theme(); !theme) return theme;
     init_runtime_navigation();
@@ -143,7 +169,13 @@ std::expected<void, std::string> System::on_init()
             return release_test_input();
         },
         [this](std::vector<TouchInputStep> steps) { return start_test_touch(std::move(steps)); },
-        [this]() { return tick_test_touch(); }
+        [this]() { return tick_test_touch(); },
+        [this]() -> std::expected<TestScreenshot, std::string> {
+            if (stopping_.load(std::memory_order_acquire) || !developer_mode_->enabled() ||
+                    !display_on_.load(std::memory_order_acquire)) return std::unexpected("invalid_state");
+            if (test_power_input_ && test_power_input_->busy()) return std::unexpected("busy");
+            return capture_display_screenshot();
+        }
     );
 
     auto hello = std::make_shared<HelloApp>();
@@ -287,6 +319,10 @@ std::expected<void, std::string> System::on_init()
                 return std::unexpected(result.detail);
             return result.observed->percent;
         },
+        .launcher_apps = [this](std::string_view language) -> std::expected<std::vector<LauncherApp>, std::string> {
+            return launcher_apps(language);
+        },
+        .launcher_generation = [this] { return launcher_generation_.load(std::memory_order_acquire); },
         }
     );
     auto result = install_app(shell_);
@@ -317,6 +353,7 @@ std::expected<void, std::string> System::on_start()
         if (auto samples = init_card_samples(); !samples) return samples;
     }
     stopping_.store(false, std::memory_order_release);
+    if (auto acceptance = prepare_package_acceptance(); !acceptance) return acceptance;
     test_snapshots_ = std::make_unique<OwnerSnapshotQueue>([this]() { return read_test_snapshot(); });
     if (test_power_input_) { test_power_input_->cancel_pending(); }
     foreground_app_id_.store(
@@ -398,6 +435,7 @@ void System::on_stop()
 
 void System::on_deinit()
 {
+    shutdown_runtime_render_probe();
     if (brightness_) brightness_->invalidate();
     brightness_.reset();
     stop_runtime_navigation();

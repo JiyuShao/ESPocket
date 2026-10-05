@@ -23,7 +23,8 @@ public:
                                     TestProtocol::Command power_short = {},
                                     TestProtocol::Command release = {},
                                     TestProtocol::TouchCommand touch = {},
-                                    TestProtocol::Command input_tick = {});
+                                    TestProtocol::Command input_tick = {},
+                                    TestProtocol::ScreenshotReader screenshot_reader = {});
     ~InteractionTestAdapter();
 
     std::expected<void, std::string> start();
@@ -45,6 +46,7 @@ private:
     TestProtocol::Command release_;
     TestProtocol::TouchCommand touch_;
     TestProtocol::Command input_tick_;
+    TestProtocol::ScreenshotReader screenshot_reader_;
     std::atomic_bool running_ = false;
     std::atomic_bool driver_ready_ = false;
     std::mutex mode_request_mutex_;

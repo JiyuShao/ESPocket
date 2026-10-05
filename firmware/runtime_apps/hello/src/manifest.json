@@ -7,12 +7,15 @@
     },
     "version": "0.1.0",
     "visible": true,
-    "systems": ["espocket"]
+    "systems": [
+      "espocket"
+    ]
   },
   "runtime": {
     "type": "JavaScript",
     "entry": "app/main.js",
     "resource_dir": "res",
     "arguments": []
-  }
+  },
+  "services": []
 }

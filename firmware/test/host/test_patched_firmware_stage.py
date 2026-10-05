@@ -24,7 +24,9 @@ class PatchedFirmwareStageTest(unittest.TestCase):
     def test_production_promotes_validated_display_board_and_store_owner_fixes(self):
         self.assertEqual(BUILDER.PATCH_SETS['production'],
                          BUILDER.PATCH_SETS['display-candidate'] + (('espressif__esp_board_manager', '0.5.15'),
-                         ('espressif__brookesia_app_store', '0.8.2')))
+                         ('espressif__brookesia_app_store', '0.8.2'),
+                         ('espressif__brookesia_lib_utils', '0.8.2'),
+                         ('espressif__brookesia_service_storage', '0.8.3')))
         self.assertEqual(BUILDER.PATCH_SETS['store-candidate'], BUILDER.PATCH_SETS['production'])
 
     def setUp(self):

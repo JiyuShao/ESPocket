@@ -32,20 +32,27 @@ def inventory(directory):
 
 
 def apply_exact_patch(directory, patch):
-    """Accept text modifications only; hunk coordinates and context must match exactly."""
+    """Accept text modifications/additions with exact coordinates and context."""
     lines = patch.read_text().splitlines(keepends=True)
     cursor = 0
     seen = set()
     while cursor < len(lines):
-        if not lines[cursor].startswith('--- a/') or cursor + 1 >= len(lines):
+        creation = lines[cursor] == '--- /dev/null\n'
+        if (not creation and not lines[cursor].startswith('--- a/')) or cursor + 1 >= len(lines):
             raise ValueError('Expected unified patch file header')
-        old_name = lines[cursor][6:].rstrip('\n')
         new_header = lines[cursor + 1]
+        if not new_header.startswith('+++ b/'):
+            raise ValueError('Renames and deletion are unsupported')
+        old_name = new_header[6:].rstrip('\n') if creation else lines[cursor][6:].rstrip('\n')
         if new_header != f'+++ b/{old_name}\n' or old_name in seen:
-            raise ValueError('Renames, duplicate files and file creation are unsupported')
+            raise ValueError('Renames and duplicate files are unsupported')
         seen.add(old_name)
         target = directory / relative_path(old_name)
-        original = target.read_text().splitlines(keepends=True)
+        if any(p.is_symlink() for p in (target, *target.parents)):
+            raise ValueError('Symlink patch target is unsupported')
+        if creation and target.exists():
+            raise ValueError('New file target already exists')
+        original = [] if creation else target.read_text().splitlines(keepends=True)
         output = []
         consumed = 0
         cursor += 2
@@ -55,7 +62,9 @@ def apply_exact_patch(directory, patch):
             if not match:
                 raise ValueError('Invalid hunk header')
             old_start, old_count, new_start, new_count = match.groups()
-            start = int(old_start) - 1
+            if creation and (int(old_start) != 0 or int(old_count or 1) != 0 or hunks):
+                raise ValueError('Invalid new file coordinates')
+            start = 0 if creation else int(old_start) - 1
             if start < consumed or start > len(original):
                 raise ValueError('Invalid or overlapping hunk coordinates')
             output.extend(original[consumed:start])
@@ -65,7 +74,7 @@ def apply_exact_patch(directory, patch):
             cursor += 1
             removed = added = 0
             while cursor < len(lines) and lines[cursor][:1] in (' ', '+', '-'):
-                if lines[cursor].startswith('--- a/'):
+                if lines[cursor].startswith('--- '):
                     break
                 kind, content = lines[cursor][0], lines[cursor][1:]
                 if kind in (' ', '-'):
@@ -83,6 +92,8 @@ def apply_exact_patch(directory, patch):
         if not hunks:
             raise ValueError('File patch has no hunks')
         output.extend(original[consumed:])
+        if creation:
+            target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(''.join(output))
     if not seen:
         raise ValueError('Empty patch')

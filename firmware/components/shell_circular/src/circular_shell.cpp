@@ -45,6 +45,7 @@ std::expected<void, std::string> CircularShell::on_start(
              OPEN_SETTINGS_CARD_ACTION,
              OPEN_SETTINGS_QUICK_ACTION,
              OPEN_APP_STORE_ACTION,
+             OPEN_DYNAMIC_APP_ACTION,
              STEP_BRIGHTNESS_ACTION,
              STEP_BRIGHTNESS_QUICK_ACTION,
              TOGGLE_WIFI_ACTION,
@@ -88,6 +89,17 @@ std::expected<void, std::string> CircularShell::on_start(
 
     callback_state_ = std::make_shared<CallbackState>();
     callback_state_->owner = this;
+    launcher_connection_ = context.gui().subscribe_action(OPEN_DYNAMIC_APP_ACTION,
+        [state = callback_state_](const esp_brookesia::gui::Event &event) {
+            std::lock_guard lock(state->mutex);
+            if (!state->owner) return;
+            std::lock_guard intent_lock(state->owner->launcher_intent_mutex_);
+            // Remember the exact immutable view path; retired views cannot launch.
+            if (state->owner->launcher_intent_.empty()) state->owner->launcher_intent_ = event.path;
+        });
+    launcher_generation_ = UINT64_MAX;
+    launcher_refresh_at_us_ = 0;
+    refresh_launcher();
     start_status();
     ESP_LOGI(SHELL_TAG, "Circular Shell started");
     return {};
@@ -98,6 +110,7 @@ std::expected<void, std::string> CircularShell::on_stop(
 )
 {
     (void)context;
+    stop_launcher();
     if (keyboard_state_) {
         esp_brookesia::system::core::AppId app_id =
             esp_brookesia::system::core::INVALID_APP_ID;
@@ -151,7 +164,9 @@ std::expected<void, std::string> CircularShell::on_action(
     const bool launcher_action = action == OPEN_HELLO_NATIVE_ACTION ||
         action == OPEN_HELLO_RUNTIME_ACTION || action == OPEN_SETTINGS_ACTION ||
         action == OPEN_APP_STORE_ACTION;
-    if (launcher_action && current_surface() != ShellSurface::Launcher) {
+    if (launcher_action && (current_surface() != ShellSurface::Launcher ||
+            (host_.app_visible && host_.app_visible()) ||
+            (home_gesture_state_ && home_gesture_state_->modal_active.load(std::memory_order_acquire)))) {
         return {};
     }
     // A completed pull also suppresses the row while Launcher is still active.
@@ -173,6 +188,7 @@ std::expected<void, std::string> CircularShell::on_action(
     if (action == OPEN_APP_STORE_ACTION) {
         return open_app(APP_STORE_MANIFEST_ID, "App Store");
     }
+    if (action == OPEN_DYNAMIC_APP_ACTION) { return {}; } // Event path is dispatched on the Owner tick.
     if (action == STEP_BRIGHTNESS_ACTION || action == STEP_BRIGHTNESS_QUICK_ACTION) {
         auto result = step_brightness();
         if (!result) {
@@ -258,6 +274,8 @@ std::expected<void, std::string> CircularShell::on_timer(
         if (host_.tick) {
             host_.tick();
         }
+        refresh_launcher();
+        dispatch_launcher();
         if (home_gesture_state_) {
             const auto activity = home_gesture_state_->activity_generation.load(std::memory_order_acquire);
             if (activity != last_activity_generation_) {

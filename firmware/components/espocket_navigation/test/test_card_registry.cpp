@@ -21,6 +21,8 @@ int main()
     assert(registry.register_app(invalid).error() == CardError::InvalidDeclaration);
     assert(registry.available_cards().size() == 4);
     const CardKey a{"app.a", "summary"}, b{"app.a", "control"}, c{"app.b", "summary"};
+    assert(registry.declaration("app.a")->cards.size() == 2);
+    assert(registry.declaration("missing").error() == CardError::UnknownApp);
     assert(registry.target_page(a) == "root");
     assert(registry.target_page(b) == "detail");
     assert(registry.add(a, CardSide::Left, 0));

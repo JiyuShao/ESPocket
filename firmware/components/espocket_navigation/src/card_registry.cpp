@@ -76,6 +76,14 @@ std::vector<CardKey> CardRegistry::available_cards() const
     return cards;
 }
 
+std::expected<PageDeclaration, CardError> CardRegistry::declaration(std::string_view app_id) const
+{
+    std::lock_guard lock(mutex_);
+    const auto app = declarations_.find(app_id);
+    if (app == declarations_.end()) return std::unexpected(CardError::UnknownApp);
+    return app->second;
+}
+
 std::expected<std::string, CardError> CardRegistry::target_page_locked(const CardKey &key) const
 {
     auto app = declarations_.find(key.app_id);

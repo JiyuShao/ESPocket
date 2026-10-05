@@ -1,4 +1,5 @@
 #include "espocket/interaction_test_adapter.hpp"
+#include "espocket/usb_connection_watchdog.hpp"
 #include "usb_frame.hpp"
 
 #include <array>
@@ -22,8 +23,9 @@ namespace {
 constexpr char TAG[] = "ESPocket.Test";
 constexpr std::string_view FRAME_PREFIX = detail::TEST_FRAME_PREFIX;
 constexpr size_t MAX_LINE_SIZE = 1024;
-// JSON touch frames overflowed the former 4 KiB worker on ESP32-S3.
-constexpr uint32_t USB_TASK_STACK_BYTES = 8192;
+// Synchronous screenshot rendering exceeded the former 8 KiB USB stack.
+// Keep the render caller's stack in PSRAM, alongside the capture buffer.
+constexpr uint32_t USB_TASK_STACK_BYTES = 32 * 1024;
 
 std::optional<uint64_t> unsigned_field(const boost::json::object &object, std::string_view key)
 {
@@ -68,9 +70,11 @@ InteractionTestAdapter::InteractionTestAdapter(std::shared_ptr<DeveloperMode> mo
                                              TestProtocol::Command power_short,
                                              TestProtocol::Command release,
                                              TestProtocol::TouchCommand touch,
-                                             TestProtocol::Command input_tick)
+                                             TestProtocol::Command input_tick,
+                                             TestProtocol::ScreenshotReader screenshot_reader)
     : mode_(std::move(mode)), snapshot_reader_(std::move(snapshot_reader)),
-      power_short_(std::move(power_short)), release_(std::move(release)), touch_(std::move(touch)), input_tick_(std::move(input_tick))
+      power_short_(std::move(power_short)), release_(std::move(release)), touch_(std::move(touch)),
+      input_tick_(std::move(input_tick)), screenshot_reader_(std::move(screenshot_reader))
 {}
 
 InteractionTestAdapter::~InteractionTestAdapter()
@@ -96,7 +100,7 @@ std::expected<void, std::string> InteractionTestAdapter::start()
     std::array<char, 65> image_sha{};
     esp_app_get_elf_sha256(image_sha.data(), image_sha.size());
     protocol_ = std::make_unique<TestProtocol>(*mode_, std::string(image_sha.data()), snapshot_reader_,
-                                              power_short_, release_, touch_);
+                                              power_short_, release_, touch_, screenshot_reader_);
     running_.store(true, std::memory_order_release);
     driver_ready_.store(false, std::memory_order_release);
     const auto created = xTaskCreateWithCaps(task_entry, "espocket_test_usb", USB_TASK_STACK_BYTES,
@@ -109,7 +113,9 @@ std::expected<void, std::string> InteractionTestAdapter::start()
         return std::unexpected("USB test task creation failed");
     }
     usb_serial_jtag_driver_config_t config = {
-        .tx_buffer_size = 512,
+        // A 512-byte pixel chunk becomes 1024 hex characters plus its envelope.
+        // Enqueue the complete response atomically with respect to console writers.
+        .tx_buffer_size = 2048,
         .rx_buffer_size = 512,
     };
     const auto installed = usb_serial_jtag_driver_install(&config);
@@ -204,7 +210,9 @@ void InteractionTestAdapter::run()
     std::array<uint8_t, 256> buffer{};
     bool discarding_oversized_line = false;
     bool was_connected = false;
+    UsbConnectionWatchdog link;
     while (running_.load(std::memory_order_acquire)) {
+        protocol_->expire_screenshot();
         std::shared_ptr<ModeRequest> mode_request;
         {
             std::lock_guard lock(mode_request_mutex_);
@@ -222,12 +230,15 @@ void InteractionTestAdapter::run()
             vTaskDelay(pdMS_TO_TICKS(20));
             continue;
         }
-        const bool connected = usb_serial_jtag_is_connected();
+        const bool connected = link.observe(usb_serial_jtag_is_connected(),
+            static_cast<uint64_t>(xTaskGetTickCount()) * portTICK_PERIOD_MS);
         if (was_connected && !connected) {
+            ESP_LOGI(TAG, "USB sustained disconnect: clearing input and screenshot");
             line.clear();
             discarding_oversized_line = false;
         }
         if (!connected || !mode_->enabled()) {
+            protocol_->clear_screenshot();
             if (release_) { (void)release_(); }
         }
         if (connected && mode_->enabled() && input_tick_) {
@@ -291,6 +302,14 @@ void InteractionTestAdapter::handle_line(std::string_view line)
     }
     const auto &operation = op->as_string();
     std::vector<TouchInputStep> steps;
+    uint64_t capture_id = 0, offset = 0, length = 0;
+    if (operation == "screenshot.read") {
+        auto id = unsigned_field(object, "capture_id");
+        auto start = unsigned_field(object, "offset");
+        auto count = unsigned_field(object, "length");
+        if (!id || !start || !count) { send_error(*request_id, "bad_request"); return; }
+        capture_id = *id; offset = *start; length = *count;
+    }
     if (operation == "stimulus.touch") {
         const auto *trace = object.if_contains("points");
         if (!trace || !trace->is_array() || trace->as_array().size() > 16) {
@@ -313,20 +332,32 @@ void InteractionTestAdapter::handle_line(std::string_view line)
         }
     }
     const auto reply = protocol_->dispatch(static_cast<uint32_t>(*version),
-                                           std::string_view(operation.data(), operation.size()), std::move(steps));
+                                           std::string_view(operation.data(), operation.size()), std::move(steps),
+                                           capture_id, offset, length);
     boost::json::object response = {
         {"version", TestProtocol::VERSION},
         {"request_id", *request_id},
         {"ok", reply.ok},
     };
     if (reply.ok) {
-        if (reply.snapshot) {
+        if (reply.screenshot) {
+            const auto &frame = *reply.screenshot;
+            response["screenshot"] = boost::json::object{
+                {"capture_id", reply.capture_id}, {"width", frame.width}, {"height", frame.height},
+                {"size", frame.size}, {"format", "rgb565le"}, {"sha256", frame.sha256},
+            };
+        } else if (!reply.pixel_hex.empty()) {
+            response["capture_id"] = reply.capture_id;
+            response["offset"] = reply.offset;
+            response["pixel_hex"] = reply.pixel_hex;
+        } else if (reply.snapshot) {
             const auto &state = *reply.snapshot;
             response["snapshot"] = boost::json::object{
                 {"seq", state.seq}, {"surface", state.surface}, {"display", state.display},
                 {"foregroundAppId", state.foreground_app_id}, {"pageId", state.page_id},
                 {"canBack", state.can_back}, {"backPending", state.back_pending},
                 {"inputBusy", state.input_busy},
+                {"navigationAvailable", state.navigation_available},
             };
         } else if (!reply.image_identity.empty()) {
             response["image_identity"] = reply.image_identity;

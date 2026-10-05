@@ -35,6 +35,7 @@ class NavigationRequestQueue;
 class CardConfigurationStore;
 class CardSession;
 struct TestSnapshot;
+struct LauncherApp;
 enum class ShellSurface : uint8_t;
 
 class System final : public esp_brookesia::system::core::System {
@@ -67,9 +68,22 @@ protected:
     std::expected<void, std::string> on_app_uninstalled(
         const esp_brookesia::system::core::AppInfo &app
     ) override;
+    void on_app_content_invalidated(
+        const esp_brookesia::system::core::AppInfo &app) override;
+    void on_app_replacement_prepared(
+        const esp_brookesia::system::core::AppInfo &old_app
+    ) override;
     std::expected<void, std::string> on_app_replaced(
         const esp_brookesia::system::core::AppInfo &old_app,
         const esp_brookesia::system::core::AppInfo &new_app
+    ) override;
+    std::expected<void, std::string> on_app_replacement_committed(
+        const esp_brookesia::system::core::AppInfo &old_app,
+        const esp_brookesia::system::core::AppInfo &new_app
+    ) override;
+    std::expected<void, std::string> on_app_replacement_rolled_back(
+        const esp_brookesia::system::core::AppInfo &failed_app,
+        const esp_brookesia::system::core::AppInfo &restored_app
     ) override;
     std::expected<void, std::string> on_app_started(
         const esp_brookesia::system::core::AppInfo &app
@@ -125,6 +139,17 @@ private:
     std::expected<void, std::string> tick_test_touch();
     std::expected<void, std::string> release_test_input();
     void poll_system_input();
+    std::expected<void, std::string> prepare_package_acceptance();
+    void tick_package_acceptance(uint64_t now_ms);
+    std::expected<std::vector<LauncherApp>, std::string> launcher_apps(std::string_view language) const;
+    uint8_t package_acceptance_phase_ = 0;
+    uint64_t package_acceptance_at_ms_ = 0;
+    bool package_acceptance_original_mode_ = false;
+    bool package_acceptance_rebooted_ = false;
+    bool package_acceptance_fail_update_ = false;
+    bool package_acceptance_interrupt_update_ = false;
+    std::string package_acceptance_data_path_;
+    void tick_runtime_package_policy(bool developer_enabled, uint64_t now_ms);
     void handle_power_short_press();
     void handle_screen_timeout();
     void handle_back();
@@ -136,6 +161,8 @@ private:
     void clear_foreground(const esp_brookesia::system::core::AppInfo &app);
     void restore_home_after_lifecycle(const esp_brookesia::system::core::AppInfo &app);
     std::shared_ptr<PageNavigator> navigator_for(esp_brookesia::system::core::AppId app_id) const;
+    void remember_replaced_card_state(std::string_view app_id);
+    std::expected<void, std::string> restore_replaced_card_state(std::string_view app_id);
     void register_navigator(
         esp_brookesia::system::core::AppId app_id,
         std::shared_ptr<PageNavigator> navigator
@@ -155,12 +182,28 @@ private:
     bool card_samples_active_ = false;
     std::unique_ptr<CardSession> card_session_;
     std::shared_ptr<NavigationRequestQueue> card_actions_;
+    struct ReplacedCardState {
+        std::string app_id;
+        PageDeclaration declaration;
+        CardConfiguration configuration;
+        bool had_declaration = true;
+    };
+    std::optional<ReplacedCardState> replaced_card_state_;
     std::unordered_map<esp_brookesia::system::core::AppId, CardModelFactory> card_factories_;
     uint64_t card_generation_ = 0;
     uint64_t next_card_generation_ = 0;
     esp_brookesia::system::core::AppId card_owner_id_ = esp_brookesia::system::core::INVALID_APP_ID;
     std::optional<CardKey> pending_card_;
     std::shared_ptr<DeveloperMode> developer_mode_;
+    struct LauncherAdmission {
+        std::string manifest_id;
+        std::string version;
+        bool requires_developer = false;
+    };
+    // Admission is cached only from Core install/discovery hooks. Core still
+    // revalidates the bytes at start; Launcher never treats this as a trust root.
+    std::unordered_map<esp_brookesia::system::core::AppId, LauncherAdmission> launcher_admissions_;
+    std::atomic<uint64_t> launcher_generation_ = 0;
     std::unique_ptr<InteractionTestAdapter> test_adapter_;
     std::unique_ptr<OwnerSnapshotQueue> test_snapshots_;
     std::unique_ptr<PowerKeyMonitor> power_key_monitor_;
@@ -184,6 +227,8 @@ private:
     std::unique_ptr<semantic::Brightness> brightness_;
     bool display_started_ = false;
     bool package_developer_was_enabled_ = true;
+    uint64_t package_policy_retry_at_ms_ = 0;
+    uint32_t package_policy_retry_delay_ms_ = 1000;
     std::atomic_bool display_on_ = true;
     esp_brookesia::system::core::AppId resume_app_id_ =
         esp_brookesia::system::core::INVALID_APP_ID;

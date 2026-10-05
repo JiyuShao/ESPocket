@@ -1,0 +1,52 @@
+--- a/src/app/manager.cpp
++++ b/src/app/manager.cpp
+@@ -651,8 +651,13 @@
+         return std::unexpected(record_result.error());
+     }
+     auto &record = *record_result.value();
++    // Count package admission in startup latency; it runs before GUI/runtime loading.
++    const auto start_profile_started_at = SteadyClock::now();
+     if (record.info.manifest.kind == AppKind::Runtime && impl_->package_policy_.enforce) {
+         auto admitted = validate_installed_runtime_package(record.info.manifest.app_path, get_system_type(), impl_->package_policy_);
++        SYSTEM_CORE_PROFILE_LOGI(
++            "App start profile: id(%1%), manifest(%2%), stage(package_admission), elapsed_ms(%3%)",
++            app_id, record.info.manifest.id, elapsed_ms_since(start_profile_started_at));
+         if (!admitted) {
+             record.info.last_error = admitted.error();
+             on_app_start_failed(record.info, admitted.error());
+@@ -693,7 +698,6 @@
+         }
+     }
+ 
+-    const auto start_profile_started_at = SteadyClock::now();
+     auto log_start_profile = [&](const char *stage, SteadyTimePoint stage_started_at) {
+         const auto now = SteadyClock::now();
+         SYSTEM_CORE_PROFILE_LOGI(
+--- a/src/runtime/host_bridge.cpp
++++ b/src/runtime/host_bridge.cpp
+@@ -15,6 +15,7 @@
+ #include "private/runtime/service_json.hpp"
+ 
+ #include <algorithm>
++#include <chrono>
+ #include <cstddef>
+ #include <cstdint>
+ #include <limits>
+@@ -882,7 +883,17 @@
+     service::ScopedCallContext call_context(
+         make_runtime_service_call_context(app_id.value(), RuntimeServiceCallMode::Blocking)
+     );
++#if BROOKESIA_SYSTEM_CORE_ENABLE_PROFILE_LOG
++    const auto call_started = std::chrono::steady_clock::now();
++#endif
+     auto result = service->call_function_sync(function_name, std::move(*params), timeout_ms);
++#if BROOKESIA_SYSTEM_CORE_ENABLE_PROFILE_LOG
++    const auto call_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
++        std::chrono::steady_clock::now() - call_started).count();
++    if (call_ms >= 20) BROOKESIA_LOGI(
++        "Runtime service profile: app(%1%), service(%2%), function(%3%), elapsed_ms(%4%)",
++        app_id.value(), service_name, function_name, call_ms);
++#endif
+     if constexpr (heap_trace::enabled) {
+         const auto runtime_app_id = std::to_string(app_id.value());
+         const auto details = "runtime_app_id=" + runtime_app_id + " service=" + service_name +

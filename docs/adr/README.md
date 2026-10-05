@@ -30,3 +30,5 @@ ADR 记录替代方案代价显著、需要长期保持可追溯的 ESPocket 决
 | [0017](0017-overlay-arbitration-preserves-request-ownership.md) | accepted | Shell 仲裁 Overlay 输入；Core 保持请求身份、队列与期限。 |
 
 | [0018](0018-developer-mode-allows-unsigned-packages.md) | accepted | 仅开发者模式允许未签名 Runtime 包；Core 安装边界与其余验证要求继续有效。 |
+
+| [0019](0019-reuse-protected-package-verification.md) | accepted | 安装完整验证，保护内容修改，重启与启动复用绑定版本和信任配置的持久结果。 |

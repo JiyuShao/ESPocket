@@ -5,6 +5,9 @@
 #include "espocket/declarative_card.hpp"
 #include "brookesia/service_helper/system/storage.hpp"
 #include <filesystem>
+#if CONFIG_ESPOCKET_PACKAGE_ACCEPTANCE_TEST
+#include "esp_system.h"
+#endif
 
 namespace espocket {
 void System::init_runtime_navigation()
@@ -64,6 +67,26 @@ std::expected<void, std::string> System::on_app_installed(
 {
     using namespace esp_brookesia::system::core;
     if (app.manifest.kind != AppKind::Runtime || !app.manifest.visible) return {};
+#if CONFIG_ESPOCKET_PACKAGE_ACCEPTANCE_TEST
+    if (package_acceptance_interrupt_update_ && app.manifest.id == "espocket.test.store_hello" &&
+            app.manifest.version == "0.2.0") {
+        ESP_LOGW("ESPocket.PackageTest", "CHECKPOINT reset with v2 pending receipt and v1 backup");
+        esp_restart();
+    }
+    if (package_acceptance_fail_update_ && app.manifest.id == "espocket.test.store_hello" &&
+            app.manifest.version == "0.2.0") {
+        package_acceptance_fail_update_ = false;
+        return std::unexpected("acceptance_injected_activation_failure");
+    }
+#endif
+    const auto pending_receipt = esp_brookesia::service::helper::Storage::fs_stat(
+        (std::filesystem::path(app.manifest.app_path) / ".brookesia-install.pending").generic_string(), 5000);
+    if (!pending_receipt) return std::unexpected(pending_receipt.error());
+    auto package = validate_installed_runtime_package(app.manifest.app_path, get_system_type(),
+        runtime_package_policy(), false, pending_receipt->exists);
+    if (!package) return std::unexpected(package.error());
+    launcher_admissions_[app.app_id] = {app.manifest.id, app.manifest.version, package->requires_developer()};
+    launcher_generation_.fetch_add(1, std::memory_order_release);
     const auto path = std::filesystem::path(app.manifest.app_path) / app.manifest.resource_dir / "navigation.json";
     auto status = esp_brookesia::service::helper::Storage::fs_stat(path.generic_string(), 5000);
     if (!status) return std::unexpected(status.error());

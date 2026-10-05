@@ -22,7 +22,9 @@ def run(runner, profile):
         detail = {**root, 'pageId': 'detail', 'canBack': True}
         pending = {**detail, 'canBack': False, 'backPending': True}
         runner.touch(model + ' Launcher', {**home, 'surface': 'launcher'}, *profile['up'])
-        runner.touch(model + ' Root', root, profile[launch])
+        runner.stimulate(model + ' Root', 'stimulus.touch', root,
+                         quiet_window=8 if model == 'Runtime' else 0,
+                         points=runner.points(profile[launch]))
         runner.touch(model + ' Root cannot Back', root, *profile['edge_back'])
         runner.observe(model + ' Root stays Root', root)
         runner.touch(model + ' Detail', detail, profile[open_detail])
@@ -47,7 +49,9 @@ def run(runner, profile):
         runner.touch(model + ' deferred Back before Home', pending, *profile['edge_back'])
         runner.power(model + ' pending Home', home)
         runner.touch(model + ' Launcher after Home', {**home, 'surface': 'launcher'}, *profile['up'])
-        runner.touch(model + ' relaunch starts Root', root, profile[launch])
+        runner.stimulate(model + ' relaunch starts Root', 'stimulus.touch', root,
+                         quiet_window=8 if model == 'Runtime' else 0,
+                         points=runner.points(profile[launch]))
         runner.touch(model + ' new Detail', detail, profile[open_detail])
         runner.touch(model + ' new instance defaults to immediate Back', root, *profile['edge_back'])
         runner.power(model + ' final Home', home)

@@ -41,6 +41,30 @@ class PatchedComponentTest(unittest.TestCase):
         self.assertEqual((self.output / 'source.txt').read_text(), 'first\npatched\nlast\n')
         self.assertEqual(PATCHER.inventory(self.source), before)
 
+    def test_new_file_after_existing_file_is_exact_and_source_is_preserved(self):
+        self.patch.write_text(self.patch.read_text() +
+            '--- /dev/null\n+++ b/src/new.cpp\n@@ -0,0 +1,2 @@\n+first\n+second\n')
+        self.save_manifest()
+        PATCHER.prepare(self.source, self.manifest, self.output)
+        self.assertEqual((self.output / 'src/new.cpp').read_text(), 'first\nsecond\n')
+        self.assertFalse((self.source / 'src').exists())
+
+    def test_new_file_rejects_existing_target_escape_and_bad_coordinates(self):
+        for name, coords, content in (
+            ('source.txt', '-0,0 +1,1', '+x\n'),
+            ('../escape', '-0,0 +1,1', '+x\n'),
+            ('new.txt', '-1,0 +1,1', '+x\n'),
+            ('new.txt', '-0,1 +1,1', '+x\n'),
+            ('new.txt', '-0,0 +2,1', '+x\n'),
+            ('new.txt', '-0,0 +1,2', '+x\n'),
+        ):
+            with self.subTest(name=name, coords=coords):
+                self.patch.write_text(f'--- /dev/null\n+++ b/{name}\n@@ {coords} @@\n{content}')
+                self.save_manifest()
+                with self.assertRaises(ValueError):
+                    PATCHER.prepare(self.source, self.manifest, self.output)
+                self.assertFalse(self.output.exists())
+
     def test_changed_added_and_missing_source_files_are_rejected(self):
         for mode in ('changed', 'added', 'missing'):
             with self.subTest(mode=mode):

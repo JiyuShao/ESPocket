@@ -95,7 +95,23 @@
     },
     {
       "file": "005-runtime-package-admission.patch",
-      "sha256": "d171d78e3a678b35bea352bb4e8187d839c636c9c4dd5b3597eddc96d01bc771"
+      "sha256": "24b3e97dba3a8ad8e417e00a0f378d4f0620e7e4d3937fdae4ea974ef53664a1"
+    },
+    {
+      "file": "006-bound-recursive-package-removal.patch",
+      "sha256": "9f145a0c851edf6034eae1367d6e05f001cb37251e2af801fde2bc69a4fdfb11"
+    },
+    {
+      "file": "007-count-package-admission-in-startup.patch",
+      "sha256": "65bd3ccb5ed5c7f92e97025d239775ba6a931ddc6f33ddb61e7f5c97b5c4dc79"
+    },
+    {
+      "file": "008-reuse-protected-package-verification.patch",
+      "sha256": "7dc25b4ad3acf93a5279cac62dd5e76cdd712732aaf0dea5b950921fdd75bbe3"
+    },
+    {
+      "file": "009-profile-runtime-timers.patch",
+      "sha256": "3ef25663217c12b58865ef63a6dfd330062138964a0affd24ba8cf6aa1513934"
     }
   ],
   "issue": ".scratch/005-m5-application-ecosystem/issues/07-isolate-runtime-keyboard-results.md",

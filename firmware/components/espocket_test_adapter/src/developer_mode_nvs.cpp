@@ -1,55 +1,32 @@
 #include "espocket/developer_mode.hpp"
 
-#include "esp_err.h"
-#include "nvs.h"
-#include "nvs_flash.h"
+#include "brookesia/service_helper/system/storage.hpp"
 
 namespace espocket {
 namespace {
 
 constexpr char STORAGE_NAMESPACE[] = "espocket";
 constexpr char STORAGE_KEY[] = "dev_mode";
+using Storage = esp_brookesia::service::helper::Storage;
 
 std::expected<bool, std::string> read_mode()
 {
-    const auto init = nvs_flash_init();
-    if (init != ESP_OK) {
-        return std::unexpected(std::string("NVS initialization failed: ") + esp_err_to_name(init));
+    auto entries = Storage::kv_list(STORAGE_NAMESPACE, 5000);
+    if (!entries) return std::unexpected(entries.error());
+    for (const auto &entry : *entries) {
+        if (entry.key == STORAGE_KEY) {
+            return Storage::get_key_value<bool>(STORAGE_NAMESPACE, STORAGE_KEY, 5000);
+        }
     }
-    nvs_handle_t handle;
-    const auto opened = nvs_open(STORAGE_NAMESPACE, NVS_READONLY, &handle);
-    if (opened == ESP_ERR_NVS_NOT_FOUND) {
-        return false;
-    }
-    if (opened != ESP_OK) {
-        return std::unexpected(std::string("Developer mode read failed: ") + esp_err_to_name(opened));
-    }
-    uint8_t value = 0;
-    const auto read = nvs_get_u8(handle, STORAGE_KEY, &value);
-    nvs_close(handle);
-    if (read == ESP_ERR_NVS_NOT_FOUND) {
-        return false;
-    }
-    if (read != ESP_OK || value > 1) {
-        return std::unexpected("Developer mode value is invalid");
-    }
-    return value == 1;
+    return false;
 }
 
 std::expected<void, std::string> write_mode(bool enabled)
 {
-    nvs_handle_t handle;
-    const auto opened = nvs_open(STORAGE_NAMESPACE, NVS_READWRITE, &handle);
-    if (opened != ESP_OK) {
-        return std::unexpected(std::string("Developer mode write failed: ") + esp_err_to_name(opened));
-    }
-    const auto written = nvs_set_u8(handle, STORAGE_KEY, enabled ? 1 : 0);
-    const auto committed = written == ESP_OK ? nvs_commit(handle) : written;
-    nvs_close(handle);
-    if (committed != ESP_OK) {
-        return std::unexpected(std::string("Developer mode commit failed: ") + esp_err_to_name(committed));
-    }
-    return {};
+    // App Owner callbacks may have a PSRAM stack. Flash IO must execute
+    // on Storage's internal-RAM worker. Its Bool backend retains the existing
+    // espocket/dev_mode uint8 schema and commits before reporting success.
+    return Storage::save_key_value(STORAGE_NAMESPACE, STORAGE_KEY, enabled, 5000);
 }
 
 } // namespace

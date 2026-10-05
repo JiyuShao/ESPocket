@@ -1,5 +1,20 @@
 menu "ESPocket"
 
+    config ESPOCKET_PACKAGE_ACCEPTANCE_TEST
+        bool "Test only: run signed package and Developer Mode acceptance"
+        default n
+        help
+            Uses public fixture inputs, the real Core APIs and the real mode
+            control. Updates and uninstalls only espocket.test.store_hello,
+            checks an installed Flappy Bird across mode changes, restores the
+            initial mode, and performs two controlled resets. Never enable in
+            production firmware. Does not add USB installation commands.
+
+    config ESPOCKET_PACKAGE_ACCEPTANCE_INPUTS
+        string "External directory containing package_acceptance_inputs.hpp"
+        depends on ESPOCKET_PACKAGE_ACCEPTANCE_TEST
+        default ""
+
     config ESPOCKET_M2_LIFECYCLE_STRESS
         bool "Run the M2 Native App lifecycle stress test at boot"
         default n
@@ -58,5 +73,25 @@ menu "ESPocket"
             Test firmware only. Emit internal and PSRAM free/largest heap
             metrics at a repeatable Watch Face checkpoint after each App Home
             transition. Leave disabled in normal interactive firmware.
+
+    config ESPOCKET_RUNTIME_IMAGE_CACHE_BYTES
+        int "Bounded LVGL decoded image cache in bytes"
+        range 0 2097152
+        default 0
+        help
+            Zero preserves the baseline; one MiB is a measured trial budget.
+            Decoded buffers use the upstream allocator (prefers PSRAM).
+            Oversized images bypass the cache and PNG decoding releases
+            retained entries under memory pressure. This budget excludes
+            decoder workspace and buffers currently in use.
+
+    config ESPOCKET_RUNTIME_RENDER_PROFILE
+        bool "Measure Runtime PNG misses, drawing and completed refresh FPS"
+        default n
+        select ESP_LVGL_ADAPTER_ENABLE_FPS_STATS
+        help
+            Diagnostic only: aggregate two-second windows, never log image
+            bytes or game state. Counts successful real PNG decoder opens,
+            render duration and adapter completed-frame FPS. Leave off normally.
 
 endmenu

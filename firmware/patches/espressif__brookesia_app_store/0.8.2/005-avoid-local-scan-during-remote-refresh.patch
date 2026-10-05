@@ -1,0 +1,12 @@
+--- a/src/app/lifecycle.ipp
++++ b/src/app/lifecycle.ipp
+@@ -612,7 +612,8 @@
+     refresh_installed_apps(context);
+     refresh_storage_capacity(context);
+     if (requested_view_mode == ViewMode::Store && view_mode_ == ViewMode::Store) {
+-        start_local_package_scan(context, false);
++        // The index Refresh does not change local archives. Leave their scan to
++        // startup and the Local tab so HTTP cancellation can reach the Owner.
+         auto result = start_remote_refresh(context);
+         if (!result) {
+             status_text_ = result.error();

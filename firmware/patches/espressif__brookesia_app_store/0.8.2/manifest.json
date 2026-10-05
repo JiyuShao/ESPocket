@@ -69,6 +69,14 @@
     {
       "file": "002-developer-install-confirmation.patch",
       "sha256": "4d53540434a25865a8ede493c45443f9e05163618640ddf472940ded77ffd519"
+    },
+    {
+      "file": "004-owner-service-completions.patch",
+      "sha256": "acb69d36411ba955b4976e856afb76e88d32c993ac2c753b59401eaf40a4062d"
+    },
+    {
+      "file": "005-avoid-local-scan-during-remote-refresh.patch",
+      "sha256": "b09de87b4edfc0cb67f1453032fcbbc410281fcc393c86eaea4a3bbb8577dec3"
     }
   ],
   "issue": ".scratch/005-m5-application-ecosystem/issues/06-adopt-online-store-stability-fix.md",

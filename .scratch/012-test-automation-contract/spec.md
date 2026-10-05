@@ -11,7 +11,7 @@ Blocked by: none
 
 ## Solution
 
-在正式固件中加入受设备开发者模式控制的 USB Test Adapter。设备上开启并持久保存开发者模式，默认关闭；开启后命令直接可用。首版仅允许合成触摸、语义 PWR、只读快照和释放输入。Shell、Navigator、System 的状态从各自 Owner 读取，不维护第二套测试导航状态。
+在正式固件中加入受设备开发者模式控制的 USB Test Adapter。设备上开启并持久保存开发者模式，默认关闭；开启后命令直接可用。首版仅允许合成触摸、语义 PWR、只读快照、最终渲染画面截图和释放输入。Shell、Navigator、System 的状态从各自 Owner 读取，不维护第二套测试导航状态。
 
 ## User Stories
 
@@ -23,7 +23,7 @@ Blocked by: none
 
 - Test Adapter 属于 ESPocket，借用 Brookesia Display、System Core 与 GUI 的公开能力，不修改上游组件以加入产品测试协议。
 - 正式固件提供入口；开发者模式是设备本地持久配置，默认关闭。USB 是首版传输；Wi-Fi 留待后续。
-- 命令语义限定为 `hello`、合成触摸/PWR、`snapshot`、`release`。确切线缆 schema 和语言类型在实现 ticket 中定版。
+- 命令语义限定为 `hello`、合成触摸/PWR、`snapshot`、`release`、`screenshot`、`screenshot.read`。确切线缆 schema 和语言类型在实现 ticket 中定版。
 - 合成触摸的 Shell 手势进入与真实输入共用的处理入口；不得直接修改 Surface 或 Page 栈。
 - 页面快照从 ESPocket Navigator 读取 `pageId`、`canBack`、`backPending`，不包含页面参数或整条栈。
 
@@ -42,6 +42,7 @@ Wi-Fi 测试通道、任意 App Action、应用安装、设置修改、物理执
 - [01 — 设备开发者模式与 USB 协议准入](issues/01-developer-mode-usb-gate.md)
 - [02 — 共享输入路径与只读快照](issues/02-shared-input-and-snapshot.md)
 - [03 — 主机 Driver 与证据分类](issues/03-host-driver-evidence.md)
+- [04 — 最终渲染画面截图](issues/04-rendered-frame-screenshot.md)
 
 ## Further Notes
 
@@ -66,3 +67,9 @@ Wi-Fi 测试通道、任意 App Action、应用安装、设置修改、物理执
 ## Resolution
 
 2026-10-02：三张 tickets 全部 resolved。设备协议、共享输入/快照和独立 Driver 的源码、主机与真实 USB 合成路径门槛完成；35 步设备 attempt 通过。物理触摸、GPIO 与视觉继续由 007/03、008/03、014/05 持有，不以本 Effort 结果替代，见 [运行证据](records/2026-10-02-device-driver-run.md)。
+
+## Comments
+
+2026-10-04：用户授权增加截图并在真机导出。新增 04 持有扩展验收，原三票历史结果仍有效；软件渲染帧与实体屏幕证据分开记录。
+
+2026-10-04 后续结果：新增 04 已 resolved；f3fdd7e82 实际导出经 SHA-256 校验的整帧 PNG，见[截图设备证据](records/2026-10-04-rendered-frame-screenshot.md)。原安装、GPIO 与实体面板门槛保持独立。

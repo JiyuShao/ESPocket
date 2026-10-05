@@ -207,3 +207,9 @@ production 已包含 Store 0.8.2 的图标容量延后重试，共七个组件�
 `run_device_tests.py --suite store-online` 在普通候选固件上打开 Store、点击 Refresh，要求本次远程 index 真正写入缓存，再验证 Home 和重进。缓存启动不能独自满足这个门槛；此 suite 不安装或下载包，不证明信任、回滚与发布。
 
 安装链路的独立签名测试输入见 [Store release fixture](test/fixtures/store_release/README.md)。官方 SDK 生成两个兼容版本，输出到仓库外的新目录；临时测试 identity 不进入正式信任策略。
+
+### Runtime 绘制诊断与解码缓存
+
+`CONFIG_ESPOCKET_RUNTIME_RENDER_PROFILE` 默认关闭；开启后，每约两秒聚合 Runtime PNG decoder open（实际 cache miss／无缓存解码）、成功次数与耗时、LVGL render 耗时及 adapter 最近一秒完整末次 flush 完成 FPS。统计从 `on_app_started` 开始，不能覆盖此前 `on_start` 的全部启动解码。GUI 线程经单元素有界队列交给独立诊断线程输出，慢串口可能覆盖待输出窗口；截断日志和窗口边界不作为有效样本。Core 的 `CONFIG_BROOKESIA_SYSTEM_CORE_ENABLE_PROFILE_LOG` 另记录 periodic timer 的调度唤醒、Owner 排队、回调和实际 dispatch 周期。
+
+`CONFIG_ESPOCKET_RUNTIME_IMAGE_CACHE_BYTES` 设置共享 LVGL decoded image cache 的字节预算，默认 0，最多 2 MiB；它不是预分配，也不包含正在绘制的缓冲、decoder 临时工作区和缓存管理开销。decoder allocator 保持上游配置。超预算图像绕过缓存；PNG 解码前若 PSRAM 最大连续块不足以承载 RGBA 缓冲，或总空闲不足以额外保留 64 KiB 临时工作区，则先清掉缓存。`pressure_evictions` 计数清缓存请求，不能保证基础堆自身仍能分配成功。资源替换／释放使用 GUI backend 的 `lv_image_cache_drop`。该 fallback 与诊断开关独立，且共享缓存也影响 Native 图像。预算不能按 App PNG 文件解码总量直接决定；必须比较同机原包的成功解码、完整绘制、timer 和 PSRAM free/largest，出现缺图时 FPS 增加不算性能收益。截图需要连续整帧缓冲；1 MiB 试验仍出现截图分配失败，因此保持默认 0。下载后须立即 `release`，并在性能窗口外截图。当前试验与镜像结果由 [005/10](../.scratch/005-m5-application-ecosystem/issues/10-reduce-runtime-startup-blocking.md) 持有。

@@ -1,0 +1,748 @@
+--- a/cmake/esp_platform.cmake
++++ b/cmake/esp_platform.cmake
+@@ -3,7 +3,7 @@
+ #
+ # Always declare mbedtls for release verify on ESP-IDF (see package_release_verify.cpp).
+ set(_brookesia_system_core_esp_requires ${COMPONENT_REQUIRES})
+-list(APPEND _brookesia_system_core_esp_requires mbedtls)
++list(APPEND _brookesia_system_core_esp_requires mbedtls esp_hw_support)
+ if(CONFIG_BROOKESIA_SYSTEM_CORE_ENABLE_USB_BRIDGE)
+     list(APPEND _brookesia_system_core_esp_requires brookesia_service_usb)
+ endif()
+--- a/include/brookesia/system_core/app/package.hpp
++++ b/include/brookesia/system_core/app/package.hpp
+@@ -8,6 +8,8 @@
+ #include <expected>
+ #include <functional>
+ #include <map>
++#include <memory>
++#include <vector>
+ #include <string>
+ #include <string_view>
+ 
+@@ -16,9 +18,13 @@
+ 
+ namespace esp_brookesia::system::core {
+ 
++struct PackageValidationState;
++
+ // Product policy is supplied once; Core remains the install/discovery/start Owner.
+ struct RuntimePackagePolicy {
+     bool enforce = false;
++    bool reuse_verified_installations = false;
++    std::shared_ptr<PackageValidationState> validation_state;
+     std::function<bool()> developer_enabled;
+     std::string public_key_pem_path;
+     std::string platform_baseline;
+@@ -43,6 +49,13 @@
+     std::string expected_id = {};
+     std::string expected_version = {};
+ };
++// Called by Core before discovery or any App execution. Reuse requires an active
++// Storage mutation guard; setting the policy flag alone never grants reuse.
++std::expected<void, std::string> initialize_runtime_package_validation(
++    RuntimePackagePolicy &policy, const std::vector<std::string> &app_roots);
++bool is_runtime_package_validation_current(
++    std::string_view path, const RuntimePackagePolicy &policy);
++
+ std::expected<PackageAdmission, std::string> inspect_runtime_package(
+     std::string_view path, std::string_view system, const RuntimePackagePolicy &policy,
+     std::string_view expected_sha256 = {});
+--- a/include/brookesia/system_core/system/system.hpp
++++ b/include/brookesia/system_core/system/system.hpp
+@@ -124,6 +124,11 @@
+      */
+     const RuntimePackagePolicy &runtime_package_policy() const;
+     std::expected<void, std::string> enforce_runtime_package_policy();
++    // Native developer tooling only. Stop the instance and invalidate the
++    // protected version before mutation; this does not grant edited content trust.
++    std::expected<void, std::string> write_runtime_app_member(
++        AppId app_id, std::string_view member, std::string contents);
++    virtual void on_app_content_invalidated(const AppInfo &) {}
+     System();
+     System(const System &) = delete;
+     System &operator=(const System &) = delete;
+--- a/src/app/app.cpp
++++ b/src/app/app.cpp
+@@ -1,3 +1,4 @@
++#include "private/app/package_validation.hpp"
+ /*
+  * SPDX-FileCopyrightText: 2026 Espressif Systems (Shanghai) CO LTD
+  *
+@@ -1171,6 +1172,7 @@
+             [this, path = std::string(path), options] { return install_runtime_app_package(path, options); },
+             std::unexpected("Failed to post package installation task"));
+     }
++    detail::PackageMutationScope mutation_scope(impl_->package_policy_);
+     if (impl_->package_transaction_) return std::unexpected("package_transaction_busy");
+     impl_->package_transaction_ = true;
+     struct Reset { bool &flag; ~Reset() { flag = false; } } reset{impl_->package_transaction_};
+@@ -1307,6 +1309,10 @@
+         (void)detach_app_for_replacement(*activated);
+         return rollback(committed.error());
+     }
++    if (impl_->package_policy_.reuse_verified_installations) {
++        auto verified = validate_installed_runtime_package(final.generic_string(), get_system_type(), impl_->package_policy_, false);
++        if (!verified) return std::unexpected("committed_package_verification_failed: " + verified.error());
++    }
+     if (replaced_app) {
+         auto current = get_app(*activated);
+         if (!current) return std::unexpected("replacement_commit_registration_missing");
+@@ -1319,6 +1325,44 @@
+     auto removed_backup = remove_path_tree_if_exists(backup, "committed package backup");
+     if (!removed_backup) BROOKESIA_LOGW("Committed package backup retained: %1%", removed_backup.error());
+     return *activated;
++}
++
++std::expected<void, std::string> System::write_runtime_app_member(
++    AppId app_id, std::string_view member, std::string contents)
++{
++    if (impl_->should_schedule_app_task()) {
++        return impl_->run_task_sync<std::expected<void, std::string>>(SYSTEM_APP_TASK_GROUP,
++            [this, app_id, member = std::string(member), contents = std::move(contents)]() mutable {
++                return write_runtime_app_member(app_id, member, std::move(contents));
++            }, std::unexpected("Failed to post package content mutation"));
++    }
++    if (!impl_->package_policy_.developer()) return std::unexpected("developer_mode_required");
++    const std::filesystem::path relative{std::string(member)};
++    if (member.empty() || relative.is_absolute() || relative.lexically_normal() != relative ||
++        member.starts_with(".brookesia-") ||
++        contents.size() > 16U * 1024U * 1024U)
++        return std::unexpected("invalid_package_member_mutation");
++    for (const auto &segment : relative)
++        if (segment == "." || segment == "..") return std::unexpected("invalid_package_member_mutation");
++    const auto first = relative.begin()->string();
++    if (first == "data" || first == "cache" || first == "files")
++        return std::unexpected("use_app_data_storage");
++    auto record_result = impl_->get_record(app_id);
++    if (!record_result) return std::unexpected(record_result.error());
++    auto &record = *record_result.value();
++    if (record.info.manifest.kind != AppKind::Runtime) return std::unexpected("not_runtime_app");
++    if (record.info.state == AppState::Running || record.info.state == AppState::Paused) {
++        auto stopped = stop_app(app_id);
++        if (!stopped) return std::unexpected(stopped.error());
++    }
++    impl_->unload_runtime(record);
++    impl_->unload_gui(record);
++    detail::PackageMutationScope mutation_scope(impl_->package_policy_);
++    auto written = service::helper::Storage::fs_write_text(
++        (std::filesystem::path(record.info.manifest.app_path) / relative).generic_string(), contents, STORAGE_FS_TIMEOUT_MS);
++    if (written || !is_runtime_package_validation_current(record.info.manifest.app_path, impl_->package_policy_))
++        on_app_content_invalidated(record.info);
++    return written;
+ }
+ 
+ std::expected<void, std::string> System::enforce_runtime_package_policy()
+--- a/src/app/manager.cpp
++++ b/src/app/manager.cpp
+@@ -1,3 +1,4 @@
++#include "private/app/package_validation.hpp"
+ /*
+  * SPDX-FileCopyrightText: 2026 Espressif Systems (Shanghai) CO LTD
+  *
+@@ -565,6 +566,7 @@
+         std::unexpected("Failed to post app uninstall task")
+                );
+     }
++    detail::PackageMutationScope mutation_scope(impl_->package_policy_);
+     auto record_result = impl_->get_record(app_id);
+     if (!record_result) {
+         return std::unexpected(record_result.error());
+--- a/src/app/package.cpp
++++ b/src/app/package.cpp
+@@ -38,6 +38,7 @@
+ #include "private/app/service_requirement.hpp"
+ #include "private/utils.hpp"
+ #include "private/filesystem.hpp"
++#include "private/app/package_validation.hpp"
+ 
+ namespace esp_brookesia::system::core {
+ namespace {
+@@ -1112,7 +1113,8 @@
+         if (!is_safe_relative_path(entry.name) || entry.name.find('/') != std::string::npos)
+             return std::unexpected("unsafe_installed_member");
+         const auto name = (relative / entry.name).generic_string();
+-        if (relative.empty() && (package_private(name) || name == RECEIPT || name == PENDING || name == ARCHIVE)) continue;
++        if (relative.empty() && (package_private(name) || name == RECEIPT || name == PENDING || name == ARCHIVE ||
++            name == ".brookesia-verified.json" || name == ".brookesia-verified.pending")) continue;
+         if (entry.info.type == service::helper::Storage::FileType::Directory) {
+             auto nested = directory_members(root, relative / entry.name);
+             if (!nested) return std::unexpected(nested.error());
+@@ -1289,7 +1291,7 @@
+     return package_rename(root / PENDING, root / RECEIPT);
+ }
+ 
+-std::expected<PackageAdmission, std::string> validate_installed_runtime_package(
++std::expected<PackageAdmission, std::string> detail::validate_installed_runtime_package_full(
+     std::string_view path, std::string_view system, const RuntimePackagePolicy &policy,
+     bool for_start, bool pending)
+ {
+@@ -1350,12 +1352,24 @@
+     if (for_start && admission->requires_developer() && !policy.developer())
+         return std::unexpected("developer_mode_required");
+     admission->manifest.app_path = std::string(path);
++    admission->transaction_identity = field("transaction");
+     return admission;
++}
++
++std::expected<std::string, std::string> detail::package_validation_digest(std::string_view bytes)
++{
++    return package_sha256(std::vector<uint8_t>(bytes.begin(), bytes.end()));
++}
++std::expected<AppManifest, std::string> detail::parse_validation_manifest(
++    std::string_view json, const fs::path &directory)
++{
++    return parse_manifest_to_app_manifest(std::string(json), directory, {});
+ }
+ 
+ std::expected<void, std::string> recover_runtime_package_updates(
+     std::string_view root_path, std::string_view system, const RuntimePackagePolicy &policy)
+ {
++    detail::PackageMutationScope mutation_scope(policy);
+     const fs::path root{std::string(root_path)};
+     const auto rollback_root = root / ".rollback";
+     auto stat = service::helper::Storage::fs_stat(rollback_root.generic_string(), STORAGE_FS_TIMEOUT_MS);
+--- /dev/null
++++ b/src/app/package_validation.cpp
+@@ -0,0 +1,454 @@
++#include "private/app/package_validation.hpp"
++
++#include <algorithm>
++#include <atomic>
++#include <filesystem>
++#include <mutex>
++#include "mbedtls/md.h"
++#include "private/utils.hpp"
++#if defined(ESP_PLATFORM)
++#include "esp_random.h"
++#else
++#include <random>
++#endif
++#include "boost/json.hpp"
++#include "brookesia/service_storage.hpp"
++#include "brookesia/service_helper/system/storage.hpp"
++
++namespace esp_brookesia::system::core {
++namespace fs = std::filesystem;
++namespace {
++constexpr const char *SEAL = ".brookesia-verified.json";
++constexpr const char *TEMP = ".brookesia-verified.pending";
++constexpr const char *FORMAT = "core.package.validation.v2";
++constexpr const char *OWNER = "core.package.write_owner";
++constexpr const char *KIND = "core.package.write_kind";
++constexpr const char *EPOCH = "core.package.write_epoch";
++constexpr const char *KEY_NAMESPACE = "core.pkg.v2";
++constexpr unsigned TIMEOUT = 5000;
++void profile_validation(std::string_view path, const char *source)
++{
++#if BROOKESIA_SYSTEM_CORE_ENABLE_PROFILE_LOG
++    BROOKESIA_LOGI("Package validation profile: path(%1%), source(%2%)", path, source);
++#else
++    (void)path; (void)source;
++#endif
++}
++using Storage = service::helper::Storage;
++bool within(const fs::path &path, const fs::path &root)
++{
++    auto p = path.begin(), r = root.begin();
++    for (; r != root.end(); ++r, ++p) if (p == path.end() || *p != *r) return false;
++    return true;
++}
++bool private_path(const fs::path &relative)
++{
++    auto it = relative.begin();
++    if (it == relative.end()) return false;
++    const auto first = it->string();
++    return first == "data" || first == "cache" || first == "files";
++}
++std::string text_field(const boost::json::object &object, const char *name)
++{
++    auto *v = object.if_contains(name);
++    return v && v->is_string() ? std::string(v->as_string()) : "";
++}
++std::string configuration_key(const RuntimePackagePolicy &policy)
++{
++    boost::json::object builtins;
++    for (const auto &[id, members] : policy.built_in_members) {
++        boost::json::object values;
++        for (const auto &[path, hash] : members) values[path] = hash;
++        builtins[id] = std::move(values);
++    }
++    return boost::json::serialize(boost::json::object{
++        {"format", FORMAT}, {"baseline", policy.platform_baseline},
++        {"key_path", policy.public_key_pem_path}, {"enforce", policy.enforce},
++        {"builtins", std::move(builtins)}});
++}
++}
++
++struct PackageValidationState {
++    std::mutex mutex, key_mutex;
++    std::vector<fs::path> roots;
++    fs::path key_path;
++    std::string owner, configuration, key_digest, binding, seal_key;
++    bool key_loaded = false;
++    uint64_t epoch = 0;
++    std::map<std::string, PackageAdmission> admissions;
++};
++
++namespace {
++// Runs on Storage's internal-RAM worker before any write side effect. The
++// framework captures CallContext with each queued service operation.
++std::expected<void, std::string> before_mutation(
++    const std::shared_ptr<PackageValidationState> &state,
++    const fs::path &path, const service::CallContext &context)
++{
++    std::vector<fs::path> packages;
++    bool protected_path = false, trust_change = false;
++    for (const auto &root : state->roots) {
++        if (within(root, path)) {
++            protected_path = true;
++            std::error_code error;
++            const bool exists = fs::exists(root, error);
++            if (error) return std::unexpected("package_verification_invalidation_failed");
++            if (exists) {
++                fs::directory_iterator iterator(root, error);
++                if (error) return std::unexpected("package_verification_invalidation_failed");
++                for (const auto &entry : iterator) {
++                    if (!entry.path().filename().string().starts_with('.')) packages.push_back(entry.path());
++                }
++            }
++        } else if (within(path, root)) {
++            const auto relative = path.lexically_relative(root);
++            auto first = relative.begin();
++            if (first == relative.end()) continue;
++            const auto package = root / *first;
++            if (!first->string().starts_with('.') && private_path(path.lexically_relative(package))) continue;
++            protected_path = true;
++            // Staging/rollback never carry reusable committed records. Their
++            // promotions invalidate the ordinary destination before mutation.
++            if (!first->string().starts_with('.')) packages.push_back(package);
++        }
++    }
++    if (!state->key_path.empty() && (within(path, state->key_path) || within(state->key_path, path))) {
++        protected_path = true;
++        trust_change = true;
++    }
++    if (!protected_path) return {};
++    auto owner = context.find(OWNER), kind = context.find(KIND);
++    if (owner == context.end() || owner->second != state->owner || kind == context.end())
++        return std::unexpected("package_content_read_only");
++    std::lock_guard lock(state->mutex);
++    if (kind->second == "verification") {
++        auto epoch = context.find(EPOCH);
++        if (trust_change || (path.filename() != SEAL && path.filename() != TEMP) ||
++            epoch == context.end() || epoch->second != std::to_string(state->epoch))
++            return std::unexpected("package_verification_changed");
++        return {};
++    }
++    if (kind->second != "mutation") return std::unexpected("package_content_read_only");
++    ++state->epoch;
++    if (trust_change) {
++        for (const auto &[known, unused] : state->admissions) packages.emplace_back(known);
++        state->key_loaded = false;
++        state->key_digest.clear();
++    }
++    // Invalidate RAM first. Deleting the committed seal durably precedes the
++    // requested mutation; failure blocks that mutation even if RAM was cleared.
++    if (trust_change) state->admissions.clear();
++    else for (const auto &package : packages) state->admissions.erase(package.generic_string());
++    for (const auto &package : packages) {
++        for (const auto *name : {SEAL, TEMP}) {
++            std::error_code error;
++            fs::remove(package / name, error);
++            if (error) return std::unexpected("package_verification_invalidation_failed: " + error.message());
++        }
++    }
++    return {};
++}
++
++std::string hex_bytes(const unsigned char *bytes, size_t size)
++{
++    constexpr char digits[] = "0123456789abcdef";
++    std::string result;
++    result.reserve(size * 2);
++    for (size_t i = 0; i < size; ++i) {
++        result.push_back(digits[bytes[i] >> 4]);
++        result.push_back(digits[bytes[i] & 15]);
++    }
++    return result;
++}
++std::expected<std::string, std::string> seal_mac(std::string_view key, const boost::json::object &record)
++{
++    // RFC 2104 HMAC-SHA256 using the digest API present in mbedTLS 4.
++    // The generated 64-byte hex key exactly fills SHA256's 64-byte block.
++    if (key.size() != 64) return std::unexpected("invalid_package_verification_key");
++    std::string inner(64, '\x36'), outer(64, '\x5c');
++    for (size_t i = 0; i < 64; ++i) {
++        inner[i] ^= key[i]; outer[i] ^= key[i];
++    }
++    inner += boost::json::serialize(record);
++    unsigned char result[32];
++    const auto *algorithm = mbedtls_md_info_from_type(MBEDTLS_MD_SHA256);
++    if (!algorithm || mbedtls_md(algorithm, reinterpret_cast<const unsigned char *>(inner.data()), inner.size(), result) != 0)
++        return std::unexpected("package_verification_mac_failed");
++    outer.append(reinterpret_cast<const char *>(result), sizeof(result));
++    if (mbedtls_md(algorithm, reinterpret_cast<const unsigned char *>(outer.data()), outer.size(), result) != 0)
++        return std::unexpected("package_verification_mac_failed");
++    return hex_bytes(result, sizeof(result));
++}
++std::expected<void, std::string> load_seal_key(const RuntimePackagePolicy &policy)
++{
++    auto state = policy.validation_state;
++    std::lock_guard key_lock(state->key_mutex);
++    {
++        std::lock_guard lock(state->mutex);
++        if (!state->seal_key.empty()) return {};
++    }
++    auto context = service::get_current_call_context();
++    context[OWNER] = state->owner;
++    service::ScopedCallContext guard(std::move(context));
++    auto values = Storage::call_function_sync<boost::json::object>(
++        Storage::FunctionId::KVGet, std::string(KEY_NAMESPACE), boost::json::array{"seal_key"}, service::helper::Timeout(TIMEOUT));
++    if (!values) return std::unexpected("package_verification_key_unavailable");
++    auto key = text_field(*values, "seal_key");
++    if (values->contains("seal_key") && (key.size() != 64 ||
++        key.find_first_not_of("0123456789abcdef") != std::string::npos))
++        return std::unexpected("invalid_package_verification_key");
++    if (key.empty()) {
++        unsigned char random[32];
++#if defined(ESP_PLATFORM)
++        esp_fill_random(random, sizeof(random));
++#else
++        std::random_device source;
++        for (auto &byte : random) byte = static_cast<unsigned char>(source());
++#endif
++        key = hex_bytes(random, sizeof(random));
++        auto written = Storage::call_function_sync<void>(Storage::FunctionId::KVSet,
++            std::string(KEY_NAMESPACE), boost::json::object{{"seal_key", key}}, service::helper::Timeout(TIMEOUT));
++        if (!written) return std::unexpected("package_verification_key_persistence_failed");
++    }
++    std::lock_guard lock(state->mutex);
++    state->seal_key = std::move(key);
++    return {};
++}
++
++std::expected<std::string, std::string> fingerprint(
++    const RuntimePackagePolicy &policy, std::string_view system)
++{
++    const auto state = policy.validation_state;
++    auto key = load_seal_key(policy);
++    if (!key) return std::unexpected(key.error());
++    const auto config = configuration_key(policy);
++    bool load_key;
++    uint64_t epoch;
++    {
++        std::lock_guard lock(state->mutex);
++        if (state->configuration != config) {
++            state->configuration = config;
++            state->key_path = policy.public_key_pem_path;
++            state->key_loaded = false;
++            state->admissions.clear();
++            ++state->epoch;
++        }
++        load_key = !state->key_loaded;
++        epoch = state->epoch;
++    }
++    if (load_key) {
++        std::string material = "no-release-key";
++        if (!policy.public_key_pem_path.empty()) {
++            auto stat = Storage::fs_stat(policy.public_key_pem_path, TIMEOUT);
++            if (!stat) return std::unexpected(stat.error());
++            if (stat->exists) {
++                if (stat->type != Storage::FileType::File || stat->size > 64 * 1024)
++                    return std::unexpected("invalid_package_trust_key");
++                auto key = Storage::fs_read_text(policy.public_key_pem_path, TIMEOUT);
++                if (!key) return std::unexpected(key.error());
++                material = *key;
++            } else material = "release-key-missing";
++        }
++        auto digest = detail::package_validation_digest(material);
++        if (!digest) return std::unexpected(digest.error());
++        std::lock_guard lock(state->mutex);
++        if (epoch != state->epoch) return std::unexpected("package_verification_changed");
++        state->key_digest = *digest;
++        state->key_loaded = true;
++    }
++    std::lock_guard lock(state->mutex);
++    auto result = detail::package_validation_digest(config + std::string(system) + state->key_digest);
++    if (!result) return std::unexpected(result.error());
++    if (state->binding != *result) {
++        state->admissions.clear();
++        state->binding = *result;
++        ++state->epoch;
++    }
++    return result;
++}
++
++std::expected<PackageAdmission, std::string> read_seal(
++    const fs::path &directory, std::string_view expected_fingerprint, std::string_view key)
++{
++    auto pending = Storage::fs_stat((directory / ".brookesia-install.pending").generic_string(), TIMEOUT);
++    if (!pending || pending->exists) return std::unexpected("package_transaction_pending");
++    auto info = Storage::fs_stat((directory / SEAL).generic_string(), TIMEOUT);
++    if (!info || !info->exists || info->type != Storage::FileType::File || info->size > 512 * 1024)
++        return std::unexpected("package_verification_record_missing");
++    auto raw = Storage::fs_read_text((directory / SEAL).generic_string(), TIMEOUT);
++    if (!raw) return std::unexpected(raw.error());
++    boost::system::error_code error;
++    auto value = boost::json::parse(*raw, error);
++    if (error || !value.is_object()) return std::unexpected("invalid_package_verification_record");
++    auto record = value.as_object();
++    const auto stored_mac = text_field(record, "mac");
++    record.erase("mac");
++    auto expected_mac = seal_mac(key, record);
++    unsigned difference = stored_mac.size() == 64 ? 0 : 1;
++    if (!expected_mac) return std::unexpected(expected_mac.error());
++    if (stored_mac.size() == 64) {
++        for (size_t i = 0; i < 64; ++i) difference |= stored_mac[i] ^ (*expected_mac)[i];
++    }
++    if (difference) return std::unexpected("package_verification_mac_mismatch");
++    if (text_field(record, "format") != FORMAT || text_field(record, "fingerprint") != expected_fingerprint ||
++        text_field(record, "path") != directory.generic_string() || text_field(record, "transaction").empty())
++        return std::unexpected("package_verification_record_changed");
++    const auto manifest_json = text_field(record, "manifest");
++    auto digest = detail::package_validation_digest(manifest_json);
++    if (!digest || *digest != text_field(record, "manifest_digest"))
++        return std::unexpected("package_verification_manifest_mismatch");
++    auto manifest = detail::parse_validation_manifest(manifest_json, directory);
++    if (!manifest) return std::unexpected(manifest.error());
++    auto unsigned_flag = record.if_contains("unsigned"), super_flag = record.if_contains("super");
++    auto members = record.if_contains("members");
++    if (!unsigned_flag || !unsigned_flag->is_bool() || !super_flag || !super_flag->is_bool() ||
++        !members || !members->is_object() || members->as_object().empty() || members->as_object().size() > 1024)
++        return std::unexpected("invalid_package_verification_record");
++    PackageAdmission admission;
++    admission.manifest = *manifest;
++    admission.artifact_sha256 = text_field(record, "artifact_digest");
++    admission.manifest_sha256 = *digest;
++    admission.signing_key_identity = text_field(record, "signing_key");
++    admission.transaction_identity = text_field(record, "transaction");
++    admission.unsigned_exception = unsigned_flag->as_bool();
++    admission.super_exception = super_flag->as_bool();
++    for (const auto &[name, hash] : members->as_object()) {
++        if (!hash.is_string() || hash.as_string().size() != 64)
++            return std::unexpected("invalid_package_verification_member");
++        admission.members.emplace(std::string(name), std::string(hash.as_string()));
++    }
++    auto found = admission.members.find("manifest.json");
++    if (found == admission.members.end() || found->second != *digest)
++        return std::unexpected("package_verification_manifest_mismatch");
++    return admission;
++}
++
++std::expected<void, std::string> write_seal(
++    const fs::path &directory, const PackageAdmission &admission,
++    const RuntimePackagePolicy &policy, std::string_view binding, uint64_t epoch)
++{
++    auto manifest = Storage::fs_read_text((directory / "manifest.json").generic_string(), TIMEOUT);
++    if (!manifest) return std::unexpected(manifest.error());
++    boost::json::object members;
++    for (const auto &[name, digest] : admission.members) members[name] = digest;
++    boost::json::object record{
++        {"format", FORMAT}, {"path", directory.generic_string()}, {"fingerprint", binding},
++        {"manifest", *manifest}, {"manifest_digest", admission.manifest_sha256},
++        {"artifact_digest", admission.artifact_sha256}, {"signing_key", admission.signing_key_identity},
++        {"transaction", admission.transaction_identity}, {"unsigned", admission.unsigned_exception},
++        {"super", admission.super_exception}, {"members", std::move(members)}};
++    auto mac = seal_mac(policy.validation_state->seal_key, record);
++    if (!mac) return std::unexpected(mac.error());
++    record["mac"] = *mac;
++    auto context = service::get_current_call_context();
++    context[OWNER] = policy.validation_state->owner;
++    context[KIND] = "verification";
++    context[EPOCH] = std::to_string(epoch);
++    service::ScopedCallContext guard(std::move(context));
++    auto written = Storage::fs_write_text((directory / TEMP).generic_string(), boost::json::serialize(record), TIMEOUT);
++    if (!written) return std::unexpected(written.error());
++    return Storage::fs_rename((directory / TEMP).generic_string(), (directory / SEAL).generic_string(), TIMEOUT);
++}
++}
++
++std::expected<void, std::string> initialize_runtime_package_validation(
++    RuntimePackagePolicy &policy, const std::vector<std::string> &roots)
++{
++    if (!policy.enforce || !policy.reuse_verified_installations) return {};
++    if (roots.empty()) return std::unexpected("package_protection_roots_missing");
++    auto state = std::make_shared<PackageValidationState>();
++    for (const auto &raw : roots) {
++        const fs::path path(raw);
++        if (!path.is_absolute() || path.lexically_normal() != path)
++            return std::unexpected("invalid_package_protection_root");
++        state->roots.push_back(path);
++    }
++    static std::atomic<uint64_t> next_owner{0};
++    state->owner = std::to_string(++next_owner);
++    state->key_path = policy.public_key_pem_path;
++    service::Storage::get_instance().set_file_system_mutation_guard(
++        [state](const fs::path &path, const service::CallContext &context) {
++            return before_mutation(state, path, context);
++        });
++    service::Storage::get_instance().set_key_value_access_guard(
++        [state](const std::string &nspace, const service::CallContext &context) -> std::expected<void, std::string> {
++            if (nspace != KEY_NAMESPACE) return {};
++            auto owner = context.find(OWNER);
++            if (owner == context.end() || owner->second != state->owner)
++                return std::unexpected("package_verification_key_private");
++            return {};
++        });
++    policy.validation_state = state;
++    return {};
++}
++
++detail::PackageMutationScope::PackageMutationScope(const RuntimePackagePolicy &policy)
++{
++    if (!policy.validation_state) return;
++    auto context = service::get_current_call_context();
++    context[OWNER] = policy.validation_state->owner;
++    context[KIND] = "mutation";
++    context_.emplace(std::move(context));
++}
++
++bool is_runtime_package_validation_current(std::string_view path, const RuntimePackagePolicy &policy)
++{
++    if (!policy.reuse_verified_installations || !policy.validation_state) return !policy.reuse_verified_installations;
++    std::lock_guard lock(policy.validation_state->mutex);
++    return policy.validation_state->configuration == configuration_key(policy) &&
++           policy.validation_state->admissions.contains(std::string(path));
++}
++
++std::expected<PackageAdmission, std::string> validate_installed_runtime_package(
++    std::string_view path, std::string_view system, const RuntimePackagePolicy &policy,
++    bool for_start, bool pending)
++{
++    if (!policy.reuse_verified_installations || pending || !policy.enforce)
++        return detail::validate_installed_runtime_package_full(path, system, policy, for_start, pending);
++    if (!policy.validation_state) return std::unexpected("package_protection_not_initialized");
++    auto binding = fingerprint(policy, system);
++    if (!binding) return std::unexpected(binding.error());
++    const auto state = policy.validation_state;
++    uint64_t epoch;
++    {
++        std::lock_guard lock(state->mutex);
++        epoch = state->epoch;
++        auto found = state->admissions.find(std::string(path));
++        if (found != state->admissions.end()) {
++            if (for_start && found->second.requires_developer() && !policy.developer())
++                return std::unexpected("developer_mode_required");
++            profile_validation(path, "memory");
++            return found->second;
++        }
++    }
++    const fs::path directory{std::string(path)};
++    bool protected_directory = false;
++    for (const auto &root : state->roots)
++        if (directory.parent_path() == root && !directory.filename().string().starts_with('.')) protected_directory = true;
++    if (!protected_directory) return detail::validate_installed_runtime_package_full(path, system, policy, for_start, pending);
++    auto admission = read_seal(directory, *binding, state->seal_key);
++    if (admission) profile_validation(path, "persistent");
++    if (!admission) {
++        if (admission.error() == "package_transaction_pending") return std::unexpected(admission.error());
++        profile_validation(path, "full");
++        admission = detail::validate_installed_runtime_package_full(path, system, policy, false, false);
++        if (!admission) return std::unexpected(admission.error());
++        if (admission->manifest_sha256.empty()) {
++            auto manifest = admission->members.find("manifest.json");
++            if (manifest == admission->members.end()) return std::unexpected("package_manifest_digest_missing");
++            admission->manifest_sha256 = manifest->second;
++            admission->transaction_identity = "builtin-" + *binding;
++        }
++        auto sealed = write_seal(directory, *admission, policy, *binding, epoch);
++        if (!sealed) return std::unexpected(sealed.error());
++    }
++    {
++        std::lock_guard lock(state->mutex);
++        if (epoch != state->epoch) return std::unexpected("package_verification_changed");
++        state->admissions[std::string(path)] = *admission;
++    }
++    if (for_start && admission->requires_developer() && !policy.developer())
++        return std::unexpected("developer_mode_required");
++    return admission;
++}
++} // namespace esp_brookesia::system::core
+--- /dev/null
++++ b/src/private/app/package_validation.hpp
+@@ -0,0 +1,19 @@
++#pragma once
++#include <optional>
++#include <filesystem>
++#include "brookesia/service_manager/common.hpp"
++#include "brookesia/system_core/app/package.hpp"
++namespace esp_brookesia::system::core::detail {
++class PackageMutationScope {
++public:
++    explicit PackageMutationScope(const RuntimePackagePolicy &policy);
++private:
++    std::optional<service::ScopedCallContext> context_;
++};
++std::expected<std::string, std::string> package_validation_digest(std::string_view bytes);
++std::expected<AppManifest, std::string> parse_validation_manifest(
++    std::string_view json, const std::filesystem::path &directory);
++std::expected<PackageAdmission, std::string> validate_installed_runtime_package_full(
++    std::string_view path, std::string_view system, const RuntimePackagePolicy &policy,
++    bool for_start, bool pending);
++}
+--- a/src/system/lifecycle.cpp
++++ b/src/system/lifecycle.cpp
+@@ -207,32 +207,11 @@
+     ) -> std::expected<void, std::string> {
+         if (command == service::Usb::HostCommand::PutFile)
+         {
+-            std::error_code error_code;
+-            const std::filesystem::path destination_path(destination);
+-            std::filesystem::create_directories(destination_path.parent_path(), error_code);
+-            if (error_code) {
+-                return std::unexpected("Failed to create upload destination directory: " + error_code.message());
+-            }
+-            if (!artifact.overwrite) {
+-                const bool copied = std::filesystem::copy_file(
+-                                        artifact.temporary_path,
+-                                        destination_path,
+-                                        std::filesystem::copy_options::none,
+-                                        error_code
+-                                    );
+-                if (!copied) {
+-                    if (error_code == std::errc::file_exists) {
+-                        return std::unexpected("Upload destination already exists");
+-                    }
+-                    return std::unexpected("Failed to commit uploaded file: " + error_code.message());
+-                }
+-                return {};
+-            }
+-            std::filesystem::rename(artifact.temporary_path, destination_path, error_code);
+-            if (error_code) {
+-                return std::unexpected("Failed to commit uploaded file: " + error_code.message());
+-            }
+-            return {};
++            // Use the guarded Storage worker for the actual destination write.
++            auto copied = service::helper::Storage::fs_copy_tree(
++                artifact.temporary_path, std::string(destination), artifact.overwrite, 5000);
++            if (!copied) return std::unexpected(copied.error());
++            return service::helper::Storage::fs_remove(artifact.temporary_path, 5000);
+         }
+         if (command == service::Usb::HostCommand::InstallBpk)
+         {
+@@ -331,6 +310,12 @@
+     auto storage_result = impl_->initialize_storage_layout();
+     if (!storage_result) {
+         return std::unexpected(storage_result.error());
++    }
++    if (impl_->package_policy_.reuse_verified_installations) {
++        std::vector<std::string> roots;
++        for (const auto &root : impl_->get_app_scan_roots()) roots.push_back(root.generic_string());
++        auto guarded = initialize_runtime_package_validation(impl_->package_policy_, roots);
++        if (!guarded) return std::unexpected(guarded.error());
+     }
+     impl_->load_gui_preferences();
+ 
+--- a/src/system/storage.cpp
++++ b/src/system/storage.cpp
+@@ -274,6 +274,9 @@
+     if (path.empty()) {
+         return {};
+     }
++    auto existing = service::helper::Storage::fs_stat(path.generic_string());
++    if (!existing) return std::unexpected(existing.error());
++    if (existing->exists && existing->type == service::helper::Storage::FileType::Directory) return {};
+     auto result = service::helper::Storage::fs_mkdir(path.generic_string());
+     if (!result) {
+         return std::unexpected(

@@ -54,6 +54,7 @@ ESPocket 需要官方 Store 与远程 Runtime distribution path，但锁定的�
 - [07 — 隔离 Runtime keyboard result](issues/07-isolate-runtime-keyboard-results.md)
 - [08 — 取得兼容签名包与发布路径](issues/08-publish-compatible-signed-package.md)
 - [09 — 开发者模式包准入与 Super 兼容运行](issues/09-allow-unsigned-developer-installation.md)
+- [10 — 降低 Runtime 启动阻塞并准确测量](issues/10-reduce-runtime-startup-blocking.md)
 
 ## Further Notes
 
@@ -76,6 +77,8 @@ ESPocket 需要官方 Store 与远程 Runtime distribution path，但锁定的�
 ## 记录
 
 - [2026-09-28-acceptance-report](records/2026-09-28-acceptance-report.md)
+- [2026-10-04 Package review follow-up](records/2026-10-04-package-review-followup.md)
+- [2026-10-04 Package final build](records/2026-10-04-package-final-build.md)
 
 ## 当前功能优先级
 
@@ -85,11 +88,18 @@ ESPocket 需要官方 Store 与远程 Runtime distribution path，但锁定的�
 
 2026-10-04 用户选择仅开发者模式允许未签名安装，见 [09](issues/09-allow-unsigned-developer-installation.md) 与 [ADR-0018](../../docs/adr/0018-developer-mode-allows-unsigned-packages.md)。08 仍持有正式签名发行包和发布路线；开发路径不再以取得正式发行签名作为前置，但仍依赖 03 的统一 Core 事务和实际兼容性。用户后续确认开发者模式允许所有声明 super 的包进入正常校验，外部旧包暂不要求导航契约；关闭模式保留安装、禁止启动并停止运行中的例外 App。安装提示与实施范围由 09 和 ADR-0018 持有。2026-10-04 已完成代码与 host matrix；完整构建因磁盘空间不足失败，尚未刷入或进行设备验收，详见 [实施证据](records/2026-10-04-package-implementation-evidence.md)。
 
-## Handoff
+## 实施范围与验收
 
-- Executor: Claude Code implementation session。
-- 授权范围：先执行 [03](issues/03-enforce-core-package-trust.md) 的统一 Core gate、receipt、事务与恢复基础，再完成 [09](issues/09-allow-unsigned-developer-installation.md) 的开发准入与实际 Store 安装。03 的正式发行签名证据依赖 08，不虚报完成；本次不执行 08 或其他 Effort。
+当前检查点：已完成真实 Store 安装／卸载、动态 Launcher、例外包模式切换与隔离测试签名矩阵的可执行部分，历史结果与未通过项见[生命周期记录](records/2026-10-04-launcher-and-lifecycle-acceptance.md)。持久验证在 2698534d2 完成首次迁移与受控重启复用，Hello Runtime 打开约 0.9–1.0 秒、Flappy admission 约 6 ms。缓存候选 329ad8074 已完成四项探针、两轮无截图原包 A/B 与完整 Apps 回归；游玩阶段 PNG 解码约少 71%、绘制平均约少 50%，game timer 仍约 74 ms／13.5 Hz，流畅性未结案。1 MiB 试验仍出现截图分配回归，清缓存重试未通过；已撤回默认启用与该修复，恢复已验证零缓存镜像 a2df08485。探针和缓存配置保留，默认 0，后续须解决截图连续内存约束后再采纳。原 Store 1.5 秒退出与活动取消门槛仍未通过；正式发布身份、目录和 Catalog 权限尚缺，物理掉电仍未验。详见[性能记录](records/2026-10-05-runtime-startup-performance.md)与 03／04／06／08／09／10 的未完成条件。
+
+硬件／软件隔离诊断已完成：同机原生小范围刷新 48–49 FPS、全屏 15 FPS；原包主要可见成本为 PNG 解码／绘制与负载下的锁等待、调度，未发现要求换硬件的故障证据，但当前全屏显示实现也有性能约束。诊断不等于可玩性修复；临时 overlay 已清理，设备恢复 a2df08485，原包保持不改。详见[诊断记录](records/2026-10-05-runtime-bottleneck-diagnosis.md)，后续验收仍由 10 持有。
+
+- 授权范围：先执行 [03](issues/03-enforce-core-package-trust.md) 的统一 Core gate、receipt、事务与恢复基础，再完成 [09](issues/09-allow-unsigned-developer-installation.md) 的开发准入与实际 Store 安装。03 的正式发行签名证据依赖 08，不虚报完成；后续用户已明确授权全部剩余工作，范围扩至 04/05/06/08/09；正式发行仍需真实发布者密钥和发布路线，测试签名不替代。
 - 读取入口：本 Spec、03/09、ADR-0004、ADR-0016、ADR-0018、product/05-runtime-package-trust、product/07-developer-mode、development/app-navigation 与 [实现交接记录](records/2026-10-04-package-implementation-handoff.md)。
 - 修改范围：ESPocket 产品 policy 接入、Core/Store 版本锁定补丁及 manifest、对应 host/device tests、相关接口文档与本 Effort 状态/证据。禁止修改 managed_components；保留其他聊天的暂存与未提交改动，不自动 push。
 - 验证：最终完整 scripts/check.py 与 Markdown 检查；精确补丁输入、registry lock、Audio config 核对及完整固件构建；app-only 刷机前备份当前设备镜像与 LittleFS，实际 Store 取消/安装、启动、PWR 退出、重启发现、更新失败回滚、开发模式关闭/重新开启。已有有效证据不重复，视觉或物理门槛最多集中请求一次。
-- 停止条件：09 全部验收通过，03 可执行基础完成且发行阻塞明确保留；或剩余工作确实需要人工/新设计/外部条件。设备未验证不得勾选通过。既定设计内修复持续执行，真实设计缺口按 questions 协议回流。
+- 停止条件：09 全部验收通过，03 可执行基础完成且发行阻塞明确保留；或剩余工作确实需要人工/新设计/外部条件。设备未验证不得勾选通过。既定设计内修复持续执行，涉及契约或范围变化时同步修订设计与验收定义。
+
+## 全部剩余工作授权
+
+2026-10-04：用户明确“可以，全部执行”。继续已有备份、app-only 刷写与真机输入授权，执行动态 Launcher、安装确认、外部运行、模式切换、在线稳定性及更新卸载矩阵；正式签名路径完成可执行准备和测试签名验收，缺少真实发行身份或外部发布权限时明确保留。保持 LittleFS 数据，不刷构建文件系统。

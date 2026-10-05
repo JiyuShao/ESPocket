@@ -1,0 +1,282 @@
+--- a/src/private/app_store_impl.hpp
++++ b/src/private/app_store_impl.hpp
+@@ -6,14 +6,73 @@
+ #pragma once
+ 
+ #include <deque>
++#include <functional>
++#include <memory>
++#include <utility>
+ #include <mutex>
++
+ 
+ #include "brookesia/app_store.hpp"
+ #include "brookesia/service_manager/service/manager.hpp"
+ 
+ namespace esp_brookesia::app::app_store {
+ 
++class OwnerCompletion : public std::enable_shared_from_this<OwnerCompletion> {
++public:
++    template<class Result, class Handler>
++    auto defer(Handler handler)
++    {
++        return [mailbox = shared_from_this(), handler = std::move(handler)](Result &&result) mutable {
++            std::lock_guard lock(mailbox->mutex_);
++            if (mailbox->closed_) {
++                return;
++            }
++            mailbox->pending_.emplace_back(
++                [handler, result = std::move(result)]() mutable { handler(std::move(result)); });
++        };
++    }
++
++    void enqueue(std::function<void()> handler)
++    {
++        std::lock_guard lock(mutex_);
++        if (!closed_) {
++            pending_.push_back(std::move(handler));
++        }
++    }
++
++    // Both drain and close belong to the App Owner. Never execute user code
++    // while holding the mutex: handlers can submit another async operation.
++    bool drain_one()
++    {
++        std::function<void()> handler;
++        {
++            std::lock_guard lock(mutex_);
++            if (closed_ || pending_.empty()) {
++                return false;
++            }
++            handler = std::move(pending_.front());
++            pending_.pop_front();
++        }
++        handler();
++        return true;
++    }
++
++    void close()
++    {
++        std::lock_guard lock(mutex_);
++        closed_ = true;
++        pending_.clear();
++    }
++
++private:
++    std::mutex mutex_;
++    bool closed_ = false;
++    std::deque<std::function<void()>> pending_;
++};
++
+ struct AppStoreApp::Impl {
++    std::shared_ptr<OwnerCompletion> owner_completions;
++    system::core::TimerId owner_completion_timer = system::core::INVALID_TIMER_ID;
+     system::core::AppContext *context = nullptr;
+     service::ServiceBinding http_binding;
+     service::ServiceBinding device_binding;
+--- a/src/private/app_store_impl_access.hpp
++++ b/src/private/app_store_impl_access.hpp
+@@ -88,3 +88,6 @@
+ #define pending_http_events_mutex_ impl_->pending_http_events_mutex
+ 
+ #define developer_install_ impl_->developer_install
++
++#define owner_completions_ impl_->owner_completions
++#define owner_completion_timer_ impl_->owner_completion_timer
+--- a/src/app/lifecycle.ipp
++++ b/src/app/lifecycle.ipp
+@@ -48,6 +48,14 @@
+ {
+     BROOKESIA_LOG_TRACE_GUARD_WITH_THIS();
+     context_ = &context;
++    owner_completions_ = std::make_shared<OwnerCompletion>();
++    auto completion_timer = context.timer().start_periodic("store.owner_completion", 16);
++    if (!completion_timer) {
++        owner_completions_->close();
++        context_ = nullptr;
++        return std::unexpected(completion_timer.error());
++    }
++    owner_completion_timer_ = *completion_timer;
+     network_ready_ = true;
+     terminal_download_request_ids_.clear();
+     pending_delete_success_package_name_.clear();
+@@ -58,6 +66,9 @@
+     }
+     auto result = subscribe_actions(context);
+     if (!result) {
++        owner_completions_->close();
++        (void)context.timer().stop(owner_completion_timer_);
++        owner_completion_timer_ = system::core::INVALID_TIMER_ID;
+         context_ = nullptr;
+         return result;
+     }
+@@ -65,6 +76,9 @@
+     status_text_ = tr("status.loading_cache");
+     auto refresh_result = refresh_ui(context);
+     if (!refresh_result) {
++        owner_completions_->close();
++        (void)context.timer().stop(owner_completion_timer_);
++        owner_completion_timer_ = system::core::INVALID_TIMER_ID;
+         context_ = nullptr;
+         return refresh_result;
+     }
+@@ -75,6 +89,9 @@
+ std::expected<void, std::string> AppStoreApp::on_stop(system::core::AppContext &context)
+ {
+     BROOKESIA_LOG_TRACE_GUARD_WITH_THIS();
++    owner_completions_->close();
++    (void)context.timer().stop(owner_completion_timer_);
++    owner_completion_timer_ = system::core::INVALID_TIMER_ID;
+     ++async_generation_;
+     developer_install_.reset();
+     cancel_deferred_operation(context);
+@@ -201,6 +218,13 @@
+     std::string_view name
+ )
+ {
++    if (name == "store.owner_completion") {
++        if (timer_id == owner_completion_timer_ && context_ != nullptr) {
++            (void)owner_completions_->drain_one();
++        }
++        return {};
++    }
++
+     if (name == STARTUP_LOAD_TIMER_NAME) {
+         if (timer_id != startup_load_timer_id_) {
+             BROOKESIA_LOGW(
+--- a/src/network/remote_index.ipp
++++ b/src/network/remote_index.ipp
+@@ -35,7 +35,7 @@
+         if (StorageHelper::call_function_async(
+                     StorageHelper::FunctionId::FSReadText,
+                     path.generic_string(),
+-                    service::ServiceBase::FunctionResultHandler(std::move(result_handler))
++                    service::ServiceBase::FunctionResultHandler(owner_completions_->defer<service::FunctionResult>(std::move(result_handler)))
+                 )) {
+             return;
+         }
+--- a/src/network/http.ipp
++++ b/src/network/http.ipp
+@@ -1212,7 +1212,7 @@
+     return HttpHelper::call_function_async(
+                HttpHelper::FunctionId::RequestAsync,
+                BROOKESIA_DESCRIBE_TO_JSON(request).as_object(),
+-               service::ServiceBase::FunctionResultHandler(std::move(result_handler))
++               service::ServiceBase::FunctionResultHandler(owner_completions_->defer<service::FunctionResult>(std::move(result_handler)))
+            );
+ }
+ 
+@@ -1398,7 +1398,7 @@
+     auto handler = [this, generation, purpose](service::FunctionResult && result) {
+         handle_network_check_result(generation, purpose, std::move(result));
+     };
+-    if (!DeviceHelper::call_function_async(DeviceHelper::FunctionId::GetNetworkConnectivityInfo, handler)) {
++    if (!DeviceHelper::call_function_async(DeviceHelper::FunctionId::GetNetworkConnectivityInfo, owner_completions_->defer<service::FunctionResult>(std::move(handler)))) {
+         BROOKESIA_LOGW("Failed to submit App Store network connectivity request");
+         return false;
+     }
+--- a/src/storage/storage.ipp
++++ b/src/storage/storage.ipp
+@@ -92,36 +92,44 @@
+         return;
+     }
+ 
+-    auto on_progress = [this](
++    auto on_progress = [this, mailbox = owner_completions_](
+                            const std::string &, double request_id, const boost::json::object & progress_json
+     ) {
+-        if (context_ != nullptr) {
+-            schedule_http_event_processing(*context_, PendingHttpEventType::Progress, request_id, progress_json);
+-        }
+-    };
+-    auto on_completed = [this](
++        mailbox->enqueue([this, request_id, progress_json] {
++            if (context_ != nullptr) {
++                schedule_http_event_processing(*context_, PendingHttpEventType::Progress, request_id, progress_json);
++            }
++        });
++    };
++    auto on_completed = [this, mailbox = owner_completions_](
+                             const std::string &, double request_id, const boost::json::object & response_json
+     ) {
+-        if (context_ != nullptr) {
+-            schedule_http_event_processing(*context_, PendingHttpEventType::Completed, request_id, response_json);
+-        }
+-    };
+-    auto on_failed = [this](
++        mailbox->enqueue([this, request_id, response_json] {
++            if (context_ != nullptr) {
++                schedule_http_event_processing(*context_, PendingHttpEventType::Completed, request_id, response_json);
++            }
++        });
++    };
++    auto on_failed = [this, mailbox = owner_completions_](
+                          const std::string &, double request_id, const boost::json::object & response_json
+     ) {
+-        if (context_ != nullptr) {
+-            schedule_http_event_processing(*context_, PendingHttpEventType::Failed, request_id, response_json);
+-        }
+-    };
+-    auto on_canceled = [this](
++        mailbox->enqueue([this, request_id, response_json] {
++            if (context_ != nullptr) {
++                schedule_http_event_processing(*context_, PendingHttpEventType::Failed, request_id, response_json);
++            }
++        });
++    };
++    auto on_canceled = [this, mailbox = owner_completions_](
+                            const std::string &, double request_id, const boost::json::object & response_json
+     ) {
+-        if (context_ != nullptr) {
+-            schedule_http_event_processing(*context_, PendingHttpEventType::Canceled, request_id, response_json);
+-        }
+-    };
+-    auto on_general_state_changed = [this](const std::string &, const std::string & state) {
+-        handle_http_general_state_changed(state);
++        mailbox->enqueue([this, request_id, response_json] {
++            if (context_ != nullptr) {
++                schedule_http_event_processing(*context_, PendingHttpEventType::Canceled, request_id, response_json);
++            }
++        });
++    };
++    auto on_general_state_changed = [this, mailbox = owner_completions_](const std::string &, const std::string & state) {
++        mailbox->enqueue([this, state] { handle_http_general_state_changed(state); });
+     };
+ 
+     http_event_connections_.push_back(HttpHelper::subscribe_event(HttpHelper::EventId::RequestProgress, on_progress));
+@@ -368,7 +376,7 @@
+     auto handler = [this, generation](service::FunctionResult && result) {
+         handle_storage_filesystems_result(generation, std::move(result));
+     };
+-    if (!StorageHelper::call_function_async(StorageHelper::FunctionId::GetFileSystems, handler)) {
++    if (!StorageHelper::call_function_async(StorageHelper::FunctionId::GetFileSystems, owner_completions_->defer<service::FunctionResult>(std::move(handler)))) {
+         BROOKESIA_LOGW("Failed to submit storage filesystems request");
+         return;
+     }
+@@ -452,7 +460,7 @@
+     if (!StorageHelper::call_function_async(
+                 StorageHelper::FunctionId::GetFileSystemCapacity,
+                 best_mount_point,
+-                handler
++                owner_completions_->defer<service::FunctionResult>(std::move(handler))
+             )) {
+         BROOKESIA_LOGW("Failed to submit storage capacity request");
+         (void)refresh_ui(*context_);
+@@ -694,7 +702,7 @@
+         if (StorageHelper::call_function_async(
+                     StorageHelper::FunctionId::FSStat,
+                     packages_dir.generic_string(),
+-                    service::ServiceBase::FunctionResultHandler(std::move(result_handler))
++                    service::ServiceBase::FunctionResultHandler(owner_completions_->defer<service::FunctionResult>(std::move(result_handler)))
+                 )) {
+             return;
+         }
+@@ -733,7 +741,7 @@
+     if (!StorageHelper::call_function_async(
+                 StorageHelper::FunctionId::FSList,
+                 packages_dir.generic_string(),
+-                service::ServiceBase::FunctionResultHandler(std::move(result_handler))
++                service::ServiceBase::FunctionResultHandler(owner_completions_->defer<service::FunctionResult>(std::move(result_handler)))
+             )) {
+         BROOKESIA_LOGW("Failed to submit App Store local package list: %1%", packages_dir.generic_string());
+         submit_next_local_package_scan_dir(generation);

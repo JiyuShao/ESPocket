@@ -950,13 +950,23 @@
         },
         {
           "type": "label",
-          "id": "bottom_space",
+          "id": "launch_status",
           "labelProps": {
-            "text": " "
+            "text": ""
           },
+          "styleRefs": [
+            "shell.hint"
+          ],
           "placement": {
-            "width": "160dp",
-            "height": "44dp"
+            "width": "280dp",
+            "height": "wrap"
+          },
+          "style": {
+            "fontSize": "16sp",
+            "textAlign": "center"
+          },
+          "commonProps": {
+            "hidden": true
           }
         }
       ]
@@ -1046,6 +1056,124 @@
         "overlay"
       ],
       "initial": "overlay"
+    },
+    {
+      "type": "viewTemplate",
+      "id": "launcher_region",
+      "node": {
+        "type": "container",
+        "commonProps": {
+          "hidden": true,
+          "scrollable": false
+        },
+        "bindings": {
+          "commonProps.hidden": "hidden"
+        },
+        "style": {
+          "padding": 0,
+          "backgroundOpacity": 0
+        },
+        "placement": {
+          "width": "280dp",
+          "height": "wrap"
+        },
+        "layout": {
+          "type": "flex",
+          "flexFlow": "column",
+          "crossAlign": "center",
+          "gap": "12dp"
+        }
+      }
+    },
+    {
+      "type": "viewTemplate",
+      "id": "launcher_item",
+      "node": {
+        "type": "button",
+        "styleRefs": [
+          "shell.row"
+        ],
+        "style": {
+          "radius": "18dp"
+        },
+        "events": [
+          {
+            "type": "clicked",
+            "action": "shell.open_dynamic_app"
+          }
+        ],
+        "placement": {
+          "width": "280dp",
+          "height": "72dp"
+        },
+        "children": [
+          {
+            "type": "image",
+            "id": "icon",
+            "commonProps": {
+              "hidden": true,
+              "clickable": false
+            },
+            "bindings": {
+              "commonProps.hidden": "hidden",
+              "imageProps.src": "src"
+            },
+            "placement": {
+              "mode": "relative",
+              "align": "leftMid",
+              "x": "16dp",
+              "width": "36dp",
+              "height": "36dp"
+            }
+          },
+          {
+            "type": "label",
+            "id": "label",
+            "commonProps": {
+              "clickable": false
+            },
+            "labelProps": {
+              "text": ""
+            },
+            "bindings": {
+              "placement.x": "left"
+            },
+            "styleRefs": [
+              "shell.rowText"
+            ],
+            "style": {
+              "fontSize": "21sp"
+            },
+            "placement": {
+              "mode": "relative",
+              "align": "leftMid",
+              "x": "22dp",
+              "width": "176dp"
+            }
+          },
+          {
+            "type": "label",
+            "id": "chevron",
+            "commonProps": {
+              "clickable": false
+            },
+            "labelProps": {
+              "text": ""
+            },
+            "styleRefs": [
+              "shell.hint"
+            ],
+            "style": {
+              "fontSize": "18sp"
+            },
+            "placement": {
+              "mode": "relative",
+              "align": "rightMid",
+              "x": "-18dp"
+            }
+          }
+        ]
+      }
     }
   ]
 }

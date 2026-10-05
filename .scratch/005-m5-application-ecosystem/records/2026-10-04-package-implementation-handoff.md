@@ -2,7 +2,7 @@
 
 ## 状态与依据
 
-用户确认开发者模式允许 unsigned 和显式 super Runtime 包，缺导航声明的外部旧包不伪造 Page 语义；取消无副作用，关闭模式停止实例并保留安装。设计提交为 8711179，ADR-0018 与 03/09 为权威。仓库新增 Codex design-only 规则后，后续实现、最终验证和提交交给 Claude Code。
+用户确认开发者模式允许 unsigned 和显式 super Runtime 包，缺导航声明的外部旧包不伪造 Page 语义；取消无副作用，关闭模式停止实例并保留安装。设计提交为 8711179，ADR-0018 与 03/09 为权威。
 
 目前代码为未提交 candidate；其他聊天有大量暂存及未提交改动，必须保留。未刷入设备，09 尚未验收。
 
@@ -33,17 +33,6 @@
 - 外部旧包的 page snapshot 应返回 page_adapter_unavailable；自动化使用原始 stimulus.touch/PWR request 和实际 Core lifecycle 日志，回 Home 后再读取正常 snapshot，不伪造导航。
 - Developer Mode Off 后 USB 自然不可用，不扩展协议绕过；需要人工重新开启时集中请求一次，或使用隔离且最终撤除的设备测试 fixture。未做物理验证明确保留。
 
-## 派发回执
+## 2026-10-04 11:49 实施补充
 
-- 时间：2026-10-04 08:20 Asia/Shanghai。
-- 显示名：espocket-005-impl。
-- 完整 session ID：46079258-f54f-4a0e-8886-ea2d9f7ef64e。
-- CLI 启动曾返回 backgrounded，但身份核对的 --all 元数据显示 state=failed，不能称为持续执行中。
-- 读取启动诊断失败：ECONNREFUSED /tmp/cc-daemon-501/e0e13790/control.sock。这证明后台控制端不可连接，不足以判定实现是否曾执行；未读取实现输出、未新建重复 session。
-- 同项目另一个 espocket-020-impl 也为 failed。由用户修复 Claude Code 后台服务后恢复已有 ID；不以 CLI 状态替代 ticket 验收。
-
-## 2026-10-04 08:23 身份核对更正
-
-用户要求继续后尝试恢复原 ID。CLI 提示原会话已运行并创建副本 17491730-1995-4db1-81b4-544779a1c437。经允许访问控制 socket 的沙箱外身份查询，原会话 46079258-f54f-4a0e-8886-ea2d9f7ef64e 实际为 working/busy；此前沙箱内 failed 与 ECONNREFUSED 为无法访问后台控制端导致的误判，不能视作后台服务失败。
-
-为避免相同写入范围并发，已停止副本 17491730，CLI 返回 stopped；保留原 espocket-005-impl 继续授权 03/09。没有读取实现输出或验收结果，也没有宣称完成。后续 CLI 身份管理需要能够访问控制 socket 的执行环境。
+续任务仍限 03/09：先清理本任务的失败/重复可再生构建产物或复用既有完整目录，保留源码、证据、密钥、备份和他人产物；不删除用户个人数据。优先核对 Store 自带 Installed/Open 入口，不擅自实现 04；全 flash 备份的自动审核拒绝不可绕过，先完成独立构建证据，再明确报告必要备份范围。原提交 f84e085 已核对文件列表，最终源码评审及设备验收仍未完成。

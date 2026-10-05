@@ -77,6 +77,7 @@ class UsbTestClient:
     @staticmethod
     def check_log(line):
         markers = (b'A stack overflow in task', b'Guru Meditation', b'panic_abort', b'abort() was called', b'ESP_RST_PANIC',
+                   b'assert failed:', b'task_wdt: Task watchdog got triggered.',
                    b'Synthetic input tick failed:', b'Input cleanup during stop failed:',
                    b'Synthetic PWR expired', b'Synthetic PWR cancelled',
                    b'USB Test Adapter response write failed', b'ESP-ROM:esp32', b'ESPocket started')
@@ -110,7 +111,13 @@ class UsbTestClient:
         for field in ('surface', 'foregroundAppId', 'pageId'):
             if not isinstance(value.get(field), str):
                 raise DeviceTestError(f'invalid snapshot {field}')
-        if value['foregroundAppId'] and not value['pageId']:
+        navigation_available = value.get('navigationAvailable', True)
+        if type(navigation_available) is not bool:
+            raise DeviceTestError('invalid snapshot navigationAvailable')
+        if not navigation_available and (not value['foregroundAppId'] or value['pageId'] or
+                                         value['canBack'] or value['backPending']):
+            raise DeviceTestError('page state with unavailable navigation')
+        if navigation_available and value['foregroundAppId'] and not value['pageId']:
             raise DeviceTestError('foreground App without a declared page')
         if not value['foregroundAppId'] and (value['pageId'] or value['canBack'] or value['backPending']):
             raise DeviceTestError('page state without a foreground App')

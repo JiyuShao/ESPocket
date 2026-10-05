@@ -44,6 +44,7 @@ constexpr std::string_view OPEN_SETTINGS_ACTION = "shell.open_settings";
 constexpr std::string_view OPEN_SETTINGS_CARD_ACTION = "shell.open_settings_card";
 constexpr std::string_view OPEN_SETTINGS_QUICK_ACTION = "shell.open_settings_quick";
 constexpr std::string_view OPEN_APP_STORE_ACTION = "shell.open_app_store";
+constexpr std::string_view OPEN_DYNAMIC_APP_ACTION = "shell.open_dynamic_app";
 constexpr std::string_view STEP_BRIGHTNESS_ACTION = "shell.step_brightness";
 constexpr std::string_view STEP_BRIGHTNESS_QUICK_ACTION = "shell.step_brightness_quick";
 constexpr std::string_view TOGGLE_WIFI_ACTION = "shell.toggle_wifi";

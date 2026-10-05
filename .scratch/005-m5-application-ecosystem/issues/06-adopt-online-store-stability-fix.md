@@ -26,3 +26,5 @@
 2026-10-04 用户授权解决全链路：先补充[图标容量回归](../records/2026-10-04-store-icon-admission.md)，原版真实控制流失败，候选延后重试通过；完整网络与安装条件仍分别由本票及 03/08 持有。
 
 2026-10-04：普通候选 5bb555ca5 已通过实际 online Refresh、Home 和重进，cached/online 证据分开记录；另修复合成 release 被 App launch 重新取消的输入边界，原失败 attempt 保留。见[候选构建与结果](../records/2026-10-04-store-icon-admission.md#候选构建与真实在线结果)。活动请求取消、完整 shutdown/offline 等门槛仍独立核查，未关闭本票。
+
+2026-10-04 全链路自动验收：`da8537b55` 的真实 Store Local Cancel 保持未安装，Continue 最终提交 Flappy，但安装期间 `SvcMgrSec0` 连续 Storage 查询使 IDLE0 触发 task watchdog；没有重启也不能计作无 watchdog 通过。新增锁定 Lib utils 0.8.2 dispatch 公平性候选，真实 worker block 主机回归旧版失败、候选通过；当前设备复验仍待完成，见[Launcher 与 lifecycle 记录](../records/2026-10-04-launcher-and-lifecycle-acceptance.md)。不移除 watchdog、不降低监控门槛。

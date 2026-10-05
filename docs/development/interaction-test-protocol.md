@@ -1,6 +1,6 @@
 # 交互自动化测试协议（目标 v1）
 
-本文定义主机 Test Driver 与 ESPocket Test Adapter 的开发协议语义。实施见[交互自动化工作项](../../.scratch/012-test-automation-contract/spec.md)，Owner 见[交互自动化架构](../design/architecture/08-interaction-test-seam.md)。当前源码已接入 USB 准入、`hello`、只读 `snapshot`、`stimulus.powerShort`、`stimulus.touch` 与 `release`；设备支持能力仍以其 `hello` 为准，源码构建不等于已刷写或真机通过。
+本文定义主机 Test Driver 与 ESPocket Test Adapter 的开发协议语义。实施见[交互自动化工作项](../../.scratch/012-test-automation-contract/spec.md)，Owner 见[交互自动化架构](../design/architecture/08-interaction-test-seam.md)。当前源码已接入 USB 准入、`hello`、只读 `snapshot`、`stimulus.powerShort`、`stimulus.touch` 、`release`、`screenshot` 与 `screenshot.read`；设备支持能力仍以其 `hello` 为准，源码构建不等于已刷写或真机通过。
 
 ## 当前 USB 帧格式
 
@@ -49,7 +49,7 @@ PWR 成功响应仅表示已排队。USB worker 不直接执行导航；System �
 
 PWR 槽位从排队到 Owner 调用结束保持占用。`release` 可重复取消尚未执行的输入，但不会撤销已经开始的 Owner 调用，也不会提前释放正在执行的槽位。System 消费时检查 1000 ms 排队期限，过期输入取消并记录警告，不补发迟到短按。Driver 应通过最终快照判断状态，不把 ACK 或 `inputBusy=false` 单独作为 PASS。
 
-物理 USB 断开、响应写入失败、Adapter 停止和开发者模式关闭都会清理待执行 PWR。USB Serial/JTAG 的连接检测依据物理连接，不能检测线缆仍连接时主机关闭串口；Driver 应显式 `release`，未消费输入还受排队期限保护。关闭开发者模式后协议命令被拒绝，内部清理仍执行。PWR 排队同时保存导航任务 token，消费时 token 已变化则丢弃，不对新的 App 任务执行旧输入。
+物理 USB 断开、响应写入失败、Adapter 停止和开发者模式关闭都会清理待执行 PWR。USB Serial/JTAG 的连接检测依据物理连接；SOF 连续缺失 200 ms 才确认断连，避免忙碌渲染中的短暂 SOF gap 清除正在下载的截图。连接检测不能检测线缆仍连接时主机关闭串口；Driver 应显式 `release`，未消费输入还受排队期限保护。关闭开发者模式后协议命令被拒绝，内部清理仍执行。PWR 排队同时保存导航任务 token，消费时 token 已变化则丢弃，不对新的 App 任务执行旧输入。
 
 ## 当前触摸轨迹与清理
 
@@ -69,15 +69,27 @@ ACK 只表示校验后预留了共同输入槽位；worker 按时逐点调用 Di
 
 ## 快照契约
 
-最小快照包含单调 `seq`、Home Space `surface`、`display` 开关状态、`foregroundAppId`，以及前台 App 的 `pageId`、`canBack`、`backPending`。无前台 App 时页面字段为空。Page ID 来自 App 安装声明和 ESPocket 唯一导航栈；测试协议不暴露页面参数、表单内容、私有控件树或整条栈。
+最小快照包含单调 `seq`、Home Space `surface`、`display` 开关状态、`foregroundAppId`，以及前台 App 的 `pageId`、`canBack`、`backPending`。无前台 App 时页面字段为空。新增 `navigationAvailable` 布尔字段：有真实导航接入时为 true；仅已被 Core 准入的开发者兼容旧包可以为 false，此时返回真实 `foregroundAppId`，`pageId` 为空且 Back 字段为 false，不伪造 Root。其他导航读取失败仍返回错误。Page ID 来自 App 安装声明和 ESPocket 唯一导航栈；测试协议不暴露页面参数、表单内容、私有控件树或整条栈。
 
 当前请求为 `{"version":1,"request_id":43,"op":"snapshot"}`，仍使用 `@ESPTEST ` 行前缀。成功响应的 `snapshot` 对象包含上述七个字段及 `inputBusy`；后者表示 触摸序列占用、PWR 已排队或 System 正在消费，不表示页面转移已完成。布尔字段是 JSON boolean，身份是 string。`surface` 使用 `watch_face`、`launcher`、`quick_settings`、`shell.battery`、`shell.brightness`，表示 Shell 持有的 Home Space Surface；前台完整 App 存在时，它是保留的底层 Shell Surface，App 是否前台以 `foregroundAppId` 判断。无 App 时两个 ID 是空字符串，两个 Back 字段为 false。
 
 System 的 USB reader 使用单容量 Owner 快照队列：传输线程提交，既有 App Owner tick 在处理 PWR、Runtime 导航和 Card 动作后执行真实采样。请求最多等待 2 秒；Owner 不可用、队列关闭或读取失败仍返回错误，不使用旧快照或自动重试。
 
-`seq` 从 Adapter 本次启动后的 1 开始，仅成功采样递增；重启或 Adapter 重启后建立新的采样序列。Owner 读取失败、未绑定 Runtime Page 或读取期间前台/Surface/显示状态改变时返回 `invalid_state`，不伪造 Root、不带成功快照。Settings 实时通过官方 GUI 任务读取 Flow；USB worker 不从 raw GUI 回调访问它。设备能力以它的 `hello` 为准，各 App 模型的设备证据由对应 ticket 记录。
+`seq` 从 Adapter 本次启动后的 1 开始，仅成功采样递增；重启或 Adapter 重启后建立新的采样序列。Owner 读取失败、普通 App 未绑定 Runtime Page 或读取期间前台/Surface/显示状态改变时返回 `invalid_state`，不伪造 Root、不带成功快照。Settings 实时通过官方 GUI 任务读取 Flow；USB worker 不从 raw GUI 回调访问它。设备能力以它的 `hello` 为准，各 App 模型的设备证据由对应 ticket 记录。
 
 Home Space 的 `surface` 至少能区分 Watch Face、Launcher、Quick Settings 和具体 Card 身份。需要验证 Launcher 顶部拉伸时，Shell 可提供只读滚动到顶和拉动阶段；这些是 Owner 的交互反馈事实，不由 Test Driver 复制。Launcher 滚动与拉动阶段的扩展字段仍待输入路径实现时定版。
+
+## 最终渲染画面截图
+
+设备 `hello` 同时公布 `screenshot` 与 `screenshot.read` 后，主机才能请求截图。`screenshot` 无参数，在 LVGL 锁内触发整屏同步刷新，捕获 RGB565 部分刷新块，并检查逐像素完整覆盖；包含 App、底层与系统提示层。只支持 RGB565、partial 模式、零旋转和零偏移，其他配置返回 `unsupported`。息屏返回 `invalid_state`，输入占用返回 `busy`；截图不会自动唤醒或执行导航。
+
+成功响应的 `screenshot` 对象包含 `capture_id`、`width`、`height`、`size`、`format: "rgb565le"` 与原始像素的 `sha256`。主机随后发送 `screenshot.read`，参数为相同 `capture_id`、从零开始的字节 `offset` 和 1–512 字节的 `length`；响应顶层返回相同 ID、offset 与 `pixel_hex`。请求越界返回 `bad_request`；失效 ID 返回 `invalid_state`。RGB565 数据在面板传输字节交换之前捕获，按小端解码。
+
+每次新截图替换旧缓存，单帧约 424 KiB（466×466），保留最多 60 秒；USB worker 定期清理过期帧。`release`、物理断连、开发者模式关闭和 Adapter 停止都清理缓存。主机关闭串口仍须显式 `release`。缓存固定不变，后续画面变化不会修改已捕获的帧。
+
+Driver 下载并校验截图后，应立即 `release`，再进行性能或内存测量；不能等到整段测试结束才释放。保留的整帧会占用设备 PSRAM、改变最大连续块，可能引入 App 解码失败或改变 FPS。截图的同步整屏刷新也应放在测量窗口之外。
+
+[capture_device_screen.py](../../scripts/firmware/capture_device_screen.py) 使用 `--port`、`--expected-image` 与可选 `--output`，创建独立 attempt，检查逐块 ID、offset、长度和整帧 SHA-256，导出 `screen.png`、原始 RGB565、报告和本地串口日志，最后释放缓存。其证据标为 `rendered-frame`：可评估渲染提示、布局和文字，不能单独证明实体面板、亮度或物理输入。失败保留原 attempt，不能拿假 transport 结果当设备截图。
 
 ## 错误与清理
 

@@ -2,43 +2,40 @@
 #include "espocket/card_configuration_store.hpp"
 #include "espocket/navigation_request_queue.hpp"
 #include "card_document.hpp"
-#include "nvs.h"
+#include "brookesia/service_helper/system/storage.hpp"
 
 namespace espocket {
 namespace {
 constexpr char CARD_STORAGE_NAMESPACE[] = "espocket";
 constexpr char CARD_STORAGE_KEY[] = "cards_v1";
+using CardStorage = esp_brookesia::service::helper::Storage;
 
 std::expected<std::optional<std::string>, std::string> read_cards()
 {
-    nvs_handle_t handle;
-    auto error = nvs_open(CARD_STORAGE_NAMESPACE, NVS_READONLY, &handle);
-    if (error == ESP_ERR_NVS_NOT_FOUND) return std::optional<std::string>{};
-    if (error != ESP_OK) return std::unexpected(esp_err_to_name(error));
-    size_t size = 0;
-    error = nvs_get_str(handle, CARD_STORAGE_KEY, nullptr, &size);
-    if (error == ESP_ERR_NVS_NOT_FOUND) { nvs_close(handle); return std::optional<std::string>{}; }
-    if (error != ESP_OK || size == 0 || size > 16'385) {
-        nvs_close(handle); return std::unexpected("invalid_card_storage");
-    }
-    std::string json(size, '\0');
-    error = nvs_get_str(handle, CARD_STORAGE_KEY, json.data(), &size);
-    nvs_close(handle);
-    if (error != ESP_OK) return std::unexpected(esp_err_to_name(error));
-    json.resize(size - 1);
+    auto binding = esp_brookesia::service::ServiceManager::get_instance().bind(CardStorage::get_name().data());
+    if (!binding.is_valid()) return std::unexpected("card_storage_unavailable");
+    auto values = CardStorage::call_function_sync<boost::json::object>(
+        CardStorage::FunctionId::KVGet, std::string(CARD_STORAGE_NAMESPACE),
+        boost::json::array{CARD_STORAGE_KEY}, esp_brookesia::service::helper::Timeout(5000));
+    if (!values) return std::unexpected(values.error());
+    const auto value = values->find(CARD_STORAGE_KEY);
+    if (value == values->end()) return std::optional<std::string>{};
+    if (!value->value().is_string() || value->value().as_string().size() > 16'384)
+        return std::unexpected("invalid_card_storage");
+    std::string json(value->value().as_string());
     return std::optional<std::string>(std::move(json));
 }
 
 std::expected<void, std::string> write_cards(std::string_view json)
 {
-    nvs_handle_t handle;
-    auto error = nvs_open(CARD_STORAGE_NAMESPACE, NVS_READWRITE, &handle);
-    if (error != ESP_OK) return std::unexpected(esp_err_to_name(error));
-    const std::string terminated(json);
-    error = nvs_set_str(handle, CARD_STORAGE_KEY, terminated.c_str());
-    if (error == ESP_OK) error = nvs_commit(handle);
-    nvs_close(handle);
-    if (error != ESP_OK) return std::unexpected(esp_err_to_name(error));
+    auto binding = esp_brookesia::service::ServiceManager::get_instance().bind(CardStorage::get_name().data());
+    if (!binding.is_valid()) return std::unexpected("card_storage_unavailable");
+    // Preserve the raw JSON NVS string schema. save_key_value<string> would
+    // add JSON string escaping. Storage executes and commits on internal RAM.
+    auto result = CardStorage::call_function_sync(CardStorage::FunctionId::KVSet,
+        std::string(CARD_STORAGE_NAMESPACE), boost::json::object{{CARD_STORAGE_KEY, std::string(json)}},
+        esp_brookesia::service::helper::Timeout(5000));
+    if (!result) return std::unexpected(result.error());
     return {};
 }
 }
@@ -215,6 +212,45 @@ std::expected<void, std::string> System::configure_cards(CardConfiguration confi
 CardConfiguration System::card_configuration() const
 {
     return cards_ ? cards_->configuration() : CardConfiguration{};
+}
+
+void System::remember_replaced_card_state(std::string_view app_id)
+{
+    replaced_card_state_.reset();
+    if (!cards_) return;
+    auto declaration = cards_->declaration(app_id);
+    if (!declaration && declaration.error() != CardError::UnknownApp) return;
+    replaced_card_state_ = ReplacedCardState{
+        .app_id = std::string(app_id),
+        .declaration = declaration ? std::move(*declaration) : PageDeclaration{},
+        .configuration = card_configuration(),
+        .had_declaration = declaration.has_value(),
+    };
+}
+
+std::expected<void, std::string> System::restore_replaced_card_state(std::string_view app_id)
+{
+    if (!replaced_card_state_ || replaced_card_state_->app_id != app_id || !cards_) {
+        return std::unexpected("card_replacement_state_unavailable");
+    }
+    if (replaced_card_state_->had_declaration) {
+        auto registered = cards_->register_app(replaced_card_state_->declaration);
+        if (!registered && registered.error() == CardError::AlreadyRegistered) {
+            registered = cards_->update_app(replaced_card_state_->declaration);
+        }
+        if (!registered) return std::unexpected("card_declaration_restore_failed");
+    } else if (auto removed = cards_->uninstall_app(app_id);
+               !removed && removed.error() != CardError::UnknownApp) {
+        return std::unexpected("card_declaration_restore_failed");
+    }
+    if (!cards_->replace_configuration(replaced_card_state_->configuration)) {
+        return std::unexpected("card_configuration_restore_failed");
+    }
+    if (!card_samples_active_) {
+        if (auto saved = card_store_->save_current(); !saved) return saved;
+    }
+    replaced_card_state_.reset();
+    return {};
 }
 
 std::vector<CardKey> System::available_cards() const

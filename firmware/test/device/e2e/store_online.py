@@ -21,7 +21,10 @@ def run(runner, profile):
         if initial['foregroundAppId'] or initial['surface'] != 'watch_face':
             runner.power('Store initial Home', HOME)
         runner.touch('Launcher for Store', {**HOME, 'surface': 'launcher'}, *profile['up'])
-        runner.touch('Store Root', STORE, profile['store_tap'])
+        runner.stimulate('Store Root', 'stimulus.touch', STORE, quiet_window=8,
+                         points=runner.points(profile['store_tap']))
+        # Cached-index processing now belongs to the App Owner. Wait for its
+        # startup work before requesting the bounded snapshot mailbox.
         runner.capture_logs(12)
         runner.raw_log.flush()
         start = runner.raw_log.tell()
@@ -46,7 +49,8 @@ def run(runner, profile):
         runner.power('Store PWR Home', HOME)
         runner.observe('Store stays stopped', HOME, duration=1)
         runner.touch('Launcher after Store stop', {**HOME, 'surface': 'launcher'}, *profile['up'])
-        runner.touch('Store reopens after HTTP stop', STORE, profile['store_tap'])
+        runner.stimulate('Store reopens after HTTP stop', 'stimulus.touch', STORE, quiet_window=8,
+                         points=runner.points(profile['store_tap']))
         runner.power('Reopened Store PWR Home', HOME)
     finally:
         runner.timeout = previous_timeout

@@ -1,6 +1,35 @@
 #include "system_internal.hpp"
 
+#include <algorithm>
+
 namespace espocket {
+
+void System::tick_runtime_package_policy(bool developer_enabled, uint64_t now_ms)
+{
+    constexpr uint32_t MAX_RETRY_MS = 30'000;
+    if (developer_enabled) {
+        package_developer_was_enabled_ = true;
+        package_policy_retry_at_ms_ = 0;
+        package_policy_retry_delay_ms_ = 1000;
+        return;
+    }
+    if (!package_developer_was_enabled_ ||
+            (package_policy_retry_at_ms_ != 0 && now_ms < package_policy_retry_at_ms_)) {
+        return;
+    }
+    auto enforced = enforce_runtime_package_policy();
+    if (enforced) {
+        package_developer_was_enabled_ = false;
+        package_policy_retry_at_ms_ = 0;
+        package_policy_retry_delay_ms_ = 1000;
+        return;
+    }
+    ESP_LOGE(TAG, "Developer package stop failed; retry in %" PRIu32 " ms: %s",
+             package_policy_retry_delay_ms_, enforced.error().c_str());
+    package_policy_retry_at_ms_ = now_ms + package_policy_retry_delay_ms_;
+    package_policy_retry_delay_ms_ =
+        std::min(package_policy_retry_delay_ms_ * 2, MAX_RETRY_MS);
+}
 
 void System::poll_system_input()
 {
@@ -9,12 +38,10 @@ void System::poll_system_input()
     if (stopping_.load(std::memory_order_acquire)) {
         return;
     }
-    const bool package_developer_enabled = developer_mode_ && developer_mode_->enabled();
-    if (!package_developer_enabled && package_developer_was_enabled_) {
-        auto enforced = enforce_runtime_package_policy();
-        package_developer_was_enabled_ = false;
-        if (!enforced) ESP_LOGE(TAG, "Developer package stop failed: %s", enforced.error().c_str());
-    } else if (package_developer_enabled) package_developer_was_enabled_ = true;
+    tick_runtime_package_policy(
+        developer_mode_ && developer_mode_->enabled(),
+        static_cast<uint64_t>(esp_timer_get_time() / 1000)
+    );
     const bool hardware_press = power_key_monitor_ && power_key_monitor_->take_short_press();
     if (hardware_press) {
         cancel_test_touch_.store(true, std::memory_order_release);
@@ -43,6 +70,7 @@ void System::poll_system_input()
     drain_runtime_navigation();
     drain_card_actions();
     if (test_snapshots_) { test_snapshots_->drain(); }
+    tick_package_acceptance(static_cast<uint64_t>(esp_timer_get_time() / 1000));
 }
 
 void System::handle_power_short_press()

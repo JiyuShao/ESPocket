@@ -51,6 +51,21 @@ class Transport:
 
 
 class DeviceTestRunnerTests(unittest.TestCase):
+    def test_external_app_reports_navigation_unavailable_without_a_fake_page(self):
+        driver, _, _ = self.make(lambda _: {'snapshot': snapshot(
+            1, foregroundAppId='external', navigationAvailable=False)})
+        self.assertFalse(driver.snapshot()['navigationAvailable'])
+
+    def test_unavailable_navigation_rejects_page_or_back_state(self):
+        for fields in ({'pageId': 'root'}, {'canBack': True}, {'backPending': True},
+                       {'foregroundAppId': ''}, {'navigationAvailable': 'false'}):
+            with self.subTest(fields=fields):
+                value = snapshot(1, foregroundAppId='external', navigationAvailable=False)
+                value.update(fields)
+                driver, _, _ = self.make(lambda _: {'snapshot': value})
+                with self.assertRaises(DeviceTestError):
+                    driver.snapshot()
+
     def make(self, responder, driver_type=MODULE.DeviceTestRunner):
         clock = Clock()
         transport = Transport(responder, clock)
@@ -229,6 +244,13 @@ class DeviceTestRunnerTests(unittest.TestCase):
     def test_stack_overflow_log_fails_before_reboot(self):
         with self.assertRaisesRegex(DeviceTestError, 'device error observed'):
             MODULE.DeviceTestRunner.check_log(b'***ERROR*** A stack overflow in task espocket_test_u has been detected.\n')
+
+    def test_assert_and_task_watchdog_are_device_errors(self):
+        for line in (b'assert failed: cache_utils.c:126',
+                     b'E task_wdt: Task watchdog got triggered.'):
+            with self.subTest(line=line):
+                with self.assertRaises(DeviceTestError):
+                    MODULE.DeviceTestRunner.check_log(line)
 
     def test_device_error_log_fails_current_operation(self):
         driver, _, log = self.make(lambda _: [b'Synthetic input tick failed: timeout\n'])

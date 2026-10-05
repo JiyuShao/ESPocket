@@ -20,3 +20,5 @@
 2026-10-04：当前设备缓存 Flappy Bird 0.3.0 由实际包扫描拒绝，错误为 `Package does not support system type: espocket`。本轮未发起下载／安装，不将这个缓存包的结果推广到全部最新官方包。见[当前可用性诊断](../records/2026-10-04-store-availability.md)。
 
 2026-10-04：已用锁定官方 SDK 准备两个 espocket-compatible signed 测试版本，identity 与边界见[候选记录](../records/2026-10-04-store-icon-admission.md#签名输入准备)。测试 key 不作为正式 publisher；受支持的正式发布路线和 Core 端验收仍待完成。
+
+2026-10-04 用户确认正式发行的发布者身份、签名目录和 Catalog 权限尚未准备，要求先完成其余验收并记录发布阻塞。本轮已准备 SDK 验签脚本和明确 test-only 的两个签名版本；不关闭本票，不上传或生成生产发布者身份。见[准备与官方文档核查](../records/2026-10-04-launcher-and-lifecycle-acceptance.md#签名准备与外部发布边界)。

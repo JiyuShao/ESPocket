@@ -9,11 +9,10 @@
  #include <string>
  #include <string_view>
  
-@@ -13,6 +15,46 @@
- #include "brookesia/system_core/app/types.hpp"
+@@ -14,6 +16,46 @@
  
  namespace esp_brookesia::system::core {
-+
+ 
 +// Product policy is supplied once; Core remains the install/discovery/start Owner.
 +struct RuntimePackagePolicy {
 +    bool enforce = false;
@@ -53,10 +52,11 @@
 +std::expected<void, std::string> recover_runtime_package_updates(
 +    std::string_view root, std::string_view system, const RuntimePackagePolicy &policy);
 +
- 
++
  /**
   * @brief Unpack a .bpk/.rpk package (ZIP) to an install directory and return the parsed app manifest.
-@@ -28,7 +70,8 @@
+  *
+@@ -28,7 +70,8 @@ namespace esp_brookesia::system::core {
  std::expected<AppManifest, std::string> unpack_app_package_to(
      std::string_view package_path,
      std::string_view install_dir,
@@ -76,7 +76,7 @@
  #include <optional>
  #include <string>
  #include <vector>
-@@ -56,6 +57,10 @@
+@@ -56,6 +57,10 @@ public:
      std::expected<void, std::string> start_app(AppId app_id) const;
      std::expected<void, std::string> stop_app(AppId app_id) const;
      std::expected<void, std::string> uninstall_app(AppId app_id) const;
@@ -89,7 +89,7 @@
          bool replace_existing = true
 --- a/include/brookesia/system_core/package.hpp
 +++ b/include/brookesia/system_core/package.hpp
-@@ -10,42 +10,9 @@
+@@ -10,43 +10,10 @@
  #include <string_view>
  
  #include "brookesia/runtime_manager/types.hpp"
@@ -97,7 +97,7 @@
 +#include "brookesia/system_core/app/package.hpp"
  
  namespace esp_brookesia::system::core {
--
+ 
 -/**
 - * @brief Unpack an .bpk package (ZIP) to an install directory and return the parsed app manifest.
 - *
@@ -130,10 +130,11 @@
 - * @brief Convert a system_core app manifest to a RuntimeManager app config.
 - */
 -std::expected<runtime::AppConfig, std::string> make_runtime_app_config(const AppManifest &manifest);
- 
+-
  /**
   * @brief Options for verify_app_package_release (RSA public key PEM on filesystem).
-@@ -68,4 +35,7 @@
+  *
+@@ -68,4 +35,7 @@ std::expected<void, std::string> verify_app_package_release(
      const AppPackageReleaseVerifyOptions &options
  );
  
@@ -151,7 +152,7 @@
  #include <functional>
  #include <memory>
  #include <optional>
-@@ -107,6 +108,7 @@
+@@ -107,6 +108,7 @@ public:
          bool install_registered_apps = true;
          /** Whether package apps should be discovered from configured package roots. */
          bool install_package_apps = true;
@@ -159,7 +160,7 @@
          /** Whether GUI view debug metadata should be enabled at startup. */
          bool enable_gui_view_debug = false;
          /** Whether GUI live preview should be enabled at startup. */
-@@ -120,6 +122,8 @@
+@@ -120,6 +122,8 @@ public:
      /**
       * @brief Create a core system runtime.
       */
@@ -168,7 +169,7 @@
      System();
      System(const System &) = delete;
      System &operator=(const System &) = delete;
-@@ -167,6 +171,10 @@
+@@ -167,6 +171,10 @@ public:
       * @param replace_existing Whether an installed package with the same ID may be replaced.
       * @return The installed application ID, or an error string.
       */
@@ -179,15 +180,20 @@
      std::expected<AppId, std::string> install_runtime_app_package(
          std::string_view package_path,
          bool replace_existing = true
-@@ -393,6 +401,7 @@
+@@ -393,6 +401,12 @@ protected:
      virtual void on_stop();
      virtual void on_deinit();
      virtual std::expected<void, std::string> on_app_installed(const AppInfo &app);
++    virtual void on_app_replacement_prepared(const AppInfo &old_app);
 +    virtual std::expected<void, std::string> on_app_replaced(const AppInfo &old_app, const AppInfo &new_app);
++    virtual std::expected<void, std::string> on_app_replacement_committed(
++        const AppInfo &old_app, const AppInfo &new_app);
++    virtual std::expected<void, std::string> on_app_replacement_rolled_back(
++        const AppInfo &failed_app, const AppInfo &restored_app);
      virtual std::expected<void, std::string> on_app_uninstalled(const AppInfo &app);
      virtual std::expected<void, std::string> on_app_started(const AppInfo &app);
      virtual void on_app_start_failed(const AppInfo &app, std::string_view reason);
-@@ -463,6 +472,7 @@
+@@ -463,6 +477,7 @@ private:
      friend class SystemGuiAccess;
  
      class Impl;
@@ -205,54 +211,24 @@
  
  namespace esp_brookesia::system::core {
  namespace {
-@@ -1119,166 +1120,213 @@
+@@ -1119,166 +1120,225 @@ std::expected<void, std::string> SystemApi::uninstall_app(AppId app_id) const
      return system_->uninstall_app(app_id);
  }
  
-+std::expected<PackageAdmission, std::string> SystemApi::inspect_runtime_package(
-+    std::string_view path, std::string_view expected_sha256) const
-+{
-+    if (!system_) return std::unexpected("System is not available");
-+    if (!is_native_system_app()) return std::unexpected("Only native system apps can inspect runtime app packages");
-+    return system_->inspect_runtime_package(path, expected_sha256);
-+}
-+std::expected<PackageAdmission, std::string> System::inspect_runtime_package(
-+    std::string_view path, std::string_view expected_sha256) const
-+{
-+    auto admission = core::inspect_runtime_package(path, get_system_type(), impl_->package_policy_, expected_sha256);
-+    if (!admission) return std::unexpected(admission.error());
-+    bool available = false;
-+    for (const auto &[name, backend] : runtime::RuntimeBackendRegistry::get_all_instances()) {
-+        if (backend && backend->get_type() == admission->manifest.runtime_type) { available = true; break; }
-+    }
-+    if (!available) return std::unexpected("runtime_backend_unavailable");
-+    return admission;
-+}
-+const RuntimePackagePolicy &System::runtime_package_policy() const { return impl_->package_policy_; }
-+
- std::expected<AppId, std::string> SystemApi::install_runtime_app_package(
+-std::expected<AppId, std::string> SystemApi::install_runtime_app_package(
 -    std::string_view package_path,
 -    bool replace_existing
 -) const
--{
++std::expected<PackageAdmission, std::string> SystemApi::inspect_runtime_package(
++    std::string_view path, std::string_view expected_sha256) const
+ {
 -    if (system_ == nullptr) {
 -        return std::unexpected("System is not available");
 -    }
 -    if (!is_native_system_app()) {
 -        return std::unexpected("Only native system apps can install runtime app packages");
 -    }
-+    std::string_view path, bool replace_existing) const
-+{
-+    return install_runtime_app_package(path, PackageInstallOptions{.replace_existing = replace_existing});
-+}
-+std::expected<AppId, std::string> SystemApi::install_runtime_app_package(
-+    std::string_view path, const PackageInstallOptions &options) const
-+{
-+    if (!system_) return std::unexpected("System is not available");
-+    if (!is_native_system_app()) return std::unexpected("Only native system apps can install runtime app packages");
-+    auto manifest = system_->inspect_runtime_package(path, options.expected_sha256);
-+    if (!manifest) return std::unexpected(manifest.error());
-     auto self = system_->get_app(app_id_);
+-    auto self = system_->get_app(app_id_);
 -    auto package_manifest = read_app_package_manifest(package_path, system_->get_system_type());
 -    if (!package_manifest) {
 -        return std::unexpected("Failed to read runtime app package manifest: " + package_manifest.error());
@@ -261,22 +237,18 @@
 -        return std::unexpected("App cannot replace itself");
 -    }
 -    return system_->install_runtime_app_package(package_path, replace_existing);
--}
++    if (!system_) return std::unexpected("System is not available");
++    if (!is_native_system_app()) return std::unexpected("Only native system apps can inspect runtime app packages");
++    return system_->inspect_runtime_package(path, expected_sha256);
+ }
 -
-+    if (self && self->manifest.id == manifest->manifest.id) return std::unexpected("An App cannot replace itself");
-+    auto bound_options = options;
-+    bound_options.expected_sha256 = manifest->artifact_sha256;
-+    return system_->install_runtime_app_package(path, bound_options);
-+}
-+std::expected<AppId, std::string> System::install_runtime_app_package(std::string_view path, bool replace_existing)
-+{
-+    return install_runtime_app_package(path, PackageInstallOptions{.replace_existing = replace_existing});
-+}
- std::expected<AppId, std::string> System::install_runtime_app_package(
+-std::expected<AppId, std::string> System::install_runtime_app_package(
 -    std::string_view package_path,
 -    bool replace_existing
 -)
--{
++std::expected<PackageAdmission, std::string> System::inspect_runtime_package(
++    std::string_view path, std::string_view expected_sha256) const
+ {
 -    BROOKESIA_LOG_TRACE_GUARD_WITH_THIS();
 -
 -    auto package_manifest = read_app_package_manifest(package_path, get_system_type());
@@ -295,10 +267,60 @@
 -    auto service_requirement_result = check_runtime_app_service_requirements(*package_manifest, "install");
 -    if (!service_requirement_result) {
 -        return std::unexpected(service_requirement_result.error());
--    }
--
++    auto admission = core::inspect_runtime_package(path, get_system_type(), impl_->package_policy_, expected_sha256);
++    if (!admission) return std::unexpected(admission.error());
++    bool available = false;
++    for (const auto &[name, backend] : runtime::RuntimeBackendRegistry::get_all_instances()) {
++        if (backend && backend->get_type() == admission->manifest.runtime_type) { available = true; break; }
+     }
++    if (!available) return std::unexpected("runtime_backend_unavailable");
++    return admission;
++}
++const RuntimePackagePolicy &System::runtime_package_policy() const { return impl_->package_policy_; }
+ 
 -    std::filesystem::path app_root;
 -    std::filesystem::path old_app_dir;
+-    if (installed) {
+-        old_app_dir = std::filesystem::path(installed->manifest.app_path).lexically_normal();
+-        if (old_app_dir.empty()) {
+-            return std::unexpected("Installed runtime app path is empty: " + package_manifest->id);
+-        }
+-        if (old_app_dir.filename().generic_string() != package_manifest->id) {
+-            return std::unexpected(
+-                       "Installed runtime app path does not match manifest id: " + old_app_dir.generic_string()
+-                   );
+-        }
+-        app_root = old_app_dir.parent_path().lexically_normal();
+-        if (app_root.empty()) {
+-            return std::unexpected("Installed runtime app root is empty: " + package_manifest->id);
+-        }
+-    } else {
+-        auto app_root_result = get_default_install_app_root(get_storage_layout());
+-        if (!app_root_result) {
+-            return std::unexpected(app_root_result.error());
++std::expected<AppId, std::string> SystemApi::install_runtime_app_package(
++    std::string_view path, bool replace_existing) const
++{
++    return install_runtime_app_package(path, PackageInstallOptions{.replace_existing = replace_existing});
++}
++std::expected<AppId, std::string> SystemApi::install_runtime_app_package(
++    std::string_view path, const PackageInstallOptions &options) const
++{
++    if (!system_) return std::unexpected("System is not available");
++    if (!is_native_system_app()) return std::unexpected("Only native system apps can install runtime app packages");
++    auto manifest = system_->inspect_runtime_package(path, options.expected_sha256);
++    if (!manifest) return std::unexpected(manifest.error());
++    auto self = system_->get_app(app_id_);
++    if (self && self->manifest.id == manifest->manifest.id) return std::unexpected("An App cannot replace itself");
++    auto bound_options = options;
++    bound_options.expected_sha256 = manifest->artifact_sha256;
++    return system_->install_runtime_app_package(path, bound_options);
++}
++std::expected<AppId, std::string> System::install_runtime_app_package(std::string_view path, bool replace_existing)
++{
++    return install_runtime_app_package(path, PackageInstallOptions{.replace_existing = replace_existing});
++}
++std::expected<AppId, std::string> System::install_runtime_app_package(
 +    std::string_view path, const PackageInstallOptions &options)
 +{
 +    if (impl_->should_schedule_app_task()) {
@@ -318,8 +340,23 @@
 +        if (existing) {
 +            if (existing->manifest.kind != AppKind::Runtime) return std::unexpected("cannot_replace_native_app");
 +            root = std::filesystem::path(existing->manifest.app_path).parent_path();
-+        }
-+    }
+         }
+-        app_root = app_root_result->lexically_normal();
+     }
+-
+-    auto app_root_result = service::helper::Storage::fs_mkdir(app_root.generic_string(), STORAGE_FS_TIMEOUT_MS);
+-    if (!app_root_result) {
+-        return std::unexpected(
+-                   "Failed to create app root '" + app_root.generic_string() + "': " + app_root_result.error()
+-               );
+-    }
+-
+-    const auto staging_parent = app_root / ".installing" / make_unique_install_directory_name(package_manifest->id);
+-    const auto staged_app_dir = staging_parent / package_manifest->id;
+-    const auto install_dir = app_root / package_manifest->id;
+-
+-    auto cleanup_staging = [&staging_parent]() {
+-        (void)remove_path_tree_if_exists(staging_parent, "runtime app staging directory");
 +    const auto stage_parent = root / ".installing" / make_unique_install_directory_name("candidate");
 +    auto made = service::helper::Storage::fs_mkdir(stage_parent.generic_string(), STORAGE_FS_TIMEOUT_MS);
 +    if (!made) return std::unexpected(made.error());
@@ -389,8 +426,11 @@
 +        if (!moved) return std::unexpected(moved.error());
 +    }
 +    auto replacement_source = replaced_app;
++    if (replaced_app) on_app_replacement_prepared(*replaced_app);
 +    auto rollback = [&](std::string error) -> std::expected<AppId, std::string> {
-+        (void)remove_path_tree_if_exists(final, "failed package version");
++        auto removed = remove_path_tree_if_exists(final, "failed package version");
++        if (!removed)
++            return std::unexpected(error + "; rollback_cleanup_failed: " + removed.error());
 +        if (final_stat->exists) {
 +            auto restored = service::helper::Storage::fs_rename(backup.generic_string(), final.generic_string(), STORAGE_FS_TIMEOUT_MS);
 +            if (!restored) return std::unexpected(error + "; rollback_failed: " + restored.error());
@@ -404,94 +444,13 @@
 +                if (!registered) return std::unexpected(error + "; rollback_registration_failed: " + registered.error());
 +                auto restored_info = get_app(*registered);
 +                if (restored_info && replacement_source) {
-+                    auto migrated = on_app_replaced(*replacement_source, *restored_info);
++                    auto migrated = on_app_replacement_rolled_back(*replacement_source, *restored_info);
 +                    if (!migrated) return std::unexpected(error + "; rollback_migration_failed: " + migrated.error());
 +                }
 +            }
 +        }
 +        return std::unexpected(std::move(error));
-+    };
-     if (installed) {
--        old_app_dir = std::filesystem::path(installed->manifest.app_path).lexically_normal();
--        if (old_app_dir.empty()) {
--            return std::unexpected("Installed runtime app path is empty: " + package_manifest->id);
-+        auto detached = detach_app_for_replacement(installed->app_id);
-+        if (!detached) return rollback(detached.error());
-+    }
-+    auto promoted = service::helper::Storage::fs_rename(staged.generic_string(), final.generic_string(), STORAGE_FS_TIMEOUT_MS);
-+    if (!promoted) return rollback(promoted.error());
-+    unpacked->app_path = final.generic_string();
-+    auto activated = install_runtime_app(*unpacked);
-+    if (!activated) return rollback(activated.error());
-+    replacement_source = get_app(*activated);
-+    if (!impl_->package_policy_.developer() && admission->requires_developer()) {
-+        (void)detach_app_for_replacement(*activated);
-+        return rollback("developer_mode_changed");
-+    }
-+    if (replaced_app) {
-+        auto current = get_app(*activated);
-+        if (!current) return rollback("replacement_registration_missing");
-+        auto migrated = on_app_replaced(*replaced_app, *current);
-+        if (!migrated) {
-+            (void)detach_app_for_replacement(*activated);
-+            return rollback(migrated.error());
-         }
--        if (old_app_dir.filename().generic_string() != package_manifest->id) {
--            return std::unexpected(
--                       "Installed runtime app path does not match manifest id: " + old_app_dir.generic_string()
--                   );
-+    }
-+    auto committed = commit_runtime_package_receipt(final.generic_string());
-+    if (!committed) {
-+        (void)detach_app_for_replacement(*activated);
-+        return rollback(committed.error());
-+    }
-+    auto removed_backup = remove_path_tree_if_exists(backup, "committed package backup");
-+    if (!removed_backup) BROOKESIA_LOGW("Committed package backup retained: %1%", removed_backup.error());
-+    return *activated;
-+}
-+
-+std::expected<void, std::string> System::enforce_runtime_package_policy()
-+{
-+    if (impl_->should_schedule_app_task()) {
-+        return impl_->run_task_sync<std::expected<void, std::string>>(SYSTEM_APP_TASK_GROUP,
-+            [this] { return enforce_runtime_package_policy(); }, std::unexpected("Failed to post package policy task"));
-+    }
-+    if (!impl_->package_policy_.enforce) return {};
-+    std::string first_error;
-+    for (const auto &app : list_apps()) {
-+        if (app.manifest.kind != AppKind::Runtime || (app.state != AppState::Running && app.state != AppState::Paused)) continue;
-+        auto admitted = validate_installed_runtime_package(app.manifest.app_path, get_system_type(), impl_->package_policy_);
-+        if (!admitted) {
-+            auto stopped = stop_app(app.app_id);
-+            if (!stopped && first_error.empty()) first_error = stopped.error();
-         }
--        app_root = old_app_dir.parent_path().lexically_normal();
--        if (app_root.empty()) {
--            return std::unexpected("Installed runtime app root is empty: " + package_manifest->id);
--        }
--    } else {
--        auto app_root_result = get_default_install_app_root(get_storage_layout());
--        if (!app_root_result) {
--            return std::unexpected(app_root_result.error());
--        }
--        app_root = app_root_result->lexically_normal();
--    }
--
--    auto app_root_result = service::helper::Storage::fs_mkdir(app_root.generic_string(), STORAGE_FS_TIMEOUT_MS);
--    if (!app_root_result) {
--        return std::unexpected(
--                   "Failed to create app root '" + app_root.generic_string() + "': " + app_root_result.error()
--               );
--    }
--
--    const auto staging_parent = app_root / ".installing" / make_unique_install_directory_name(package_manifest->id);
--    const auto staged_app_dir = staging_parent / package_manifest->id;
--    const auto install_dir = app_root / package_manifest->id;
--
--    auto cleanup_staging = [&staging_parent]() {
--        (void)remove_path_tree_if_exists(staging_parent, "runtime app staging directory");
--    };
+     };
 -
 -    auto unpacked_manifest = unpack_app_package_to(
 -                                 package_path,
@@ -520,7 +479,7 @@
 -        return std::unexpected("Failed to validate staged runtime app package: " + descriptor_result.error());
 -    }
 -
--    if (installed) {
+     if (installed) {
 -        auto preserve_result = preserve_runtime_app_private_data(old_app_dir, staged_app_dir);
 -        if (!preserve_result) {
 -            cleanup_staging();
@@ -531,17 +490,53 @@
 -        if (!remove_stale_result) {
 -            cleanup_staging();
 -            return std::unexpected(remove_stale_result.error());
--        }
--    }
++        auto detached = detach_app_for_replacement(installed->app_id);
++        if (!detached) return rollback(detached.error());
++    }
++    auto promoted = service::helper::Storage::fs_rename(staged.generic_string(), final.generic_string(), STORAGE_FS_TIMEOUT_MS);
++    if (!promoted) return rollback(promoted.error());
++    unpacked->app_path = final.generic_string();
++    auto activated = install_runtime_app(*unpacked);
++    if (!activated) return rollback(activated.error());
++    replacement_source = get_app(*activated);
++    if (!impl_->package_policy_.developer() && admission->requires_developer()) {
++        (void)detach_app_for_replacement(*activated);
++        return rollback("developer_mode_changed");
++    }
++    if (replaced_app) {
++        auto current = get_app(*activated);
++        if (!current) return rollback("replacement_registration_missing");
++        auto migrated = on_app_replaced(*replaced_app, *current);
++        if (!migrated) {
++            (void)detach_app_for_replacement(*activated);
++            return rollback(migrated.error());
+         }
+     }
 -
 -    if (installed) {
 -        auto uninstall_result = uninstall_app(installed->app_id);
 -        if (!uninstall_result) {
 -            cleanup_staging();
 -            return std::unexpected("Failed to uninstall existing app: " + uninstall_result.error());
--        }
--    }
--
++    auto committed = commit_runtime_package_receipt(final.generic_string());
++    if (!committed) {
++        (void)detach_app_for_replacement(*activated);
++        return rollback(committed.error());
++    }
++    if (replaced_app) {
++        auto current = get_app(*activated);
++        if (!current) return std::unexpected("replacement_commit_registration_missing");
++        auto persisted = on_app_replacement_committed(*replaced_app, *current);
++        if (!persisted) {
++            BROOKESIA_LOGW("Committed package Card persistence failed; backup retained: %1%", persisted.error());
++            return std::unexpected("committed_package_card_persistence_failed: " + persisted.error());
+         }
+     }
++    auto removed_backup = remove_path_tree_if_exists(backup, "committed package backup");
++    if (!removed_backup) BROOKESIA_LOGW("Committed package backup retained: %1%", removed_backup.error());
++    return *activated;
++}
+ 
 -    auto rename_result = service::helper::Storage::fs_rename(
 -                             staged_app_dir.generic_string(), install_dir.generic_string(), STORAGE_FS_TIMEOUT_MS
 -                         );
@@ -551,7 +546,12 @@
 -                   "Failed to move staged runtime app to final directory '" + install_dir.generic_string() +
 -                   "': " + rename_result.error()
 -               );
--    }
++std::expected<void, std::string> System::enforce_runtime_package_policy()
++{
++    if (impl_->should_schedule_app_task()) {
++        return impl_->run_task_sync<std::expected<void, std::string>>(SYSTEM_APP_TASK_GROUP,
++            [this] { return enforce_runtime_package_policy(); }, std::unexpected("Failed to post package policy task"));
+     }
 -    cleanup_staging();
 -    unpacked_manifest->app_path = install_dir.generic_string();
 -
@@ -563,11 +563,18 @@
 -                       "Failed to install runtime app package: " + install_result.error() +
 -                       "; additionally failed to remove runtime app directory: " + cleanup_result.error()
 -                   );
--        }
++    if (!impl_->package_policy_.enforce) return {};
++    std::string first_error;
++    for (const auto &app : list_apps()) {
++        if (app.manifest.kind != AppKind::Runtime || (app.state != AppState::Running && app.state != AppState::Paused)) continue;
++        auto admitted = validate_installed_runtime_package(app.manifest.app_path, get_system_type(), impl_->package_policy_);
++        if (!admitted) {
++            auto stopped = stop_app(app.app_id);
++            if (!stopped && first_error.empty()) first_error = stopped.error();
+         }
 -        return std::unexpected("Failed to install runtime app package: " + install_result.error());
--    }
+     }
 -    return *install_result;
-+    }
 +    if (!first_error.empty()) return std::unexpected(first_error);
 +    return {};
  }
@@ -575,7 +582,7 @@
  std::expected<void, std::string> SystemApi::show_loading() const
 --- a/src/app/manager.cpp
 +++ b/src/app/manager.cpp
-@@ -180,7 +180,7 @@
+@@ -180,7 +180,7 @@ void show_lifecycle_error_dialog(
      }
  }
  
@@ -584,19 +591,19 @@
  {
      MessageDialogOptions options{
          .text = "Unable to start " + get_lifecycle_app_name(info),
-@@ -412,6 +412,11 @@
-     }
+@@ -413,6 +413,11 @@ std::expected<AppId, std::string> System::install_runtime_app(const AppManifest
      if (impl_->manifest_id_to_app_.contains(manifest.id)) {
          return std::unexpected("App manifest id already installed");
-+    }
+     }
 +    if (impl_->package_policy_.enforce) {
 +        auto admitted = validate_installed_runtime_package(manifest.app_path, get_system_type(),
 +            impl_->package_policy_, false, impl_->package_transaction_);
 +        if (!admitted) return std::unexpected(admitted.error());
-     }
++    }
      auto heap_before_descriptor = heap_trace::capture();
      heap_trace::log("system.install_runtime", "before descriptor read", manifest.id, heap_before_descriptor);
-@@ -521,6 +526,33 @@
+     auto resource_descriptor = read_runtime_app_resource_descriptor(manifest);
+@@ -521,6 +526,33 @@ std::expected<void, std::string> System::install_registered_apps()
      return {};
  }
  
@@ -630,7 +637,7 @@
  std::expected<void, std::string> System::uninstall_app(AppId app_id)
  {
      BROOKESIA_LOG_TRACE_GUARD_WITH_THIS();
-@@ -619,6 +651,17 @@
+@@ -619,6 +651,17 @@ std::expected<void, std::string> System::start_app(AppId app_id, const AppStartO
          return std::unexpected(record_result.error());
      }
      auto &record = *record_result.value();
@@ -648,7 +655,7 @@
      if (record.info.state == AppState::Running) {
          return {};
      }
-@@ -645,7 +688,7 @@
+@@ -645,7 +688,7 @@ std::expected<void, std::string> System::start_app(AppId app_id, const AppStartO
                  );
              }
              on_app_start_failed(record.info, error);
@@ -677,7 +684,7 @@
  #include <cstddef>
  #include <cstdint>
  #include <cstring>
-@@ -35,6 +42,7 @@
+@@ -35,6 +42,7 @@ namespace esp_brookesia::system::core {
  namespace {
  
  namespace fs = std::filesystem;
@@ -685,7 +692,7 @@
  
  constexpr const char *APP_MANIFEST_FILE = "manifest.json";
  constexpr const char *APP_RUNTIME_PROFILE_FILE = "profile.json";
-@@ -48,6 +56,7 @@
+@@ -48,6 +56,7 @@ constexpr uint32_t STORAGE_FS_TIMEOUT_MS = 5000;
  
  struct ZipEntry {
      std::string name;
@@ -693,7 +700,7 @@
      uint16_t compression_method = 0;
      uint16_t flags = 0;
      uint32_t compressed_size = 0;
-@@ -102,6 +111,7 @@
+@@ -102,6 +111,7 @@ std::expected<std::vector<uint8_t>, std::string> read_binary_file(const fs::path
          return std::unexpected("Package file does not exist or is not a regular file: " + path.string());
      }
  
@@ -701,7 +708,7 @@
      std::vector<uint8_t> data(static_cast<size_t>(info->size));
      if (!data.empty()) {
          auto read_result = service::helper::Storage::fs_read(
-@@ -190,6 +200,7 @@
+@@ -190,6 +200,7 @@ std::expected<std::vector<ZipEntry>, std::string> parse_central_directory(const
  
          ZipEntry entry;
          entry.flags = read_u16_le(zip_data, cursor + 8);
@@ -709,7 +716,7 @@
          entry.compression_method = read_u16_le(zip_data, cursor + 10);
          entry.compressed_size = read_u32_le(zip_data, cursor + 20);
          entry.uncompressed_size = read_u32_le(zip_data, cursor + 24);
-@@ -286,10 +297,13 @@
+@@ -286,10 +297,13 @@ std::expected<std::vector<uint8_t>, std::string> extract_zip_entry(
  
  bool is_safe_relative_path(std::string_view path)
  {
@@ -724,7 +731,7 @@
      const auto normalized = fs::path(std::string(path)).lexically_normal();
      if (normalized.empty() || normalized.is_absolute()) {
          return false;
-@@ -843,7 +857,8 @@
+@@ -843,7 +857,8 @@ std::expected<void, std::string> validate_runtime_gui_document(const fs::path &p
  std::expected<AppManifest, std::string> unpack_app_package_to(
      std::string_view package_path,
      std::string_view install_dir,
@@ -734,7 +741,7 @@
  )
  {
      BROOKESIA_LOG_TRACE_GUARD();
-@@ -856,6 +871,10 @@
+@@ -856,6 +871,10 @@ std::expected<AppManifest, std::string> unpack_app_package_to(
          return std::unexpected(zip_data.error());
      }
  
@@ -745,7 +752,7 @@
      auto entries = parse_central_directory(*zip_data);
      if (!entries) {
          return std::unexpected(entries.error());
-@@ -1044,3 +1063,345 @@
+@@ -1044,3 +1063,345 @@ std::expected<runtime::AppConfig, std::string> make_runtime_app_config(const App
  }
  
  } // namespace esp_brookesia::system::core
@@ -1093,7 +1100,7 @@
 +} // namespace esp_brookesia::system::core
 --- a/src/app/package_scan.cpp
 +++ b/src/app/package_scan.cpp
-@@ -55,6 +55,10 @@
+@@ -55,6 +55,10 @@ std::expected<void, std::string> System::Impl::install_unpacked_apps()
              return {};
          }
  
@@ -1104,7 +1111,7 @@
          std::vector<std::filesystem::path> package_dirs;
          auto entries = service::helper::Storage::fs_list(app_path.generic_string(), STORAGE_FS_TIMEOUT_MS);
          if (!entries)
-@@ -66,6 +70,7 @@
+@@ -66,6 +70,7 @@ std::expected<void, std::string> System::Impl::install_unpacked_apps()
          } else
          {
              for (const auto &entry : entries.value()) {
@@ -1112,7 +1119,7 @@
                  if (entry.info.type != service::helper::Storage::FileType::Directory) {
                      continue;
                  }
-@@ -82,7 +87,12 @@
+@@ -82,7 +87,12 @@ std::expected<void, std::string> System::Impl::install_unpacked_apps()
  
          for (const auto &package_dir : package_dirs)
          {
@@ -1128,7 +1135,7 @@
                      BROOKESIA_LOGI(
 --- a/src/package_release_verify.cpp
 +++ b/src/package_release_verify.cpp
-@@ -616,21 +616,12 @@
+@@ -616,21 +616,12 @@ EmbeddedPresence detect_embedded(const std::vector<ZipEntry> &entries)
  
  } // namespace detail
  
@@ -1136,7 +1143,10 @@
 -    std::string_view package_path,
 -    const AppPackageReleaseVerifyOptions &options
 -)
--{
++std::expected<void, std::string> verify_app_package_release_bytes(
++    const std::vector<uint8_t> &bytes,
++    const AppPackageReleaseVerifyOptions &options)
+ {
 -    if (options.public_key_pem_path.empty()) {
 -        return std::unexpected("public_key_pem_path is empty");
 -    }
@@ -1147,16 +1157,12 @@
 -        return std::unexpected(zip_data.error());
 -    }
 -    auto entries = detail::parse_central_directory(zip_data.value());
-+std::expected<void, std::string> verify_app_package_release_bytes(
-+    const std::vector<uint8_t> &bytes,
-+    const AppPackageReleaseVerifyOptions &options)
-+{
 +    if (options.public_key_pem_path.empty()) return std::unexpected("public_key_pem_path is empty");
 +    auto entries = detail::parse_central_directory(bytes);
      if (!entries) {
          return std::unexpected(entries.error());
      }
-@@ -645,11 +636,11 @@
+@@ -645,11 +636,11 @@ std::expected<void, std::string> verify_app_package_release(
          return std::unexpected("Package is not signed: missing META-INF/hash.json or META-INF/signature.sig");
      }
  
@@ -1170,7 +1176,7 @@
      if (!sig_bytes) {
          return std::unexpected(sig_bytes.error());
      }
-@@ -659,7 +650,24 @@
+@@ -659,7 +650,24 @@ std::expected<void, std::string> verify_app_package_release(
      if (!pk_ok) {
          return std::unexpected(pk_ok.error());
      }
@@ -1196,22 +1202,23 @@
  }
  
  #elif defined(ESP_PLATFORM) && ESP_PLATFORM
-@@ -691,5 +699,12 @@
+@@ -690,6 +698,13 @@ std::expected<void, std::string> verify_app_package_release(
+            );
  }
  
- #endif
++#endif
 +#if !defined(BROOKESIA_SYSTEM_CORE_HAVE_PACKAGE_RELEASE_VERIFY) || !defined(ESP_PLATFORM)
 +std::expected<void, std::string> verify_app_package_release_bytes(
 +    const std::vector<uint8_t> &, const AppPackageReleaseVerifyOptions &)
 +{
 +    return std::unexpected("release_verification_unavailable");
 +}
-+#endif
+ #endif
  
  } // namespace esp_brookesia::system::core
 --- a/src/private/system/impl.hpp
 +++ b/src/private/system/impl.hpp
-@@ -284,6 +284,8 @@
+@@ -284,6 +284,8 @@ public:
      mutable std::recursive_mutex app_callback_mutex_;
      mutable std::recursive_mutex gui_runtime_mutex_;
      Config config_;
@@ -1222,21 +1229,36 @@
      std::unique_ptr<gui::Runtime> gui_runtime_;
 --- a/src/system/core.cpp
 +++ b/src/system/core.cpp
-@@ -66,6 +66,11 @@
- {}
+@@ -70,6 +70,26 @@ std::expected<void, std::string> System::on_app_installed(const AppInfo &)
+     return {};
+ }
  
- std::expected<void, std::string> System::on_app_installed(const AppInfo &)
++void System::on_app_replacement_prepared(const AppInfo &)
++{}
++
++std::expected<void, std::string> System::on_app_replaced(const AppInfo &, const AppInfo &)
 +{
 +    return {};
 +}
 +
-+std::expected<void, std::string> System::on_app_replaced(const AppInfo &, const AppInfo &)
++std::expected<void, std::string> System::on_app_replacement_committed(
++    const AppInfo &, const AppInfo &)
++{
++    return {};
++}
++
++std::expected<void, std::string> System::on_app_replacement_rolled_back(
++    const AppInfo &failed_app, const AppInfo &restored_app)
++{
++    return on_app_replaced(failed_app, restored_app);
++}
++
+ std::expected<void, std::string> System::on_app_uninstalled(const AppInfo &)
  {
      return {};
- }
 --- a/src/system/lifecycle.cpp
 +++ b/src/system/lifecycle.cpp
-@@ -81,6 +81,7 @@
+@@ -81,6 +81,7 @@ std::expected<void, std::string> System::init(Config config)
  
      impl_->system_type_ = config.system_type.empty() ? BROOKESIA_SYSTEM_CORE_DEFAULT_SYSTEM_TYPE : config.system_type;
      impl_->environment_ = config.environment;
@@ -1244,7 +1266,7 @@
      impl_->set_gui_theme_snapshot(impl_->environment_.theme_id);
      impl_->set_gui_language_snapshot(impl_->environment_.language);
      impl_->task_scheduler_ = std::make_shared<lib_utils::TaskScheduler>();
-@@ -235,11 +236,7 @@
+@@ -235,11 +236,7 @@ std::expected<void, std::string> System::init(Config config)
          }
          if (command == service::Usb::HostCommand::InstallBpk)
          {

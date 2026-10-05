@@ -25,12 +25,19 @@ std::expected<TestSnapshot, std::string> System::read_test_snapshot() const
     if (token != 0) {
         auto page = foreground_page_snapshot();
         if (!page) {
-            return std::unexpected(page.error());
+            const auto app = get_app(foreground_app_id_.load(std::memory_order_acquire));
+            const auto admitted = app ? launcher_admissions_.find(app->app_id) : launcher_admissions_.end();
+            if (page.error() != "page_adapter_unavailable" || !app || admitted == launcher_admissions_.end() ||
+                    !admitted->second.requires_developer || !developer_mode_->enabled())
+                return std::unexpected(page.error());
+            snapshot.foreground_app_id = app->manifest.id;
+            snapshot.navigation_available = false;
+        } else {
+            snapshot.foreground_app_id = page->app_id;
+            snapshot.page_id = page->page_id;
+            snapshot.can_back = page->can_back;
+            snapshot.back_pending = page->back_pending;
         }
-        snapshot.foreground_app_id = page->app_id;
-        snapshot.page_id = page->page_id;
-        snapshot.can_back = page->can_back;
-        snapshot.back_pending = page->back_pending;
     }
     if (foreground_token_->load(std::memory_order_acquire) != token ||
             shell_->current_surface() != surface ||
@@ -53,6 +60,9 @@ std::expected<void, std::string> System::launch_app(
     if (app == apps.end()) {
         return std::unexpected("App is not installed: " + std::string(manifest_id));
     }
+    if (std::count_if(apps.begin(), apps.end(), [manifest_id](const auto &candidate) {
+            return candidate.manifest.id == manifest_id;
+        }) != 1 || !app->manifest.visible) return std::unexpected("App identity unavailable");
     launch_source_ = source;
     lifecycle_restore_surface_ = source;
     lifecycle_restore_pending_ = true;

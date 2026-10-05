@@ -45,6 +45,7 @@ public:
     std::expected<void, CardError> update_app(PageDeclaration declaration);
     std::expected<void, CardError> uninstall_app(std::string_view app_id);
     std::vector<CardKey> available_cards() const;
+    std::expected<PageDeclaration, CardError> declaration(std::string_view app_id) const;
     std::expected<std::string, CardError> target_page(const CardKey &key) const;
     std::expected<void, CardError> add(const CardKey &key, CardSide side, size_t index);
     std::expected<void, CardError> move(const CardKey &key, CardSide side, size_t final_index);

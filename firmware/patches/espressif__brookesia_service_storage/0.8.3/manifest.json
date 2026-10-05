@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "component": "espressif__brookesia_service_storage",
+  "upstream_version": "0.8.3",
+  "source_commit": "01939b5e58fd50d18339b1c35fb74c4e808962c7",
+  "registry_component_hash": "2746c32429841b24b25df6d5469a6fcb190f66917b092c574b796d83e229bcfe",
+  "source_files": {
+    ".component_hash": "cbbfe31eb752ca9d88e0d2e64e78f2677d675efde2edd3b647610a872f04779e",
+    "CHANGELOG.md": "17731b0d7590cf71160b1a651a739fccb9a322eb4c87be6138bfc00b25a3c675",
+    "CHECKSUMS.json": "4b8d7586102446a655c4f774121f0b6d76ff22b3e0981365516d6546dbb1b578",
+    "CMakeLists.txt": "cffba2cf2b59781393066cd8fbc50bbb0405a6f07f262eef77d4ae16a9c1d32c",
+    "Kconfig": "1f602e6563c7df7869f80c563d7afc8371a225f1ea153dfc83c9b41f5c0b6828",
+    "README.md": "290d26766c3efbe2561ceb600735548430ed8f6e3880b907b905d0f69205f984",
+    "README_CN.md": "f11cd7b8aac1400cf7f0d3dd8c5ca2fdd6053177803f522dba5186d018d168eb",
+    "cmake/esp_platform.cmake": "33419fdaa240d63107f472b1843b9b2c70fd85c16fdf35344c4555af05e7f2b3",
+    "cmake/pc_platform.cmake": "1676ed197969a7934848cdba28cdbf1368eed83006b0906725779c0bdd5ef06f",
+    "cmake/pc_test_common.cmake": "0bc9bd7cb2e20ca1260dc4fd59f28fbe591b3b595904ae7613a6f20c7d5ee4e7",
+    "idf_component.yml": "ad4eb545be5818a7c2bfa1ecfaf83cc9e87e224ee8605c7d9d2fdad89d07e60c",
+    "include/brookesia/service_storage/macro_configs.h": "9d654e9ad043867c2ea577607489416940d8528afe453fee415575b1984aea03",
+    "include/brookesia/service_storage/service_storage.hpp": "d6eea3fba5fa1999d7e1a442bf1a4998f875b3887fa4cc49c5d9f96cd1fda3cf",
+    "include/brookesia/service_storage.hpp": "ab8981b7033574aa53336b4d8a7ee6ad027f86c27c9d351692df56d2cce1bc73",
+    "license.txt": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+    "src/private/utils.hpp": "4d40a2998eac110afdaf1fafc83932955403e2650d64e3a393f65689318a9805",
+    "src/service_storage.cpp": "667a23e46da5c84c67c6a08e2c883f66a7c0ed096b21e488a7e7d9bae8c2edd7",
+    "test_apps/CMakeLists.txt": "d64157858e10282ec81ff84a609fdca0c11079b32d2b90aee6adbdae3ca467c7",
+    "test_apps/README.md": "3cbcdd27ff47aa9046578375ec350acea27983e615cfe5d55a972b6959b27e73",
+    "test_apps/cmake/esp_platform.cmake": "ca2fc15d1c72b3100711eb92ef9ab44ceb9464a446f8099d8e1a75dc3ff6c951",
+    "test_apps/cmake/pc_platform.cmake": "7080b59d92885884cfd9444628260744443b9488848cb479c21246e30e8f35b2",
+    "test_apps/main/CMakeLists.txt": "b6cc3b83adfb783d660b3f68a10d076587a2bb6de65450750b10a51245e17933",
+    "test_apps/main/common_def.hpp": "54a1eff918e89a97b873ca5a54f1b060c88cffe8b551af11b74f4fd7a9f22ea3",
+    "test_apps/main/idf_component.yml": "ef4cb594b8d7ba894317336e4645f65c8f5cc400157c9414ea43d905c56240ae",
+    "test_apps/main/test_app_main.cpp": "5f5732d8967c4f573a5acafd2fcabc132b9dff54a6d401dcac314601f24d1250",
+    "test_apps/main/test_service_helper.cpp": "9692f526fbefb1153986611c01eef79b4149adb14b8280f3e8d8ec02ae9290e3",
+    "test_apps/main/test_service_storage.cpp": "9e93ee485b8d813021942f295093b57261b71805ff0e00bc69a13514f96638ba",
+    "test_apps/partitions.csv": "16e5bf3a0a412ecca28815fef47cbb44d8288f418347e26c83d0b9d1983cf95d",
+    "test_apps/pytest_service_storage.py": "4d94be6587d4510efddfe71f4659eadae7a8c89a0d3e8ca1cb03298fd5022620",
+    "test_apps/sdkconfig.ci.esp32p4_xip": "952a43d6e80fc5cb288e0b184d0ab1a4148db0ee1585410fd46e78a0c0798c68",
+    "test_apps/sdkconfig.ci.esp32s3_psram_xip": "ad65b9815226c4caa37fe32490f1ef7217abd6481bddc1a98ed39b30015cdecf",
+    "test_apps/sdkconfig.defaults": "5167098cecab7bba69541d7dfc60790abf28ed7811dacb51722e1c97903db335",
+    "test_apps/sdkconfig.defaults.esp32p4": "05a5f1761ca0abb9d73e774dc8abdc3323d1cbce06b10dff4a69655c850db3f0",
+    "test_apps/sdkconfig.defaults.esp32s3": "936edc1c336b7c0666b16ec9040bc79406228ce9358ef4129f84af2fa2054eab"
+  },
+  "patches": [
+    {
+      "file": "001-read-file-metadata-once.patch",
+      "sha256": "a5f874d1ab8098e760da7a0eb5c5128865c63d4f2fa2a3435d5b3273391cb841"
+    },
+    {
+      "file": "002-guard-file-system-mutations.patch",
+      "sha256": "fe67cbcc25a9dc051d0a4be6f9ed7c66baffeb1f80f548d6ddd7cecc7354c82b"
+    }
+  ],
+  "issue": ".scratch/005-m5-application-ecosystem/issues/10-reduce-runtime-startup-blocking.md",
+  "upstream_report": ".scratch/005-m5-application-ecosystem/records/2026-10-05-runtime-startup-performance.md",
+  "upstream_submission": "not submitted",
+  "remove_when": "Storage metadata uses one equivalent VFS lookup while preserving file types, sizes, symlink handling and file-clock timestamps; package integrity and device performance regressions pass."
+}

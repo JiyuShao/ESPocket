@@ -1,0 +1,143 @@
+--- a/include/brookesia/service_storage/service_storage.hpp
++++ b/include/brookesia/service_storage/service_storage.hpp
+@@ -6,6 +6,7 @@
+ #pragma once
+ 
+ #include <expected>
++#include <functional>
+ #include <filesystem>
+ #include <memory>
+ #include <string>
+@@ -50,7 +51,34 @@
+         return instance;
+     }
+ 
++    // Firmware-only configuration; never exposed as a Storage service function.
++    using FileSystemMutationGuard = std::function<std::expected<void, std::string>(
++        const std::filesystem::path &, const CallContext &)>;
++    void set_file_system_mutation_guard(FileSystemMutationGuard guard)
++    {
++        mutation_guard_ = std::move(guard);
++    }
++
++    using KeyValueAccessGuard = std::function<std::expected<void, std::string>(
++        const std::string &, const CallContext &)>;
++    void set_key_value_access_guard(KeyValueAccessGuard guard)
++    {
++        kv_access_guard_ = std::move(guard);
++    }
++
+ private:
++    KeyValueAccessGuard kv_access_guard_;
++    std::expected<void, std::string> authorize_key_value_access(const std::string &nspace)
++    {
++        if (!kv_access_guard_) return {};
++        return kv_access_guard_(nspace, get_current_call_context());
++    }
++    std::expected<void, std::string> authorize_file_system_mutation(const std::filesystem::path &path)
++    {
++        if (!mutation_guard_) return {};
++        return mutation_guard_(path, get_current_call_context());
++    }
++    FileSystemMutationGuard mutation_guard_;
+     static std::string get_component_version();
+ 
+ #if BROOKESIA_SERVICE_STORAGE_ENABLE_PRIVATE_SCHEDULER
+--- a/src/service_storage.cpp
++++ b/src/service_storage.cpp
+@@ -857,6 +857,8 @@
+ 
+ std::expected<boost::json::array, std::string> Storage::function_list(const std::string &nspace)
+ {
++    if (auto authorized = authorize_key_value_access(nspace); !authorized)
++        return std::unexpected(authorized.error());
+     BROOKESIA_LOG_TRACE_GUARD_WITH_THIS();
+     BROOKESIA_LOGD("Params: nspace(%1%)", nspace);
+ 
+@@ -876,8 +878,10 @@
+ 
+ std::expected<void, std::string> Storage::function_set(const std::string &nspace, boost::json::object &&key_value_map)
+ {
+-    BROOKESIA_LOG_TRACE_GUARD_WITH_THIS();
+-    BROOKESIA_LOGD("Params: nspace(%1%), key_value_map(%2%)", nspace, BROOKESIA_DESCRIBE_TO_STR(key_value_map));
++    if (auto authorized = authorize_key_value_access(nspace); !authorized)
++        return std::unexpected(authorized.error());
++    BROOKESIA_LOG_TRACE_GUARD_WITH_THIS();
++    BROOKESIA_LOGD("Params: nspace(%1%), keys(%2%)", nspace, key_value_map.size());
+ 
+     if (!kv_iface_) {
+         return std::unexpected("Storage KV HAL interface is not available");
+@@ -1010,6 +1014,8 @@
+     if (!path) {
+         return std::unexpected(path.error());
+     }
++    if (auto authorized = authorize_file_system_mutation(*path); !authorized)
++        return std::unexpected(authorized.error());
+ 
+     auto result = create_directory_tree(path.value());
+     return result;
+@@ -1070,6 +1076,8 @@
+     if (!path) {
+         return std::unexpected(path.error());
+     }
++    if (auto authorized = authorize_file_system_mutation(*path); !authorized)
++        return std::unexpected(authorized.error());
+ 
+     return write_bytes_to_file(path.value(), reinterpret_cast<const uint8_t *>(data.data()), data.size());
+ }
+@@ -1087,6 +1095,8 @@
+     if (!path) {
+         return std::unexpected(path.error());
+     }
++    if (auto authorized = authorize_file_system_mutation(*path); !authorized)
++        return std::unexpected(authorized.error());
+ 
+     return write_bytes_to_file(path.value(), data.to_const_ptr<uint8_t>(), data.data_size);
+ }
+@@ -1104,6 +1114,8 @@
+     if (!path) {
+         return std::unexpected(path.error());
+     }
++    if (auto authorized = authorize_file_system_mutation(*path); !authorized)
++        return std::unexpected(authorized.error());
+     if (is_file_system_root(file_system_roots_, path.value())) {
+         return std::unexpected("Storage FS remove path must not be a mounted file-system root");
+     }
+@@ -1130,6 +1142,10 @@
+     if (!to) {
+         return std::unexpected(to.error());
+     }
++    if (auto authorized = authorize_file_system_mutation(*to); !authorized)
++        return std::unexpected(authorized.error());
++    if (auto authorized = authorize_file_system_mutation(*from); !authorized)
++        return std::unexpected(authorized.error());
+     if (is_file_system_root(file_system_roots_, from.value()) ||
+             is_file_system_root(file_system_roots_, to.value())) {
+         return std::unexpected("Storage FS rename source/destination must not be a mounted file-system root");
+@@ -1170,6 +1186,8 @@
+     if (!to) {
+         return std::unexpected(to.error());
+     }
++    if (auto authorized = authorize_file_system_mutation(*to); !authorized)
++        return std::unexpected(authorized.error());
+     if (is_file_system_root(file_system_roots_, to.value())) {
+         return std::unexpected("Storage FS copy destination must not be a mounted file-system root");
+     }
+@@ -1179,6 +1197,8 @@
+ 
+ std::expected<boost::json::object, std::string> Storage::function_get(const std::string &nspace, boost::json::array &&keys)
+ {
++    if (auto authorized = authorize_key_value_access(nspace); !authorized)
++        return std::unexpected(authorized.error());
+     BROOKESIA_LOG_TRACE_GUARD_WITH_THIS();
+     BROOKESIA_LOGD("Params: nspace(%1%), keys(%2%)", nspace, keys);
+ 
+@@ -1203,6 +1223,8 @@
+ 
+ std::expected<void, std::string> Storage::function_erase(const std::string &nspace, boost::json::array &&keys)
+ {
++    if (auto authorized = authorize_key_value_access(nspace); !authorized)
++        return std::unexpected(authorized.error());
+     BROOKESIA_LOG_TRACE_GUARD_WITH_THIS();
+     BROOKESIA_LOGD("Params: nspace(%1%), keys(%2%)", nspace, keys);
+ 

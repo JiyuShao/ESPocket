@@ -9,6 +9,7 @@
 
 #include "espocket/developer_mode.hpp"
 #include "espocket/test_protocol.hpp"
+#include "espocket/usb_connection_watchdog.hpp"
 #include "espocket/test_input_queue.hpp"
 #include "espocket/touch_input_sequence.hpp"
 #include "espocket/owner_snapshot_queue.hpp"
@@ -23,6 +24,13 @@ void require(bool condition, std::string_view message)
 
 int main()
 {
+    espocket::UsbConnectionWatchdog link;
+    require(!link.observe(false, 0), "disconnected startup");
+    require(link.observe(true, 10), "physical connection");
+    require(link.observe(false, 20) && link.observe(false, 219), "short SOF gap retains session");
+    require(link.observe(true, 220), "SOF recovery resets loss window");
+    require(link.observe(false, 230) && !link.observe(false, 430), "sustained disconnect cancels session");
+    require(link.observe(true, 500), "reconnection");
     const std::string response = R"({"version":1,"request_id":42,"ok":true})";
     std::istringstream console("Runtime initialized: " +
         espocket::detail::encode_usb_response(response) + "remaining log\n");

@@ -33,3 +33,5 @@ Runtime package 可以通过多个产品入口到达，也会在重启后被重�
 ## 开发者模式修订
 
 [ADR-0018](0018-developer-mode-allows-unsigned-packages.md) 对发行签名要求增加用户已接受的开发者模式例外；Core 统一安装边界、事务与重启验证职责保持有效。
+
+[ADR-0019](0019-reuse-protected-package-verification.md) 修订完整重验的时机：受保护安装版本可以复用绑定事务与信任配置的持久验证结果；未完成事务、修改失效与缺失／损坏记录仍 fail closed。
