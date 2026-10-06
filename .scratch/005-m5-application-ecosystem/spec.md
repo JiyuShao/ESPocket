@@ -108,6 +108,8 @@ ESPocket 需要官方 Store 与远程 Runtime distribution path，但锁定的�
 
 2026-10-06 新增 [13](issues/13-xiaozhi-and-launcher-performance.md)：实际选择并验证小智，修复阻碍配置的显示入口，对照 Launcher 绘制并落实有效方案。沿用数据保护和完成后本地合并／清理授权。
 
+2026-10-07：[13](issues/13-xiaozhi-and-launcher-performance.md) 完成并合并本地 main，任务 worktree 已清理。最终普通镜像 `0203fb1fc` 的小智激活码、播报中 Home、八 App 联合与导航回归通过；Launcher 改为四行 Release 翻页，warm 累计 draw 降低 55.25%。完整语音仍需要账号绑定和真实录音支持；未把激活等待当作云端对话通过。详见[验收记录](records/2026-10-07-xiaozhi-launcher.md)。
+
 2026-10-06 用户进一步授权全部存储／缓存策略修复、Launcher／Weather 卡顿优化、系统侧矩形 Runtime 的圆屏兼容，以及安装除 Camera 外的 Store App；由 [12](issues/12-storage-round-display-and-runtime-usability.md) 持有具体验收。保留原包与用户数据，验证完成后合并本地 main 并清理任务 worktree／分支；真实 Service 或凭据缺失必须明确说明。
 
 该票已完成：启用实测 32 MiB Flash 并保留数据，所有非 Camera App 安装／启动／Home 通过，Calculator 四角运算与 Weather 滚动通过；最终普通镜像 `69edbcc15` 的 apps/navigation/surfaces 与精确构建验证通过。Weather 首次启动 6.554 s，Chronos 12.289 s，Launcher 仍有软件绘制限制；不宣称全局 30 FPS。按授权合并本地 main，保留其它工作与原有发行／物理门槛。见[最终记录](records/2026-10-06-storage-round-runtime.md)。

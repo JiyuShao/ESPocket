@@ -43,3 +43,5 @@ Host 检查通过：最终 150 项跨模块 host tests（1 项已有 skip），S
 串口重启脚本第一次使用默认 DTR 设置，未得到重启日志并超时；改为与已验证 flash helper 相同的 DTR／RTS 初始化后重启成功。临时多点轨迹第一次使用 20ms 间隔，低于真实适配器的 40ms 最小间隔，被准确拒绝为 bad_request；按 40ms 重跑通过。这两次不作为设备性能或固件崩溃证据。
 
 原始证据保留在 `/private/tmp/espocket-ai-*.log`、`espocket-launcher-continuous-*.log`、`espocket-launcher-pages-comparison.json`、`espocket-xiaozhi-launcher-*.log` 与设备 suite JSON。原有备份、用户文件和其它工作的未完成门槛保留。
+
+2026-10-07：修复提交 `d6b52e2` 已 fast-forward 合并本地 main；managed worktree `xiaozhi-launcher` 已通过 app 归档清理，确认 Git 仅保留主 checkout 和本地 main 分支。没有 push；未删除原有设备备份或其它工作。工作票在这些步骤完成后关闭。
