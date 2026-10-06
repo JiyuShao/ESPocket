@@ -54,3 +54,19 @@ GUI LVGL 0.8.5 的 [图片内部滚动补丁](espressif__brookesia_gui_lvgl/0.8.
 Core [同域队列候选](espressif__brookesia_system_core/0.8.4/010-share-task-domain-strands.patch) 已纳入 canonical manifest，同目录 `scheduler-candidate.json` 保留相同补丁组合；显式 `--patch-set scheduler-candidate` 在 GUI 候选上使 App／App Input、GUI／GUI Input 各共用一个 strand，保留原 gate 和 callback context。真实 group callback 与 Boost strand 回归验证独立 timer 的进展；原包压力、截图和完整 Apps 回归通过后已纳入默认 manifest。显示缓冲实验另用 `--display-buffer-height 80 --display-single-buffer`，保持默认 40 行及原双缓冲选择；实验配置和源码身份随 patch-inputs 保存。两项状态由同一工作票持有。
 
 Core 图片来源背压候选 [011](espressif__brookesia_system_core/0.8.4/011-bound-image-source-dispatch.patch) 已纳入默认 manifest：`SetViewSrc` 通过既有同步 GUI Owner 队列按序完成，避免周期 App 在 GUI 变慢时持续创建任务／promise。真实 call site 和 run_task_sync 模板覆盖慢 Owner、有界任务、全序更新与错误传播；真机 mutex 分配 abort 回溯及候选状态仍由 005/10 持有，原包联合回归通过后已纳入默认 manifest。
+
+Core 0.8.4 新增[Overlay 请求有效性查询](espressif__brookesia_system_core/0.8.4/013-overlay-request-validity.patch)，由 [019/03](../../.scratch/019-system-shell-remediation/issues/03-arbitrate-overlay-input-and-deadlines.md)持有。该隔离实施候选只读取真实请求 Owner，不复制队列；查询在恢复呈现或提交结果前执行，调用不得持有 GUI 锁。源码/构建证据与尚待集成和真机门槛见[实施记录](../../.scratch/019-system-shell-remediation/records/2026-10-04-overlay-isolated-implementation.md)，不以加入 manifest 代替设备验收。
+
+
+Core 019 整合补丁 012–014 分别处理 partial initialization 清理、真实 Overlay 请求有效性与 staging 同步删除旧成员；前序性能补丁保留，准确应用/hash、源码回归及尚未完成门槛见[019 联合整合记录](../../.scratch/019-system-shell-remediation/records/2026-10-05-joint-integration.md)。
+
+esp_lv_decoder 0.4.3 的[不透明 PNG 原生 RGB565](espressif__esp_lv_decoder/0.4.3/001-copy-opaque-png-as-rgb565.patch)只在首次解码确认所有 alpha=255 后转换，透明 PNG、非 RGB565 display 与分配失败保持原格式；同时按实际 stride 解码 padding 行。Lib utils 的[空闲 worker 即时唤醒](espressif__brookesia_lib_utils/0.8.2/002-wake-idle-worker-on-task.patch)保留逐项 dispatch 和 busy 后 1 ms 让步，空闲等待可被入队任务/到期 timer 唤醒。真实调用点回归、单变量真机测量与最终组合结果见[延迟优化记录](../../.scratch/005-m5-application-ecosystem/records/2026-10-05-runtime-timer-latency.md)，不得以 host 通过代替性能及 watchdog 门槛。
+
+
+esp-boost 0.6.0 的[ESP 条件变量等待时钟补丁](espressif__esp-boost/0.6.0/001-match-esp-condition-wait-clock.patch)匹配该平台默认 CLOCK_REALTIME 的条件变量初始化，保留其他平台的原路径。它是即时唤醒候选在真机启动失败后定位的前置修复；原失败、真实等待方法 RED/GREEN、设备结果和采纳边界同见延迟优化记录。
+
+Core 的[诊断输出降优先级](espressif__brookesia_system_core/0.8.4/017-lower-timer-diagnostic-priority.patch)在 ESP 上只在输出 timer 样本期间将当前 worker 降至最多 2，并通过作用域 guard 恢复原优先级。诊断仍保留有界发布与丢窗标记；真实输出调用点回归验证输出期间优先级及结束后恢复，性能收益仍须原包真机测量。
+
+Decoder 的[二值 alpha PNG 原生绘制](espressif__esp_lv_decoder/0.4.3/002-copy-binary-alpha-png-as-rgb565a8.patch)只在 RGB565 display、alpha 全为 0/255 且 LVGL 支持 RGB565A8 时转换，alpha 平面保持半个 RGB stride；半透明、未启用目标格式和分配失败均保留 ARGB8888。原包无需改变，格式、padding、像素与 fallback 回归通过后仍须真机计时和截图验收。
+
+Core 的[有界异步 source 队列](espressif__brookesia_system_core/0.8.4/018-bound-asynchronous-image-source-queue.patch)取代 011 的同步等待，恢复上游 SetViewSrc 的异步提交契约：返回值表示接受，实际 GUI source 失败仍由 GUI Owner 报告。每个 App/document 待处理批次最多 8 项、32 KiB，保留所有已接受 source 的 FIFO 顺序，不合并或静默丢弃换帧；最多一个批次执行、一个后继 GUI task 排队。队列满或调度失败立即拒绝；停止／卸载／重启（包括保留同一 DOM）撤销旧 buffer。旧实例不能把已排队内容应用到新实例。回归同时验证非阻塞、容量、顺序、失败和撤销，仍须原包计时与长期压力验收。

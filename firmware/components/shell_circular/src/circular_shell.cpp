@@ -1,4 +1,5 @@
 #include "shell_internal.hpp"
+#include "brookesia/lib_utils/function_guard.hpp"
 
 namespace espocket {
 
@@ -29,11 +30,43 @@ std::expected<void, std::string> CircularShell::on_start(
     esp_brookesia::system::core::AppContext &context
 )
 {
+    // A failed stop retains revoked presentation storage until GUI cleanup.
+    // Never overwrite it with a new Running Instance's state.
+    if (loading_state_) {
+        std::lock_guard lock(loading_state_->mutex);
+        if (loading_state_->overlay) return std::unexpected("Previous Loading cleanup pending");
+    }
+    if (keyboard_state_) {
+        std::lock_guard lock(keyboard_state_->mutex);
+        if (keyboard_state_->overlay) return std::unexpected("Previous keyboard cleanup pending");
+    }
+    if (message_dialog_state_) {
+        std::lock_guard lock(message_dialog_state_->mutex);
+        if (message_dialog_state_->overlay) return std::unexpected("Previous Dialog cleanup pending");
+    }
+    if (back_overlay_state_ && (back_overlay_state_->button || back_overlay_state_->card_hint)) {
+        return std::unexpected("Previous Back cleanup pending");
+    }
     context_ = &context;
-    if (auto colors = load_theme_colors(); !colors) {
+    // Core does not call Native on_stop when on_start fails.
+    esp_brookesia::lib_utils::FunctionGuard start_cleanup([this, &context]() {
+        gesture_connection_.disconnect();
+        if (home_intent_timer_id_ != esp_brookesia::system::core::INVALID_TIMER_ID) {
+            (void)context.timer().stop(home_intent_timer_id_);
+        }
+        home_intent_timer_id_ = esp_brookesia::system::core::INVALID_TIMER_ID;
+        display_binding_.release();
+        home_gesture_state_.reset();
+        loading_state_.reset();
+        keyboard_state_.reset();
+        message_dialog_state_.reset();
+        back_overlay_state_.reset();
         context_ = nullptr;
+    });
+    if (auto colors = load_theme_colors(); !colors) {
         return colors;
     }
+    loading_state_ = std::make_shared<LoadingState>();
     keyboard_state_ = std::make_shared<KeyboardState>();
     message_dialog_state_ = std::make_shared<MessageDialogState>();
     back_overlay_state_ = std::make_shared<BackOverlayState>();
@@ -53,8 +86,6 @@ std::expected<void, std::string> CircularShell::on_start(
          }) {
         auto action_result = context.gui().subscribe_action(action);
         if (!action_result) {
-            keyboard_state_.reset();
-            context_ = nullptr;
             return std::unexpected("Failed to subscribe Launcher action: " + action_result.error());
         }
     }
@@ -65,9 +96,6 @@ std::expected<void, std::string> CircularShell::on_start(
     screen_timeout_latched_ = false;
     auto gesture_result = configure_home_gesture();
     if (!gesture_result) {
-        home_gesture_state_.reset();
-        keyboard_state_.reset();
-        context_ = nullptr;
         return gesture_result;
     }
 
@@ -76,11 +104,6 @@ std::expected<void, std::string> CircularShell::on_start(
                           HOME_INTENT_INTERVAL_MS
                       );
     if (!home_timer) {
-        gesture_connection_.disconnect();
-        display_binding_.release();
-        home_gesture_state_.reset();
-        keyboard_state_.reset();
-        context_ = nullptr;
         return std::unexpected(
             "Failed to start Home intent timer: " + home_timer.error()
         );
@@ -101,6 +124,7 @@ std::expected<void, std::string> CircularShell::on_start(
     launcher_refresh_at_us_ = 0;
     refresh_launcher();
     start_status();
+    start_cleanup.release();
     ESP_LOGI(SHELL_TAG, "Circular Shell started");
     return {};
 }
@@ -111,6 +135,15 @@ std::expected<void, std::string> CircularShell::on_stop(
 {
     (void)context;
     stop_launcher();
+    bool overlay_cleanup_pending = false;
+    if (loading_state_) {
+        esp_brookesia::system::core::AppId app;
+        { std::lock_guard lock(loading_state_->mutex); app = loading_state_->app_id; }
+        hide_loading(app, true);
+        hide_loading(app);
+        std::lock_guard lock(loading_state_->mutex);
+        overlay_cleanup_pending |= loading_state_->overlay != nullptr;
+    }
     if (keyboard_state_) {
         esp_brookesia::system::core::AppId app_id =
             esp_brookesia::system::core::INVALID_APP_ID;
@@ -135,8 +168,19 @@ std::expected<void, std::string> CircularShell::on_stop(
         }
         hide_message_dialog(app_id, request_id);
     }
+    if (keyboard_state_) {
+        std::lock_guard lock(keyboard_state_->mutex);
+        overlay_cleanup_pending |= keyboard_state_->overlay != nullptr;
+    }
+    if (message_dialog_state_) {
+        std::lock_guard lock(message_dialog_state_->mutex);
+        overlay_cleanup_pending |= message_dialog_state_->overlay != nullptr;
+    }
     sync_default_back(false);
     sync_card_hint(false);
+    if (back_overlay_state_ && (back_overlay_state_->button || back_overlay_state_->card_hint)) {
+        overlay_cleanup_pending = true;
+    }
     gesture_connection_.disconnect();
     if (home_intent_timer_id_ != esp_brookesia::system::core::INVALID_TIMER_ID) {
         (void)context.timer().stop(home_intent_timer_id_);
@@ -146,8 +190,14 @@ std::expected<void, std::string> CircularShell::on_stop(
     stop_status();
     display_binding_.release();
     context_ = nullptr;
+    if (overlay_cleanup_pending) {
+        // All input/subscriptions/bindings are already stopped, even on GUI failure.
+        // Keep identities revoked and report incomplete resource cleanup.
+        return std::unexpected("Shell Overlay GUI cleanup pending");
+    }
     keyboard_state_.reset();
     message_dialog_state_.reset();
+    loading_state_.reset();
     back_overlay_state_.reset();
     callback_state_.reset();
     return {};
@@ -223,6 +273,37 @@ std::expected<void, std::string> CircularShell::on_timer(
 {
     (void)context;
     if (timer_id == home_intent_timer_id_ && name == HOME_INTENT_TIMER) {
+        // Consume recognized PWR before any not-yet-submitted GUI intent.
+        if (host_.tick) host_.tick();
+        refresh_overlay_input();
+        if (loading_state_) {
+            esp_brookesia::system::core::AppId app;
+            bool retry;
+            { std::lock_guard lock(loading_state_->mutex); app = loading_state_->app_id; retry = loading_state_->invalidated; }
+            if (retry) hide_loading(app);
+        }
+        if (keyboard_state_) {
+            esp_brookesia::system::core::AppId app;
+            esp_brookesia::system::core::KeyboardRequestId request;
+            bool retry;
+            {
+                std::lock_guard lock(keyboard_state_->mutex);
+                app = keyboard_state_->app_id; request = keyboard_state_->request_id;
+                retry = keyboard_state_->invalidated;
+            }
+            if (retry) hide_keyboard(app, request);
+        }
+        if (message_dialog_state_) {
+            esp_brookesia::system::core::AppId app;
+            esp_brookesia::system::core::MessageDialogRequestId request;
+            bool retry;
+            {
+                std::lock_guard lock(message_dialog_state_->mutex);
+                app = message_dialog_state_->app_id; request = message_dialog_state_->request_id;
+                retry = message_dialog_state_->invalidated;
+            }
+            if (retry) hide_message_dialog(app, request);
+        }
         if (host_.expire_back) {
             host_.expire_back();
         }
@@ -230,7 +311,8 @@ std::expected<void, std::string> CircularShell::on_timer(
             const bool clicked = back_overlay_state_->clicked.exchange(
                                      false, std::memory_order_acq_rel
                                  );
-            if (clicked && host_.back) {
+            if (clicked && !(home_gesture_state_ && home_gesture_state_->modal_active.load()) &&
+                    !cancel_keyboard_input() && host_.back) {
                 host_.back();
             }
             bool keyboard_active = false;
@@ -241,39 +323,16 @@ std::expected<void, std::string> CircularShell::on_timer(
             }
             const bool modal_active = home_gesture_state_ &&
                 home_gesture_state_->modal_active.load(std::memory_order_acquire);
-            const bool visible = host_.back_ui && host_.back_ui().default_visible &&
-                                 !keyboard_active && !modal_active;
+            const bool visible = (keyboard_active || (host_.back_ui && host_.back_ui().default_visible)) &&
+                                 !modal_active;
             sync_default_back(visible);
             const auto surface = current_surface();
             sync_card_hint(!keyboard_active && !modal_active && !(host_.app_visible && host_.app_visible()) &&
                 (surface == ShellSurface::LeftAppCard || surface == ShellSurface::RightAppCard));
         }
-        if (keyboard_state_ && host_.keyboard_result) {
-            esp_brookesia::system::core::AppId app_id =
-                esp_brookesia::system::core::INVALID_APP_ID;
-            esp_brookesia::system::core::KeyboardRequestId request_id =
-                esp_brookesia::system::core::INVALID_KEYBOARD_REQUEST_ID;
-            bool confirmed = false;
-            std::string text;
-            {
-                std::lock_guard lock(keyboard_state_->mutex);
-                if (keyboard_state_->result_pending) {
-                    app_id = keyboard_state_->app_id;
-                    request_id = keyboard_state_->request_id;
-                    confirmed = keyboard_state_->confirmed;
-                    text = std::move(keyboard_state_->text);
-                    keyboard_state_->result_pending = false;
-                }
-            }
-            if (request_id != esp_brookesia::system::core::INVALID_KEYBOARD_REQUEST_ID) {
-                hide_keyboard(app_id, request_id);
-                host_.keyboard_result(app_id, request_id, confirmed, std::move(text));
-            }
-        }
+        poll_keyboard();
         poll_message_dialog();
-        if (host_.tick) {
-            host_.tick();
-        }
+
         refresh_launcher();
         if (status_refresh_deferred_) refresh_status();
         dispatch_launcher();
@@ -356,7 +415,7 @@ std::expected<void, std::string> CircularShell::on_timer(
                 result = show_surface(ShellSurface::Launcher);
                 break;
             case GestureIntent::Back:
-                if (host_.back) {
+                if (!cancel_keyboard_input() && host_.back) {
                     host_.back();
                 }
                 break;

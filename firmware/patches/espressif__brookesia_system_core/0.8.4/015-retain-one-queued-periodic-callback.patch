@@ -1,0 +1,21 @@
+--- a/src/system/timer.cpp
++++ b/src/system/timer.cpp
+@@ -178,12 +178,16 @@
+ #endif
+             ]()
+         {
+-            lib_utils::FunctionGuard clear_pending_guard([this, app_id, timer_id]() {
++            // Pending denotes queued work, not the callback already executing.
++            // Release this slot before dispatch so one next due callback can
++            // wait on the same serial App strand. Further due times still
++            // coalesce; never erase the next callback's slot on this return.
++            {
+                 std::lock_guard lock(impl_->timer_mutex_);
+                 std::erase_if(impl_->pending_timers_, [app_id, timer_id](const Impl::PendingTimer & timer) {
+                     return (timer.app_id == app_id) && (timer.timer_id == timer_id);
+                 });
+-            });
++            }
+ #if BROOKESIA_SYSTEM_CORE_ENABLE_PROFILE_LOG
+             const auto started=timer_probe_now();
+ #endif

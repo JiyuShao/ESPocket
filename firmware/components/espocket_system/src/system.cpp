@@ -36,11 +36,15 @@ std::expected<std::vector<LauncherApp>, std::string> System::launcher_apps(std::
 
 System::~System()
 {
+    // Derived hooks and callback targets must still exist during Core teardown.
+    esp_brookesia::system::core::System::deinit();
     stop_runtime_navigation();
+    stop_display();
 }
 
 std::expected<void, std::string> System::init()
 {
+    if (startup_failed_) return std::unexpected("Critical startup failure requires explicit device restart");
     auto &service_manager = esp_brookesia::service::ServiceManager::get_instance();
     if (!service_manager.init()) {
         return std::unexpected("Failed to initialize ServiceManager");
@@ -81,9 +85,7 @@ std::expected<void, std::string> System::init()
     auto result = esp_brookesia::system::core::System::init(std::move(config));
     if (!result) {
         stop_runtime_navigation();
-        DisplaySource::get_instance().stop();
-        display_binding_.release();
-        display_started_ = false;
+        stop_display();
         return result;
     }
     return {};
@@ -104,17 +106,24 @@ std::expected<void, std::string> System::init_product_theme()
 
 std::expected<void, std::string> System::restore_product_theme()
 {
-    const auto theme = get_stored_gui_theme_id().value_or("dark");
-    if (theme != "dark" && theme != "light") {
-        return std::unexpected("Unsupported saved product theme: " + theme);
-    }
+    const auto saved_theme = get_stored_gui_theme_id();
+    const auto theme = saved_theme.value_or("dark");
+    // Suppress preference writes through both the saved-theme attempt and fallback.
     begin_gui_preferences_restore();
-    auto result = system_gui().set_theme(theme, false);
+    std::expected<void, std::string> result = std::unexpected("Unsupported saved product theme: " + theme);
+    if (theme == "dark" || theme == "light") {
+        result = system_gui().set_theme(theme, false);
+    }
+    if (!result && theme != "dark") {
+        ESP_LOGW(TAG, "Saved product theme unavailable (%s): %s; using dark temporarily",
+                 theme.c_str(), result.error().c_str());
+        result = system_gui().set_theme("dark", false);
+    }
     if (!result) {
-        return std::unexpected("Failed to restore product GUI theme: " + result.error());
+        return std::unexpected("Failed to apply product GUI theme/default: " + result.error());
     }
     mark_gui_preferences_restored();
-    ESP_LOGI(TAG, "Product GUI theme active: %s", theme.c_str());
+    ESP_LOGI(TAG, "Product GUI theme restored (saved preference retained)");
     return {};
 }
 
@@ -323,6 +332,8 @@ std::expected<void, std::string> System::on_init()
             return launcher_apps(language);
         },
         .launcher_generation = [this] { return launcher_generation_.load(std::memory_order_acquire); },
+        .keyboard_valid = [this](auto app, auto request) { return has_app_keyboard_request(app, request); },
+        .message_dialog_valid = [this](auto app, auto request) { return has_message_dialog_request(app, request); },
         }
     );
     auto result = install_app(shell_);
@@ -414,23 +425,22 @@ void System::on_stop()
         power_key_monitor_->stop();
     }
 
-    if (shell_id_ != esp_brookesia::system::core::INVALID_APP_ID) {
-        auto shell_result = stop_app(shell_id_);
-        if (!shell_result) {
-            ESP_LOGW(TAG, "Failed to stop Circular Shell: %s", shell_result.error().c_str());
-        }
+    if (test_touch_input_) (void)test_touch_input_->cancel();
+    if (test_power_input_) test_power_input_->cancel_pending();
+    using namespace esp_brookesia::system::core;
+    const auto apps = list_apps();
+    for (const auto &app : apps) {
+        if (app.app_id == shell_id_ || app.state == AppState::Installed || app.state == AppState::Stopped) continue;
+        auto result = stop_app(app.app_id);
+        if (!result) ESP_LOGE(TAG, "Managed App stop failed: %s: %s", app.manifest.id.c_str(), result.error().c_str());
     }
-
-    const auto app_id = foreground_app_id_.exchange(
-                            esp_brookesia::system::core::INVALID_APP_ID,
-                            std::memory_order_acq_rel
-                        );
-    if (app_id != esp_brookesia::system::core::INVALID_APP_ID) {
-        auto app_result = stop_app(app_id);
-        if (!app_result) {
-            ESP_LOGW(TAG, "Failed to stop foreground app: %s", app_result.error().c_str());
-        }
+    if (shell_id_ != INVALID_APP_ID) {
+        auto result = stop_app(shell_id_);
+        if (!result) ESP_LOGE(TAG, "Circular Shell stop failed: %s", result.error().c_str());
     }
+    foreground_app_id_.store(INVALID_APP_ID, std::memory_order_release);
+    resume_app_id_ = INVALID_APP_ID;
+    lifecycle_restore_pending_ = false;
 }
 
 void System::on_deinit()
@@ -443,6 +453,11 @@ void System::on_deinit()
     card_session_.reset();
     card_actions_.reset();
     card_factories_.clear();
+    test_adapter_.reset();
+    test_snapshots_.reset();
+    developer_mode_.reset();
+    launcher_admissions_.clear();
+    launcher_generation_.fetch_add(1, std::memory_order_release);
     shell_.reset();
     settings_adapter_.reset();
     card_store_.reset();
@@ -473,11 +488,7 @@ void System::on_deinit()
     launch_source_ = ShellSurface::WatchFace;
     lifecycle_restore_surface_ = ShellSurface::WatchFace;
     lifecycle_restore_pending_ = false;
-    if (display_started_) {
-        DisplaySource::get_instance().stop();
-        display_started_ = false;
-    }
-    display_binding_.release();
+    stop_display();
 }
 
 } // namespace espocket

@@ -21,9 +21,27 @@ brookesia_stage_runtime_app_package(
 
 get_property(runtime_app_stage_targets GLOBAL PROPERTY BROOKESIA_RUNTIME_APP_STAGE_TARGETS)
 list(REMOVE_DUPLICATES runtime_app_stage_targets)
+# Validate real package inputs at configure time and staged bytes before imaging.
+idf_component_get_property(espocket_settings_dir espressif__brookesia_app_settings COMPONENT_DIR)
+idf_component_get_property(espocket_store_dir espressif__brookesia_app_store COMPONENT_DIR)
+set(espocket_resource_check
+    "${PYTHON}" "${CMAKE_CURRENT_LIST_DIR}/check_resources.py"
+    --runtime "${PROJECT_DIR}/runtime_apps/hello/src"
+    --settings "${espocket_settings_dir}/package"
+    --store "${espocket_store_dir}/package"
+)
+execute_process(COMMAND ${espocket_resource_check} RESULT_VARIABLE espocket_resource_result)
+if(NOT espocket_resource_result EQUAL 0)
+    message(FATAL_ERROR "Built-in package resource integrity failed")
+endif()
+add_custom_target(espocket_check_staged_resources
+    COMMAND ${espocket_resource_check} --stage-root "${runtime_app_stage_root}"
+    DEPENDS ${runtime_app_stage_targets}
+    VERBATIM
+)
 littlefs_create_partition_image(
     littlefs_data
     "${CMAKE_BINARY_DIR}/littlefs-root"
     FLASH_IN_PROJECT
-    DEPENDS ${runtime_app_stage_targets}
+    DEPENDS espocket_check_staged_resources
 )

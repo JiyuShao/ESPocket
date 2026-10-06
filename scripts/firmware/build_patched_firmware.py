@@ -18,7 +18,7 @@ VERSION = '0.8.3'
 PATCHES = ((COMPONENT, VERSION), ('espressif__brookesia_system_core', '0.8.4'))
 PATCH_SETS = {
     'baseline': PATCHES,
-    'production': PATCHES + (('espressif__brookesia_hal_adaptor', '0.8.4'), ('espressif__brookesia_app_settings', '0.8.3'), ('espressif__brookesia_service_display', '0.8.2'), ('espressif__esp_board_manager', '0.5.15'), ('espressif__brookesia_app_store', '0.8.2'), ('espressif__brookesia_lib_utils', '0.8.2'), ('espressif__brookesia_service_storage', '0.8.3'), ('espressif__brookesia_gui_lvgl', '0.8.5'), ('espressif__brookesia_gui_interface', '0.8.2')),
+    'production': PATCHES + (('espressif__brookesia_hal_adaptor', '0.8.4'), ('espressif__brookesia_app_settings', '0.8.3'), ('espressif__brookesia_service_display', '0.8.2'), ('espressif__esp_board_manager', '0.5.15'), ('espressif__brookesia_app_store', '0.8.2'), ('espressif__brookesia_lib_utils', '0.8.2'), ('espressif__brookesia_service_storage', '0.8.3'), ('espressif__brookesia_gui_lvgl', '0.8.5'), ('espressif__brookesia_gui_interface', '0.8.2'), ('espressif__esp_lv_decoder', '0.4.3'), ('espressif__esp-boost', '0.6.0')),
     'hal-candidate': PATCHES + (('espressif__brookesia_hal_adaptor', '0.8.4'),),
     'audio-candidate': PATCHES + (('espressif__brookesia_hal_adaptor', '0.8.4'), ('espressif__brookesia_app_settings', '0.8.3')),
     'display-candidate': PATCHES + (('espressif__brookesia_hal_adaptor', '0.8.4'), ('espressif__brookesia_app_settings', '0.8.3'), ('espressif__brookesia_service_display', '0.8.2')),
@@ -138,6 +138,7 @@ def patch_manifest(root, component, version, patch_set):
 
 
 def stage(root, workspace, sdkconfig, patch_set='production', *, display_buffer_height=40, display_single_buffer=False):
+    source_spelling = str(root / 'firmware')
     root = root.resolve()
     source = root / 'firmware'
     workspace = workspace.resolve()
@@ -165,6 +166,20 @@ def stage(root, workspace, sdkconfig, patch_set='production', *, display_buffer_
         return set(names) & ignored
 
     shutil.copytree(source, firmware, ignore=ignore_generated)
+    # Board Manager emits absolute component paths. Keep the copied board input
+    # inside this workspace, rather than selecting a component from the checkout.
+    generated_board = firmware / 'components/gen_bmgr_codes'
+    for name in ('CMakeLists.txt', 'idf_component.yml', 'board_manager.defaults'):
+        generated = generated_board / name
+        if generated.is_file():
+            generated.write_text(generated.read_text().replace(source_spelling, str(firmware)).replace(str(source), str(firmware)))
+    board_manifest = generated_board / 'idf_component.yml'
+    if board_manifest.is_file():
+        for match in re.finditer(r'^\s+override_path: ["\']?(/[^"\'\n]+)',
+                                 board_manifest.read_text(), re.MULTILINE):
+            selected_board_component = Path(match[1]).resolve()
+            if not selected_board_component.is_relative_to(firmware):
+                raise ValueError('Generated board override is outside the isolated firmware; regenerate board configuration')
     shutil.copyfile(sdkconfig, firmware / 'sdkconfig')
     main_manifest = firmware / 'main/idf_component.yml'
     constraints = registry_lock(source / 'dependencies.lock')

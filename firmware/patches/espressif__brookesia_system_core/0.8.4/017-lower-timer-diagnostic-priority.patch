@@ -1,0 +1,46 @@
+--- a/src/system/timer.cpp
++++ b/src/system/timer.cpp
+@@ -12,6 +12,10 @@
+ #include "private/system/impl.hpp"
+ #include <chrono>
+ #include <atomic>
++#if defined(ESP_PLATFORM)
++#include "freertos/FreeRTOS.h"
++#include "freertos/task.h"
++#endif
+ 
+ namespace esp_brookesia::system::core {
+ #if BROOKESIA_SYSTEM_CORE_ENABLE_PROFILE_LOG
+@@ -19,6 +23,21 @@
+ int64_t timer_probe_now()
+ {
+     return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
++}
++template<class Sample>
++void log_timer_sample(Sample &&sample)
++{
++#if defined(ESP_PLATFORM)
++    // This diagnostic runs on a shared Core worker. Do not let formatting or
++    // serial IO preempt the lower-priority LVGL task being measured.
++    const auto priority = uxTaskPriorityGet(nullptr);
++    struct RestorePriority {
++        UBaseType_t value;
++        ~RestorePriority() { vTaskPrioritySet(nullptr, value); }
++    } restore{priority};
++    vTaskPrioritySet(nullptr, std::min<UBaseType_t>(priority, 2));
++#endif
++    sample();
+ }
+ struct TimerProbe {
+     bool enabled;
+@@ -54,8 +73,10 @@
+                 period_us=period_us, period_max_us=period_max_us,
+                 reports_dropped=dropped_windows
+             ]() {
++                log_timer_sample([&]() {
+                 BROOKESIA_LOGI("Runtime timer profile: app(%1%), name(%2%), window_us(%3%), requested_us(%4%), callbacks(%5%), coalesced(%6%), wake_total_us(%7%), wake_max_us(%8%), queue_total_us(%9%), queue_max_us(%10%), callback_total_us(%11%), callback_max_us(%12%), periods(%13%), period_total_us(%14%), period_max_us(%15%), reports_dropped(%16%)",
+                     app,name,duration,interval_us,callbacks,window_coalesced,wake_us,wake_max_us,queue_us,queue_max_us,callback_us,callback_max_us,periods,period_us,period_max_us,reports_dropped);
++                });
+             });
+             if (queued) {
+                 dropped_windows=0;

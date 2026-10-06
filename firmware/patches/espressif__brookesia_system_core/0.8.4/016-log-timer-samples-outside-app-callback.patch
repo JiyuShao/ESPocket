@@ -1,0 +1,64 @@
+--- a/src/system/timer.cpp
++++ b/src/system/timer.cpp
+@@ -26,7 +26,10 @@
+     uint64_t callbacks=0, wake_us=0, wake_max_us=0, queue_us=0, queue_max_us=0,
+         callback_us=0, callback_max_us=0, period_us=0, period_max_us=0, periods=0;
+     std::atomic<uint32_t> coalesced{0};
+-    void record(AppId app, std::string_view name, int64_t enqueued, uint64_t wake_delay, int64_t start, int64_t end) {
++    std::atomic<bool> sample_pending{false};
++    uint64_t dropped_windows=0;
++    template<class Publish>
++    void record(AppId app, std::string_view name, int64_t enqueued, uint64_t wake_delay, int64_t start, int64_t end, Publish &&publish) {
+         if (!enabled) return;
+         const auto queued=static_cast<uint64_t>(std::max<int64_t>(0,start-enqueued));
+         const auto elapsed=static_cast<uint64_t>(std::max<int64_t>(0,end-start));
+@@ -36,8 +39,31 @@
+         if(last_dispatch){const auto period=static_cast<uint64_t>(start-last_dispatch);++periods;period_us+=period;period_max_us=std::max(period_max_us,period);}
+         last_dispatch=start;
+         if (end-window_start<2000000) return;
+-        BROOKESIA_LOGI("Runtime timer profile: app(%1%), name(%2%), window_us(%3%), requested_us(%4%), callbacks(%5%), coalesced(%6%), wake_total_us(%7%), wake_max_us(%8%), queue_total_us(%9%), queue_max_us(%10%), callback_total_us(%11%), callback_max_us(%12%), periods(%13%), period_total_us(%14%), period_max_us(%15%)",
+-            app,name,end-window_start,interval_us,callbacks,coalesced.exchange(0),wake_us,wake_max_us,queue_us,queue_max_us,callback_us,callback_max_us,periods,period_us,period_max_us);
++        const auto window_coalesced=coalesced.exchange(0);
++        // Serial output must not extend the App callback gate. Keep at most
++        // one outstanding immutable sample for this timer, even if IO stalls.
++        if (sample_pending.exchange(true)) {
++            ++dropped_windows;
++        } else {
++            const bool queued=publish([
++                app, name=std::string(name), duration=end-window_start,
++                interval_us=interval_us, callbacks=callbacks, window_coalesced,
++                wake_us=wake_us, wake_max_us=wake_max_us, queue_us=queue_us,
++                queue_max_us=queue_max_us, callback_us=callback_us,
++                callback_max_us=callback_max_us, periods=periods,
++                period_us=period_us, period_max_us=period_max_us,
++                reports_dropped=dropped_windows
++            ]() {
++                BROOKESIA_LOGI("Runtime timer profile: app(%1%), name(%2%), window_us(%3%), requested_us(%4%), callbacks(%5%), coalesced(%6%), wake_total_us(%7%), wake_max_us(%8%), queue_total_us(%9%), queue_max_us(%10%), callback_total_us(%11%), callback_max_us(%12%), periods(%13%), period_total_us(%14%), period_max_us(%15%), reports_dropped(%16%)",
++                    app,name,duration,interval_us,callbacks,window_coalesced,wake_us,wake_max_us,queue_us,queue_max_us,callback_us,callback_max_us,periods,period_us,period_max_us,reports_dropped);
++            });
++            if (queued) {
++                dropped_windows=0;
++            } else {
++                sample_pending=false;
++                ++dropped_windows;
++            }
++        }
+         window_start=end;callbacks=wake_us=wake_max_us=queue_us=queue_max_us=callback_us=callback_max_us=period_us=period_max_us=periods=0;
+     }
+ };
+@@ -193,7 +219,14 @@
+ #endif
+             auto result = impl_->dispatch_timer(app_id, timer_id, name);
+ #if BROOKESIA_SYSTEM_CORE_ENABLE_PROFILE_LOG
+-            probe->record(app_id,name,enqueued,wake_delay,started,timer_probe_now());
++            probe->record(app_id,name,enqueued,wake_delay,started,timer_probe_now(),
++                [this, probe](auto sample) {
++                    auto posted=impl_->post_task("sys.timer_profile", [probe, sample=std::move(sample)]() {
++                        lib_utils::FunctionGuard release_sample([probe]() { probe->sample_pending=false; });
++                        sample();
++                    });
++                    return posted.has_value();
++                });
+ #endif
+             if (!result) {
+                 BROOKESIA_LOGW(

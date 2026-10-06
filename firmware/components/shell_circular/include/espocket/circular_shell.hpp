@@ -54,6 +54,11 @@ struct ShellHost {
     std::function<std::expected<double, std::string>(double)> brightness_set;
     std::function<std::expected<std::vector<LauncherApp>, std::string>(std::string_view)> launcher_apps;
     std::function<uint64_t()> launcher_generation;
+    // Called on the Owner tick, before acquiring LVGL.
+    std::function<bool(esp_brookesia::system::core::AppId,
+                       esp_brookesia::system::core::KeyboardRequestId)> keyboard_valid;
+    std::function<bool(esp_brookesia::system::core::AppId,
+                       esp_brookesia::system::core::MessageDialogRequestId)> message_dialog_valid;
 };
 
 class CircularShell final : public esp_brookesia::system::core::IApp {
@@ -100,6 +105,11 @@ public:
         esp_brookesia::system::core::KeyboardRequestId request_id,
         const esp_brookesia::system::core::KeyboardRequestOptions &options
     );
+    std::expected<void, std::string> show_loading(esp_brookesia::system::core::AppId app_id, bool startup = false);
+    void hide_loading(esp_brookesia::system::core::AppId app_id, bool startup = false);
+    void discard_overlay_choices();
+    bool cancel_keyboard_input();
+    void suspend_keyboard_input(bool suspend);
     void hide_keyboard(
         esp_brookesia::system::core::AppId app_id,
         esp_brookesia::system::core::KeyboardRequestId request_id
@@ -127,6 +137,7 @@ private:
 
     using HomeGestureState = ShellGestureState;
 
+    struct LoadingState;
     struct KeyboardState;
     struct MessageDialogState;
     struct BackOverlayState;
@@ -139,6 +150,8 @@ private:
     std::expected<void, std::string> render_message_dialog(
         const esp_brookesia::system::core::MessageDialogOptions &options);
     void poll_message_dialog();
+    void poll_keyboard();
+    void refresh_overlay_input();
     void sync_default_back(bool visible);
     void sync_card_hint(bool visible);
     void refresh_launcher();
@@ -162,6 +175,7 @@ private:
     std::shared_ptr<HomeGestureState> home_gesture_state_;
     std::string touch_output_name_;
     ShellTouchTracker synthetic_touch_tracker_;
+    std::shared_ptr<LoadingState> loading_state_;
     std::shared_ptr<KeyboardState> keyboard_state_;
     std::shared_ptr<MessageDialogState> message_dialog_state_;
     std::shared_ptr<BackOverlayState> back_overlay_state_;

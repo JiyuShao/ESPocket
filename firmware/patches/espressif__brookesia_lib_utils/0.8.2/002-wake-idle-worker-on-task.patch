@@ -1,0 +1,22 @@
+--- a/src/task_scheduler.cpp
++++ b/src/task_scheduler.cpp
+@@ -182,12 +182,13 @@
+                     // A continuously ready strand can keep poll() busy and
+                     // starve lower-priority tasks, including ESP-IDF Idle/TWDT.
+                     // Bound one dispatch and provide a scheduling window even
+-                    // when more work is already queued. Empty queues retain the
+-                    // configured polling interval.
+-                    size_t executed = io_context_->poll_one();
+-                    boost::this_thread::sleep_for(boost::chrono::milliseconds(
+-                        executed == 0 ? poll_interval_ms : 1
+-                    ));
++                    // when more work is already queued. Idle workers wait for
++                    // Asio work so a newly posted task or due timer wakes them
++                    // immediately, rather than waiting out a polling sleep.
++                    size_t executed = io_context_->run_one_for(std::chrono::milliseconds(poll_interval_ms));
++                    if (executed != 0) {
++                        boost::this_thread::sleep_for(boost::chrono::milliseconds(1));
++                    }
+                 } catch (const boost::thread_interrupted &) {
+                     BROOKESIA_LOGD("Worker thread (%1%) interrupted", name);
+                     break;

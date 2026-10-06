@@ -35,6 +35,7 @@ std::expected<void, std::string> System::on_app_uninstalled(
         removed->stop();
         removed->set_availability_handler({});
     }
+    if (shell_) { shell_->hide_loading(app.app_id, true); shell_->hide_loading(app.app_id); }
     clear_foreground(app);
     return {};
 }
@@ -167,6 +168,7 @@ void System::on_app_start_failed(
         static_cast<int>(reason.size()),
         reason.data()
     );
+    if (shell_) { shell_->hide_loading(app.app_id, true); shell_->hide_loading(app.app_id); }
     restore_home_after_lifecycle(app);
 }
 
@@ -178,6 +180,7 @@ void System::on_app_stopped(const esp_brookesia::system::core::AppInfo &app)
     } else if (auto navigator = navigator_for(app.app_id)) {
         navigator->stop();
     }
+    if (shell_) { shell_->hide_loading(app.app_id, true); shell_->hide_loading(app.app_id); }
     restore_home_after_lifecycle(app);
 }
 
@@ -202,6 +205,7 @@ void System::on_app_stop_failed(
         runtime_stop_failed_.store(true, std::memory_order_release);
         ESP_LOGE(TAG, "Keyboard input disabled after Runtime stop failure");
     }
+    if (shell_) { shell_->hide_loading(app.app_id, true); shell_->hide_loading(app.app_id); }
     restore_home_after_lifecycle(app);
 }
 
@@ -256,6 +260,7 @@ void System::restore_home_after_lifecycle(
     const esp_brookesia::system::core::AppInfo &app
 )
 {
+    if (shell_) { shell_->hide_loading(app.app_id, true); shell_->hide_loading(app.app_id); }
     clear_foreground(app);
     if (stopping_.load(std::memory_order_acquire) || app.app_id == shell_id_ ||
             !app.manifest.visible || !shell_) {

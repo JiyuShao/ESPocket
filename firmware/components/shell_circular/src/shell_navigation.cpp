@@ -73,6 +73,7 @@ void CircularShell::sync_default_back(bool visible)
         LV_EVENT_CLICKED,
         back_overlay_state_.get()
     );
+    retain_overlay_userdata(button, back_overlay_state_);
     back_overlay_state_->button = button;
 }
 
@@ -274,6 +275,17 @@ std::expected<void, std::string> CircularShell::set_display_on(bool on)
     for (auto *input = lv_indev_get_next(nullptr); input != nullptr; input = lv_indev_get_next(input)) {
         if (lv_indev_get_type(input) == LV_INDEV_TYPE_POINTER) {
             lv_indev_enable(input, on);
+        }
+    }
+    if (message_dialog_state_) {
+        std::lock_guard state_lock(message_dialog_state_->mutex);
+        const auto now = esp_timer_get_time();
+        if (!on && message_dialog_state_->paused_at_us < 0) message_dialog_state_->paused_at_us = now;
+        if (on && message_dialog_state_->paused_at_us >= 0) {
+            if (message_dialog_state_->deadline_us) {
+                message_dialog_state_->deadline_us += now - message_dialog_state_->paused_at_us;
+            }
+            message_dialog_state_->paused_at_us = -1;
         }
     }
     if (on) {

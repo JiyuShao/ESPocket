@@ -6,4 +6,6 @@
 - [Runtime 包发行输入](runtime-release.md)：签名包、metadata 和真实发布门槛。
 - [交互自动化测试协议](interaction-test-protocol.md)：开发者模式、USB 命令、快照和证据边界。
 
+- [系统能力兼容 seam](system-capability-seams.md)：状态、调试、环境刷新、Files、显示源与配网的目标接口边界。
+
 产品必须呈现的行为以[产品设计](../design/product/README.md)为准；模块所有权以[架构视图](../design/architecture/README.md)为准。本目录的示例名称与字段是接口设计草案，具体语言绑定及线缆格式需在对应实现工作项中确定并版本化。

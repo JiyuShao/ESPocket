@@ -66,7 +66,11 @@ std::expected<void, std::string> System::launch_app(
     launch_source_ = source;
     lifecycle_restore_surface_ = source;
     lifecycle_restore_pending_ = true;
+    // This feedback does not make synchronous Core startup preemptible.
+    auto loading = shell_->show_loading(app->app_id, true);
+    if (!loading) ESP_LOGW(TAG, "Startup feedback unavailable: %s", loading.error().c_str());
     auto result = start_app(app->app_id);
+    shell_->hide_loading(app->app_id, true);
     if (!result) {
         restore_surface(source);
         lifecycle_restore_pending_ = false;

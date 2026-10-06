@@ -43,6 +43,7 @@ public:
     System();
     ~System() override;
     std::expected<void, std::string> init();
+    void report_startup_failure(std::string_view reason);
     std::expected<PageSnapshot, std::string> foreground_page_snapshot() const;
     std::expected<InstalledPageApp, std::string> install_navigated_app(
         std::shared_ptr<esp_brookesia::system::core::IApp> app,
@@ -97,6 +98,8 @@ protected:
         const esp_brookesia::system::core::AppInfo &app,
         std::string_view reason
     ) override;
+    std::expected<void, std::string> on_show_app_loading(esp_brookesia::system::core::AppId app_id) override;
+    void on_hide_app_loading(esp_brookesia::system::core::AppId app_id) override;
     std::expected<void, std::string> on_show_app_keyboard(
         esp_brookesia::system::core::AppId app_id,
         esp_brookesia::system::core::KeyboardRequestId request_id,
@@ -135,6 +138,7 @@ private:
     bool runtime_page_matches(esp_brookesia::system::core::AppId id) const;
     std::expected<TestSnapshot, std::string> read_test_snapshot() const;
     std::expected<void, std::string> start_display();
+    void stop_display();
     std::expected<void, std::string> start_test_touch(std::vector<TouchInputStep> steps);
     std::expected<void, std::string> tick_test_touch();
     std::expected<void, std::string> release_test_input();
@@ -235,6 +239,7 @@ private:
     ShellSurface launch_source_;
     ShellSurface lifecycle_restore_surface_;
     bool lifecycle_restore_pending_ = false;
+    bool startup_failed_ = false;
     std::atomic_bool stopping_ = false;
     std::atomic_bool runtime_stop_failed_ = false;
 };

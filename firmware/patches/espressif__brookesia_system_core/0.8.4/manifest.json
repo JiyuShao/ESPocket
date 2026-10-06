@@ -120,16 +120,49 @@
     {
       "file": "011-bound-image-source-dispatch.patch",
       "sha256": "3fa3cc188ab59b45bbf90d52b92bf24a7de2fab687ad38b9c8dc76bebffbc6c2"
+    },
+    {
+      "file": "012-initialization-cleanup.patch",
+      "sha256": "770e102472354fd0336eca596834e31a266110ab06b01f39e70569ae0f312962"
+    },
+    {
+      "file": "013-overlay-request-validity.patch",
+      "sha256": "3af416406b1bde6063a31f545842adfa120932752821d5507d3b9d1f8eb0f9ad"
+    },
+    {
+      "file": "014-refresh-staged-package.patch",
+      "sha256": "95e882baf4349dd03802339c5cddef87e8b38ef413977dfbd9e556214334f465"
+    },
+    {
+      "file": "015-retain-one-queued-periodic-callback.patch",
+      "sha256": "bb3dd5393375136e69d79877e18862533d0ed8fd48286a58dd8f2e3c55ff90d4"
+    },
+    {
+      "file": "016-log-timer-samples-outside-app-callback.patch",
+      "sha256": "450b73bd87f64f35d353b2f1191bd8ab447dd0cff3a1b04adeda47d1f52a02fe"
+    },
+    {
+      "file": "017-lower-timer-diagnostic-priority.patch",
+      "sha256": "07253ec6609e29531cae9c468622f61f3145c8b72068a393a15c86bc073d8d90"
+    },
+    {
+      "file": "018-bound-asynchronous-image-source-queue.patch",
+      "sha256": "dcdc35484b311fb18607283722723d78872007830c4dd7243e5779c3476640a3"
     }
   ],
   "issue": ".scratch/005-m5-application-ecosystem/issues/07-isolate-runtime-keyboard-results.md",
   "upstream_report": ".scratch/005-m5-application-ecosystem/records/2026-10-03-core-failed-stop.md",
   "upstream_submission": "not submitted",
-  "remove_when": "Core owner-scoped keyboard delivery and unconditional failed-stop cleanup pass equivalent regressions and remaining queued-instance gates. Embedded-theme loading must also have an equivalent public System GUI seam. Runtime package admission, developer exceptions, receipt validation and recoverable update must retain equivalent regressions. Same-domain strand sharing and ordered image source backpressure must preserve worker progress, bounded tasks and original-package device regressions.",
+  "remove_when": "Core owner-scoped keyboard delivery and unconditional failed-stop cleanup pass equivalent regressions and remaining queued-instance gates. Embedded-theme loading must also have an equivalent public System GUI seam. Runtime package admission, developer exceptions, receipt validation and recoverable update must retain equivalent regressions. Same-domain strand sharing and ordered image source backpressure must preserve worker progress, bounded tasks and original-package device regressions. Equivalent partial initialization and failed GUI cleanup regressions pass. Equivalent Owner request identity queries pass revocation and scheduling failure regressions. Runtime staging removes stale members and passes edit/add/delete integrity checks. Periodic callbacks retain at most one queued due callback while executing serially and pass stop/post-failure and original-package timer regressions. Timer instrumentation publishes bounded immutable samples outside the App callback gate and preserves wake/queue/callback metrics and observable report loss. ESP timer diagnostic samples must not preempt drawing; worker priority is restored after output and original-package metrics pass. Image source submissions retain upstream asynchronous acceptance with bounded FIFO commands/bytes and queued-task count; stop, retained-document restart and scheduling failures revoke stale work.",
   "related_issues": [
     ".scratch/004-m4-device-capabilities/issues/05-fix-settings-controls-rendering.md",
     ".scratch/005-m5-application-ecosystem/issues/03-enforce-core-package-trust.md",
     ".scratch/005-m5-application-ecosystem/issues/09-allow-unsigned-developer-installation.md",
-    ".scratch/005-m5-application-ecosystem/issues/10-reduce-runtime-startup-blocking.md"
+    ".scratch/005-m5-application-ecosystem/issues/10-reduce-runtime-startup-blocking.md",
+    ".scratch/019-system-shell-remediation/issues/01-close-initialization-cleanup-gaps.md",
+    ".scratch/019-system-shell-remediation/issues/02-complete-stop-and-normal-restart.md",
+    ".scratch/019-system-shell-remediation/issues/05-fallback-unavailable-saved-theme.md",
+    ".scratch/019-system-shell-remediation/issues/03-arbitrate-overlay-input-and-deadlines.md",
+    ".scratch/019-system-shell-remediation/issues/08-audit-resource-staging-integrity.md"
   ]
 }

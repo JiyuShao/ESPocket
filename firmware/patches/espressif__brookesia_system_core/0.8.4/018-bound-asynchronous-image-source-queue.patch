@@ -1,0 +1,191 @@
+--- a/src/private/system/impl.hpp
++++ b/src/private/system/impl.hpp
+@@ -186,6 +186,18 @@
+     );
+     void flush_pending_gui_bindings(AppId app_id);
+     void clear_pending_gui_bindings(AppId app_id);
++    struct PendingImageSources {
++        gui::DocumentId document_id;
++        std::vector<std::pair<std::string, std::string>> commands;
++        size_t bytes = 0;
++        bool scheduled = false;
++        bool active = true;
++    };
++    std::expected<void, std::string> enqueue_gui_image_source(
++        AppId app_id, std::string_view path, std::string_view src);
++    void flush_gui_image_sources(AppId app_id, std::shared_ptr<PendingImageSources> buffer);
++    void clear_pending_gui_image_sources(AppId app_id);
++    void clear_all_pending_gui_image_sources();
+     gui::Runtime::ActionHandler make_app_action_forwarder(AppId app_id);
+     std::expected<void, std::string> subscribe_gui_action_now(AppId app_id, std::string action);
+     std::expected<void, std::string> subscribe_gui_actions_now(AppId app_id, const std::vector<std::string> &actions);
+@@ -316,6 +328,8 @@
+     std::map<std::string, AppId> font_resource_owners_;
+     std::map<runtime::AppId, AppId> runtime_to_app_;
+     std::map<AppId, PendingBindingBuffer> pending_gui_bindings_;
++    std::mutex gui_image_source_mutex_;
++    std::map<AppId, std::shared_ptr<PendingImageSources>> pending_gui_image_sources_;
+     std::set<gui::DocumentId::Value> live_preview_document_ids_;
+     std::optional<lib_utils::TaskSchedulerTaskId> live_preview_poll_task_id_;
+     StorageLayout storage_layout_;
+--- a/src/system/gui.cpp
++++ b/src/system/gui.cpp
+@@ -623,6 +623,7 @@
+ void System::Impl::cleanup_stopped_app_gui(AppRecord &record)
+ {
+     clear_pending_gui_bindings(record.info.app_id);
++    clear_pending_gui_image_sources(record.info.app_id);
+     if (record.preload_dom) {
+         release_app_gui_presentation(record);
+         return;
+@@ -643,6 +644,7 @@
+ 
+ void System::Impl::unload_gui(AppRecord &record)
+ {
++    clear_pending_gui_image_sources(record.info.app_id);
+     record.action_connections.clear();
+     record.action_connection_keys.clear();
+     if (gui_runtime_ && record.document_id.has_value()) {
+@@ -1208,31 +1210,100 @@
+            );
+ }
+ 
++std::expected<void, std::string> System::Impl::enqueue_gui_image_source(
++    AppId app_id, std::string_view path, std::string_view src)
++{
++    auto record = get_record(app_id);
++    if (!record || !gui_runtime_ || !record.value()->document_id.has_value()) {
++        return std::unexpected("App GUI document is not loaded");
++    }
++    if (!task_scheduler_ || !task_scheduler_->is_running()) {
++        return std::unexpected("System GUI scheduler is not available");
++    }
++    // SetViewSrc retains the upstream asynchronous submission contract. Bound
++    // both commands and bytes instead of making the App wait for drawing.
++    constexpr size_t MAX_COMMANDS = 8;
++    constexpr size_t MAX_BYTES = 32 * 1024;
++    if (path.size() > MAX_BYTES || src.size() > MAX_BYTES - path.size()) {
++        return std::unexpected("GUI image source exceeds queue byte budget");
++    }
++    const auto bytes = path.size() + src.size();
++    std::lock_guard lock(gui_image_source_mutex_);
++    auto &slot = pending_gui_image_sources_[app_id];
++    if (!slot || slot->document_id != *record.value()->document_id) {
++        if (slot) { slot->active = false; slot->commands.clear(); }
++        slot = std::make_shared<PendingImageSources>();
++        slot->document_id = *record.value()->document_id;
++    }
++    auto buffer = slot;
++    if (buffer->commands.size() >= MAX_COMMANDS || bytes > MAX_BYTES - buffer->bytes) {
++        return std::unexpected("GUI image source queue is full");
++    }
++    buffer->commands.emplace_back(path, src);
++    buffer->bytes += bytes;
++    if (!buffer->scheduled) {
++        // Scheduler::post always enqueues; it cannot run this closure inline
++        // while the buffer mutex is held. At most one successor is queued
++        // while the current GUI owner applies its finite ordered batch.
++        if (!task_scheduler_->post([this, app_id, buffer]() {
++            flush_gui_image_sources(app_id, buffer);
++        }, nullptr, SYSTEM_GUI_INPUT_TASK_GROUP)) {
++            buffer->commands.pop_back();
++            buffer->bytes -= bytes;
++            return std::unexpected("Failed to post GUI image source task");
++        }
++        buffer->scheduled = true;
++    }
++    return {};
++}
++
++void System::Impl::flush_gui_image_sources(AppId app_id, std::shared_ptr<PendingImageSources> buffer)
++{
++    std::vector<std::pair<std::string, std::string>> commands;
++    {
++        std::lock_guard lock(gui_image_source_mutex_);
++        if (!buffer->active) return;
++        commands.swap(buffer->commands);
++        buffer->bytes = 0;
++        buffer->scheduled = false;
++    }
++    auto record = get_record(app_id);
++    if (!record || !gui_runtime_ || record.value()->document_id != buffer->document_id) return;
++    flush_pending_gui_bindings(app_id);
++    for (const auto &[path, src] : commands) {
++        if (!gui_runtime_->set_view_src(buffer->document_id, path, src)) {
++            // As upstream, acceptance is not a promise of deferred rendering
++            // success. Report invalid sources at their actual GUI owner.
++            BROOKESIA_LOGW("Failed to set GUI image source: app_id(%1%), path(%2%)", app_id, path);
++        }
++    }
++}
++
++void System::Impl::clear_pending_gui_image_sources(AppId app_id)
++{
++    std::lock_guard lock(gui_image_source_mutex_);
++    auto found = pending_gui_image_sources_.find(app_id);
++    if (found == pending_gui_image_sources_.end()) return;
++    found->second->active = false;
++    found->second->commands.clear();
++    pending_gui_image_sources_.erase(found);
++}
++
++void System::Impl::clear_all_pending_gui_image_sources()
++{
++    std::lock_guard lock(gui_image_source_mutex_);
++    for (auto &[app_id, buffer] : pending_gui_image_sources_) {
++        (void)app_id;
++        buffer->active = false;
++        buffer->commands.clear();
++    }
++    pending_gui_image_sources_.clear();
++}
++
+ std::expected<void, std::string> System::gui_set_view_src(
+-    AppId app_id,
+-    std::string_view absolute_path,
+-    std::string_view src
+-)
+-{
+-    // Source changes are ordered mutations, not an unbounded frame queue.
+-    // Wait for the real GUI owner so a periodic App cannot allocate another
+-    // task handle/promise while a previous image mutation is still pending.
+-    return impl_->run_task_sync<std::expected<void, std::string>>(
+-               SYSTEM_GUI_INPUT_TASK_GROUP,
+-    [this, app_id, absolute_path = std::string(absolute_path), src = std::string(src)]()
+-        -> std::expected<void, std::string> {
+-        auto record_result = impl_->get_record(app_id);
+-        if (!record_result || !impl_->gui_runtime_ || !record_result.value()->document_id.has_value()) {
+-            return std::unexpected("App GUI document is not loaded");
+-        }
+-        impl_->flush_pending_gui_bindings(app_id);
+-        if (!impl_->gui_runtime_->set_view_src(*record_result.value()->document_id, absolute_path, src)) {
+-            return std::unexpected("Failed to set GUI image source");
+-        }
+-        return {};
+-    },
+-    std::unexpected("Failed to post GUI image source task")
+-           );
++    AppId app_id, std::string_view absolute_path, std::string_view src)
++{
++    return impl_->enqueue_gui_image_source(app_id, absolute_path, src);
+ }
+ 
+ std::expected<void, std::string> System::gui_preload_images(
+--- a/src/system/lifecycle.cpp
++++ b/src/system/lifecycle.cpp
+@@ -431,6 +431,7 @@
+                                   SYSTEM_GUI_TASK_GROUP,
+         [this, record_ptr, app_id]() -> std::expected<void, std::string> {
+             impl_->clear_pending_gui_bindings(app_id);
++            impl_->clear_pending_gui_image_sources(app_id);
+             impl_->unload_gui(*record_ptr);
+             impl_->unregister_app_gui_resources(*record_ptr);
+             impl_->unregister_app_icon_resource(*record_ptr);
+@@ -507,6 +508,7 @@
+     impl_->active_message_dialog_request_id_.reset();
+     impl_->pending_timers_.clear();
+     impl_->pending_gui_bindings_.clear();
++    impl_->clear_all_pending_gui_image_sources();
+     impl_->app_storage_paths_cache_.clear();
+     impl_->gui_preferences_restoring_ = false;
+     impl_->gui_preferences_restored_ = false;

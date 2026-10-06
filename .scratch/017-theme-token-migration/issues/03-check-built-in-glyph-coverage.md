@@ -16,3 +16,5 @@
 此次新 Launcher chevron 明确请求 16sp；产品启用 Montserrat 18/20/32，无更小字号时 GUI 回退到 UNSCII 8，缺少 U+F054。检查以实际 LVGL cmap 为准，不凭图标名称或源码注释判断。动态文本、文件字体和外部 App 不在本静态门槛覆盖内。
 
 构建、刷写与有效配置证据见[字形记录](../records/2026-10-04-glyph-coverage.md)；实际像素确认仍待用户。
+
+2026-10-04 隔离核查：已有构建/刷写和软件截图证据与剩余条件见[剩余证据核查](../records/2026-10-04-remaining-evidence-audit.md)。最终像素门槛保持未完成，本线未访问设备。

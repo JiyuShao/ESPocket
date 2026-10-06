@@ -11,7 +11,7 @@ idf_component_register(
     INCLUDE_DIRS "include"
     REQUIRES brookesia_system_core brookesia_service_manager espocket_navigation espocket_semantics freertos
     PRIV_REQUIRES
-        hello espocket_test_adapter shell_circular esp_lvgl_adapter
+        hello espocket_test_adapter shell_circular esp_lvgl_adapter lvgl
         brookesia_app_settings brookesia_app_store brookesia_gui_lvgl
         brookesia_service_display brookesia_service_helper brookesia_lib_utils
         esp_driver_gpio esp_timer esp_app_format brookesia_runtime_manager nvs_flash

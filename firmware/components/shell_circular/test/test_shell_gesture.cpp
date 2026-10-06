@@ -148,6 +148,26 @@ int main()
     process_shell_gesture(modal, {.phase = ShellGesturePhase::Release}, {});
     assert(pending(modal) == GestureIntent::WatchFace);
 
+    ShellGestureState keyboard;
+    keyboard.keyboard_active = true;
+    keyboard.launcher_return_threshold = 93;
+    for (const auto ctx : {ShellGestureContext{}, ShellGestureContext{.app_visible=true}}) {
+        press(keyboard, ctx);
+        move(keyboard, ShellGestureDirection::Up, ctx);
+        assert(pending(keyboard) == GestureIntent::None);
+        move(keyboard, ShellGestureDirection::Right, ctx, true);
+        assert(pending(keyboard) == GestureIntent::Back);
+        reset_shell_gesture(keyboard, true);
+        keyboard.modal_active = true;
+        press(keyboard, ctx);
+        move(keyboard, ShellGestureDirection::Right, ctx, true);
+        assert(pending(keyboard) == GestureIntent::None);
+        keyboard.modal_active = false;
+        press(keyboard, {.display_on=false, .app_visible=true});
+        move(keyboard, ShellGestureDirection::Right, {.display_on=false, .app_visible=true}, true);
+        assert(pending(keyboard) == GestureIntent::None);
+    }
+
     ShellTouchTracker tracker;
     tracker.geometry = {.width = 466, .horizontal_edge = 27, .vertical_edge = 37,
                         .horizontal_threshold = 77, .vertical_threshold = 77};

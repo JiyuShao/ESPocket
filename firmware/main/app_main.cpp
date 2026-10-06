@@ -13,12 +13,14 @@ extern "C" void app_main()
     auto init_result = system.init();
     if (!init_result) {
         ESP_LOGE(TAG, "Fatal initialization failure: %s", init_result.error().c_str());
+        system.report_startup_failure(init_result.error());
         return;
     }
 
     auto start_result = system.start();
     if (!start_result) {
         ESP_LOGE(TAG, "Fatal startup failure: %s", start_result.error().c_str());
+        system.report_startup_failure(start_result.error());
         return;
     }
 

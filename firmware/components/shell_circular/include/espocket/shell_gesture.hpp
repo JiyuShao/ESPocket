@@ -57,6 +57,7 @@ struct ShellGestureState {
     std::atomic<uint8_t> pending_gesture = 0;
     std::atomic<uint32_t> activity_generation = 0;
     std::atomic_bool modal_active = false;
+    std::atomic_bool keyboard_active = false;
     // PROTOTYPE: Launcher pull-to-Home arbitration; Card support will use a separate contract.
     std::atomic<int32_t> launcher_scroll_top = 100000;
     std::atomic<int32_t> launcher_pull_distance = 0;

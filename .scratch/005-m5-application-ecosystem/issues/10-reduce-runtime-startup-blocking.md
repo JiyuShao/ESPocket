@@ -16,6 +16,7 @@
 - [ ] 所有 Storage 修改入口保护代码／资源／验证记录；受控修改在写入前持久失效，普通 data/cache/files 写入有效。
 - [ ] 更新、回滚、卸载、信任变更、无效记录、关闭／恢复开发者模式的复用与失效矩阵通过。
 - [ ] 启动与 Flappy 正常运行延迟独立测量；缓存不改变 Running Instance 或清理语义。
+- [x] 原包两轮稳态 game timer 达到工程门槛 mean ≤36 ms、max ≤66 ms；有界异步 source 保留接受顺序和实例撤销。
 - [x] 聚合记录真实 PNG 解码次数／耗时、绘制耗时、完整刷新完成 FPS、timer 唤醒迟到／Owner 排队／回调耗时；不以空刷新或名义 timer 频率冒充 FPS。
 - [x] 同一 Flappy 原包对比 cache=0 与有上限 PNG 解码缓存（先试 1 MiB），记录内存上限、PSRAM free/largest、原失败与改善；大图超过预算时仍可无缓存绘制，释放资源时旧条目失效。
 - [x] 同机原生小范围／全屏绘制、33 ms 空 timer 与原包 GUI／flush 分段对照，明确软件负载和显示路径约束，移除诊断 overlay 并恢复普通镜像。
@@ -40,3 +41,9 @@
 2026-10-05 原包联合候选 fb7055e85 通过 108 跨模块 tests／全部 Owner checks、准确输入、App 构建、70 秒压力、两轮原输入、五图、完整 Apps 与重启后两次运行。声明预加载修复使预热后 PNG 解码为 0；滚动样本约 25–33 FPS，game timer 约 41–45 ms，尚不能承诺持续 30 FPS。默认选择 512 KiB、双 40 行、LVGL=6，纳入 GUI 预加载／offset-only 与 Core 同域 strand／source 背压；最终 canonical 构建复核继续执行。先前间歇自动息屏失败保留，包失效矩阵、物理路径及正式发行条件不随性能改善关闭。具体数据见分阶段优化记录。
 
 2026-10-05 默认 production 的准确输入复核、完整 App 构建与最终统一检查通过，ELF／BIN 与已验收 fb7055e85 完全相同，设备保持该普通镜像。性能收益已交付；持续稳定 30 FPS、仍未完成的包失效矩阵和物理验收继续保留为本票未完成条件。
+
+
+2026-10-06：继续 GUI 锁/布局/callback 分段与四线整合。布局约 1 ms，主要可见阻塞仍为 GUI lock 和同步 source；新增不透明 PNG、idle worker/ESP 等待时钟、有界 periodic slot 与异步诊断输出候选。完整运行窗口约 41–44 ms，峰值仍超过 100 ms，目标未通过。120 跨模块 tests/全部 Owner suites、完整 build、资源 staging/生成与文档 checks 通过；最终无临时探针镜像尚因串口访问审批阻塞未完成真机复验。准确失败和当前状态见[延迟记录](../records/2026-10-05-runtime-timer-latency.md)，未通过候选不算已完成交付。
+
+
+2026-10-06 恢复独占验收后，f5f67952c 两轮稳态 game timer 35.416 ms/50.032 ms，queue 3.288 ms，达到本次 timer 工程门槛；含启动边界的 RUNNING 最高 68.063 ms。70 秒压力与运行截图通过。直接原因是同步 source 背压让 App strand 等待 GUI；以 8 项/32 KiB 的真实 Owner FIFO 恢复上游异步接受契约，同时保留顺序、容量拒绝和旧实例撤销。二值 alpha 原生格式也降低绘制负载；其他单变量失败保留。最终五图均实际查看通过，受控重启及完整 Apps 回归通过、结束点亮 Watch Face；持续 30 FPS、包失效矩阵及物理/正式发布条件保持开放，详见延迟记录。

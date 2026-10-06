@@ -1,4 +1,7 @@
 #include "system_internal.hpp"
+#include "brookesia/lib_utils/function_guard.hpp"
+#include "esp_lv_adapter.h"
+#include "lvgl.h"
 
 namespace espocket {
 
@@ -52,6 +55,55 @@ std::expected<void, std::string> System::set_display_on(bool on)
     return {};
 }
 
+void System::report_startup_failure(std::string_view reason)
+{
+    startup_failed_ = true;
+    stopping_.store(true, std::memory_order_release);
+    ESP_LOGE(TAG, "Critical startup failure; explicit device restart required: %.*s",
+             static_cast<int>(reason.size()), reason.data());
+    // Core has already unwound. This source is held only for the fatal diagnostic,
+    // until explicit device restart/destruction; no Shell/App execution is resumed.
+    if (!display_started_) {
+        auto display = start_display();
+        if (!display) {
+            ESP_LOGE(TAG, "Fatal diagnostic display unavailable: %s", display.error().c_str());
+            return;
+        }
+    }
+    if (esp_lv_adapter_lock(1000) != ESP_OK) {
+        ESP_LOGE(TAG, "Fatal diagnostic GUI lock unavailable");
+        stop_display();
+        return;
+    }
+    bool shown = false;
+    if (auto *screen = lv_screen_active()) {
+        lv_obj_clean(screen);
+        lv_obj_set_style_bg_color(screen, lv_color_hex(0x101820), 0);
+        if (auto *label = lv_label_create(screen)) {
+            lv_obj_set_width(label, static_cast<int32_t>(display_width_ * 3 / 4));
+            lv_obj_set_style_text_align(label, LV_TEXT_ALIGN_CENTER, 0);
+            lv_obj_set_style_text_color(label, lv_color_hex(0xFFFFFF), 0);
+            lv_label_set_text(label, "Startup failed\nRestart device");
+            lv_obj_center(label);
+            shown = true;
+        }
+    }
+    esp_lv_adapter_unlock();
+    if (!shown) {
+        ESP_LOGE(TAG, "Fatal diagnostic GUI allocation unavailable");
+        stop_display();
+    }
+}
+
+void System::stop_display()
+{
+    if (display_started_) {
+        DisplaySource::get_instance().stop();
+        display_started_ = false;
+    }
+    display_binding_.release();
+}
+
 std::expected<void, std::string> System::start_display()
 {
     if (!DisplayHelper::is_available()) {
@@ -63,6 +115,8 @@ std::expected<void, std::string> System::start_display()
     if (!display_binding_.is_valid()) {
         return std::unexpected("Failed to bind Display service");
     }
+
+    esp_brookesia::lib_utils::FunctionGuard cleanup([this]() { stop_display(); });
 
     auto outputs_json = DisplayHelper::call_function_sync<boost::json::array>(
                             DisplayHelper::FunctionId::GetOutputs,
@@ -139,6 +193,7 @@ std::expected<void, std::string> System::start_display()
                                    display_binding_.is_valid() && DisplayHelper::is_available();
             return semantic::Permission{ui, available, available};
         });
+    cleanup.release();
     ESP_LOGI(
         TAG,
         "Display ready: %s (%" PRIu32 "x%" PRIu32 ")",

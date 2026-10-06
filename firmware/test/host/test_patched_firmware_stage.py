@@ -40,7 +40,9 @@ class PatchedFirmwareStageTest(unittest.TestCase):
                          ('espressif__brookesia_lib_utils', '0.8.2'),
                          ('espressif__brookesia_service_storage', '0.8.3'),
                          ('espressif__brookesia_gui_lvgl', '0.8.5'),
-                         ('espressif__brookesia_gui_interface', '0.8.2')))
+                         ('espressif__brookesia_gui_interface', '0.8.2'),
+                         ('espressif__esp_lv_decoder', '0.4.3'),
+                         ('espressif__esp-boost', '0.6.0')))
         self.assertEqual(BUILDER.PATCH_SETS['store-candidate'], BUILDER.PATCH_SETS['production'])
 
     def setUp(self):
@@ -115,6 +117,25 @@ class PatchedFirmwareStageTest(unittest.TestCase):
         inputs = json.loads((self.workspace / 'patch-inputs.json').read_text())
         self.assertEqual(inputs['display_buffer_height'], 80)
         self.assertTrue(inputs['display_single_buffer'])
+
+    def test_generated_board_paths_are_relocated_without_mutating_input(self):
+        board = self.firmware / 'components/gen_bmgr_codes'
+        board.mkdir(parents=True)
+        component = self.firmware / 'managed_components/boards/custom'
+        component.mkdir(parents=True)
+        original = f'dependencies:\n  custom:\n    override_path: {component}\n'
+        (board / 'idf_component.yml').write_text(original)
+        staged = BUILDER.stage(self.root, self.workspace, self.config, 'baseline')
+        self.assertEqual((board / 'idf_component.yml').read_text(), original)
+        self.assertIn(str(staged / 'managed_components/boards/custom'),
+                      (staged / 'components/gen_bmgr_codes/idf_component.yml').read_text())
+
+    def test_generated_board_unknown_absolute_override_is_rejected(self):
+        board = self.firmware / 'components/gen_bmgr_codes'
+        board.mkdir(parents=True)
+        (board / 'idf_component.yml').write_text('dependencies:\n  custom:\n    override_path: /unknown/old-checkout/custom\n')
+        with self.assertRaisesRegex(ValueError, 'outside the isolated'):
+            BUILDER.stage(self.root, self.workspace, self.config, 'baseline')
 
     def test_rejects_changed_upstream_before_staging(self):
         (self.registry / 'source.txt').write_text('new upstream\n')

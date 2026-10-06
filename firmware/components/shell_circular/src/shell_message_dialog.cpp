@@ -74,17 +74,22 @@ std::expected<void, std::string> CircularShell::render_message_dialog(
             auto *binding = static_cast<MessageDialogState::Button *>(lv_event_get_user_data(event));
             std::lock_guard lock(binding->state->mutex);
             if (binding->state->request_id == esp_brookesia::system::core::INVALID_MESSAGE_DIALOG_REQUEST_ID ||
-                    binding->state->result_pending) return;
+                    binding->state->result_pending || binding->state->invalidated) return;
             binding->state->button_index = binding->index;
             binding->state->result_pending = true;
         }, LV_EVENT_CLICKED, &message_dialog_state_->buttons[i]);
     }
+    retain_overlay_userdata(overlay, message_dialog_state_);
     if (message_dialog_state_->overlay) lv_obj_delete(message_dialog_state_->overlay);
     message_dialog_state_->overlay = overlay;
     message_dialog_state_->result_pending = false;
     message_dialog_state_->button_index = -1;
+    message_dialog_state_->invalidated = false;
     message_dialog_state_->deadline_us = options.auto_close_ms > 0 ?
         esp_timer_get_time() + static_cast<int64_t>(options.auto_close_ms) * 1000 : 0;
+    message_dialog_state_->paused_at_us = host_.display_on && !host_.display_on() ? esp_timer_get_time() : -1;
+    suspend_keyboard_input(true);
+    if (home_gesture_state_) reset_shell_gesture(*home_gesture_state_, true);
     return {};
 }
 
@@ -97,10 +102,20 @@ std::expected<void, std::string> CircularShell::show_message_dialog(
             request_id == esp_brookesia::system::core::INVALID_MESSAGE_DIALOG_REQUEST_ID) {
         return std::unexpected("Circular Shell is unavailable for message dialog");
     }
+    if (host_.message_dialog_valid) {
+        esp_brookesia::system::core::AppId owner;
+        esp_brookesia::system::core::MessageDialogRequestId previous;
+        {
+            std::lock_guard state_lock(message_dialog_state_->mutex);
+            owner = message_dialog_state_->app_id; previous = message_dialog_state_->request_id;
+        }
+        if (previous != esp_brookesia::system::core::INVALID_MESSAGE_DIALOG_REQUEST_ID &&
+                !host_.message_dialog_valid(owner, previous)) hide_message_dialog(owner, previous);
+    }
     LvglLock lock;
     if (!lock) return std::unexpected("Failed to lock LVGL for message dialog");
     std::lock_guard state_lock(message_dialog_state_->mutex);
-    if (message_dialog_state_->overlay) return std::unexpected("Another message dialog is active");
+    if (message_dialog_state_->overlay && !message_dialog_state_->invalidated) return std::unexpected("Another message dialog is active");
     auto result = render_message_dialog(options);
     if (!result) return result;
     message_dialog_state_->app_id = app_id;
@@ -128,6 +143,12 @@ void CircularShell::hide_message_dialog(esp_brookesia::system::core::AppId app_i
     esp_brookesia::system::core::MessageDialogRequestId request_id)
 {
     if (!message_dialog_state_) return;
+    {
+        std::lock_guard state_lock(message_dialog_state_->mutex);
+        if (message_dialog_state_->app_id != app_id || message_dialog_state_->request_id != request_id ||
+                !message_dialog_state_->overlay) return;
+        message_dialog_state_->invalidated = true;
+    }
     LvglLock lock;
     if (!lock) { ESP_LOGW(SHELL_TAG, "Failed to lock LVGL for message dialog hide"); return; }
     std::lock_guard state_lock(message_dialog_state_->mutex);
@@ -138,13 +159,17 @@ void CircularShell::hide_message_dialog(esp_brookesia::system::core::AppId app_i
     message_dialog_state_->app_id = esp_brookesia::system::core::INVALID_APP_ID;
     message_dialog_state_->result_pending = false;
     message_dialog_state_->deadline_us = 0;
+    message_dialog_state_->paused_at_us = -1;
+    message_dialog_state_->invalidated = false;
+    suspend_keyboard_input(false);
     if (home_gesture_state_) home_gesture_state_->modal_active.store(false, std::memory_order_release);
     ESP_LOGI(SHELL_TAG, "System message dialog closed: request=%" PRIu64, request_id);
 }
 
 void CircularShell::poll_message_dialog()
 {
-    if (!message_dialog_state_ || !host_.message_dialog_result) return;
+    if (!message_dialog_state_ || !host_.message_dialog_result ||
+            (host_.display_on && !host_.display_on())) return;
     esp_brookesia::system::core::AppId app_id;
     esp_brookesia::system::core::MessageDialogRequestId request_id;
     int32_t index;
@@ -152,6 +177,7 @@ void CircularShell::poll_message_dialog()
     {
         std::lock_guard lock(message_dialog_state_->mutex);
         if (message_dialog_state_->request_id == esp_brookesia::system::core::INVALID_MESSAGE_DIALOG_REQUEST_ID) return;
+        if (message_dialog_state_->invalidated) return;
         if (!message_dialog_state_->result_pending) {
             if (!message_dialog_state_->deadline_us || esp_timer_get_time() < message_dialog_state_->deadline_us) return;
             reason = esp_brookesia::system::core::MessageDialogCloseReason::Timeout;
@@ -164,7 +190,10 @@ void CircularShell::poll_message_dialog()
     hide_message_dialog(app_id, request_id);
     {
         std::lock_guard lock(message_dialog_state_->mutex);
-        if (message_dialog_state_->request_id == request_id) return; // Retry failed UI cleanup.
+        if (message_dialog_state_->request_id == request_id) {
+            message_dialog_state_->invalidated = false;
+            return; // Retry unsubmitted choice after failed GUI cleanup.
+        }
     }
     host_.message_dialog_result(app_id, request_id, index, reason);
 }

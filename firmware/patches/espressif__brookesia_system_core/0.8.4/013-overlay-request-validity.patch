@@ -1,0 +1,43 @@
+--- a/src/app/manager.cpp
++++ b/src/app/manager.cpp
+@@ -1189,6 +1189,27 @@
+     return stop_app(app_id);
+ }
+ 
++bool System::has_app_keyboard_request(AppId app_id, KeyboardRequestId request_id)
++{
++    if (impl_->should_schedule_app_task() && !is_blocking_runtime_service_call_context()) {
++        return impl_->run_task_sync<bool>(SYSTEM_APP_TASK_GROUP,
++            [this, app_id, request_id]() { return has_app_keyboard_request(app_id, request_id); }, false);
++    }
++    const auto it = impl_->keyboard_requests_.find(request_id);
++    return it != impl_->keyboard_requests_.end() && it->second.app_id == app_id;
++}
++
++bool System::has_message_dialog_request(AppId app_id, MessageDialogRequestId request_id)
++{
++    if (impl_->should_schedule_app_task() && !is_blocking_runtime_service_call_context()) {
++        return impl_->run_task_sync<bool>(SYSTEM_APP_TASK_GROUP,
++            [this, app_id, request_id]() { return has_message_dialog_request(app_id, request_id); }, false);
++    }
++    const auto it = impl_->message_dialog_requests_.find(request_id);
++    return it != impl_->message_dialog_requests_.end() && it->second.app_id == app_id &&
++           impl_->active_message_dialog_request_id_ == request_id;
++}
++
+ std::expected<void, std::string> System::show_app_loading(AppId app_id)
+ {
+     auto app = get_app(app_id);
+--- a/include/brookesia/system_core/system/system.hpp
++++ b/include/brookesia/system_core/system/system.hpp
+@@ -197,6 +197,10 @@
+     std::expected<void, std::string> pause_app(AppId app_id);
+     std::expected<void, std::string> resume_app(AppId app_id);
+     std::expected<void, std::string> request_close_app(AppId app_id);
++    // Read request validity from the actual Owner before restoring presentation.
++    // Call without a GUI lock; scheduling failure is fail-closed.
++    bool has_app_keyboard_request(AppId app_id, KeyboardRequestId request_id);
++    bool has_message_dialog_request(AppId app_id, MessageDialogRequestId request_id);
+     std::expected<void, std::string> show_app_loading(AppId app_id);
+     std::expected<void, std::string> hide_app_loading(AppId app_id);
+     std::expected<KeyboardRequestId, std::string> show_app_keyboard(

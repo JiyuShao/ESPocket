@@ -25,16 +25,17 @@ class ProductThemeRestoreTest(unittest.TestCase):
 #include <string_view>
 #include <vector>
 #define ESP_LOGI(...) ((void)0)
+#define ESP_LOGW(...) ((void)0)
 constexpr const char *TAG="test";
 constexpr char dark_theme_start[]="dark-json", light_theme_start[]="light-json";
 constexpr auto dark_theme_end=dark_theme_start+sizeof(dark_theme_start);
 constexpr auto light_theme_end=light_theme_start+sizeof(light_theme_start);
 namespace espocket {
-struct Gui { std::string selected; bool fail=false, load_fail=false;std::vector<std::string> loaded;
+struct Gui { std::string selected; bool fail=false, light_fail=false, load_fail=false;std::vector<std::string> loaded;
     std::expected<void,std::string> load_theme_json(std::string_view json) {
         if(load_fail)return std::unexpected("parse failure");loaded.emplace_back(json);return {}; }
     std::expected<void,std::string> set_theme(std::string_view id,bool reapply) {
-        assert(!reapply);selected=id;if(fail)return std::unexpected("backend failure");return {}; }
+        assert(!reapply);selected=id;if(fail || (light_fail && id=="light"))return std::unexpected("backend failure");return {}; }
 };
 struct System { Gui gui;std::optional<std::string> saved;std::vector<std::string> calls;
     std::optional<std::string> get_stored_gui_theme_id() { return saved; }
@@ -57,8 +58,14 @@ int main() {
     assert(!first.saved);assert((first.calls==std::vector<std::string>{"begin","restored"}));
     System light;light.saved="light";assert(light.restore_product_theme());
     assert(light.gui.selected=="light" && light.saved=="light");
-    System invalid;invalid.saved="unknown";assert(!invalid.restore_product_theme());
-    assert(invalid.gui.selected.empty() && invalid.saved=="unknown");
+    System invalid;invalid.saved="unknown";assert(invalid.restore_product_theme());
+    assert(invalid.gui.selected=="dark" && invalid.saved=="unknown");
+    assert((invalid.calls==std::vector<std::string>{"begin","restored"}));
+    System fallback;fallback.saved="light";fallback.gui.light_fail=true;
+    assert(fallback.restore_product_theme());assert(fallback.gui.selected=="dark" && fallback.saved=="light");
+    fallback.gui.light_fail=false;assert(fallback.restore_product_theme());assert(fallback.gui.selected=="light");
+    System default_failed;default_failed.saved="dark";default_failed.gui.fail=true;
+    assert(!default_failed.restore_product_theme());assert(default_failed.saved=="dark");
     System failed;failed.saved="light";failed.gui.fail=true;
     auto failure=failed.restore_product_theme();assert(!failure);
     assert(failure.error().find("backend failure")!=std::string::npos);

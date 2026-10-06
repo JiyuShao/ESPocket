@@ -227,10 +227,17 @@
     {
       "file": "001-bound-worker-dispatch.patch",
       "sha256": "11ab994bbdf8114909576d252f400fb643dbc99b47cbe80a385107ba29061e47"
+    },
+    {
+      "file": "002-wake-idle-worker-on-task.patch",
+      "sha256": "fcae2ff668cac55cc51c03b91f342ed45ab965f73b9e9945664d08f85939d18d"
     }
   ],
   "issue": ".scratch/005-m5-application-ecosystem/issues/06-adopt-online-store-stability-fix.md",
   "upstream_report": ".scratch/005-m5-application-ecosystem/records/2026-10-04-launcher-and-lifecycle-acceptance.md",
   "upstream_submission": "not submitted",
-  "remove_when": "Upstream worker dispatch allows lower-priority Idle tasks to run under continuous ready work, passes the real worker-loop regression, and completes equivalent Store lifecycle without task watchdogs."
+  "remove_when": "Upstream worker dispatch allows lower-priority Idle tasks to run under continuous ready work, passes the real worker-loop regression, and completes equivalent Store lifecycle without task watchdogs. Idle workers wake on posted work and due timers without a polling sleep; original-package timer and device watchdog stress regressions pass.",
+  "related_issues": [
+    ".scratch/005-m5-application-ecosystem/issues/10-reduce-runtime-startup-blocking.md"
+  ]
 }

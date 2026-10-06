@@ -1,0 +1,67 @@
+--- a/src/lvgl9/esp_lv_decoder.c
++++ b/src/lvgl9/esp_lv_decoder.c
+@@ -1457,26 +1457,35 @@
+     return decoded;
+ }
+ 
+-/* Only fully opaque PNGs on RGB565 displays can use the copy path. Alpha
+- * is checked once at decode time; transparent and other-display buffers retain
+- * their original precision and format. Allocation failure keeps the valid PNG.
++/* RGB565 displays can copy opaque pixels and blend binary-alpha masks
++ * without converting every source pixel on each frame. Keep partial alpha
++ * at its original precision. Allocation failure keeps the valid PNG.
+  */
+-static lv_draw_buf_t * optimize_opaque_png(lv_draw_buf_t * buf)
++static lv_draw_buf_t * optimize_png_for_rgb565(lv_draw_buf_t * buf)
+ {
+     if (get_target_rgb_format() != LV_COLOR_FORMAT_RGB565 ||
+             buf->header.cf != LV_COLOR_FORMAT_ARGB8888) {
+         return buf;
+     }
++    bool has_transparency = false;
+     for (uint32_t y = 0; y < buf->header.h; ++y) {
+         const uint8_t * row = buf->data + y * buf->header.stride;
+         for (uint32_t x = 0; x < buf->header.w; ++x) {
+-            if (row[x * 4 + 3] != 255) {
++            const uint8_t alpha = row[x * 4 + 3];
++            if (alpha != 0 && alpha != 255) {
+                 return buf;
+             }
+-        }
+-    }
++            has_transparency |= alpha == 0;
++        }
++    }
++#if !LV_DRAW_SW_SUPPORT_RGB565A8
++    if (has_transparency) {
++        return buf;
++    }
++#endif
++    const lv_color_format_t format = has_transparency ? LV_COLOR_FORMAT_RGB565A8 : LV_COLOR_FORMAT_RGB565;
+     lv_draw_buf_t * rgb = lv_draw_buf_create_ex(image_cache_draw_buf_handlers,
+-                         buf->header.w, buf->header.h, LV_COLOR_FORMAT_RGB565, LV_STRIDE_AUTO);
++                         buf->header.w, buf->header.h, format, LV_STRIDE_AUTO);
+     if (rgb == NULL) {
+         return buf;
+     }
+@@ -1488,6 +1497,11 @@
+             const uint16_t value = ((uint16_t)(pixel[2] >> 3) << 11) |
+                                    ((uint16_t)(pixel[1] >> 2) << 5) | (pixel[0] >> 3);
+             memcpy(out + x * 2, &value, sizeof(value));
++            if (has_transparency) {
++                // LVGL's RGB565A8 alpha plane has half the RGB row stride.
++                uint8_t * alpha = rgb->data + rgb->header.stride * rgb->header.h;
++                alpha[y * (rgb->header.stride / 2) + x] = pixel[3];
++            }
+         }
+     }
+     lv_draw_buf_destroy_user(image_cache_draw_buf_handlers, buf);
+@@ -1541,7 +1555,7 @@
+     if (dsc->src_type == LV_IMAGE_SRC_FILE && src_data) {
+         free(src_data);
+     }
+-    decoded = optimize_opaque_png(buf);
++    decoded = optimize_png_for_rgb565(buf);
+     (void)ret;
+     return decoded;
+ 

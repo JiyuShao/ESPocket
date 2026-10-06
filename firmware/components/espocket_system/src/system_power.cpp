@@ -79,6 +79,8 @@ void System::handle_power_short_press()
         return;
     }
 
+    shell_->discard_overlay_choices();
+
     if (!display_on_.load(std::memory_order_acquire)) {
         auto result = set_display_on(true);
         if (!result) {

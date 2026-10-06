@@ -19,4 +19,4 @@ CircularShell 在现有请求关系上仲裁呈现和输入：确认弹窗优先
 - 键盘期间 Back 是取消输入，不改变底层 App 页面栈。
 - GUI 更新、暂停与恢复不能改变 Owner/request identity，也不能授予 Permission。
 - 系统提示不被等同为前台 App 请求；Home 后可保留，PWR 保持已有导航/显示语义。
-- 实际用户行为要求由 [系统交互模型](../design/product/03-interaction-model.md) 持有；实现与验收由 [018](../../.scratch/018-system-super-reference-audit/spec.md) 的后续工作定义。
+- 实际用户行为要求由 [系统交互模型](../design/product/03-interaction-model.md) 持有；审计决定见 [018](../../.scratch/018-system-super-reference-audit/spec.md)，实现与验收由 [019](../../.scratch/019-system-shell-remediation/spec.md) 的后续工作定义。

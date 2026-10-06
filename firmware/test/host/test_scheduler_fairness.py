@@ -22,7 +22,7 @@ def exercise(source, directory):
 #include <cassert>
 #include <cstddef>
 #include <chrono>
-int idle_windows = 0, tasks = 0, largest_batch = 0;
+int idle_windows = 0, tasks = 0, largest_batch = 0, blocking_waits = 0;
 namespace boost {
 namespace chrono { using milliseconds = std::chrono::milliseconds; }
 namespace this_thread { void sleep_for(std::chrono::milliseconds delay) {
@@ -33,6 +33,11 @@ struct Queue {
     bool ready = true;
     size_t poll() { if (!ready) return 0; tasks += 32; largest_batch = 32; return 32; }
     size_t poll_one() { if (!ready) return 0; ++tasks; largest_batch = 1; return 1; }
+    size_t run_one_for(std::chrono::milliseconds delay) {
+        assert(delay.count() > 0);
+        if (!ready) { ++blocking_waits; return 0; }
+        ++tasks; largest_batch = 1; return 1;
+    }
 };
 int main() {
     Queue queue; auto *io_context_ = &queue; int poll_interval_ms = 10;
@@ -45,7 +50,7 @@ int main() {
     {
 ''' + block + r'''
     }
-    assert(idle_windows == 9 && tasks == 8);
+    assert(idle_windows == 8 && blocking_waits == 1 && tasks == 8);
 }
 '''
     cpp = Path(directory) / 'fairness.cpp'

@@ -199,9 +199,30 @@ inline std::string make_date_text()
     return text;
 }
 
+// LVGL owns this reference until deletion, including a failed stop/hide.
+// Invalidated states reject input; callback userdata cannot outlive its storage.
+template<class State>
+void retain_overlay_userdata(lv_obj_t *overlay, const std::shared_ptr<State> &state)
+{
+    auto *retained = new std::shared_ptr<State>(state);
+    lv_obj_add_event_cb(overlay, [](lv_event_t *event) {
+        if (lv_event_get_target(event) != lv_event_get_current_target(event)) return;
+        delete static_cast<std::shared_ptr<State> *>(lv_event_get_user_data(event));
+    }, LV_EVENT_DELETE, retained);
+}
+
 extern const char shell_gui_json_start[] asm("_binary_shell_gui_json_start");
 
 } // namespace
+
+struct CircularShell::LoadingState {
+    std::mutex mutex;
+    bool startup = false;
+    bool app_wait = false;
+    esp_brookesia::system::core::AppId app_id = esp_brookesia::system::core::INVALID_APP_ID;
+    lv_obj_t *overlay = nullptr;
+    bool invalidated = false;
+};
 
 struct CircularShell::KeyboardState {
     std::mutex mutex;
@@ -213,6 +234,8 @@ struct CircularShell::KeyboardState {
     lv_obj_t *text_area = nullptr;
     bool result_pending = false;
     bool confirmed = false;
+    bool suspended = false;
+    bool invalidated = false;
     std::string text;
 };
 
@@ -225,6 +248,8 @@ struct CircularShell::MessageDialogState {
     bool result_pending = false;
     int32_t button_index = -1;
     int64_t deadline_us = 0;
+    int64_t paused_at_us = -1;
+    bool invalidated = false;
     struct Button { MessageDialogState *state; int32_t index; };
     std::array<Button, 3> buttons{{{this, 0}, {this, 1}, {this, 2}}};
 };

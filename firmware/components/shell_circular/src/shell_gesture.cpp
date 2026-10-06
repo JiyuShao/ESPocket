@@ -57,6 +57,20 @@ void process_shell_gesture(ShellGestureState &state, const ShellGestureEvent &ev
         return;
     }
     const auto exit_distance_px = state.launcher_return_threshold.load(std::memory_order_acquire);
+    if (state.keyboard_active.load(std::memory_order_acquire)) {
+        if (event.phase == ShellGesturePhase::Press) {
+            state.consumed.store(false, std::memory_order_release);
+            if (context.display_on) state.activity_generation.fetch_add(1, std::memory_order_acq_rel);
+        } else if (context.display_on && event.phase == ShellGesturePhase::Pressing &&
+                   event.distance_px >= exit_distance_px &&
+                   ((event.left_edge && event.direction == ShellGestureDirection::Right) ||
+                    (event.right_edge && event.direction == ShellGestureDirection::Left))) {
+            if (!state.consumed.exchange(true, std::memory_order_acq_rel)) {
+                state.pending_gesture.store(static_cast<uint8_t>(GestureIntent::Back), std::memory_order_release);
+            }
+        }
+        return;
+    }
     if (event.phase == ShellGesturePhase::Press) {
         state.consumed.store(false, std::memory_order_release);
         state.launcher_pull_distance.store(0, std::memory_order_release);

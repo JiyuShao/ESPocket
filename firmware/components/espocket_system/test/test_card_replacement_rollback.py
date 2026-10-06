@@ -35,6 +35,7 @@ class CardReplacementRollbackTest(unittest.TestCase):
 #include <cassert>
 #include <atomic>
 #include <memory>
+#include <atomic>
 #include <optional>
 #include <string>
 #include <string_view>

@@ -1,0 +1,160 @@
+--- a/src/app/manager.cpp
++++ b/src/app/manager.cpp
+@@ -1085,6 +1085,11 @@
+                           );
+     if (!cleanup_result) {
+         BROOKESIA_LOGW("Failed to cleanup app GUI while stopping app: %1%", cleanup_result.error());
++        if (stop_result) {
++            stop_result = std::unexpected(cleanup_result.error());
++        } else {
++            stop_result = std::unexpected(stop_result.error() + "; GUI cleanup: " + cleanup_result.error());
++        }
+     }
+     if (!stop_result) {
+         record.info.state = AppState::Error;
+--- a/src/system/lifecycle.cpp
++++ b/src/system/lifecycle.cpp
+@@ -78,6 +78,9 @@
+     if (impl_->initialized_) {
+         return {};
+     }
++
++    impl_->initializing_ = true;
++    lib_utils::FunctionGuard init_cleanup([this]() { deinit(); });
+ 
+     impl_->system_type_ = config.system_type.empty() ? BROOKESIA_SYSTEM_CORE_DEFAULT_SYSTEM_TYPE : config.system_type;
+     impl_->environment_ = config.environment;
+@@ -189,12 +192,15 @@
+     if (!service_manager.add_service(impl_->system_service_)) {
+         return std::unexpected("Failed to add SystemCore service");
+     }
++    impl_->system_service_added_ = true;
+     if (!service_manager.add_service(impl_->gui_service_)) {
+         return std::unexpected("Failed to add SystemGui service");
+     }
++    impl_->gui_service_added_ = true;
+     if (!service_manager.add_service(impl_->timer_service_)) {
+         return std::unexpected("Failed to add SystemTimer service");
+     }
++    impl_->timer_service_added_ = true;
+ #if defined(ESP_PLATFORM) && CONFIG_BROOKESIA_SYSTEM_CORE_ENABLE_USB_BRIDGE
+     lib_utils::FunctionGuard usb_bridge_cleanup([&]() {
+         service::Usb::get_instance().clear_service_call_bridge();
+@@ -334,6 +340,7 @@
+ 
+     impl_->initialized_ = true;
+ 
++    impl_->product_init_entered_ = true;
+     auto init_result = on_init();
+     if (!init_result) {
+         return init_result;
+@@ -356,6 +363,8 @@
+     usb_bridge_cleanup.release();
+ #endif
+     startup_overlay_cleanup.release();
++    impl_->initializing_ = false;
++    init_cleanup.release();
+     return {};
+ }
+ 
+@@ -370,7 +379,9 @@
+     }
+     auto result = on_start();
+     if (!result) {
+-        impl_->hide_startup_overlay();
++        // on_start may have acquired product resources despite started_ being false.
++        on_stop();
++        deinit();
+         return result;
+     }
+     impl_->hide_startup_overlay();
+@@ -393,7 +404,7 @@
+ void System::deinit()
+ {
+     BROOKESIA_LOG_TRACE_GUARD_WITH_THIS();
+-    if (!impl_ || !impl_->initialized_) {
++    if (!impl_ || (!impl_->initialized_ && !impl_->initializing_)) {
+         return;
+     }
+     stop();
+@@ -448,9 +459,18 @@
+     service::Usb::get_instance().clear_host_command_bridge();
+ #endif
+     auto &service_manager = service::ServiceManager::get_instance();
+-    service_manager.remove_service(BROOKESIA_SYSTEM_CORE_TIMER_SERVICE_NAME);
+-    service_manager.remove_service(BROOKESIA_SYSTEM_CORE_GUI_SERVICE_NAME);
+-    service_manager.remove_service(BROOKESIA_SYSTEM_CORE_SERVICE_NAME);
++    if (impl_->timer_service_added_) {
++        service_manager.remove_service(BROOKESIA_SYSTEM_CORE_TIMER_SERVICE_NAME);
++        impl_->timer_service_added_ = false;
++    }
++    if (impl_->gui_service_added_) {
++        service_manager.remove_service(BROOKESIA_SYSTEM_CORE_GUI_SERVICE_NAME);
++        impl_->gui_service_added_ = false;
++    }
++    if (impl_->system_service_added_) {
++        service_manager.remove_service(BROOKESIA_SYSTEM_CORE_SERVICE_NAME);
++        impl_->system_service_added_ = false;
++    }
+     if (impl_->runtime_) {
+         impl_->runtime_->deinit();
+     }
+@@ -466,14 +486,42 @@
+     if (!gui_cleanup_result) {
+         BROOKESIA_LOGW("Failed to cleanup GUI runtime while deinitializing system: %1%", gui_cleanup_result.error());
+     }
+-    impl_->gui_thread_guard_.reset();
+     if (impl_->task_scheduler_) {
+         impl_->task_scheduler_->stop();
+         impl_->task_scheduler_.reset();
+     }
++    if (!gui_cleanup_result) {
++        // Posting failed: first join scheduler callbacks, then release GUI under
++        // the same backend guard. Do not reset that guard while workers use it.
++        impl_->execute_task_with_group_context(SYSTEM_GUI_TASK_GROUP, [this]() {
++            impl_->stop_live_preview_poll();
++            impl_->gui_runtime_.reset();
++        });
++    }
++    impl_->gui_thread_guard_.reset();
+     impl_->runtime_initialized_ = false;
+-    on_deinit();
++    impl_->active_app_id_ = INVALID_APP_ID;
++    impl_->keyboard_requests_.clear();
++    impl_->message_dialog_requests_.clear();
++    impl_->queued_message_dialog_requests_.clear();
++    impl_->active_message_dialog_request_id_.reset();
++    impl_->pending_timers_.clear();
++    impl_->pending_gui_bindings_.clear();
++    impl_->app_storage_paths_cache_.clear();
++    impl_->gui_preferences_restoring_ = false;
++    impl_->gui_preferences_restored_ = false;
++    impl_->runtime_.reset();
++    impl_->runtime_function_bridge_.reset();
++    impl_->host_bridge_.reset();
++    impl_->system_service_.reset();
++    impl_->gui_service_.reset();
++    impl_->timer_service_.reset();
++    if (impl_->product_init_entered_) {
++        on_deinit();
++        impl_->product_init_entered_ = false;
++    }
+     impl_->initialized_ = false;
++    impl_->initializing_ = false;
+     BROOKESIA_LOGI("System core deinitialized");
+ }
+ 
+--- a/src/private/system/impl.hpp
++++ b/src/private/system/impl.hpp
+@@ -332,6 +332,11 @@
+     AppId active_app_id_ = INVALID_APP_ID;
+     std::vector<PendingTimer> pending_timers_;
+     std::optional<TransientOverlayRecord> startup_overlay_;
++    bool initializing_ = false;
++    bool product_init_entered_ = false;
++    bool system_service_added_ = false;
++    bool gui_service_added_ = false;
++    bool timer_service_added_ = false;
+     bool initialized_ = false;
+     bool started_ = false;
+     bool runtime_initialized_ = false;
