@@ -6,6 +6,10 @@ GUI Interface 0.8.2 的[预加载资源归属补丁](espressif__brookesia_gui_in
 
 ## 当前清单
 
+Agent Manager 0.8.2 的[会话阶段录音初始化补丁](espressif__brookesia_agent_manager/0.8.2/001-defer-capture-until-conversation.patch)将 capture DataFlow 的获取从服务启动移到会话启动。账号激活可以在 playback-only 产品上运行；实际会话仍要求真实录音接口，不伪造输入或吞掉缺少接口的错误。默认 production 精确选择该补丁；验收由 [005/13](../../.scratch/005-m5-application-ecosystem/issues/13-xiaozhi-and-launcher-performance.md)持有。
+
+HAL 0.8.4 的[活跃播放关闭回调补丁](espressif__brookesia_hal_adaptor/0.8.4/003-separate-playback-callback-from-close-lock.patch)把 playback callback 存储与 acquire／release 生命周期锁分开。关闭仍串行等待真实音频 worker；最终 STOPPED 回调可完成，不等待关闭线程持有的生命周期锁。真实 close／release／event 方法的并发主机回归和小智播报中 Home 真机回归由同一 [005/13](../../.scratch/005-m5-application-ecosystem/issues/13-xiaozhi-and-launcher-performance.md)持有。
+
 已接受 [Runtime JS 0.8.3 异步栈配置补丁](espressif__brookesia_runtime_js/0.8.3/001-configure-async-stack.patch)，由 [ADR-0015](../../docs/adr/0015-runtime-async-stack-patch-exception.md)限定授权。manifest 锁定完整原始源码与补丁 hash，上游问题尚未提交。构建与设备验收状态以 [008/04](../../.scratch/008-m8-app-contract/issues/04-resolve-runtime-async-stack-overflow.md)为准。
 
 Core 0.8.4 的 failed-stop、键盘 Owner 与 queued event 补丁依据 [ADR-0016](../../docs/adr/0016-maintained-upstream-fixes.md)维护；源码回归、完整构建与尚待设备门槛见 [005/07](../../.scratch/005-m5-application-ecosystem/issues/07-isolate-runtime-keyboard-results.md)。

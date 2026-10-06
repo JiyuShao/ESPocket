@@ -16,11 +16,13 @@ inline esp_brookesia::system::core::System::Config::AppPresentation round_app_pr
     const auto diameter = std::min(environment.width_px, environment.height_px);
     if (diameter <= 0) return result;
     const auto side = static_cast<int32_t>(std::floor(diameter / std::sqrt(2.0)));
+    const bool fixed_landscape = manifest.id == "brookesia.general.ai_chatbot" && manifest.version == "0.2.1";
+    const auto height = fixed_landscape ? side * 480 / 800 : side;
     result.environment.width_px = side;
-    result.environment.height_px = side;
-    result.environment.density = static_cast<float>(side) / 480.0F;
+    result.environment.height_px = height;
+    result.environment.density = static_cast<float>(side) / (fixed_landscape ? 800.0F : 480.0F);
     result.viewport = gui::GuiViewport{
-        (environment.width_px - side) / 2, (environment.height_px - side) / 2, side, side
+        (environment.width_px - side) / 2, (environment.height_px - height) / 2, side, height
     };
     return result;
 }

@@ -144,11 +144,30 @@ int main()
         launcher.launcher_scroll_top = starts_at_top ? 0 : 200;
         press(launcher);
         move(launcher, ShellGestureDirection::Down);
-        assert(launcher.pointer_cancel_pending == starts_at_top);
+        assert(launcher.pointer_cancel_pending);
         assert(pending(launcher) == GestureIntent::None);
         process_shell_gesture(launcher, {.phase = ShellGesturePhase::Release}, {});
         assert(pending(launcher) == (starts_at_top ? GestureIntent::WatchFace : GestureIntent::None));
         assert(launcher.surface == ShellSurface::Launcher);
+    }
+    for (auto direction : {ShellGestureDirection::Up, ShellGestureDirection::Down}) {
+        ShellGestureState page;
+        page.surface = ShellSurface::Launcher;
+        page.launcher_scroll_top = 2;
+        page.launcher_return_threshold = 93;
+        press(page);
+        move(page, direction);
+        assert(page.pointer_cancel_pending && page.click_suppressed);
+        assert(pending(page) == GestureIntent::None);
+        release(page, direction);
+        assert(pending(page) == (direction == ShellGestureDirection::Up ? GestureIntent::LauncherNext : GestureIntent::LauncherPrevious));
+        const auto committed = pending(page);
+        release(page, direction);
+        assert(pending(page) == committed);
+        press(page);
+        page.pending_gesture = 0;
+        release(page, direction, {}, false, false, 92);
+        assert(pending(page) == GestureIntent::None);
     }
     ShellGestureState cancelled;
     cancelled.surface = ShellSurface::Launcher;

@@ -96,30 +96,6 @@ static_assert(gesture_exit_distance_px(466) == 93);
 static_assert(gesture_vertical_edge_px(466) == 37);
 static_assert(gesture_horizontal_edge_px(466) == 27);
 
-// PROTOTYPE: Brookesia exposes scroll commands but not a scroll-position query.
-// This recognizes the Shell-owned Launcher list by its four direct App buttons.
-inline lv_obj_t *find_launcher_view(lv_obj_t *root)
-{
-    if (root == nullptr) {
-        return nullptr;
-    }
-    if (lv_obj_has_flag(root, LV_OBJ_FLAG_SCROLLABLE) && lv_obj_get_height(root) >= 400) {
-        uint32_t app_buttons = 0;
-        for (uint32_t index = 0; index < lv_obj_get_child_count(root); ++index) {
-            app_buttons += lv_obj_check_type(lv_obj_get_child(root, index), &lv_button_class) ? 1U : 0U;
-        }
-        if (app_buttons == 4) {
-            return root;
-        }
-    }
-    for (uint32_t index = 0; index < lv_obj_get_child_count(root); ++index) {
-        if (auto *found = find_launcher_view(lv_obj_get_child(root, index)); found != nullptr) {
-            return found;
-        }
-    }
-    return nullptr;
-}
-
 class LvglLock {
 public:
     LvglLock()

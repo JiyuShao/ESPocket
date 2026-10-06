@@ -25,6 +25,7 @@ PATCH_SETS = {
 }
 
 PATCH_SETS['production'] += (('espressif__mcp-c-sdk', '2.0.1'),)
+PATCH_SETS['production'] += (('espressif__brookesia_agent_manager', '0.8.2'),)
 PATCH_SETS['gui-candidate'] = PATCH_SETS['production']
 PATCH_SETS['scheduler-candidate'] = PATCH_SETS['gui-candidate']
 

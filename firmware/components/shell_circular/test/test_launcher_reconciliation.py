@@ -34,6 +34,12 @@ int main() {
  shell.refresh_launcher();
  check(shell.launcher_entries_.size()==1 && context.view.regions.size()==1,"initial full projection");
  const auto first=shell.launcher_region_; const auto stable=shell.launcher_entries_[0].instance;
+ check(context.view.regions.at(first),"first page exposed dynamic rows");
+ check(shell.show_launcher_page(1).has_value(),"cannot open runtime page");
+ check(!context.view.regions.at(first) && context.view.bindings.at("/launcher/settings:hidden")=="true","runtime page retained fixed rows");
+ context.view.fail="swap";
+ check(!shell.show_launcher_page(0) && shell.launcher_page_==1,"failed page switch changed committed page");
+ context.view.fail.clear();
  for(const auto *failure:{"launcher_region","launcher_item","text","bindings","swap","snapshot"}) {
    context.view.fail=failure;fail_snapshot=std::string(failure)=="snapshot";
    apps[0].name=failure;++generation;++test_clock_us;
@@ -62,7 +68,23 @@ int main() {
  // on_start resets the first-reconciliation gate after ordinary stop cleanup.
  shell.launcher_generation_=UINT64_MAX;shell.launcher_refresh_at_us_=0;
  shell.refresh_launcher();check(shell.launcher_entries_.size()==1,"Shell restart did not rebuild from Core");
- shell.stop_launcher();std::cout<<"PASS: real Launcher failure retention, rate limit, icon leases, stale view and uninstall races\n";
+ apps.clear();
+ for(int index=0;index<9;++index)apps.push_back({uint32_t(index+1),"org.page."+std::to_string(index),"Page", "",true,true,true,false});
+ ++generation;++test_clock_us;shell.refresh_launcher();
+ for(size_t requested:{size_t(0),size_t(1),size_t(2),size_t(3),size_t(99)}) {
+   check(shell.show_launcher_page(requested).has_value(),"page switch failed");
+   const auto page=launcher_page(apps.size(),requested);
+   check(shell.launcher_page_==page.index,"page clamp incorrect");
+   for(size_t index=0;index<shell.launcher_entries_.size();++index) {
+     const auto visible=index+4>=page.begin && index+4<page.end;
+     check(context.view.bindings.at(shell.launcher_region_+"/"+shell.launcher_entries_[index].instance+":hidden")== (visible?"false":"true"),"page row visibility incorrect");
+   }
+ }
+ shell.launcher_intent_=shell.launcher_region_+"/"+shell.launcher_entries_[0].instance;
+ const auto opened=shell.opened.size();shell.dispatch_launcher();check(shell.opened.size()==opened,"hidden row intent launched");
+ apps.clear();++generation;++test_clock_us;shell.refresh_launcher();
+ check(shell.launcher_page_==0 && context.view.bindings.at("/launcher/settings:hidden")=="false","removed apps left invalid page");
+ shell.stop_launcher();std::cout<<"PASS: real Launcher failure retention, pagination, icon leases, stale view and uninstall races\n";
 }'''
             (directory / 'main.cpp').write_text(main)
             executable = directory / 'test'

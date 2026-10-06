@@ -359,16 +359,6 @@ std::expected<void, std::string> CircularShell::on_timer(
             }
             if (current_surface() == ShellSurface::Launcher &&
                     (!host_.app_visible || !host_.app_visible())) {
-                {
-                    LvglLock lock;
-                    if (lock) {
-                        if (auto *launcher = find_launcher_view(lv_screen_active()); launcher != nullptr) {
-                            home_gesture_state_->launcher_scroll_top.store(
-                                lv_obj_get_scroll_top(launcher), std::memory_order_release
-                            );
-                        }
-                    }
-                }
                 const int32_t pull = home_gesture_state_->launcher_pull_distance.load(
                                          std::memory_order_acquire
                                      );
@@ -381,20 +371,9 @@ std::expected<void, std::string> CircularShell::on_timer(
                     set_status_text(
                         LAUNCHER_PULL_PATH,
                         visual == 2 ? LV_SYMBOL_DOWN "  Release for Home" :
-                        visual == 1 ? LV_SYMBOL_DOWN "  Keep pulling" : LV_SYMBOL_DOWN "  Pull for Home"
+                        visual == 1 ? LV_SYMBOL_DOWN "  Keep pulling" :
+                        launcher_page_ == 0 ? "Swipe up | Home down" : "Swipe up / down"
                     );
-                }
-                const int32_t height = 28 + std::min<int32_t>(32, pull / 3);
-                if (height != launcher_pull_height_ && context_ != nullptr) {
-                    launcher_pull_height_ = height;
-                    auto result = context_->gui().set_binding_value(
-                                      LAUNCHER_PULL_PATH,
-                                      "pullHeight",
-                                      std::to_string(height) + "dp"
-                                  );
-                    if (!result) {
-                        ESP_LOGW(SHELL_TAG, "Launcher pull feedback failed: %s", result.error().c_str());
-                    }
                 }
             }
             const auto intent = static_cast<GestureIntent>(
@@ -428,6 +407,12 @@ std::expected<void, std::string> CircularShell::on_timer(
                 break;
             case GestureIntent::Launcher:
                 result = show_surface(ShellSurface::Launcher);
+                break;
+            case GestureIntent::LauncherNext:
+                result = show_launcher_page(launcher_page_ + 1);
+                break;
+            case GestureIntent::LauncherPrevious:
+                result = show_launcher_page(launcher_page_ == 0 ? 0 : launcher_page_ - 1);
                 break;
             case GestureIntent::Back:
                 if (!cancel_keyboard_input() && host_.back) {

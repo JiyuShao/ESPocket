@@ -1,4 +1,6 @@
 #include "espocket/launcher_projection.hpp"
+#include "espocket/launcher_pages.hpp"
+#include <array>
 #include <algorithm>
 #include <atomic>
 #include <functional>
@@ -26,6 +28,7 @@ struct FakeGui {
     std::map<std::string, int> image_leases;
     std::set<std::string> unavailable_icons;
     std::string fail;
+    std::map<std::string, std::string> bindings;
     int preparations = 0;
     bool fixed_available = true;
     mutable int language_reads = 0;
@@ -51,6 +54,9 @@ struct FakeGui {
         for (const auto &update : updates) {
             if ((fail == "bindings" && update.key == "src") || (fail == "swap" && update.value == "false"))
                 return std::unexpected("binding failure");
+        }
+        for (const auto &update : updates) {
+            bindings[update.path + ":" + update.key] = update.value;
             if (regions.contains(update.path) && update.key == "hidden") regions[update.path] = update.value == "true";
         }
         return {};
@@ -63,7 +69,7 @@ struct FakeGui {
 };
 struct FakeContext { FakeGui view; FakeGui &gui() { return view; } };
 struct FakeConnection { void disconnect() {} };
-struct FakeGesture { std::atomic<bool> modal_active{false}; std::atomic<int> launcher_pull_distance{0}, launcher_return_threshold{100}; };
+struct FakeGesture { std::atomic<bool> modal_active{false}; std::atomic<int> launcher_pull_distance{0}, launcher_return_threshold{100}, launcher_scroll_top{0}; };
 struct FakeHost {
     std::function<std::expected<std::vector<LauncherApp>, std::string>(std::string_view)> launcher_apps;
     std::function<uint64_t()> launcher_generation;
@@ -73,11 +79,13 @@ struct FakeHost {
 class CircularShell {
 public:
     void refresh_launcher(); void dispatch_launcher(); void stop_launcher();
+    std::expected<void,std::string> show_launcher_page(size_t requested);
     ShellSurface current_surface() { return ShellSurface::Launcher; }
     std::expected<void,std::string> open_app(const std::string &id, const std::string &) { opened.push_back(id); return {}; }
     void set_status_text(const char *, const std::string &) {}
     FakeContext *context_ = nullptr; FakeHost host_;
     int64_t launcher_refresh_at_us_ = 0;
+    size_t launcher_page_ = 0;
     uint64_t launcher_generation_ = UINT64_MAX, launcher_view_generation_ = 0;
     bool launcher_developer_enabled_ = false;
     std::string launcher_language_, launcher_region_, launcher_intent_;

@@ -16,6 +16,7 @@
 #include "brookesia/system_core.hpp"
 #include "espocket/shell_gesture.hpp"
 #include "espocket/launcher_projection.hpp"
+#include "espocket/launcher_pages.hpp"
 
 namespace espocket {
 
@@ -157,6 +158,7 @@ private:
     void sync_default_back(bool visible);
     void sync_card_hint(bool visible);
     void refresh_launcher();
+    std::expected<void, std::string> show_launcher_page(size_t requested);
     void dispatch_launcher();
     void stop_launcher();
 
@@ -193,7 +195,7 @@ private:
     int64_t last_activity_us_ = 0;
     bool screen_timeout_latched_ = false;
     uint8_t launcher_pull_visual_ = 0;
-    int32_t launcher_pull_height_ = 28;
+    size_t launcher_page_ = 0;
     std::vector<LauncherEntry> launcher_entries_;
     std::string launcher_region_;
     std::vector<std::string> launcher_images_;

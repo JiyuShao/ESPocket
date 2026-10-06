@@ -31,6 +31,7 @@ class AudioPlaybackOnlyTest(unittest.TestCase):
 #include <cstring>
 #include <functional>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <iostream>
 #define BROOKESIA_LOG_TRACE_GUARD_WITH_THIS()
@@ -70,6 +71,7 @@ struct PlaybackIface {using EventCallback=std::function<void(int)>;};
 }
 struct AudioProcessorTypeConverter {static int convert(auto&,const void*,void*){return 0;}};
 struct AudioProcessorCore {
+    std::mutex playback_callback_mutex_;
     std::shared_ptr<audio::CodecPlayerIface> player_iface_=std::make_shared<audio::CodecPlayerIface>();
     std::shared_ptr<audio::CodecRecorderIface> recorder_iface_;
     struct {struct {Format player;} playback;} config_;

@@ -27,6 +27,8 @@ enum class GestureIntent : uint8_t {
     LeftCardIn,
     RightCardIn,
     Consume,
+    LauncherNext,
+    LauncherPrevious,
 };
 
 enum class ShellGesturePhase { Press, Pressing, Release };

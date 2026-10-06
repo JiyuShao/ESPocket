@@ -6,6 +6,7 @@ import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[3]
+PRESENTATION_HEADER = ROOT / 'firmware/components/espocket_system/src/round_presentation.hpp'
 sys.path.insert(0, str(ROOT / 'scripts/firmware'))
 from prepare_patched_component import prepare
 
@@ -160,6 +161,16 @@ int main(){
  auto presentation=espocket::round_app_presentation(manifest,environment);
  assert(presentation.viewport && presentation.viewport->width==329);
  assert(std::abs(presentation.environment.width_px/presentation.environment.density-480)<0.001);
+ manifest.id="brookesia.general.ai_chatbot";
+ manifest.version="0.2.1";
+ auto landscape=espocket::round_app_presentation(manifest,environment);
+ assert(landscape.viewport->width==329 && landscape.viewport->height==197);
+ assert(landscape.viewport->x==68 && landscape.viewport->y==134);
+ assert(std::abs(landscape.environment.width_px/landscape.environment.density-800)<0.001);
+ assert(landscape.environment.height_px==landscape.viewport->height);
+ manifest.version="0.3.0";
+ assert(espocket::round_app_presentation(manifest,environment).viewport->height==329);
+ manifest.id="";
  for(auto x:{presentation.viewport->x,presentation.viewport->x+presentation.viewport->width-1})
   for(auto y:{presentation.viewport->y,presentation.viewport->y+presentation.viewport->height-1})
    assert((x-232.5)*(x-232.5)+(y-232.5)*(y-232.5)<233*233);
@@ -177,7 +188,7 @@ int main(){
  assert(backend.mount_screen(handle,native));assert(backend.screen.width==466 && !backend.screen.hidden);
 }
 '''
-            code = code.replace('PRODUCT_PRESENTATION', str(ROOT / 'firmware/components/espocket_system/src/round_presentation.hpp'))
+            code = code.replace('PRODUCT_PRESENTATION', str(PRESENTATION_HEADER))
             header = temporary / 'brookesia/system_core/system/system.hpp'
             header.parent.mkdir(parents=True)
             header.write_text(r'''
@@ -186,7 +197,7 @@ namespace esp_brookesia {
 namespace gui {using GuiViewport=::GuiViewport;struct Environment{int width_px,height_px;float density;};}
 namespace system::core {
 enum class AppKind {Native,Runtime};
-struct AppManifest{AppKind kind;std::vector<std::string>supported_systems;};
+struct AppManifest{AppKind kind;std::vector<std::string>supported_systems;std::string id,version;};
 struct System{struct Config{struct AppPresentation{gui::Environment environment;std::optional<gui::GuiViewport>viewport;};};};
 }
 }

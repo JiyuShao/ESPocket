@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "component": "espressif__brookesia_agent_manager",
+  "upstream_version": "0.8.2",
+  "source_commit": "e9f22576bb4d19ca190a8105134010d514574a6b",
+  "registry_component_hash": "2e24f02bcbc9f4a827f44385a4a122139f2e847b026ce72e607a9bd4fd15033c",
+  "source_files": {
+    ".component_hash": "5bcbb984f5180289f06d23be7f8ee0a48ed2bb17468a174f83f521e7f1323174",
+    "CHANGELOG.md": "62020eefafd4996fe5b4d28a4d6e3378eb7e11c7086a222dffd90e99be182b81",
+    "CHECKSUMS.json": "8f86442316aef34ca07a0325273cfd80e02b3ebf80f5b8a5121671be36e4c686",
+    "CMakeLists.txt": "cc65659b641ef6cef33da0d04aa0a125171ab9b919243dc813adfd87c2ef4417",
+    "Kconfig": "57809edd38cdb7434d36c4f1353e0e584bc6f4534fac2509697ad9973ca9a6c6",
+    "README.md": "537f8a21cc49446e75a3863b9bda8d69c1124a5e401119bd3c65cad7c9a169c4",
+    "README_CN.md": "4d49988c1e46d1443d0d45ebd801c0f3ab3b4fea79a39d7f7c0513e1559add35",
+    "idf_component.yml": "fbe8291009826051a957d373f91d2203a47b808ce34b04b93f7945ab9e50fcee",
+    "include/brookesia/agent_manager/base.hpp": "29dc1de10fe50164795271be85c14235746c290889efd634028a8b8553ba92a8",
+    "include/brookesia/agent_manager/macro_configs.h": "7286f2f8b82aba1b69a9253f3ea1e37ef917d7428981d0299d444f8eaeed987d",
+    "include/brookesia/agent_manager/manager.hpp": "fcc508ee66f1408a5bbe610568d202082b9cbbe5d6c1c2efa8db4f8c3e368a83",
+    "include/brookesia/agent_manager/state_machine.hpp": "3267968042c2199b615561dbb07bafb4bd755a50b117b46dcc00f4eb5eb5f206",
+    "include/brookesia/agent_manager.hpp": "71315cdae4a0b38c1065ed0e7f5d9b9a6c29a62652aaa6e769e6a3c2d8ede220",
+    "license.txt": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+    "src/base.cpp": "44ef7934f71b1a4ecf0b5200849d05ece52980f6a1b700757c68b39f6c2c2f54",
+    "src/manager.cpp": "5e7719a8a8a4bd539291d76beb2505caa02f5e4efb669026b951f64d8fddc345",
+    "src/private/utils.hpp": "ee85455cf89a7c9c8cae14d537e687aa811f7e1bcc8fd253c462d6be94da954f",
+    "src/state_machine.cpp": "c2222d61917e2fef43b2a15103bc0e7c828394b65984307a7f23cc08e53720e6"
+  },
+  "patched_files": {
+    ".component_hash": "5bcbb984f5180289f06d23be7f8ee0a48ed2bb17468a174f83f521e7f1323174",
+    "CHANGELOG.md": "62020eefafd4996fe5b4d28a4d6e3378eb7e11c7086a222dffd90e99be182b81",
+    "CHECKSUMS.json": "8f86442316aef34ca07a0325273cfd80e02b3ebf80f5b8a5121671be36e4c686",
+    "CMakeLists.txt": "cc65659b641ef6cef33da0d04aa0a125171ab9b919243dc813adfd87c2ef4417",
+    "Kconfig": "57809edd38cdb7434d36c4f1353e0e584bc6f4534fac2509697ad9973ca9a6c6",
+    "README.md": "537f8a21cc49446e75a3863b9bda8d69c1124a5e401119bd3c65cad7c9a169c4",
+    "README_CN.md": "4d49988c1e46d1443d0d45ebd801c0f3ab3b4fea79a39d7f7c0513e1559add35",
+    "idf_component.yml": "fbe8291009826051a957d373f91d2203a47b808ce34b04b93f7945ab9e50fcee",
+    "include/brookesia/agent_manager/base.hpp": "29dc1de10fe50164795271be85c14235746c290889efd634028a8b8553ba92a8",
+    "include/brookesia/agent_manager/macro_configs.h": "7286f2f8b82aba1b69a9253f3ea1e37ef917d7428981d0299d444f8eaeed987d",
+    "include/brookesia/agent_manager/manager.hpp": "fcc508ee66f1408a5bbe610568d202082b9cbbe5d6c1c2efa8db4f8c3e368a83",
+    "include/brookesia/agent_manager/state_machine.hpp": "3267968042c2199b615561dbb07bafb4bd755a50b117b46dcc00f4eb5eb5f206",
+    "include/brookesia/agent_manager.hpp": "71315cdae4a0b38c1065ed0e7f5d9b9a6c29a62652aaa6e769e6a3c2d8ede220",
+    "license.txt": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+    "src/base.cpp": "1ca75c462c8e068614df14d2cde2b31244ce65b50d237459d6f67f1ce6d1d541",
+    "src/manager.cpp": "5e7719a8a8a4bd539291d76beb2505caa02f5e4efb669026b951f64d8fddc345",
+    "src/private/utils.hpp": "ee85455cf89a7c9c8cae14d537e687aa811f7e1bcc8fd253c462d6be94da954f",
+    "src/state_machine.cpp": "c2222d61917e2fef43b2a15103bc0e7c828394b65984307a7f23cc08e53720e6"
+  },
+  "patches": [
+    {
+      "file": "001-defer-capture-until-conversation.patch",
+      "sha256": "e0dd13e451f96545996f48e33255ebdaa32c5f1d6e9c38575c6d78dfa8c91947"
+    }
+  ],
+  "issue": ".scratch/005-m5-application-ecosystem/issues/13-xiaozhi-and-launcher-performance.md",
+  "reason": "Agent service initialization and cloud activation do not require microphone capture; acquire capture at conversation startup while preserving real missing-input failures.",
+  "remove_when": "Upstream separates activation from audio capture initialization and activation/capture lifecycle regression passes.",
+  "upstream_submission": "not submitted"
+}

@@ -1,0 +1,66 @@
+--- a/src/audio/processor_impl.cpp
++++ b/src/audio/processor_impl.cpp
+@@ -111,7 +111,10 @@
+     std::lock_guard lock(mutex_);
+     if (is_opened_) {
+         if (callback) {
+-            playback_callback_ = std::move(callback);
++            {
++                std::lock_guard callback_lock(playback_callback_mutex_);
++                playback_callback_ = std::move(callback);
++            }
+         }
+         open_ref_count_++;
+         return true;
+@@ -142,7 +145,7 @@
+ {
+     BROOKESIA_LOG_TRACE_GUARD_WITH_THIS();
+ 
+-    std::lock_guard lock(mutex_);
++    std::lock_guard lock(playback_callback_mutex_);
+     playback_callback_ = nullptr;
+ }
+ 
+@@ -244,7 +247,10 @@
+         false, "Failed to open playback"
+     );
+ 
+-    playback_callback_ = std::move(callback);
++    {
++        std::lock_guard callback_lock(playback_callback_mutex_);
++        playback_callback_ = std::move(callback);
++    }
+     is_opened_ = true;
+ 
+     manager_guard.release();
+@@ -282,7 +288,10 @@
+         recorder_iface_->close();
+     }
+ 
+-    playback_callback_ = nullptr;
++    {
++        std::lock_guard callback_lock(playback_callback_mutex_);
++        playback_callback_ = nullptr;
++    }
+     is_opened_ = false;
+ }
+ 
+@@ -596,7 +605,7 @@
+ 
+     audio::PlaybackIface::EventCallback callback;
+     {
+-        std::lock_guard lock(mutex_);
++        std::lock_guard lock(playback_callback_mutex_);
+         callback = playback_callback_;
+     }
+     if (callback) {
+--- a/src/audio/processor_impl.hpp
++++ b/src/audio/processor_impl.hpp
+@@ -75,6 +75,7 @@
+     AudioProcessorConfig config_;
+ 
+     mutable std::mutex mutex_;
++    mutable std::mutex playback_callback_mutex_;
+     size_t open_ref_count_ = 0;
+     audio::PlaybackIface::EventCallback playback_callback_;
+     audio::EncoderIface::Callbacks encoder_callbacks_;

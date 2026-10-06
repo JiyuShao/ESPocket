@@ -179,6 +179,11 @@ void process_shell_gesture(ShellGestureState &state, const ShellGestureEvent &ev
             }
             break;
         case ShellSurface::Launcher:
+            if (event.direction == ShellGestureDirection::Up) intent = GestureIntent::LauncherNext;
+            else if (event.direction == ShellGestureDirection::Down &&
+                     !state.launcher_press_started_at_top.load(std::memory_order_acquire)) {
+                intent = GestureIntent::LauncherPrevious;
+            }
             break;
         case ShellSurface::LeftAppCard:
             if (event.direction == ShellGestureDirection::Left) intent = GestureIntent::LeftCardIn;

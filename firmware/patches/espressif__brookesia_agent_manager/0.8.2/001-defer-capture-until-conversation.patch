@@ -1,0 +1,54 @@
+--- a/src/base.cpp
++++ b/src/base.cpp
+@@ -456,23 +456,6 @@
+         .parent_group = Manager::get_instance().get_request_task_group(),
+     }), false, "Failed to configure request task group");
+ 
+-    df::AudioCaptureOperationConfig capture_operation_config{};
+-    capture_operation_config.owner = get_attributes().name;
+-    capture_operation_config.provider_id = AGENT_AUDIO_ENCODER_PROVIDER_ID;
+-    capture_operation_config.model = df::Model::AudioCapture;
+-    capture_operation_config.capture = to_dataflow_audio_capture_config(get_audio_config().encoder);
+-    auto operation_result = service::ServiceManager::get_instance().get_dataflow_registry().open_audio_capture_operation(
+-                                std::move(capture_operation_config)
+-                            );
+-    BROOKESIA_CHECK_FALSE_RETURN(
+-        operation_result, false, "Failed to open agent audio capture operation: %1%", operation_result.error()
+-    );
+-    audio_capture_operation_ = std::move(operation_result.value());
+-
+-    wake_words_ = audio_capture_operation_->get_afe_wake_words();
+-    if (!wake_words_.empty()) {
+-        BROOKESIA_LOGI("Detected wakeup words: %1%", wake_words_);
+-    }
+ 
+     return true;
+ }
+@@ -513,6 +496,27 @@
+ bool Base::do_start()
+ {
+     BROOKESIA_LOG_TRACE_GUARD_WITH_THIS();
++
++    if (!audio_capture_operation_ || !audio_capture_operation_->is_available()) {
++        df::AudioCaptureOperationConfig capture_operation_config{};
++        capture_operation_config.owner = get_attributes().name;
++        capture_operation_config.provider_id = AGENT_AUDIO_ENCODER_PROVIDER_ID;
++        capture_operation_config.model = df::Model::AudioCapture;
++        capture_operation_config.capture = to_dataflow_audio_capture_config(get_audio_config().encoder);
++        auto operation_result = service::ServiceManager::get_instance().get_dataflow_registry().open_audio_capture_operation(
++                                    std::move(capture_operation_config)
++                                );
++        BROOKESIA_CHECK_FALSE_RETURN(
++            operation_result, false, "Failed to open agent audio capture operation: %1%", operation_result.error()
++        );
++        audio_capture_operation_ = std::move(operation_result.value());
++
++        wake_words_ = audio_capture_operation_->get_afe_wake_words();
++        if (!wake_words_.empty()) {
++            BROOKESIA_LOGI("Detected wakeup words: %1%", wake_words_);
++        }
++
++    }
+ 
+     // Start the audio decoder
+     BROOKESIA_CHECK_FALSE_RETURN(

@@ -25,7 +25,7 @@
 | INT-010 | Card 是 Home Space 中的一级位置，可展示 Shell 内容或同一 App 的专门 App Card 形态；需要多级流程时进入完整 App 页面。 |
 | INT-011 | Launcher 只负责发现和启动 App，不得成为 Home。 |
 | INT-017 | 从 Launcher 向下、Quick Settings 向上、左右 Card 向表盘方向滑动时，必须能返回 Watch Face；周边页应有轻微的返回方向提示。 |
-| INT-018 | Launcher 应为纵向滚动列表；列表在顶部继续下拉，越过阈值并松手后才返回 Watch Face。拉动期间应有伸展与箭头反馈，达到阈值时提示松手返回，并取消本次触摸的 App 点击。 |
+| INT-018 | Circular Shell 的 Launcher 使用每页最多四个入口的纵向分页列表；上滑下一页、下滑上一页，越过阈值并松手后一次切换，不连续滚动或播放翻页动画。第一页继续下拉才返回 Watch Face；拉动期间提供方向与阈值提示，并取消本次触摸的 App 点击。页码可见，最后一页上滑保持当前页；重新进入 Launcher 从第一页开始。 |
 | INT-019 | 用户可增删和排序左右 Card；Quick Settings 与 Launcher 的位置固定。 |
 | INT-020 | 所有页面不得显示 Shell 常驻顶部状态栏。App 自行呈现所需状态信息；临时系统告警可覆盖当前页面。 |
 | INT-022 | Home Space 周边页以反方向手势返回 Watch Face；App 的子页面 Back 返回 App 页面栈的上一项，App Root 没有 Back。 |

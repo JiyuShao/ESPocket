@@ -257,9 +257,8 @@ std::expected<void, std::string> CircularShell::show_surface(ShellSurface surfac
         home_gesture_state_->surface.store(surface, std::memory_order_release);
         home_gesture_state_->activity_generation.fetch_add(1, std::memory_order_acq_rel);
         if (surface == ShellSurface::Launcher) {
-            home_gesture_state_->launcher_scroll_top.store(100000, std::memory_order_release);
             home_gesture_state_->launcher_pull_distance.store(0, std::memory_order_release);
-            (void)context_->gui().scroll_to("/launcher", 0, 0, false);
+            result = show_launcher_page(0);
         } else {
             home_gesture_state_->launcher_pull_distance.store(0, std::memory_order_release);
         }

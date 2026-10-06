@@ -661,7 +661,7 @@
       "type": "viewScreen",
       "id": "launcher",
       "commonProps": {
-        "scrollable": true
+        "scrollable": false
       },
       "styleRefs": [
         "shell.launcherPage"
@@ -681,7 +681,8 @@
           "type": "label",
           "id": "pull_hint",
           "bindings": {
-            "placement.height": "pullHeight"
+            "placement.height": "pullHeight",
+            "labelProps.text": "pageHint"
           },
           "labelProps": {
             "text": "  Pull for Home"
@@ -690,7 +691,8 @@
             "shell.hint"
           ],
           "style": {
-            "fontSize": "18sp",
+            "fontSize": "14sp",
+            "paddingTop": "10dp",
             "textAlign": "center"
           },
           "placement": {
@@ -701,6 +703,9 @@
         {
           "type": "label",
           "id": "title",
+          "bindings": {
+            "labelProps.text": "pageTitle"
+          },
           "labelProps": {
             "text": "Apps"
           },
@@ -719,6 +724,9 @@
         {
           "type": "button",
           "id": "hello_native",
+          "bindings": {
+            "commonProps.hidden": "hidden"
+          },
           "events": [
             {
               "type": "clicked",
@@ -777,6 +785,9 @@
         {
           "type": "button",
           "id": "hello_runtime",
+          "bindings": {
+            "commonProps.hidden": "hidden"
+          },
           "events": [
             {
               "type": "clicked",
@@ -841,6 +852,9 @@
               "action": "shell.open_settings"
             }
           ],
+          "bindings": {
+            "commonProps.hidden": "hidden"
+          },
           "styleRefs": [
             "shell.row"
           ],
@@ -893,6 +907,9 @@
         {
           "type": "button",
           "id": "app_store",
+          "bindings": {
+            "commonProps.hidden": "hidden"
+          },
           "events": [
             {
               "type": "clicked",
@@ -1090,6 +1107,12 @@
       "id": "launcher_item",
       "node": {
         "type": "button",
+        "commonProps": {
+          "scrollable": false
+        },
+        "bindings": {
+          "commonProps.hidden": "hidden"
+        },
         "styleRefs": [
           "shell.row"
         ],

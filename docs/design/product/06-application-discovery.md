@@ -15,7 +15,7 @@
 
 | ID | Requirement |
 |---|---|
-| DSC-001 | Launcher 必须区分产品提供的固定入口与来自已安装状态的动态 App。 |
+| DSC-001 | Launcher 必须区分产品提供的固定入口与来自已安装状态的动态 App。Circular Shell 第一页显示四个固定入口，后续每页最多显示四个来自 Core 已提交投影的动态入口；分页不改变 App identity、安装状态或准入规则。安装集合变化后页码收敛到有效范围。 |
 | DSC-002 | 动态 App 只有在可信、兼容、信息完整、已安装且未被产品策略隐藏时才可显示。 |
 | DSC-003 | Catalog 条目、下载记录、缓存目录、未完成安装和孤立文件不得单独产生 Launcher 条目。 |
 | DSC-004 | 每个 App 必须使用跨重启稳定的产品 identity；重复或冲突 identity 必须 fail closed。 |

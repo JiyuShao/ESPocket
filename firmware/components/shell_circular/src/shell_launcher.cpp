@@ -2,6 +2,42 @@
 
 namespace espocket {
 
+namespace {
+std::vector<esp_brookesia::gui::BindingValueUpdate> launcher_page_updates(
+    const std::vector<LauncherEntry> &entries, const std::string &region, const LauncherPage &page)
+{
+    std::vector<esp_brookesia::gui::BindingValueUpdate> updates;
+    if (!region.empty()) updates.push_back({region, "hidden", page.index == 0 || entries.empty() ? "true" : "false"});
+    const std::array<std::string_view, 4> fixed{"hello_native", "hello_runtime", "settings", "app_store"};
+    for (size_t index = 0; index < fixed.size(); ++index) {
+        updates.push_back({"/launcher/" + std::string(fixed[index]), "hidden", page.index == 0 ? "false" : "true"});
+    }
+    for (size_t index = 0; index < entries.size(); ++index) {
+        const auto row = index + fixed.size();
+        updates.push_back({region + "/" + entries[index].instance, "hidden",
+                           row >= page.begin && row < page.end ? "false" : "true"});
+    }
+    updates.push_back({"/launcher/title", "pageTitle",
+                       "Apps " + std::to_string(page.index + 1) + "/" + std::to_string(page.count)});
+    updates.push_back({"/launcher/pull_hint", "pageHint",
+                       page.index == 0 ? "Swipe up | Home down" : "Swipe up / down"});
+    return updates;
+}
+}
+
+std::expected<void, std::string> CircularShell::show_launcher_page(size_t requested)
+{
+    if (!context_) return std::unexpected("Circular Shell is not running");
+    const auto page = launcher_page(launcher_entries_.size(), requested);
+    if (page.index == launcher_page_) return {};
+    auto result = context_->gui().set_binding_values(launcher_page_updates(launcher_entries_, launcher_region_, page));
+    if (result) {
+        launcher_page_ = page.index;
+        if (home_gesture_state_) home_gesture_state_->launcher_scroll_top.store(page.index == 0 ? 0 : 2);
+    }
+    return result;
+}
+
 void CircularShell::refresh_launcher()
 {
     if (!context_ || !host_.launcher_apps) return;
@@ -57,7 +93,8 @@ void CircularShell::refresh_launcher()
         if (!context_->gui().set_binding_values(updates)) { ready = false; break; }
     }
     if (ready) {
-        std::vector<esp_brookesia::gui::BindingValueUpdate> visibility{{region, "hidden", "false"}};
+        const auto page = launcher_page(projected->size(), launcher_page_);
+        auto visibility = launcher_page_updates(*projected, region, page);
         if (!launcher_region_.empty()) visibility.push_back({launcher_region_, "hidden", "true"});
         // Public batch holds the GUI lock for the swap: prepared rows appear together.
         ready = context_->gui().set_binding_values(visibility).has_value();
@@ -75,6 +112,8 @@ void CircularShell::refresh_launcher()
     for (const auto &image : launcher_images_) (void)context_->gui().release_preloaded_image(image);
     launcher_region_ = region;
     launcher_entries_ = std::move(*projected);
+    launcher_page_ = launcher_page(launcher_entries_.size(), launcher_page_).index;
+    if (home_gesture_state_) home_gesture_state_->launcher_scroll_top.store(launcher_page_ == 0 ? 0 : 2);
     launcher_images_ = std::move(images);
     launcher_generation_ = generation;
     launcher_developer_enabled_ = developer;
@@ -94,6 +133,9 @@ void CircularShell::dispatch_launcher()
         return path == launcher_region_ + "/" + entry.instance;
     });
     if (found == launcher_entries_.end()) return; // Retired view or removed target.
+    const auto page = launcher_page(launcher_entries_.size(), launcher_page_);
+    const auto row = static_cast<size_t>(std::distance(launcher_entries_.begin(), found)) + 4;
+    if (row < page.begin || row >= page.end) return;
     auto apps = host_.launcher_apps(context_->gui().get_language());
     const bool developer = host_.developer_mode.enabled && host_.developer_mode.enabled();
     const auto target = apps ? resolve_launcher_target(*apps, found->manifest_id, developer) :
@@ -119,6 +161,7 @@ void CircularShell::stop_launcher()
     launcher_images_.clear();
     launcher_entries_.clear();
     launcher_region_.clear();
+    launcher_page_ = 0;
     std::lock_guard lock(launcher_intent_mutex_);
     launcher_intent_.clear();
 }
