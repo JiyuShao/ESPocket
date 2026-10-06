@@ -24,6 +24,7 @@ PATCH_SETS = {
     'display-candidate': PATCHES + (('espressif__brookesia_hal_adaptor', '0.8.4'), ('espressif__brookesia_app_settings', '0.8.3'), ('espressif__brookesia_service_display', '0.8.2')),
 }
 
+PATCH_SETS['production'] += (('espressif__mcp-c-sdk', '2.0.1'),)
 PATCH_SETS['gui-candidate'] = PATCH_SETS['production']
 PATCH_SETS['scheduler-candidate'] = PATCH_SETS['gui-candidate']
 
@@ -59,13 +60,83 @@ AUDIO_OPTIONS = {
     'CONFIG_BROOKESIA_GUI_LVGL_DISPLAY_SOURCE_BUFFER_HEIGHT': 40,
 }
 
+STORAGE_OPTIONS = {
+    'CONFIG_ESPTOOLPY_FLASHSIZE_16MB': False,
+    'CONFIG_ESPTOOLPY_FLASHSIZE_32MB': True,
+    'CONFIG_ESPTOOLPY_FLASHSIZE': '"32MB"',
+    'CONFIG_PARTITION_TABLE_CUSTOM': True,
+    'CONFIG_PARTITION_TABLE_CUSTOM_FILENAME': '"partitions_32m.csv"',
+    'CONFIG_PARTITION_TABLE_FILENAME': '"partitions_32m.csv"',
+    'CONFIG_BROOKESIA_HAL_ADAPTOR_STORAGE_FILE_SYSTEM_LITTLEFS_FORMAT_IF_MOUNT_FAILED': False,
+}
+
+PERFORMANCE_OPTIONS = {
+    'CONFIG_COMPILER_OPTIMIZATION_DEBUG': False,
+    'CONFIG_COMPILER_OPTIMIZATION_SIZE': False,
+    'CONFIG_COMPILER_OPTIMIZATION_PERF': True,
+    'CONFIG_COMPILER_OPTIMIZATION_NONE': False,
+    'CONFIG_LV_FONT_MONTSERRAT_10': True,
+    'CONFIG_LV_FONT_MONTSERRAT_12': True,
+    'CONFIG_LV_FONT_MONTSERRAT_14': True,
+    'CONFIG_LV_FONT_MONTSERRAT_16': True,
+}
+
+DISPLAY_TRANSFER_BYTES = 466 * 32 * 2
+
+
+def configure_display_transfer(text):
+    pattern = re.compile(r'(static periph_spi_config_t esp_bmgr_spi_display_cfg = \{.*?\.max_transfer_sz = )(\d+)(,.*?\n\};)', re.DOTALL)
+    matched = pattern.search(text)
+    if not matched or int(matched[2]) not in (9320, DISPLAY_TRANSFER_BYTES):
+        raise ValueError('Unexpected generated display SPI configuration')
+    return text[:matched.start()] + matched[1] + str(DISPLAY_TRANSFER_BYTES) + matched[3] + text[matched.end():]
+
+
+def configure_performance(text):
+    lines = [line for line in text.splitlines()
+             if not any(line.startswith(key + '=') or line == '# ' + key + ' is not set'
+                        for key in PERFORMANCE_OPTIONS)]
+    for key, enabled in PERFORMANCE_OPTIONS.items():
+        lines.append(key + '=y' if enabled else '# ' + key + ' is not set')
+    return '\n'.join(lines) + '\n'
+
+
+def verify_performance_config(text):
+    for key, enabled in PERFORMANCE_OPTIONS.items():
+        expected = key + '=y' if enabled else '# ' + key + ' is not set'
+        if expected not in text.splitlines():
+            raise ValueError(f'Incomplete product performance configuration: {key}')
+
+
+def configure_storage(text):
+    lines = [line for line in text.splitlines()
+             if not any(line.startswith(key + '=') or line == '# ' + key + ' is not set'
+                        for key in STORAGE_OPTIONS)]
+    for key, value in STORAGE_OPTIONS.items():
+        lines.append(key + '=y' if value is True else '# ' + key + ' is not set' if value is False else key + '=' + value)
+    return '\n'.join(lines) + '\n'
+
+
+def verify_storage_config(text):
+    for key, value in STORAGE_OPTIONS.items():
+        expected = key + '=y' if value is True else '# ' + key + ' is not set' if value is False else key + '=' + value
+        if expected not in text.splitlines():
+            raise ValueError(f'Unsafe or incomplete storage configuration: {key}')
+
 
 def audio_dependencies(root):
     path = root / 'firmware/patches/espressif__brookesia_hal_adaptor/0.8.4/audio-candidate-dependencies.json'
     document = json.loads(path.read_text())
     if document['schema_version'] != 1:
         raise ValueError('Unknown audio candidate dependency schema')
-    return document['dependencies']
+    dependencies = dict(document['dependencies'])
+    store_path = root / 'firmware/store-app-dependencies.json'
+    if store_path.exists():
+        store = json.loads(store_path.read_text())
+        if store['schema_version'] != 1 or set(dependencies) & set(store['dependencies']):
+            raise ValueError('Invalid Store dependency identities')
+        dependencies.update(store['dependencies'])
+    return dependencies
 
 
 def display_options(display_buffer_height):
@@ -174,6 +245,9 @@ def stage(root, workspace, sdkconfig, patch_set='production', *, display_buffer_
     # Board Manager emits absolute component paths. Keep the copied board input
     # inside this workspace, rather than selecting a component from the checkout.
     generated_board = firmware / 'components/gen_bmgr_codes'
+    display_peripheral = generated_board / 'gen_board_periph_config.c'
+    if display_peripheral.is_file() and patch_set == 'production':
+        display_peripheral.write_text(configure_display_transfer(display_peripheral.read_text()))
     for name in ('CMakeLists.txt', 'idf_component.yml', 'board_manager.defaults'):
         generated = generated_board / name
         if generated.is_file():
@@ -213,8 +287,11 @@ def stage(root, workspace, sdkconfig, patch_set='production', *, display_buffer_
                              'patched_component': str(patched)})
     main_manifest.write_text(text)
     config = firmware / 'sdkconfig'
+    if patch_set == 'production':
+        config.write_text(configure_storage(config.read_text()))
     if patch_set in ('production', 'audio-candidate', 'display-candidate', 'store-candidate', 'gui-candidate', 'scheduler-candidate'):
         config.write_text(configure_audio_candidate(config.read_text(), display_buffer_height=display_buffer_height))
+        config.write_text(configure_performance(config.read_text()))
     elif display_buffer_height != 40:
         display_options(display_buffer_height)
         lines = [line for line in config.read_text().splitlines()
@@ -229,6 +306,7 @@ def stage(root, workspace, sdkconfig, patch_set='production', *, display_buffer_
     config.write_text('\n'.join(lines) + '\nCONFIG_BROOKESIA_RUNTIME_JS_ASYNC_STACK_SIZE=16384\n')
     (workspace / 'patch-inputs.json').write_text(json.dumps({
         'patch_set': patch_set,
+        'product_display_transfer_bytes': DISPLAY_TRANSFER_BYTES if patch_set == 'production' else None,
         'audio_candidate_dependencies': audio_extra,
         'display_buffer_height': next((int(line.split('=')[1]) for line in config.read_text().splitlines()
                                       if line.startswith('CONFIG_BROOKESIA_GUI_LVGL_DISPLAY_SOURCE_BUFFER_HEIGHT=')), None),
@@ -258,6 +336,9 @@ def main():
         if not args.prepare_only:
             subprocess.run(['idf.py', '-C', str(firmware), 'reconfigure'], check=True)
             verify_registry_lock(ROOT / 'firmware/dependencies.lock', firmware / 'dependencies.lock', args.patch_set)
+            if args.patch_set == 'production':
+                verify_storage_config((firmware / 'sdkconfig').read_text())
+                verify_performance_config((firmware / 'sdkconfig').read_text())
             if args.patch_set in ('production', 'audio-candidate', 'display-candidate', 'store-candidate', 'gui-candidate', 'scheduler-candidate'):
                 verify_audio_config((firmware / 'sdkconfig').read_text(), display_buffer_height=args.display_buffer_height)
             glyph_errors = check_glyphs(args.workspace.resolve(), (firmware / 'sdkconfig').read_text())

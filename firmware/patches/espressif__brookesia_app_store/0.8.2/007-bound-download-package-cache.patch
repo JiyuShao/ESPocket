@@ -1,0 +1,206 @@
+--- a/include/brookesia/app_store/app_store_app.hpp
++++ b/include/brookesia/app_store/app_store_app.hpp
+@@ -165,6 +165,7 @@
+         uint64_t metadata_request_id = 0;
+         uint64_t size_metadata_request_id = 0;
+         uint64_t download_size = 0;
++        uint64_t uncompressed_size = 0;
+         uint32_t downloaded = 0;
+         uint32_t total = 0;
+         std::string installed_version;
+@@ -295,6 +296,11 @@
+     ) const;
+     void prefer_external_install_storage(system::core::AppContext &context) const;
+     void refresh_storage_capacity(system::core::AppContext &context);
++    bool read_package_cache_capacity(system::core::AppContext &context);
++    bool is_owned_package_cache(system::core::AppContext &context, const std::filesystem::path &path) const;
++    void release_installed_download_cache(system::core::AppContext &context, const std::filesystem::path &path);
++    void release_abandoned_partial_cache(system::core::AppContext &context, const std::filesystem::path &path);
++    void reclaim_package_cache(system::core::AppContext &context, uint64_t required_free, const std::filesystem::path &keep = {});
+     void handle_storage_filesystems_result(uint64_t generation, service::FunctionResult &&result);
+     void handle_storage_capacity_result(uint64_t generation, service::FunctionResult &&result);
+     void refresh_installed_apps(system::core::AppContext &context);
+--- a/src/install/download.ipp
++++ b/src/install/download.ipp
+@@ -177,9 +177,11 @@
+         return;
+     }
+ 
+-    if (storage_capacity_known_ && entry.download_size > 0) {
+-        const uint64_t required_bytes = entry.download_size + DOWNLOAD_FREE_SPACE_MARGIN_BYTES;
+-        if (storage_free_bytes_ < required_bytes) {
++    if (entry.download_size > 0) {
++        const uint64_t required_bytes = 2 * entry.download_size + entry.uncompressed_size +
++                                        DOWNLOAD_FREE_SPACE_MARGIN_BYTES;
++        reclaim_package_cache(context, required_bytes);
++        if (!storage_capacity_known_ || storage_free_bytes_ < required_bytes) {
+             BROOKESIA_LOGW(
+                 "Skip App Store download due to insufficient space: package(%1%), required(%2%), free(%3%)",
+                 entry.package_name, required_bytes, storage_free_bytes_
+@@ -317,6 +319,9 @@
+     } else if (require_size) {
+         return std::unexpected("Metadata missing size_download");
+     }
++    if (auto size = get_size_field(root, "size_uncompressed")) {
++        entry.uncompressed_size = *size;
++    }
+ 
+     const auto sha256 = get_string_field(root, "hash_sha256");
+     if (require_download_url || !sha256.empty()) {
+@@ -438,6 +443,7 @@
+         return std::unexpected(result.error());
+     }
+ 
++    release_installed_download_cache(context, path);
+     refresh_installed_apps(context);
+     start_local_package_scan(context, false);
+     refresh_storage_capacity(context);
+--- a/src/storage/storage.ipp
++++ b/src/storage/storage.ipp
+@@ -364,6 +364,127 @@
+     );
+ }
+ 
++bool AppStoreApp::read_package_cache_capacity(system::core::AppContext &context)
++{
++    storage_capacity_known_ = false;
++    auto filesystems = StorageHelper::call_function_sync<boost::json::array>(
++        StorageHelper::FunctionId::GetFileSystems, service::helper::Timeout(3000));
++    if (!filesystems) return false;
++    const auto cache_path = normalize_path_for_prefix(cache_dir(context));
++    std::string mount;
++    size_t best = 0;
++    for (const auto &value : *filesystems) {
++        if (!value.is_object()) continue;
++        const auto &object = value.as_object();
++        const auto point = get_string_field(object, "mount_point");
++        auto root = get_string_field(object, "root_path");
++        if (root.empty()) root = point;
++        for (const auto &path : {root, point}) {
++            const auto prefix = normalize_path_for_prefix(path);
++            if (!prefix.empty() && path_has_prefix(cache_path, prefix) && prefix.size() > best) {
++                best = prefix.size(); mount = point;
++            }
++        }
++    }
++    if (mount.empty()) return false;
++    auto result = StorageHelper::call_function_sync<boost::json::object>(
++        StorageHelper::FunctionId::GetFileSystemCapacity, mount, service::helper::Timeout(3000));
++    StorageHelper::FileSystemCapacity capacity;
++    if (!result || !BROOKESIA_DESCRIBE_FROM_JSON(*result, capacity)) return false;
++    storage_free_bytes_ = capacity.free_bytes;
++    storage_capacity_known_ = true;
++    return true;
++}
++
++bool AppStoreApp::is_owned_package_cache(system::core::AppContext &context, const std::filesystem::path &path) const
++{
++    const auto normalized = path.lexically_normal();
++    if (normalized != path || normalized.extension() != ".bpk" ||
++            normalized.filename() == ".brookesia-package.bpk") return false;
++    for (const auto &root : download_dirs(context)) {
++        if (normalized.parent_path().parent_path() == root.lexically_normal()) return true;
++    }
++    return false;
++}
++
++void AppStoreApp::release_abandoned_partial_cache(system::core::AppContext &context, const std::filesystem::path &path)
++{
++    auto package = path;
++    if (package.extension() != ".part") return;
++    package.replace_extension();
++    if (!is_owned_package_cache(context, package) ||
++            std::any_of(entries_.begin(), entries_.end(), [&](const auto &entry) {
++                return entry.downloading && entry.download_path == path;
++            })) return;
++    auto removed = StorageHelper::fs_remove(path.generic_string());
++    if (!removed) BROOKESIA_LOGW("Failed to release abandoned partial download: %1%", removed.error());
++}
++
++void AppStoreApp::release_installed_download_cache(system::core::AppContext &context, const std::filesystem::path &path)
++{
++    if (!is_owned_package_cache(context, path)) return;
++    auto removed = StorageHelper::fs_remove(path.generic_string());
++    if (!removed) {
++        BROOKESIA_LOGW("Failed to release committed download cache: %1%", removed.error());
++        return;
++    }
++    for (auto &entry : entries_) {
++        if (entry.cached_package_path != path) continue;
++        entry.cached_package_path.clear();
++        entry.cached_package_size = 0;
++        entry.cached = false;
++    }
++}
++
++void AppStoreApp::reclaim_package_cache(system::core::AppContext &context, uint64_t required_free,
++                                      const std::filesystem::path &keep)
++{
++    struct Candidate { std::filesystem::path path; uint64_t size; uint64_t modified; bool redundant; };
++    std::vector<Candidate> candidates;
++    read_package_cache_capacity(context);
++    uint64_t retained = 0;
++    for (const auto &package : local_packages_) {
++        if (!is_owned_package_cache(context, package.package_path)) continue;
++        retained += package.file_size;
++        const auto pinned = package.package_path == keep ||
++            (developer_install_ && developer_install_->package_path == package.package_path) ||
++            std::any_of(pending_deferred_operations_.begin(), pending_deferred_operations_.end(), [&](const auto &operation) {
++                return operation.package_path == package.package_path;
++            }) || std::any_of(entries_.begin(), entries_.end(), [&](const auto &entry) {
++                return entry.downloading && (entry.download_path == package.package_path ||
++                    entry.cached_package_path == package.package_path);
++            });
++        if (pinned || candidates.size() >= 64) continue;
++        auto info = StorageHelper::fs_stat(package.package_path.generic_string());
++        if (!info || !info->exists || info->type != StorageHelper::FileType::File) continue;
++        const auto installed = installed_version_by_manifest_id_.find(package.manifest_id);
++        const bool redundant = installed != installed_version_by_manifest_id_.end() &&
++                               compare_versions(installed->second, package.version) >= 0;
++        candidates.push_back({package.package_path, info->size, info->mtime_ms, redundant});
++    }
++    std::stable_sort(candidates.begin(), candidates.end(), [](const auto &left, const auto &right) {
++        if (left.redundant != right.redundant) return left.redundant;
++        return left.modified < right.modified;
++    });
++    constexpr uint64_t quota = 512 * 1024;
++    for (const auto &candidate : candidates) {
++        if (!candidate.redundant && retained <= quota &&
++                (!storage_capacity_known_ || storage_free_bytes_ >= required_free)) continue;
++        auto removed = StorageHelper::fs_remove(candidate.path.generic_string());
++        if (!removed) continue;
++        retained -= std::min(retained, candidate.size);
++        if (storage_capacity_known_) storage_free_bytes_ += candidate.size;
++        for (auto &entry : entries_) {
++            if (entry.cached_package_path != candidate.path) continue;
++            entry.cached_package_path.clear(); entry.cached_package_size = 0; entry.cached = false;
++        }
++        std::erase_if(local_packages_, [&](const auto &package) { return package.package_path == candidate.path; });
++    }
++    rebuild_local_package_index();
++    read_package_cache_capacity(context);
++    refresh_storage_capacity(context);
++}
++
+ void AppStoreApp::refresh_storage_capacity(system::core::AppContext &context)
+ {
+     const auto download_text = tr("storage.download_prefix") + download_dir(context).generic_string();
+@@ -778,6 +899,10 @@
+ 
+     for (const auto &entry : entries) {
+         const auto package_path = packages_dir / entry.name;
++        if (entry.info.type == StorageHelper::FileType::File && package_path.extension() == ".part") {
++            release_abandoned_partial_cache(*context_, package_path);
++            continue;
++        }
+         if (entry.info.type == StorageHelper::FileType::Directory && packages_dir.filename() == APP_CACHE_DIR) {
+             append_unique_path(local_package_scan_dirs_, package_path);
+             continue;
+@@ -886,6 +1011,7 @@
+     local_package_scan_seen_keys_.clear();
+     local_package_scan_dir_cursor_ = 0;
+     local_package_scan_candidate_cursor_ = 0;
++    reclaim_package_cache(context, 0);
+ 
+     if (refresh_view && view_mode_ == ViewMode::Local) {
+         status_text_ = tr("status.local_packages_loaded");

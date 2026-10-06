@@ -36,7 +36,8 @@ std::expected<std::unique_ptr<ProductFonts>, std::string> ProductFonts::create()
                            reinterpret_cast<uintptr_t>(espocket_cjk_start);
     for (size_t index = 0; index < sizes_.size(); ++index) {
         fonts->fonts_[index] = lv_tiny_ttf_create_data_ex(
-            espocket_cjk_start, data_size, sizes_[index], LV_FONT_KERNING_NONE, 4);
+            espocket_cjk_start, data_size, sizes_[index], LV_FONT_KERNING_NONE,
+            sizes_[index] <= 24 ? 96 : sizes_[index] <= 40 ? 48 : 16);
         if (fonts->fonts_[index] == nullptr) {
             return std::unexpected("Failed to create zh_CN font size " + std::to_string(sizes_[index]));
         }

@@ -56,6 +56,7 @@ ESPocket 需要官方 Store 与远程 Runtime distribution path，但锁定的�
 - [09 — 开发者模式包准入与 Super 兼容运行](issues/09-allow-unsigned-developer-installation.md)
 - [10 — 降低 Runtime 启动阻塞并准确测量](issues/10-reduce-runtime-startup-blocking.md)
 - [11 — Runtime 图标、Weather、Store 安装与手势误点击](issues/11-runtime-store-gesture-regressions.md)
+- [12 — 存储、圆屏适配与 Runtime 可用性](issues/12-storage-round-display-and-runtime-usability.md)
 
 ## Further Notes
 
@@ -104,5 +105,9 @@ ESPocket 需要官方 Store 与远程 Runtime distribution path，但锁定的�
 当前 [11 Runtime/Store 回归](issues/11-runtime-store-gesture-regressions.md)已完成图标、手势误点击、原 Weather 内存和字体、下载进度、私有初始文件及包写入超时修复；原 Music Store 安装／重启发现、原 Weather 联网／重开／Home、导航与 Native/Runtime 设备回归通过。普通活动下载取消及重试通过，带同步截图的 1 秒合成指令过期单独保留为失败证据。缺少 Service 的官方包继续准确拒绝，正式发行和其它票的性能／物理门槛保持开放。详细证据见[回归记录](records/2026-10-06-runtime-store-gestures.md)。
 
 ## 全部剩余工作授权
+
+2026-10-06 用户进一步授权全部存储／缓存策略修复、Launcher／Weather 卡顿优化、系统侧矩形 Runtime 的圆屏兼容，以及安装除 Camera 外的 Store App；由 [12](issues/12-storage-round-display-and-runtime-usability.md) 持有具体验收。保留原包与用户数据，验证完成后合并本地 main 并清理任务 worktree／分支；真实 Service 或凭据缺失必须明确说明。
+
+该票已完成：启用实测 32 MiB Flash 并保留数据，所有非 Camera App 安装／启动／Home 通过，Calculator 四角运算与 Weather 滚动通过；最终普通镜像 `69edbcc15` 的 apps/navigation/surfaces 与精确构建验证通过。Weather 首次启动 6.554 s，Chronos 12.289 s，Launcher 仍有软件绘制限制；不宣称全局 30 FPS。按授权合并本地 main，保留其它工作与原有发行／物理门槛。见[最终记录](records/2026-10-06-storage-round-runtime.md)。
 
 2026-10-04：用户明确“可以，全部执行”。继续已有备份、app-only 刷写与真机输入授权，执行动态 Launcher、安装确认、外部运行、模式切换、在线稳定性及更新卸载矩阵；正式签名路径完成可执行准备和测试签名验收，缺少真实发行身份或外部发布权限时明确保留。保持 LittleFS 数据，不刷构建文件系统。

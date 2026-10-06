@@ -47,6 +47,14 @@ python3 scripts/firmware/build_patched_firmware.py \
 
 产品构建将指令与只读数据留在 Flash，关闭 `SPIRAM_XIP_FROM_PSRAM`、`SPIRAM_FETCH_INSTRUCTIONS` 与 `SPIRAM_RODATA`。此板默认的指令搬运会占用约 5 MiB PSRAM，压缩 Runtime GUI、JS 编译与包解压空间。独立构建入口会纠正旧 sdkconfig 并复核配置；Flash 操作仍由 cache-safe Storage worker 执行，线程栈预算保持既有配置。对应原包和设备结果见 [Runtime / Store 回归票](../.scratch/005-m5-application-ecosystem/issues/11-runtime-store-gesture-regressions.md)。
 
+产品入口使用性能优化编译、32 MiB Flash 和 `partitions_32m.csv`：App 位于 `0x60000`，预算 14 MiB；LittleFS 位于 `0xe60000`，预算 17.625 MiB。新增 NES 与 Agent 依赖的版本/hash 由 `store-app-dependencies.json` 固定，真实服务自动注册；AI 在线功能仍需要对应服务的激活或凭据。加载的 sdkconfig 必须来自完整的板级配置，不能使用关闭 Display/Network/System HAL 的旧缓存配置。产品 DisplaySource 显式使用 24 行双内部缓冲，每块 22,368 bytes，保留启动 Wi-Fi 所需的内部 RAM；32 行配置虽能显示，实际导致 Wi-Fi RX buffer 分配失败。上游／构建候选的默认 40 行值仍保留，实际产品配置以此处的 Owner 装配为准。
+
+产品独立构建同时将准确匹配的生成 SPI display `max_transfer_sz` 配为 29,824 bytes。未声明支持 ESPocket 的 Runtime 使用圆内 329px 安全 viewport 和 480dp 逻辑画布；原始 BPK 不改写。产品主题补齐官方 App 的共享控件样式，启用 Montserrat 10/12/14/16；中文字体按字号使用 96/48/16 字形缓存。这些内存预算与 512 KiB 图片缓存独立。测量结果与仍存在的 Launcher／启动性能限制由 [存储与圆屏验收记录](../.scratch/005-m5-application-ecosystem/records/2026-10-06-storage-round-runtime.md)持有。
+
+已有设备从旧分区迁移前，先完整备份旧 Flash 并保留启动、NVS、App、LittleFS 回滚区域。用具有 littlefs-python 的 Python 执行 `scripts/firmware/migrate_littlefs.py --backup <old-littlefs.bin> --output <new-image.bin> --size 0x11a0000`，核对逐文件摘要后，将迁移镜像写入新 LittleFS 地址；同次部署匹配的 bootloader、partition table 和 App，保留 NVS/model。迁移工具只生成镜像，不烧录；它作废 Core 持久验证记录，使首次启动重新完整验证安装包。部署迁移设备时，不能使用构建生成的全新 `littlefs_data.bin` 覆盖已有文件。挂载失败自动格式化已关闭。
+
+Store 成功提交安装后回收自有下载副本，Core 的安装原包和用户 data/files 保留。下载包缓存目标为 512 KiB，优先清理已安装版本和旧版本，再按修改时间回收；单次最多处理 64 个候选，正在下载、待确认或排队安装的包保留。扫描清理自有中断 `.bpk.part`，手动导入包不参与回收。下载与 Core 安装分别读取实际可用容量，预算包括候选原包、解包、更新保留文件和分配开销；容量未知或不足时提前失败，失败安装保留旧版本。图像缓存与磁盘包缓存的预算独立。
+
 ## 测试
 
 只约束一个组件、Native App 或 Runtime App 的测试放在该 Owner 的 `test/`；跨模块主机测试放在 `firmware/test/host/`，真实设备测试放在 `firmware/test/device/`。测试可以执行组件行为，也可以分析源码或资源，只要它对稳定约束做出可重复的断言。

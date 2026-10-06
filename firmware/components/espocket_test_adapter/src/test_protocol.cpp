@@ -46,6 +46,7 @@ TestReply TestProtocol::dispatch(uint32_t version, std::string_view operation, s
     }
     if (operation == "hello") {
         std::vector<std::string> capabilities = {"hello"};
+        capabilities.reserve(7);
         if (snapshot_reader_) {
             capabilities.emplace_back("snapshot");
         }

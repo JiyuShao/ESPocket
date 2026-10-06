@@ -14,6 +14,24 @@ SPEC.loader.exec_module(BUILDER)
 
 
 class PatchedFirmwareStageTest(unittest.TestCase):
+    def test_storage_configuration_rejects_autoformat_and_small_flash(self):
+        configured = BUILDER.configure_storage('CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y\nCONFIG_PARTITION_TABLE_FILENAME="partitions_16m.csv"\nCONFIG_BROOKESIA_HAL_ADAPTOR_STORAGE_FILE_SYSTEM_LITTLEFS_FORMAT_IF_MOUNT_FAILED=y\n')
+        BUILDER.verify_storage_config(configured)
+        self.assertEqual(BUILDER.configure_storage(configured), configured)
+        with self.assertRaises(ValueError):
+            BUILDER.verify_storage_config(configured.replace('"32MB"', '"16MB"'))
+        with self.assertRaises(ValueError):
+            BUILDER.verify_storage_config(configured.replace('# CONFIG_BROOKESIA_HAL_ADAPTOR_STORAGE_FILE_SYSTEM_LITTLEFS_FORMAT_IF_MOUNT_FAILED is not set', 'CONFIG_BROOKESIA_HAL_ADAPTOR_STORAGE_FILE_SYSTEM_LITTLEFS_FORMAT_IF_MOUNT_FAILED=y'))
+
+    def test_performance_configuration_replaces_debug_choice(self):
+        configured = BUILDER.configure_performance('CONFIG_COMPILER_OPTIMIZATION_DEBUG=y\n# CONFIG_COMPILER_OPTIMIZATION_PERF is not set\n')
+        self.assertIn('CONFIG_COMPILER_OPTIMIZATION_PERF=y\n', configured)
+        self.assertNotIn('CONFIG_COMPILER_OPTIMIZATION_DEBUG=y\n', configured)
+        self.assertEqual(BUILDER.configure_performance(configured), configured)
+        BUILDER.verify_performance_config(configured)
+        with self.assertRaisesRegex(ValueError, 'performance'):
+            BUILDER.verify_performance_config(configured.replace('CONFIG_LV_FONT_MONTSERRAT_14=y', '# CONFIG_LV_FONT_MONTSERRAT_14 is not set'))
+
     def test_gui_candidate_aliases_validated_production(self):
         self.assertEqual(BUILDER.PATCH_SETS['gui-candidate'], BUILDER.PATCH_SETS['production'])
         self.assertIn(('espressif__brookesia_gui_lvgl', '0.8.5'), BUILDER.PATCH_SETS['production'])
@@ -42,7 +60,8 @@ class PatchedFirmwareStageTest(unittest.TestCase):
                          ('espressif__brookesia_gui_lvgl', '0.8.5'),
                          ('espressif__brookesia_gui_interface', '0.8.2'),
                          ('espressif__esp_lv_decoder', '0.4.3'),
-                         ('espressif__esp-boost', '0.6.0')))
+                     ('espressif__esp-boost', '0.6.0'),
+                     ('espressif__mcp-c-sdk', '2.0.1')))
         self.assertEqual(BUILDER.PATCH_SETS['store-candidate'], BUILDER.PATCH_SETS['production'])
 
     def setUp(self):
@@ -206,6 +225,18 @@ class RegistryLockTest(unittest.TestCase):
 
 
 class AudioCandidateConfigTest(unittest.TestCase):
+    def test_display_transfer_changes_only_selected_bus_and_rejects_drift(self):
+        selected = 'static periph_spi_config_t esp_bmgr_spi_display_cfg = {\n .spi_bus_config = { .max_transfer_sz = 9320, },\n};'
+        unrelated = '\nstatic int other_max_transfer_sz = 9320;\n'
+        configured = BUILDER.configure_display_transfer(selected + unrelated)
+        self.assertIn('.max_transfer_sz = 29824,', configured)
+        self.assertTrue(configured.endswith(unrelated))
+        self.assertEqual(BUILDER.configure_display_transfer(configured), configured)
+        with self.assertRaisesRegex(ValueError, 'Unexpected'):
+            BUILDER.configure_display_transfer(selected.replace('9320', '1024'))
+        with self.assertRaisesRegex(ValueError, 'Unexpected'):
+            BUILDER.configure_display_transfer(unrelated)
+
     def test_display_trial_requires_explicit_expected_height_and_keeps_audio_checks(self):
         text = BUILDER.configure_audio_candidate('', display_buffer_height=80)
         BUILDER.verify_audio_config(text, display_buffer_height=80)

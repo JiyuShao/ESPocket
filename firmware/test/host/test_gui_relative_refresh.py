@@ -19,9 +19,10 @@ enum class PropsApplyMask:uint64_t {None=0, ImageOffsetX=1ULL<<9,ImageOffsetY=1U
 constexpr PropsApplyMask operator|(PropsApplyMask a,PropsApplyMask b){return static_cast<PropsApplyMask>(static_cast<uint64_t>(a)|static_cast<uint64_t>(b));}
 struct ThreadLockGuard {};
 struct Record{void*object=reinterpret_cast<void*>(1);};
-struct BackendImpl{Record record;Record*find_record(int h){return h==1?&record:nullptr;}void apply_props(BackendHandle,const Node&,PropsApplyMask);};
+struct BackendImpl{Record record;Record*find_record(int h){return h==1?&record:nullptr;}void apply_props(BackendHandle,const Node&,PropsApplyMask);void request_relative_layout();};
 unsigned applied=0,relative=0;
 namespace lvgl {void apply_props(BackendImpl&,Record&,const Node&,PropsApplyMask){++applied;}void refresh_relative_placements(BackendImpl&){++relative;}}
+void BackendImpl::request_relative_layout(){lvgl::refresh_relative_placements(*this);}
 '''+method+r'''
 int main(){BackendImpl backend;Node node;
  backend.apply_props(1,node,PropsApplyMask::ImageOffsetX);backend.apply_props(1,node,PropsApplyMask::ImageOffsetY);backend.apply_props(1,node,PropsApplyMask::ImageOffsetX|PropsApplyMask::ImageOffsetY);

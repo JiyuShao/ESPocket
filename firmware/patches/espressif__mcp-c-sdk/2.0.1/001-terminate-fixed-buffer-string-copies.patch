@@ -1,0 +1,22 @@
+--- a/src/esp_mcp_engine.c
++++ b/src/esp_mcp_engine.c
+@@ -975,7 +975,7 @@
+     bool saved_has_related_task = mcp->has_related_task;
+     char saved_related_task_id[sizeof(mcp->related_task_id)] = {0};
+     if (saved_has_related_task) {
+-        strncpy(saved_related_task_id, mcp->related_task_id, sizeof(saved_related_task_id) - 1);
++        snprintf(saved_related_task_id, sizeof(saved_related_task_id), "%s", mcp->related_task_id);
+     }
+ 
+     if (task_id && task_id[0]) {
+--- a/src/transports/esp_mcp_http_server.c
++++ b/src/transports/esp_mcp_http_server.c
+@@ -2690,7 +2690,7 @@
+     }
+     client->sockfd = -1;
+     snprintf(client->session_id, sizeof(client->session_id), "%s", session_id);
+-    strncpy(client->protocol_version, proto_hdr, sizeof(client->protocol_version) - 1);
++    snprintf(client->protocol_version, sizeof(client->protocol_version), "%s", proto_hdr);
+     client->req = async_req;
+     client->owner = mcp_http;
+     client->sockfd = httpd_req_to_sockfd(async_req);

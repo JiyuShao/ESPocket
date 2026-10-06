@@ -1,0 +1,32 @@
+--- a/include/brookesia/gui_interface/document.hpp
++++ b/include/brookesia/gui_interface/document.hpp
+@@ -413,11 +413,19 @@
+     bool is_default = false;
+ };
+ 
++struct GuiViewport {
++    int32_t x = 0;
++    int32_t y = 0;
++    int32_t width = 0;
++    int32_t height = 0;
++};
++
+ struct MountTarget {
+     std::string display_id;
+     GuiLayer layer = GuiLayer::Default;
+     MountStackMode mount_mode = MountStackMode::Replace;
+     int32_t z_order = 0;
++    std::optional<GuiViewport> viewport = {};
+ };
+ 
+ struct ResolvedFontSpec {
+@@ -644,7 +652,8 @@
+ )
+ BROOKESIA_DESCRIBE_STRUCT(RuntimeImageResource, (), (id, primary_src, native_src, width, height, preload))
+ BROOKESIA_DESCRIBE_STRUCT(GuiDisplayInfo, (), (id, width_px, height_px, is_default))
+-BROOKESIA_DESCRIBE_STRUCT(MountTarget, (), (display_id, layer, mount_mode, z_order))
++BROOKESIA_DESCRIBE_STRUCT(GuiViewport, (), (x, y, width, height))
++BROOKESIA_DESCRIBE_STRUCT(MountTarget, (), (display_id, layer, mount_mode, z_order, viewport))
+ BROOKESIA_DESCRIBE_STRUCT(
+     ResolvedFontSpec, (),
+     (font_id, kind, primary_src, fallback_srcs, native_fonts, image_font_height, image_font_glyphs,

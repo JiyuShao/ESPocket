@@ -80,12 +80,90 @@
     {
       "file": "003-preserve-single-pointer-tracks.patch",
       "sha256": "f11b268265fef0f72f268bc485de71056d9c3dd8670b518e02826d0c28e9d562"
+    },
+    {
+      "file": "004-mount-runtime-in-safe-viewport.patch",
+      "sha256": "c8ea306095f6305f8890b05de9d68885ce9e4f6012b40d80245732c9bfd9b633"
+    },
+    {
+      "file": "005-defer-transform-pivot-layout.patch",
+      "sha256": "34f770a214bc32ea8a0802be0b07d29c3fb70321b81fc79f947541463f45d51d"
+    },
+    {
+      "file": "006-batch-relative-layout-at-gui-owner.patch",
+      "sha256": "feb4f912251fe68ac6fdde7b75253cb7a4f8f30c8dffac4514b6a9d114fb5da6"
     }
   ],
   "issue": ".scratch/005-m5-application-ecosystem/issues/10-reduce-runtime-startup-blocking.md",
   "reason": "Pure image offsets do not change relative placement anchors; avoid repeated known-layer layout refresh on scrolling. Read image bytes through Storage RawBuffer into the final allocation to avoid full-size text/RPC copies during Weather startup.",
   "remove_when": "Locked upstream provides equivalent offset-only layout behavior, single-buffer image loading with file-size/read validation, and continuous untracked single-pointer assignment with unchanged multi-touch behavior, and passes the same host/device regressions.",
   "related_issues": [
-    ".scratch/005-m5-application-ecosystem/issues/11-runtime-store-gesture-regressions.md"
-  ]
+    ".scratch/005-m5-application-ecosystem/issues/11-runtime-store-gesture-regressions.md",
+    ".scratch/005-m5-application-ecosystem/issues/12-storage-round-display-and-runtime-usability.md"
+  ],
+  "patched_files": {
+    ".component_hash": "8e1dcec44a524fc09aa9af653468370b7843fb66b48f81627141c4479ec94421",
+    "CHANGELOG.md": "336e938acfa8427c02f79b7921dc2fa401a936dbbfa9231a01b681c14a876d8a",
+    "CHECKSUMS.json": "009942b3b31529bd8aac898af1a83f9c5e294badf05bace7fbd9c029dfda7c46",
+    "CMakeLists.txt": "7d9be218c48a48a5fc769dd407fe1a98290c8a0ee6342d51987f651ac46782e4",
+    "Kconfig": "bf866398444ba6bb93368b1084261bda7788049defab011ea9706fe0f15f1548",
+    "README.md": "474ce5cf0d4f8c689b0278b0fc31b399118a2d6008071b311f50106d9f662d63",
+    "README_CN.md": "f54374fd64315380d4e451f2e4843fb803eb42d16a28fa2559de584a36451cad",
+    "cmake/esp_platform.cmake": "34aa6df68b63f03ae193fe6c6c8319b6f53bf9fc0f9ca952e9360f93884e4e17",
+    "cmake/image_pack.cmake": "94c807b0077f11a0166b72039d3b75df752a9bbfe73b68080f3444f67a4e6ca9",
+    "cmake/pc_platform.cmake": "c223e773b11345131cb7f29e7ef7b33c8bb9c52f050cb8d62e3039f31e42386c",
+    "host/main.cpp": "0bf15065857fd225fd3148c59cc67206e260dc65b0aff030e2407dd14d8dd991",
+    "idf_component.yml": "5f401a192572eec0e224215795eb1b364d1296fb57ad68235965bd4bbf8fdc72",
+    "include/brookesia/gui_lvgl/backend.hpp": "ec6680ff1c16ba86c6c7fb3dd96883bde920fbd3ca9ccde64f67c3a251c7a8c1",
+    "include/brookesia/gui_lvgl/display_source.hpp": "d665e62fef5c3f19f5d67cc21f5a77797eb7ec02a18cf45a6b88f416628340da",
+    "include/brookesia/gui_lvgl/macro_configs.h": "8f78d33cae2a1a5372c3192ba04a7db00b1fb167e12f68a814c4a60753a78910",
+    "include/brookesia/gui_lvgl.hpp": "8647e4c74b698009bb3ead025211717075b6644ccd15f2c37eb82134c5738561",
+    "license.txt": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+    "src/animation.cpp": "4ebe6d728320c77c3cbd4f6d195fd980c786d110569ccf506cd7bae1003782a5",
+    "src/backend.cpp": "711ceff1ff7d08d3cefacfde24a24e9061c405bc459706010bfe56f4b65eeadf",
+    "src/event.cpp": "557a5c2b391bc96ce5dc3b41b1c6dc4765b3e0128ab27ff177ec40e3c2900128",
+    "src/factory.cpp": "46054e96194153781559befb3ca187c2ef39bc267b49516ccb4cf3936197245b",
+    "src/layout.cpp": "503e8cea539cc14523bce0333581786aaafbaabb5f4873318ff14fb5d65d64e3",
+    "src/port/esp/display_source.cpp": "14e67df7e45858691bfaac2840d442a63804c6f6fdfc2e4093a838734884c7d7",
+    "src/port/esp/threading.cpp": "2db2736b0dca8e3f5d7de45429fce64a1a4c5f575a2fc5e73c607965cc6b1bcf",
+    "src/port/private/multi_touch_pointer.hpp": "1f422056de69f97b5cdcd022fc8944291f6d6220bb6e5e354a863cfbcf27b145",
+    "src/port/private/threading.hpp": "875009e0cecf4f9765834a1cd177dcd79a4028dd19bbf11f020825be0b6db8b0",
+    "src/port/sdl/display_source.cpp": "af683b11a299ffa31c968f696795a19abb696e2b5d1e93c6a04f8185faa6670c",
+    "src/port/sdl/threading.cpp": "19f11cb8ee4fcb480855bd9d6fd6885d29434c2c25ad2883d9ef79a39fc52b6c",
+    "src/port/wasm/display_source.cpp": "b6018c78e19a86b6b0a01dcf3c9f996eaecf37de01b524582ed26ddfb195d8bf",
+    "src/port/wasm/threading.cpp": "0d478e3767a9891d5dc88423afbcbc05ed53fe5de58bae9be7cf8fb0dde5b9b5",
+    "src/private/props_impl.hpp": "6966c65f4ba9dc455ca7c20619ae1e8676f7e3159128d17d4403ce5d4703902d",
+    "src/private/style_impl.hpp": "84bf5a84ea7ea88c4c603f042646dfbf1265b7cc08802b7e08b7572f4fd21323",
+    "src/private/types.hpp": "14f52e3527895e478aa593a45da92890b92f9b4691d1cda154a59aa20770843c",
+    "src/private/utils.hpp": "d67ca3c999e2b97eb635dd07b7e500d1b91b1c1830ed062b6b6cba6e369ee80f",
+    "src/props.cpp": "ae892d59d8bfee55549cfea70e61a6f90f4e6f89480267084cb4a96289f7f044",
+    "src/props_common.cpp": "b15506a58fcad5fbcf929ea67cb21c065e024ea50476e1f90633dcd3208cd9e8",
+    "src/props_frame_view.cpp": "622d1efde80412ab713a55b18254fe468a7e6d68339f5a81f89d69eccbb07856",
+    "src/props_image.cpp": "fc0d2d1a6e9f19d8228e206e08578b4923c35fc9bdb86eddc6bd33347374ad72",
+    "src/props_keyboard.cpp": "3a00f0d9d341eb5fc71f2835cb8520b967f0d2700c2040a16aace076d518cbbb",
+    "src/style.cpp": "074940fb85d2189948f39db7a0e3c9030f747372c6005bdcd0491e8c7ce63ff1",
+    "src/style_arc.cpp": "1f3ece9d7b248a9b520e1a97dbaa2106d91df4ca8ec00c41765d53a511bb8562",
+    "src/style_base.cpp": "009f1c5b0137ad789821709f2a02b75de9f6c308f3ba1563010ebbc13c71e367",
+    "src/style_font.cpp": "ae09d9b538367c7c69d8683425df8093ec211bef1a6e02d96c02f7598c4a5bf5",
+    "src/style_state.cpp": "430cc6edce968b60f409cd634fd9657e3f1b906447a9361ab9c6201dfe3a94b3",
+    "test_apps/CMakeLists.txt": "0b0340eef5269472402aa75c08371447b18a9e6d0958c62513d4f413d334b702",
+    "test_apps/cmake/esp_platform.cmake": "92a1f0fc8830551cb9c8d5a04882c9963f7f6fdf9eb65bcd377dfe94113a9499",
+    "test_apps/cmake/pc_platform.cmake": "313c5a6132aad39cf86823371291e434ceecd3ea160b4104d63f23382a55718c",
+    "test_apps/idf_ext.py": "b6e4c7b3719a2975e7b1d3abfd1d5ab128c8093931d4e2babd202d73f2a169e6",
+    "test_apps/main/CMakeLists.txt": "1cf8062a059cb836c15734521f9633834d1cd0772c266f83ff2706ec961301cb",
+    "test_apps/main/idf_component.yml": "3649ed97077be89c5be80791ddb0cf82f30dd1c3857683f8baade6c78acc4857",
+    "test_apps/main/test_app_main.cpp": "b191a655a94afe9f07692a1b33d4f907ce8122c4f74eca3ee7356abad40c727e",
+    "test_apps/main/test_gui_lvgl.cpp": "43c4317bde24f3a95fb93b4bc92d89fbca0eeeb59493739ec0f206c126a9f13e",
+    "test_apps/partitions_16m.csv": "4ce2521270d174314d32e45cec7dd3a3da6a83496ab6b0d6d1290a58de3e4a35",
+    "test_apps/pytest_gui_lvgl.py": "506984e6365fdf410009edb06b44b8080218b7af0dd301e99867273190f16a75",
+    "test_apps/sdkconfig.ci.board.esp32_p4x_function_ev": "f88219292401e84436988bf93590ef7a2396d0e8c839c39360ab63b5d3478cc4",
+    "test_apps/sdkconfig.ci.board.esp32_s31_korvo1": "ab079c5849d0f231e8c3c936e29b56843c0869eda75491cda24525ebe6c46180",
+    "test_apps/sdkconfig.ci.board.esp32_s3_korvo2_v3": "d450f8aac46a603a2da4ec135132ac99863a1929822500bd93fc3cb7cf1e44da",
+    "test_apps/sdkconfig.ci.board.esp_box_3": "d450f8aac46a603a2da4ec135132ac99863a1929822500bd93fc3cb7cf1e44da",
+    "test_apps/sdkconfig.ci.board.esp_sensair_shuttle": "f53f0af16a672b4f5aecd7110ab18c8eb3f0d7f3427c081d17112b8b03e83af9",
+    "test_apps/sdkconfig.ci.board.esp_vocat_board_v1_0": "d450f8aac46a603a2da4ec135132ac99863a1929822500bd93fc3cb7cf1e44da",
+    "test_apps/sdkconfig.ci.board.esp_vocat_board_v1_2": "d450f8aac46a603a2da4ec135132ac99863a1929822500bd93fc3cb7cf1e44da",
+    "test_apps/sdkconfig.defaults": "953576ba6d2612ed7bda4026d256de39d60a0378390808d73ae438aee77f876d"
+  },
+  "removed_when": "Remove each fix when the locked upstream release provides equivalent validated font ownership, viewport mounting, and deferred transform pivot resolution. Relative layout must also batch at the GUI Owner guard with synchronous geometry reads flushing pending anchors."
 }

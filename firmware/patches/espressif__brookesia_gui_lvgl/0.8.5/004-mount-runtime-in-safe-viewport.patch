@@ -1,0 +1,84 @@
+--- a/src/backend.cpp
++++ b/src/backend.cpp
+@@ -315,6 +315,12 @@
+     }
+ 
+     mounted_targets.erase(handle.value());
++    if (auto viewport = mounted_viewports.find(handle.value()); viewport != mounted_viewports.end()) {
++        if (it->second.object && lv_obj_is_valid(it->second.object))
++            lv_obj_set_parent(it->second.object, lv_obj_get_parent(viewport->second));
++        lv_obj_delete(viewport->second);
++        mounted_viewports.erase(viewport);
++    }
+ 
+     for (auto handle_value : subtree_handles) {
+         auto record_it = records.find(handle_value);
+@@ -656,7 +662,27 @@
+         return false;
+     }
+ 
+-    lv_obj_set_parent(record->object, layer_parent);
++    if (auto previous = mounted_viewports.find(handle.value()); previous != mounted_viewports.end()) {
++        lv_obj_set_parent(record->object, layer_parent);
++        lv_obj_delete(previous->second);
++        mounted_viewports.erase(previous);
++    }
++    auto *mount_parent = layer_parent;
++    if (target.viewport) {
++        const auto &viewport = *target.viewport;
++        if (viewport.width <= 0 || viewport.height <= 0 || viewport.x < 0 || viewport.y < 0 ||
++                viewport.x + viewport.width > lv_display_get_horizontal_resolution(display) ||
++                viewport.y + viewport.height > lv_display_get_vertical_resolution(display)) return false;
++        mount_parent = lv_obj_create(layer_parent);
++        if (!mount_parent) return false;
++        lv_obj_remove_style_all(mount_parent);
++        lv_obj_remove_flag(mount_parent, LV_OBJ_FLAG_SCROLLABLE);
++        lv_obj_remove_flag(mount_parent, LV_OBJ_FLAG_CLICKABLE);
++        lv_obj_set_pos(mount_parent, viewport.x, viewport.y);
++        lv_obj_set_size(mount_parent, viewport.width, viewport.height);
++        mounted_viewports.insert_or_assign(handle.value(), mount_parent);
++    }
++    lv_obj_set_parent(record->object, mount_parent);
+     lv_obj_remove_flag(record->object, LV_OBJ_FLAG_HIDDEN);
+     lv_obj_move_foreground(record->object);
+     lv_obj_update_layout(layer_parent);
+@@ -698,6 +724,7 @@
+         .layer = target.layer,
+         .mount_mode = target.mount_mode,
+         .z_order = target.z_order,
++        .viewport = target.viewport,
+     });
+     return true;
+ }
+@@ -722,6 +749,11 @@
+     }
+ 
+     lv_obj_add_flag(record->object, LV_OBJ_FLAG_HIDDEN);
++    if (auto viewport = mounted_viewports.find(handle.value()); viewport != mounted_viewports.end()) {
++        lv_obj_set_parent(record->object, lv_obj_get_parent(viewport->second));
++        lv_obj_delete(viewport->second);
++        mounted_viewports.erase(viewport);
++    }
+     mounted_targets.erase(handle.value());
+     return true;
+ }
+@@ -736,7 +768,8 @@
+     BROOKESIA_CHECK_NULL_RETURN(display, false, "Display must not be null");
+ 
+     if (auto *active_screen = lv_display_get_screen_active(display); active_screen != nullptr) {
+-        lv_obj_set_style_bg_opa(active_screen, LV_OPA_TRANSP, LV_PART_MAIN);
++        lv_obj_set_style_bg_color(active_screen, lv_color_black(), LV_PART_MAIN);
++        lv_obj_set_style_bg_opa(active_screen, LV_OPA_COVER, LV_PART_MAIN);
+         lv_obj_remove_flag(active_screen, LV_OBJ_FLAG_SCROLLABLE);
+     }
+ 
+--- a/src/private/types.hpp
++++ b/src/private/types.hpp
+@@ -394,6 +394,7 @@
+     std::unordered_map<char, FontAssetsMountRecord> font_asset_mounts;
+     std::unordered_map<char, ImageAssetsMountRecord> image_asset_mounts;
+     std::unordered_map<BackendHandle::Value, MountTarget> mounted_targets;
++    std::unordered_map<BackendHandle::Value, lv_obj_t *> mounted_viewports;
+     std::unordered_map<std::string, DisplayRegistration> displays;
+     std::string default_display_id;
+     IBackend::EventSink event_sink;

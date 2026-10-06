@@ -2,6 +2,7 @@
 #include "runtime_render_probe.hpp"
 #include "espocket_builtin_packages.hpp"
 #include "product_fonts.hpp"
+#include "round_presentation.hpp"
 #include "brookesia/lib_utils/function_guard.hpp"
 
 extern const char dark_theme_start[] asm("_binary_espocket_dark_theme_json_start");
@@ -87,6 +88,7 @@ std::expected<void, std::string> System::init()
         .theme_id = "dark",
     };
     config.system_type = "espocket";
+    config.app_presentation = round_app_presentation;
     config.start_service_manager = true;
     config.install_registered_apps = false;
     config.install_package_apps = true;

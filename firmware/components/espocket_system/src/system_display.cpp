@@ -153,6 +153,7 @@ std::expected<void, std::string> System::start_display()
 
     esp_brookesia::gui::lvgl::DisplaySourceConfig source_config;
     source_config.output_name = output->name;
+    source_config.buffer_height = 24;
     auto &source = DisplaySource::get_instance();
     if (!source.start(source_config)) {
         return std::unexpected("Failed to start LVGL Display source");

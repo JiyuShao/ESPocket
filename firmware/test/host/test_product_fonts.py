@@ -75,7 +75,8 @@ void esp_lv_adapter_unlock() {
 lv_font_t *lv_tiny_ttf_create_data_ex(const void *data, size_t data_size,
     int32_t size, lv_font_kerning_t kerning, size_t cache_size) {
     assert(lock_depth > 0 && data != nullptr && data_size == 4);
-    assert(kerning == LV_FONT_KERNING_NONE && cache_size == 4);
+    assert(kerning == LV_FONT_KERNING_NONE && cache_size >= 16 && cache_size <= 96);
+    assert(cache_size * static_cast<size_t>(size) * size <= 96 * 24 * 24 || size > 24);
     if (!shared_data) { shared_data = data; shared_size = data_size; }
     assert(shared_data == data && shared_size == data_size);
     created_sizes.push_back(size);

@@ -1,0 +1,119 @@
+--- a/src/backend.cpp
++++ b/src/backend.cpp
+@@ -173,9 +173,34 @@
+ std::optional<IBackend::ThreadGuard> BackendImpl::get_thread_guard() const
+ {
+     return IBackend::ThreadGuard{
+-        .lock = lock_thread,
+-        .unlock = unlock_thread,
++        .lock = [this]() {
++            lock_thread();
++            ++layout_batch_depth;
++        },
++        .unlock = [this]() {
++            lib_utils::FunctionGuard unlock_guard(unlock_thread);
++            if (layout_batch_depth > 0 && --layout_batch_depth == 0) {
++                flush_relative_layout();
++            }
++        },
+     };
++}
++
++void BackendImpl::request_relative_layout()
++{
++    relative_layout_dirty = true;
++    if (layout_batch_depth == 0) {
++        flush_relative_layout();
++    }
++}
++
++void BackendImpl::flush_relative_layout() const
++{
++    if (!relative_layout_dirty) {
++        return;
++    }
++    relative_layout_dirty = false;
++    lvgl::refresh_relative_placements(*const_cast<BackendImpl *>(this));
+ }
+ 
+ BackendHandle BackendImpl::create_node(
+@@ -387,7 +412,7 @@
+     // drawing path without rebuilding every known layer layout.
+     constexpr auto pixel_offsets = PropsApplyMask::ImageOffsetX | PropsApplyMask::ImageOffsetY;
+     if ((static_cast<uint64_t>(mask) & ~static_cast<uint64_t>(pixel_offsets)) != 0) {
+-        lvgl::refresh_relative_placements(*this);
++        request_relative_layout();
+     }
+ }
+ 
+@@ -459,7 +484,7 @@
+     }
+ 
+     lvgl::apply_layout(*record, layout, mask);
+-    lvgl::refresh_relative_placements(*this);
++    request_relative_layout();
+ }
+ 
+ void BackendImpl::apply_placement(BackendHandle handle, const Placement &placement, PlacementApplyMask mask)
+@@ -485,7 +510,7 @@
+     }
+     if (mask == PlacementApplyMask::All || has_mask(mask, PlacementApplyMask::Size) ||
+             has_mask(mask, PlacementApplyMask::Align) || has_mask(mask, PlacementApplyMask::RelativeTo)) {
+-        lvgl::refresh_relative_placements(*this);
++        request_relative_layout();
+     }
+ }
+ 
+@@ -503,7 +528,7 @@
+     }
+ 
+     lvgl::apply_style(*this, *record, style, mask);
+-    lvgl::refresh_relative_placements(*this);
++    request_relative_layout();
+ }
+ 
+ void BackendImpl::apply_debug_visual(BackendHandle handle, bool enabled)
+@@ -866,6 +891,7 @@
+     BROOKESIA_LOG_TRACE_GUARD_WITH_THIS();
+ 
+     ThreadLockGuard lock;
++    flush_relative_layout();
+ 
+     BROOKESIA_LOGD("Params: handle(%1%)", handle);
+ 
+@@ -889,6 +915,7 @@
+     BROOKESIA_LOG_TRACE_GUARD_WITH_THIS();
+ 
+     ThreadLockGuard lock;
++    flush_relative_layout();
+ 
+     BROOKESIA_LOGD("Params: handle(%1%), animated(%2%)", handle, animated);
+ 
+@@ -911,6 +938,7 @@
+     BROOKESIA_LOG_TRACE_GUARD_WITH_THIS();
+ 
+     ThreadLockGuard lock;
++    flush_relative_layout();
+ 
+     BROOKESIA_LOGD("Params: handle(%1%), x(%2%), y(%3%), animated(%4%)", handle, x, y, animated);
+ 
+--- a/src/private/types.hpp
++++ b/src/private/types.hpp
+@@ -315,6 +315,8 @@
+ 
+     void set_event_sink(IBackend::EventSink sink);
+     std::optional<IBackend::ThreadGuard> get_thread_guard() const;
++    void request_relative_layout();
++    void flush_relative_layout() const;
+     BackendHandle create_node(
+         const Node &node,
+         BackendHandle parent,
+@@ -400,6 +402,8 @@
+     IBackend::EventSink event_sink;
+     lv_obj_t *staging_root = nullptr;
+     BackendHandle::Value next_handle = 1;
++    mutable std::size_t layout_batch_depth = 0;
++    mutable bool relative_layout_dirty = false;
+ };
+ 
+ std::optional<uint32_t> parse_color(std::string_view color);

@@ -81,6 +81,10 @@
     {
       "file": "006-store-installed-runtime-icons.patch",
       "sha256": "7fb70ca9886bc65849c9813b68e2ea2a6ff30fc9509ace3a75323775bd2f9277"
+    },
+    {
+      "file": "007-bound-download-package-cache.patch",
+      "sha256": "6a3de46e1172c315616b16a973a5e70090d06d5ee3902a319828434ca7094223"
     }
   ],
   "issue": ".scratch/005-m5-application-ecosystem/issues/06-adopt-online-store-stability-fix.md",
@@ -98,7 +102,7 @@
     "cmake/esp_platform.cmake": "9b166775b9650802efc292091c7120d39f660298adcef53033d2b18ba9427532",
     "cmake/pc_platform.cmake": "f39f5933e90c753a09e4d716607ee323e14a939499ab66844522e8ab0a5a9025",
     "idf_component.yml": "fed83818cdf69c6166304b640035f0fb347c4ab25a73ff9542c87b57e2d619f6",
-    "include/brookesia/app_store/app_store_app.hpp": "74884f937199ce82e096059a3ddb3f0c47e7b83bc712947c626f3a40b13dbe7a",
+    "include/brookesia/app_store/app_store_app.hpp": "2931661627fd6c704f5bed2063014274c221ee5db8d3c1957586246179d6e914",
     "include/brookesia/app_store/macro_configs.h": "9b24ae5685335373c0a387be6847cd3ab100562609b51d02f2134beccf10ea68",
     "include/brookesia/app_store.hpp": "fbbb6b980b1af2e82aa2bf92977a770830d258e5aafb69774455ccc88c924059",
     "license.txt": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
@@ -127,7 +131,7 @@
     "src/i18n/locale.ipp": "6c2064b74811de228777426ce6d01154dc8b58148f18863b4a17b66253e04bba",
     "src/i18n/text.ipp": "e06860b0f6cafa1135c0df2709fc25942167d598fea44c47da82a04de94aeb20",
     "src/install/download.cpp": "1799cbd52b79bc163acb793a7202e8b4c55b4bb193c62ccbd560f59fdc54e8b1",
-    "src/install/download.ipp": "e280b78824ec31ee8d6a63410201e53122ffbf080f6e135b58cc5351403c6049",
+    "src/install/download.ipp": "1f9bcf8166caa4c3b1678d14abb435e3043b443c45f46a562948713e68beea97",
     "src/network/http.cpp": "2ad718d2f2fad3029f145ed0d6097e92068d508a85924d111f0edbdc7cfe3e0d",
     "src/network/http.ipp": "34fda890da857da8b5e0785d8c9c9bf1ebc4be5d69852f57a9a415bb404a33c9",
     "src/network/remote_index.cpp": "ff9d78425580db1f0279c7e41cad4fa2fa1f7bdaeeeb7cb292ce50e082c60e56",
@@ -141,11 +145,12 @@
     "src/screen/catalog_i18n.cpp": "fb664558aee52885f3483dfe4c8e82b546493f574c189e6179a28fb36629c6f3",
     "src/storage/catalog_model.ipp": "dac53ce34ae71057c4f5a1f9dad36a29720ed992aac4b904f70fe97ec7c7f5cb",
     "src/storage/icons.ipp": "271191dbc4fc1ede1c654b6e163a048ee3e4dfd6167a52d8907351b902ff8f4e",
-    "src/storage/storage.ipp": "492f9053b9428b8d1a5b9475ae72abaf943acfaad50b705403605a6b696cc46d",
+    "src/storage/storage.ipp": "6c81a49236081e35f2f29482cc98ddd1ec04529f9abb8f412161d3d4c8631174",
     "src/storage/storage_catalog_icons.cpp": "c144e7d461d1ae7b9fa29c5144116b5c4b671e3172110d9844b5494b9225fc97"
   },
   "related_issues": [
     ".scratch/005-m5-application-ecosystem/issues/03-enforce-core-package-trust.md",
-    ".scratch/005-m5-application-ecosystem/issues/09-allow-unsigned-developer-installation.md"
+    ".scratch/005-m5-application-ecosystem/issues/09-allow-unsigned-developer-installation.md",
+    ".scratch/005-m5-application-ecosystem/issues/12-storage-round-display-and-runtime-usability.md"
   ]
 }

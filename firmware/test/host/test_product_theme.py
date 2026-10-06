@@ -30,6 +30,12 @@ class ProductThemeTest(unittest.TestCase):
             theme = json.loads((ROOT / 'firmware/components/espocket_system/resources' / (name + '_theme.json')).read_text())
             self.assertEqual(theme['id'], name)
             self.assertFalse(required - theme['styles'].keys(), 'official App uses undeclared theme tokens')
+            for control in ['button', 'app.primaryChip', 'app.secondaryChip', 'app.buttonPrimary', 'app.buttonSecondary']:
+                style = theme['styles'][control]
+                self.assertTrue(style['bgColor'])
+                self.assertTrue(style['textColor'])
+                self.assertTrue(style['stateStyles']['pressed']['bgColor'])
+            self.assertEqual(theme['styles']['app.selectableLabelSelected']['textColor'], '${color.primary.on}')
             for control in ['app.slider', 'app.switch']:
                 style = theme['styles'][control]
                 self.assertTrue(style['bgColor'])

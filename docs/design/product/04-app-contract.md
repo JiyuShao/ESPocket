@@ -31,6 +31,12 @@
 
 旧要求的替代关系：APP-001 → APP-021、APP-023；APP-002 → APP-022；APP-007 → APP-023。旧 ID 保留在 Git 历史中，不再表示当前产品要求。
 
+## 圆屏兼容
+
+未声明 ESPocket 圆屏支持的矩形 Runtime App，由系统放入屏幕内接正方形安全区域。系统统一调整布局尺寸、密度和挂载坐标，保持原包及资源完整；所有四角控件应可见、可点。兼容模式保留 480 dp 的逻辑画布以选择上游紧凑布局；466 px 屏幕对应居中的 329 × 329 px 区域。App 获取的环境尺寸与实际布局一致。
+
+声明 `supported_systems` 包含 `espocket` 的 Runtime App，以及 Native App、Shell 和系统 Overlay 使用完整屏幕；圆屏 App 自己遵守安全区域要求。兼容缩放可能使文字和按钮变小，不能替代专门的圆屏界面设计。
+
 ## AI Native
 
 | ID | Requirement |

@@ -1,0 +1,98 @@
+{
+  "schema_version": 1,
+  "purpose": "Pinned genuine NES and Agent services for non-Camera Store applications; existing dependency versions remain unchanged",
+  "dependencies": {
+    "espressif/brookesia_agent_coze": {
+      "version": "0.8.2",
+      "component_hash": "fb0531c3e0daa8fa68956c1459536471dadf3858ef78d033445057479d40c16b"
+    },
+    "espressif/brookesia_agent_manager": {
+      "version": "0.8.2",
+      "component_hash": "2e24f02bcbc9f4a827f44385a4a122139f2e847b026ce72e607a9bd4fd15033c"
+    },
+    "espressif/brookesia_agent_xiaozhi": {
+      "version": "0.8.2",
+      "component_hash": "ff4b086e501d92d1c21a55c17ab1f9f72fcea463213ed2b905ecccbf0ca0e30a"
+    },
+    "espressif/brookesia_emulation_nes": {
+      "version": "0.8.2",
+      "component_hash": "3608fb144a79d5a1b6d9bafd2ff22b37e555c6c1a2effbbf46481d03dc403e07"
+    },
+    "espressif/brookesia_mcp_utils": {
+      "version": "0.8.0",
+      "component_hash": "54dda52921ef4f7ef7412b65437de5c7a6bec1f56dfb33924bc3f2e8afd2ceda"
+    },
+    "espressif/esp32-camera": {
+      "version": "2.1.8",
+      "component_hash": "d1770097ec47996a9aba49b8d99672863c9855ea2d47e91fe31e11e58e8c7813"
+    },
+    "espressif/esp_cam_sensor": {
+      "version": "2.6.0",
+      "component_hash": "0dd6634a71cc8756f0e46c961476304a23a82db4f4c4deb8aecfa30161d2185c"
+    },
+    "espressif/esp_capture": {
+      "version": "0.8.4",
+      "component_hash": "a4eb200170dee73e0223a922051c569267a8db8f1f6ad91321221fb35b2af5db"
+    },
+    "espressif/esp_coze": {
+      "version": "1.0.0",
+      "component_hash": "e448e7fe42fbe8757425a14d1524fe2ee23f0ad91bea302dfdaa0edd37fd8da0"
+    },
+    "espressif/esp_h264": {
+      "version": "1.4.1",
+      "component_hash": "3d60078419ceac61cd87579664ae6a5a9b9a42d6f2edf4e23d753af8d2a67da9"
+    },
+    "espressif/esp_image_effects": {
+      "version": "1.1.0",
+      "component_hash": "a9a9a18173dc338f94559e61ebbfc1aeff5ebb2f7703e7e3d2431c5bb3450fe6"
+    },
+    "espressif/esp_jpeg": {
+      "version": "1.3.1",
+      "component_hash": "defb83669293cbf86d0fa86b475ba5517aceed04ed70db435388c151ab37b5d7"
+    },
+    "espressif/esp_muxer": {
+      "version": "1.2.3",
+      "component_hash": "7de5d869121f8decaf4dd1dcaf0d7ffa9be0e9bd58be55dcf544eac4958a61ef"
+    },
+    "espressif/esp_sccb_intf": {
+      "version": "0.0.9",
+      "component_hash": "eb6a7d5c992f09583c163b2e3f5e95a0fdc87a2d9f8e026f3e59153935553889"
+    },
+    "espressif/esp_video": {
+      "version": "2.5.0",
+      "component_hash": "5694b16c12b8bb26b56ad3f999ad10119f1314d64b2d1c518bc7dfed902df9e1"
+    },
+    "espressif/esp_video_codec": {
+      "version": "0.5.7",
+      "component_hash": "e717c04f9dc491a3fefd655500d7009a107391127e6903c4005bfec0bbd3c29c"
+    },
+    "espressif/esp_websocket_client": {
+      "version": "1.8.0",
+      "component_hash": "dc00233af846f3a744ada283a300e0d586040aadc3ee67361645ecdce4523672"
+    },
+    "espressif/esp_xiaozhi": {
+      "version": "0.1.2",
+      "component_hash": "8e2e8a32abee72b29fd1833990a033f07bc6e468867ece1176513da467292e3f"
+    },
+    "espressif/gmf_video": {
+      "version": "0.8.8",
+      "component_hash": "d0485b6ec48f47f6ef7b6424e3643a1fc90ca16dcfca4c537c1fcdcafe3a7312"
+    },
+    "espressif/mcp-c-sdk": {
+      "version": "2.0.1",
+      "component_hash": "58252f2ca194794f11aff0ff559b6c16cc57c0838d99558011c2f95eeae87e00"
+    },
+    "espressif/mqtt": {
+      "version": "1.1.0",
+      "component_hash": "fb18bc3b65aa8c94693a9811ffc322cca8a65d92d5ec84983d3e385080e3969c"
+    },
+    "espressif/usb": {
+      "version": "1.6.0",
+      "component_hash": "99eee72ea224d9117d4c342442717a1f20bf8112e2ab5d7d7038b827874f4c92"
+    },
+    "espressif/usb_host_uvc": {
+      "version": "2.5.2",
+      "component_hash": "ecb2604b71cb5a65d64e5f441be54793b1838096043ad8cf1fa0d3012de18a9a"
+    }
+  }
+}

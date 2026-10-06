@@ -31,14 +31,14 @@ namespace boost::json { struct array{};struct value{value(array){}}; }
 struct Binding {bool valid=false; int releases=0; bool is_valid(){return valid;} void release(){if(valid){++releases;valid=false;}}};
 struct Manager { Binding bind(const char*) {return Binding{!injected()};} static Manager& get_instance(){static Manager m;return m;}};
 namespace esp_brookesia {namespace lib_utils {struct FunctionGuard {std::function<void()> fn; FunctionGuard(std::function<void()> f):fn(f){}~FunctionGuard(){if(fn)fn();}void release(){fn={};}};} namespace service {using ServiceManager=Manager;namespace helper {struct Timeout{Timeout(int){}};}}
-namespace gui::lvgl {struct DisplaySourceConfig{std::string output_name;};constexpr auto DISPLAY_SOURCE_ROLE="gui";}}
+namespace gui::lvgl {struct DisplaySourceConfig{std::string output_name;unsigned buffer_height=40;};constexpr auto DISPLAY_SOURCE_ROLE="gui";}}
 struct DisplayHelper { enum class FunctionId{GetOutputs,SetBacklightOnOff,SetActiveSourceRole};
 struct OutputInfo {std::string name="display"; unsigned id=1,width=466,height=466;std::optional<int> touch=1,backlight=1;};
 static bool is_available(){return !injected();} static std::string get_name(){return "Display";}
 template<class T=void,class... A> static std::expected<T,std::string> call_function_sync(FunctionId,A&&...){if(injected())return std::unexpected("injected");if constexpr(!std::is_void_v<T>)return T{};else return {};}};
 bool parse(boost::json::value,std::vector<DisplayHelper::OutputInfo>& out){if(injected())return false;out.push_back({});if(injected())out[0].touch.reset();return true;}
 #define BROOKESIA_DESCRIBE_FROM_JSON(v,o) parse(v,o)
-struct DisplaySource {bool started=false;int stops=0;static DisplaySource& get_instance(){static DisplaySource s;return s;}bool start(auto){if(injected())return false;started=true;return true;}void stop(){assert(started);started=false;++stops;}};
+struct DisplaySource {bool started=false;int stops=0;static DisplaySource& get_instance(){static DisplaySource s;return s;}bool start(auto config){assert(config.buffer_height*466*2<=24576);if(injected())return false;started=true;return true;}void stop(){assert(started);started=false;++stops;}};
 constexpr int DISPLAY_TIMEOUT_MS=10;
 namespace espocket {
 struct System {Binding display_binding_;bool display_started_=false;unsigned display_width_=0,display_height_=0,display_output_id_=0;

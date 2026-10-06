@@ -65,6 +65,50 @@
     }
   ],
   "styles": {
+    "button": {
+      "bgColor": "${color.surface.raised}",
+      "textColor": "${color.text.default}",
+      "radius": "16dp",
+      "stateStyles": {
+        "pressed": { "bgColor": "${color.surface.pressed}" }
+      }
+    },
+    "app.primaryChip": {
+      "bgColor": "${color.primary.fill}",
+      "textColor": "${color.primary.on}",
+      "radius": "16dp",
+      "stateStyles": {
+        "pressed": { "bgColor": "${color.primary.hover}" }
+      }
+    },
+    "app.secondaryChip": {
+      "bgColor": "${color.surface.raised}",
+      "textColor": "${color.text.default}",
+      "radius": "16dp",
+      "stateStyles": {
+        "pressed": { "bgColor": "${color.surface.pressed}" }
+      }
+    },
+    "app.selectableLabelSelected": {
+      "textColor": "${color.primary.on}",
+      "fontSize": "20sp"
+    },
+    "app.buttonPrimary": {
+      "bgColor": "${color.primary.fill}",
+      "textColor": "${color.primary.on}",
+      "radius": "16dp",
+      "stateStyles": {
+        "pressed": { "bgColor": "${color.primary.hover}" }
+      }
+    },
+    "app.buttonSecondary": {
+      "bgColor": "${color.surface.raised}",
+      "textColor": "${color.text.default}",
+      "radius": "16dp",
+      "stateStyles": {
+        "pressed": { "bgColor": "${color.surface.pressed}" }
+      }
+    },
     "app.caption": {
       "textColor": "${color.text.muted}",
       "fontSize": "20sp"

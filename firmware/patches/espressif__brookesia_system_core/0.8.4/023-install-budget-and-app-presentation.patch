@@ -1,0 +1,242 @@
+--- a/include/brookesia/system_core/app/package.hpp
++++ b/include/brookesia/system_core/app/package.hpp
+@@ -38,6 +38,7 @@
+     std::string signing_key_identity;
+     std::string transaction_identity;
+     std::map<std::string, std::string> members;
++    uint64_t unpack_allocation_bytes = 0;
+     bool unsigned_exception = false;
+     bool super_exception = false;
+     bool requires_developer() const { return unsigned_exception || super_exception; }
+--- a/include/brookesia/system_core/system/system.hpp
++++ b/include/brookesia/system_core/system/system.hpp
+@@ -94,6 +94,11 @@
+         std::unique_ptr<gui::IBackend> gui_backend;
+         /** GUI and platform environment exposed to apps. */
+         gui::Environment environment;
++        struct AppPresentation {
++            gui::Environment environment;
++            std::optional<gui::GuiViewport> viewport;
++        };
++        std::function<AppPresentation(const AppManifest &, const gui::Environment &)> app_presentation;
+         /** Storage roots and install target policy. */
+         StorageConfig storage = {};
+         /** Optional startup overlay configuration. */
+@@ -250,7 +255,7 @@
+     std::string get_system_type() const;
+     SystemInfo get_system_info() const;
+     gui::Environment get_environment() const;
+-    boost::json::object get_environment_json() const;
++    boost::json::object get_environment_json(std::optional<AppId> app_id = std::nullopt) const;
+     StorageLayout get_storage_layout() const;
+     std::expected<AppStoragePaths, std::string> get_app_storage_paths(AppId app_id);
+     std::expected<PublicStoragePaths, std::string> get_public_storage_paths();
+--- a/src/app/app.cpp
++++ b/src/app/app.cpp
+@@ -182,6 +182,71 @@
+     return merge_directory_contents(old_app_dir / "files", staged_app_dir / "files", true);
+ }
+ 
++std::expected<void, std::string> check_install_space(const std::filesystem::path &root, uint64_t required)
++{
++    using Storage = service::helper::Storage;
++    auto filesystems = Storage::call_function_sync<boost::json::array>(Storage::FunctionId::GetFileSystems, service::helper::Timeout(3000));
++    if (!filesystems) return std::unexpected("install_capacity_unavailable");
++    std::string selected;
++    size_t best = 0;
++    const auto destination = root.lexically_normal().generic_string();
++    for (const auto &value : *filesystems) {
++        if (!value.is_object()) continue;
++        const auto &object = value.as_object();
++        auto field = [&](const char *key) {
++            const auto found = object.find(key);
++            return found != object.end() && found->value().is_string() ? std::string(found->value().as_string().c_str()) : std::string{};
++        };
++        const auto mount = field("mount_point");
++        auto volume_root = field("root_path");
++        if (volume_root.empty()) volume_root = mount;
++        for (const auto &path : {volume_root, mount}) {
++            if (path.empty()) continue;
++            const auto prefix = std::filesystem::path(path).lexically_normal().generic_string();
++            if ((prefix == "/" || destination == prefix || destination.starts_with(prefix + "/")) && prefix.size() > best) {
++                best = prefix.size(); selected = mount;
++            }
++        }
++    }
++    if (selected.empty()) return std::unexpected("install_capacity_unavailable");
++    auto capacity = Storage::call_function_sync<boost::json::object>(Storage::FunctionId::GetFileSystemCapacity, selected, service::helper::Timeout(3000));
++    if (!capacity) return std::unexpected("install_capacity_unavailable");
++    const auto free = capacity->find("free_bytes");
++    if (free == capacity->end() || (!free->value().is_uint64() && !free->value().is_int64()))
++        return std::unexpected("install_capacity_unavailable");
++    const uint64_t available = free->value().is_uint64() ? free->value().as_uint64() :
++        static_cast<uint64_t>(std::max<int64_t>(0, free->value().as_int64()));
++    if (available < required + 256 * 1024) return std::unexpected("insufficient_install_space");
++    return {};
++}
++
++std::expected<uint64_t, std::string> private_data_allocation(const std::filesystem::path &directory)
++{
++    using Storage = service::helper::Storage;
++    std::vector<std::filesystem::path> pending{directory / "data", directory / "cache", directory / "files"};
++    uint64_t allocation = 0;
++    size_t visited = 0;
++    while (!pending.empty()) {
++        const auto path = std::move(pending.back()); pending.pop_back();
++        if (++visited > 8192) return std::unexpected("private_data_budget_limit");
++        auto info = Storage::fs_stat(path.generic_string(), STORAGE_FS_TIMEOUT_MS);
++        if (!info) return std::unexpected(info.error());
++        if (!info->exists) continue;
++        if (info->type == Storage::FileType::File) {
++            allocation += ((info->size + 4095) / 4096 + 1) * 4096;
++        } else if (info->type == Storage::FileType::Directory) {
++            allocation += 8192;
++            auto entries = Storage::fs_list(path.generic_string(), STORAGE_FS_TIMEOUT_MS);
++            if (!entries) return std::unexpected(entries.error());
++            for (const auto &entry : *entries) {
++                if (!is_safe_app_directory_name(entry.name)) return std::unexpected("invalid_private_data_path");
++                pending.push_back(path / entry.name);
++            }
++        } else return std::unexpected("invalid_private_data_type");
++    }
++    return allocation;
++}
++
+ std::expected<std::filesystem::path, std::string> get_default_install_app_root(const StorageLayout &layout)
+ {
+     auto make_app_root = [](const StorageVolume & volume) {
+@@ -958,7 +1023,7 @@
+ 
+ boost::json::object SystemApi::get_environment() const
+ {
+-    return system_ == nullptr ? boost::json::object{} : system_->get_environment_json();
++    return system_ == nullptr ? boost::json::object{} : system_->get_environment_json(app_id_);
+ }
+ 
+ StorageLayout SystemApi::get_storage_layout() const
+@@ -1199,6 +1264,8 @@
+     auto source_info = service::helper::Storage::fs_stat(std::string(path), STORAGE_FS_TIMEOUT_MS);
+     if (!source_info || !source_info->exists || source_info->size > 16U * 1024U * 1024U)
+         return std::unexpected("invalid_package_candidate");
++    if (auto space = check_install_space(root, ((source_info->size + 4095) / 4096 + 1) * 4096); !space)
++        return std::unexpected(space.error());
+     std::vector<uint8_t> source(source_info->size);
+     auto read = service::helper::Storage::fs_read(std::string(path), service::RawBuffer(source.data(), source.size()), STORAGE_FS_TIMEOUT_MS);
+     if (!read || *read != source.size()) return std::unexpected("candidate_copy_failed");
+@@ -1223,6 +1290,10 @@
+         return std::unexpected(services.error());
+     const auto staged = stage_parent / manifest.id, final = root / manifest.id;
+     const auto backup_root = root / ".rollback", backup = backup_root / manifest.id;
++    auto private_bytes = private_data_allocation(final);
++    if (!private_bytes) return std::unexpected(private_bytes.error());
++    if (auto space = check_install_space(root, admission->unpack_allocation_bytes + *private_bytes); !space)
++        return std::unexpected(space.error());
+     auto unpacked = unpack_app_package_to(candidate.generic_string(), stage_parent.generic_string(),
+         admission->super_exception ? "super" : get_system_type(), admission->artifact_sha256);
+     if (!unpacked) return std::unexpected(unpacked.error());
+--- a/src/app/manager.cpp
++++ b/src/app/manager.cpp
+@@ -806,6 +806,7 @@
+                     impl_->unregister_app_gui_resources(record);
+                     return std::unexpected("App GUI screen flow is not found: " + flow_entry.screen_flow);
+                 }
++                if (record.presentation) target->viewport = record.presentation->viewport;
+                 auto flow_result = impl_->gui_runtime_->start_screen_flow(
+                                        *record.document_id,
+                                        flow_entry.screen_flow,
+@@ -1790,15 +1791,20 @@
+     return impl_->environment_;
+ }
+ 
+-boost::json::object System::get_environment_json() const
+-{
++boost::json::object System::get_environment_json(std::optional<AppId> app_id) const
++{
++    auto metrics = impl_->environment_;
++    if (app_id && impl_->config_.app_presentation) {
++        const auto app = get_app(*app_id);
++        if (app) metrics = impl_->config_.app_presentation(app->manifest, metrics).environment;
++    }
+     boost::json::object environment;
+-    environment["width_px"] = impl_->environment_.width_px;
+-    environment["height_px"] = impl_->environment_.height_px;
+-    environment["density"] = impl_->environment_.density;
+-    environment["font_scale"] = impl_->environment_.font_scale;
+-    environment["language"] = impl_->environment_.language;
+-    environment["theme_id"] = impl_->environment_.theme_id;
++    environment["width_px"] = metrics.width_px;
++    environment["height_px"] = metrics.height_px;
++    environment["density"] = metrics.density;
++    environment["font_scale"] = metrics.font_scale;
++    environment["language"] = metrics.language;
++    environment["theme_id"] = metrics.theme_id;
+     return environment;
+ }
+ 
+--- a/src/app/package.cpp
++++ b/src/app/package.cpp
+@@ -1210,6 +1210,7 @@
+         if (!data || data->size() != entry.uncompressed_size) return std::unexpected("unreadable_package_member: " + name);
+         if (crc32(0, data->data(), data->size()) != entry.crc)
+             return std::unexpected("package_member_crc_mismatch: " + name);
++        result.unpack_allocation_bytes += ((static_cast<uint64_t>(entry.uncompressed_size) + 4095) / 4096 + 1) * 4096;
+         if (name == "manifest.json") manifest_text.assign(data->begin(), data->end());
+         if (!name.starts_with("META-INF/")) {
+             auto digest = package_sha256(*data);
+@@ -1217,6 +1218,7 @@
+             result.members.emplace(name, std::move(*digest));
+         }
+     }
++    result.unpack_allocation_bytes += (directory_names.size() + 1) * 8192;
+     for (const auto &name : file_names) if (directory_names.contains(name)) return std::unexpected("package_file_directory_collision");
+     if (manifest_text.empty()) return std::unexpected("manifest_missing");
+     // A file cannot also be a parent directory (including case-insensitive collisions).
+--- a/src/private/system/impl.hpp
++++ b/src/private/system/impl.hpp
+@@ -60,6 +60,7 @@
+         std::shared_ptr<IApp> native_app;
+         std::unique_ptr<AppContext> context;
+         std::optional<gui::DocumentId> document_id;
++        std::optional<System::Config::AppPresentation> presentation;
+         std::optional<runtime::AppId> runtime_app_id;
+         std::vector<gui::ScopedConnection> action_connections;
+         std::set<std::string> action_connection_keys;
+--- a/src/service/system.cpp
++++ b/src/service/system.cpp
+@@ -852,7 +852,10 @@
+ 
+ FunctionResult SystemService::get_environment()
+ {
+-    return make_success(system_.get_environment_json());
++    auto caller = get_runtime_caller(system_);
++    if (!caller) return make_error(caller.error());
++    const auto app_id = caller->has_value() ? std::optional<AppId>(caller->value().app_id) : std::nullopt;
++    return make_success(system_.get_environment_json(app_id));
+ }
+ 
+ FunctionResult SystemService::get_active_app()
+--- a/src/system/gui.cpp
++++ b/src/system/gui.cpp
+@@ -505,18 +505,20 @@
+         return std::unexpected("GUI runtime is not available");
+     }
+     if (!record.document_id.has_value()) {
++        record.presentation = config_.app_presentation ? config_.app_presentation(record.info.manifest, environment_) :
++            System::Config::AppPresentation{environment_, {}};
+         std::expected<gui::DocumentId, std::string> load_result = std::unexpected("Invalid GUI root");
+         if (descriptor.root_kind == GuiRootKind::File) {
+             load_result = gui_runtime_->load_file(
+                               resolve_app_resource_path(record.info.manifest, descriptor.root),
+-                              environment_
++                              record.presentation->environment
+                           );
+         } else if (descriptor.root_kind == GuiRootKind::JsonString) {
+             load_result = gui_runtime_->load_json(
+                               record.info.manifest.id,
+                               descriptor.root,
+                               resolve_app_resource_dir(record.info.manifest),
+-                              environment_
++                              record.presentation->environment
+                           );
+         }
+         if (!load_result) {

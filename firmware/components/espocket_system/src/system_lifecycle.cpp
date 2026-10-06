@@ -100,8 +100,7 @@ std::expected<void, std::string> System::on_app_started(
     const esp_brookesia::system::core::AppInfo &app
 )
 {
-    if (app.manifest.kind == esp_brookesia::system::core::AppKind::Runtime) begin_runtime_render_probe(app.manifest.id);
-    else end_runtime_render_probe();
+    begin_runtime_render_probe(app.manifest.id);
     if (stopping_.load(std::memory_order_acquire)) {
         return std::unexpected("ESPocket System is stopping");
     }

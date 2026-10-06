@@ -1,0 +1,6 @@
+# Name,         Type, SubType,  Offset,     Size,       Flags
+nvs,            data, nvs,      0x9000,     0x6000,
+phy_init,       data, phy,      0xf000,     0x1000,
+model,          data, littlefs, 0x10000,    300K,
+factory,        app,  factory,  0x60000,    14M,
+littlefs_data,  data, littlefs, 0xe60000,   0x11a0000,

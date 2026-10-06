@@ -113,7 +113,16 @@ struct RawBuffer { uint8_t *data; size_t size; RawBuffer(uint8_t*p,size_t n):dat
 namespace helper {
 struct Timeout {explicit Timeout(unsigned){}};
 struct Storage {
- enum class FunctionId {KVGet,KVSet};
+ enum class FunctionId {KVGet,KVSet,GetFileSystems,GetFileSystemCapacity};
+ static inline uint64_t capacity_free_bytes = 1ULL << 30;
+ static inline bool capacity_unknown = false;
+ template<class T> static std::expected<T,std::string> call_function_sync(FunctionId,Timeout){
+  if(capacity_unknown)return std::unexpected("injected capacity failure");
+  return boost::json::array{boost::json::object{{"mount_point","/"},{"root_path","/"}}};
+ }
+ template<class T> static std::expected<T,std::string> call_function_sync(FunctionId,const std::string&,Timeout){
+  return boost::json::object{{"free_bytes",capacity_free_bytes}};
+ }
  static inline unsigned write_wait_ms = 0;
  using Timeout=helper::Timeout;
  static inline boost::json::object kv_values;
@@ -194,6 +203,13 @@ TRANSACTION_MATRIX = r'''
  System sys;sys.root=root/"transactions";sys.impl_->package_policy_=p;
  PackageInstallOptions options;options.developer_confirmed=true;
  assert(!sys.install_runtime_app_package((root/"super.bpk").string(),true));
+ Storage::capacity_free_bytes=0;
+ auto no_space=sys.install_runtime_app_package((root/"super.bpk").string(),options);
+ assert(!no_space && no_space.error()=="insufficient_install_space");assert(sys.apps.empty());
+ Storage::capacity_free_bytes=1ULL<<30;Storage::capacity_unknown=true;
+ auto unavailable=sys.install_runtime_app_package((root/"super.bpk").string(),options);
+ assert(!unavailable && unavailable.error()=="install_capacity_unavailable");assert(sys.apps.empty());
+ Storage::capacity_unknown=false;
  auto first=sys.install_runtime_app_package((root/"super.bpk").string(),options);
  if(!first){std::cerr<<first.error();return 1;}
  const auto installed=sys.root/"test.game";

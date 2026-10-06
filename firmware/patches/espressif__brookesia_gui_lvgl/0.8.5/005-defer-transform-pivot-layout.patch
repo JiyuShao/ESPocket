@@ -1,0 +1,18 @@
+--- a/src/props_common.cpp
++++ b/src/props_common.cpp
+@@ -90,11 +90,10 @@
+ 
+ void apply_common_transform(Record &record, const CommonProps &props)
+ {
+-    lv_obj_update_layout(record.object);
+-    const auto width = lv_obj_get_width(record.object);
+-    const auto height = lv_obj_get_height(record.object);
+-    lv_obj_set_style_transform_pivot_x(record.object, resolve_pivot_value(props.pivot_x, width), LV_PART_MAIN);
+-    lv_obj_set_style_transform_pivot_y(record.object, resolve_pivot_value(props.pivot_y, height), LV_PART_MAIN);
++    lv_obj_set_style_transform_pivot_x(record.object,
++        props.pivot_x.percent ? lv_pct(props.pivot_x.value) : props.pivot_x.value, LV_PART_MAIN);
++    lv_obj_set_style_transform_pivot_y(record.object,
++        props.pivot_y.percent ? lv_pct(props.pivot_y.value) : props.pivot_y.value, LV_PART_MAIN);
+     lv_obj_set_style_transform_scale(record.object, std::max<int32_t>(1, props.zoom), LV_PART_MAIN);
+     lv_obj_set_style_transform_rotation(record.object, props.angle * 10, LV_PART_MAIN);
+ }
