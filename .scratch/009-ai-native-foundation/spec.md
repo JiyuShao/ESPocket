@@ -52,7 +52,7 @@ ESPocket 需要让 AI access 成为产品与架构设计的一部分，同时不
 - [05 — 验证 cancellation 与 result 语义](issues/05-verify-cancellation-and-result-semantics.md)
 - [06 — 注册一个 Native App capability](issues/06-register-native-app-capability.md)
 - [07 — 注册一个 Runtime App capability](issues/07-register-runtime-app-capability.md)
-- [08 — 连接主要 voice Provider](issues/08-connect-a-voice-provider.md)
+- [08 — 单列 Agent Manager 与 XiaoZhi 接入](issues/08-connect-a-voice-provider.md)
 
 ## Further Notes
 
@@ -61,3 +61,7 @@ ESPocket 需要让 AI access 成为产品与架构设计的一部分，同时不
 官方 0.8 examples 的源码范围、迁移价值与兼容限制见 [2026-10-04 examples 核查](records/2026-10-04-brookesia-examples-review.md)；该调查不表示已接受迁移或升级依赖。
 
 原 A0–A5 顺序保留为 ticket group：A0 = 01、A1 = 02、A2 = 03–05、A3 = 06、A4 = 07、A5 = 08。A1 → A2 是最小 mainline；A3–A5 在各自依赖可用时分支推进。
+
+## Comments
+
+2026-10-04：用户要求 Agent Manager / XiaoZhi 单列，由 08 独立持有；Files、手机配网和开发诊断的产品计划由 [019](../019-system-shell-remediation/spec.md)继续访谈，不重复分配 HTTP/Store/Wi-Fi 基础服务。
