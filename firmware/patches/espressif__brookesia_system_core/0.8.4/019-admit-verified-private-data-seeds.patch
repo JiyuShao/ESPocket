@@ -1,0 +1,124 @@
+--- a/src/app/package.cpp
++++ b/src/app/package.cpp
+@@ -1103,7 +1103,7 @@
+ }
+ 
+ std::expected<std::map<std::string, std::string>, std::string> directory_members(
+-    const fs::path &root, const fs::path &relative = {})
++    const fs::path &root, const fs::path &relative = {}, bool include_private = false)
+ {
+     if (std::distance(relative.begin(), relative.end()) > 16) return std::unexpected("installed_path_depth_limit");
+     std::map<std::string, std::string> result;
+@@ -1113,10 +1113,10 @@
+         if (!is_safe_relative_path(entry.name) || entry.name.find('/') != std::string::npos)
+             return std::unexpected("unsafe_installed_member");
+         const auto name = (relative / entry.name).generic_string();
+-        if (relative.empty() && (package_private(name) || name == RECEIPT || name == PENDING || name == ARCHIVE ||
++        if (relative.empty() && ((!include_private && package_private(name)) || name == RECEIPT || name == PENDING || name == ARCHIVE ||
+             name == ".brookesia-verified.json" || name == ".brookesia-verified.pending")) continue;
+         if (entry.info.type == service::helper::Storage::FileType::Directory) {
+-            auto nested = directory_members(root, relative / entry.name);
++            auto nested = directory_members(root, relative / entry.name, include_private);
+             if (!nested) return std::unexpected(nested.error());
+             result.insert(nested->begin(), nested->end());
+         } else if (entry.info.type == service::helper::Storage::FileType::File) {
+@@ -1170,11 +1170,13 @@
+         const fs::path member_path(name);
+         if (name.size() > 192 || std::distance(member_path.begin(), member_path.end()) > 16 ||
+             !is_safe_relative_path(name) || fs::path(name).lexically_normal().generic_string() != name ||
+-            package_private(name) || name.starts_with(".brookesia-"))
++            name.starts_with(".brookesia-"))
+             return std::unexpected("unsafe_package_member: " + name);
+         std::string folded = name;
+         std::transform(folded.begin(), folded.end(), folded.begin(), [](unsigned char c) { return std::tolower(c); });
+-        if (package_private(folded) || folded.starts_with(".brookesia-")) return std::unexpected("reserved_package_member");
++        if ((package_private(folded) && !package_private(name)) || folded.starts_with(".brookesia-")) return std::unexpected("reserved_package_member");
++        if (package_private(name) && name.find('/') == std::string::npos && !entry.is_directory)
++            return std::unexpected("private_package_root_must_be_directory");
+         if (entry.is_directory) directory_names.try_emplace(folded, name);
+         else file_names.insert(folded);
+         for (auto parent = fs::path(name).parent_path(); !parent.empty(); parent = parent.parent_path()) {
+@@ -1244,6 +1246,8 @@
+         result.super_exception = true;
+     }
+     result.manifest = std::move(*manifest);
++    if (package_private(result.manifest.entry) || package_private(result.manifest.resource_dir))
++        return std::unexpected("runtime_code_or_gui_in_private_directory");
+     if (!result.members.contains(result.manifest.entry)) return std::unexpected("runtime_entry_missing");
+     if (!policy.enforce) return result;
+     if (!hash) {
+@@ -1261,6 +1265,19 @@
+         result.signing_key_identity = "sha256:" + *key_digest;
+     }
+     return result;
++}
++
++std::expected<void, std::string> detail::validate_unpacked_runtime_package(
++    std::string_view path, const PackageAdmission &admission)
++{
++    auto actual = directory_members(fs::path(std::string(path)), {}, true);
++    if (!actual) return std::unexpected(actual.error());
++    for (auto member = actual->begin(); member != actual->end();) {
++        if (member->first.starts_with("META-INF/")) member = actual->erase(member);
++        else ++member;
++    }
++    if (*actual != admission.members) return std::unexpected("unpacked_members_mismatch");
++    return {};
+ }
+ 
+ std::expected<void, std::string> write_runtime_package_receipt(
+@@ -1338,7 +1355,12 @@
+         admission->signing_key_identity != field("signing_key"))
+         return std::unexpected("package_archive_identity_mismatch");
+     auto actual = directory_members(directory);
+-    if (!actual || *actual != admission->members) return std::unexpected("installed_members_mismatch");
++    auto immutable_members = admission->members;
++    for (auto member = immutable_members.begin(); member != immutable_members.end();) {
++        if (package_private(member->first)) member = immutable_members.erase(member);
++        else ++member;
++    }
++    if (!actual || *actual != immutable_members) return std::unexpected("installed_members_mismatch");
+     const auto recorded_members = receipt.if_contains("members");
+     const auto unsigned_flag = receipt.if_contains("unsigned"), super_flag = receipt.if_contains("super");
+     if (!recorded_members || !recorded_members->is_object() || recorded_members->as_object().size() != admission->members.size() ||
+--- a/src/app/app.cpp
++++ b/src/app/app.cpp
+@@ -171,15 +171,15 @@
+     if (!preserve_cache) {
+         return preserve_cache;
+     }
+-    auto preserve_data = replace_directory_contents(
++    auto preserve_data = merge_directory_contents(
+                              old_app_dir / "data",
+                              staged_app_dir / "data",
+-                             "runtime app data"
++                             true
+                          );
+     if (!preserve_data) {
+         return preserve_data;
+     }
+-    return merge_directory_contents(old_app_dir / "files", staged_app_dir / "files", false);
++    return merge_directory_contents(old_app_dir / "files", staged_app_dir / "files", true);
+ }
+ 
+ std::expected<std::filesystem::path, std::string> get_default_install_app_root(const StorageLayout &layout)
+@@ -1226,6 +1226,8 @@
+     auto unpacked = unpack_app_package_to(candidate.generic_string(), stage_parent.generic_string(),
+         admission->super_exception ? "super" : get_system_type(), admission->artifact_sha256);
+     if (!unpacked) return std::unexpected(unpacked.error());
++    if (auto verified = detail::validate_unpacked_runtime_package(unpacked->app_path, *admission); !verified)
++        return std::unexpected(verified.error());
+     auto descriptor = read_runtime_app_resource_descriptor(*unpacked);
+     if (!descriptor) return std::unexpected(descriptor.error());
+     if (auto moved = service::helper::Storage::fs_rename(candidate.generic_string(), (staged / ".brookesia-package.bpk").generic_string(), STORAGE_FS_TIMEOUT_MS); !moved)
+--- a/src/private/app/package_validation.hpp
++++ b/src/private/app/package_validation.hpp
+@@ -10,6 +10,8 @@
+ private:
+     std::optional<service::ScopedCallContext> context_;
+ };
++std::expected<void, std::string> validate_unpacked_runtime_package(
++    std::string_view path, const PackageAdmission &admission);
+ std::expected<std::string, std::string> package_validation_digest(std::string_view bytes);
+ std::expected<AppManifest, std::string> parse_validation_manifest(
+     std::string_view json, const std::filesystem::path &directory);

@@ -114,6 +114,7 @@ namespace helper {
 struct Timeout {explicit Timeout(unsigned){}};
 struct Storage {
  enum class FunctionId {KVGet,KVSet};
+ static inline unsigned write_wait_ms = 0;
  using Timeout=helper::Timeout;
  static inline boost::json::object kv_values;
  template<class T,class V> static std::expected<T,std::string> call_function_sync(FunctionId id,const std::string&nspace,V values,Timeout){
@@ -136,7 +137,7 @@ struct Storage {
  static std::expected<void,std::string> fs_mkdir(const std::string&p,unsigned){auto g=guard_write(p);if(!g)return g;std::filesystem::create_directories(p);return {};}
  static std::expected<std::string,std::string> fs_read_text(const std::string&p,unsigned){std::ifstream f(p,std::ios::binary);if(!f)return std::unexpected("missing");return std::string(std::istreambuf_iterator<char>(f),{});}
  static std::expected<size_t,std::string> fs_read(const std::string&p,RawBuffer b,unsigned){++binary_reads;std::ifstream f(p,std::ios::binary);if(!f)return std::unexpected("missing");f.read(reinterpret_cast<char*>(b.data),b.size);return f.gcount();}
- static std::expected<void,std::string> fs_write(const std::string&p,RawBuffer b,unsigned){auto g=guard_write(p);if(!g)return std::unexpected(g.error());std::ofstream f(p,std::ios::binary);f.write(reinterpret_cast<char*>(b.data),b.size);if(!f)return std::unexpected("write failed");return {};}
+ static std::expected<void,std::string> fs_write(const std::string&p,RawBuffer b,unsigned timeout){if(timeout<write_wait_ms)return std::unexpected("injected write timeout");auto g=guard_write(p);if(!g)return std::unexpected(g.error());std::ofstream f(p,std::ios::binary);f.write(reinterpret_cast<char*>(b.data),b.size);if(!f)return std::unexpected("write failed");return {};}
  static std::expected<void,std::string> fs_write_text(const std::string&p,const std::string&s,unsigned){auto g=guard_write(p);if(!g)return g;std::ofstream f(p,std::ios::binary);f<<s;if(!f)return std::unexpected("write failed");return {};}
  static std::expected<std::vector<Entry>,std::string> fs_list(const std::string&p,unsigned){++directory_scans;std::error_code ec;std::filesystem::directory_iterator it(p,ec);if(ec)return std::unexpected(ec.message());std::vector<Entry> v;for(auto&e:it)v.push_back({e.path().filename().string(),*fs_stat(e.path().string(),0)});return v;}
  static std::expected<void,std::string> fs_remove(const std::string&p,unsigned){auto g=guard_write(p);if(!g)return g;if(p==fail_remove_to)return std::unexpected("injected remove failure");std::error_code ec;std::filesystem::remove_all(p,ec);if(ec)return std::unexpected(ec.message());return {};}
@@ -223,7 +224,8 @@ TRANSACTION_MATRIX = r'''
  fs::remove_all(sys.root/".rollback/test.game");
  sys.fail_install_version="3.0.0";Storage::fail_remove_to=installed.string();
  auto cleanup_failed=sys.install_runtime_app_package((root/"update2.bpk").string(),options);assert(!cleanup_failed);
- assert(cleanup_failed.error().find("rollback_cleanup_failed: injected remove failure")!=std::string::npos);
+ assert(cleanup_failed.error().find("rollback_cleanup_failed:")!=std::string::npos);
+ assert(cleanup_failed.error().find("injected remove failure")!=std::string::npos);
  const auto retained=sys.root/".rollback/test.game";
  assert(fs::exists(retained/"data/private") && fs::exists(installed));
  assert(validate_installed_runtime_package(retained.string(),"espocket",p,false));
@@ -334,6 +336,16 @@ HARNESS = r'''
 #include "mbedtls/md.h"
 #include "brookesia/system_core/package.hpp"
 #include "brookesia/service_helper/system/storage.hpp"
+#include <cstdlib>
+#include <new>
+bool fail_package_member_allocation = false;
+void *operator new(size_t size) {
+ if (fail_package_member_allocation && size == 323664) throw std::bad_alloc();
+ if (auto *pointer = std::malloc(size ? size : 1)) return pointer;
+ throw std::bad_alloc();
+}
+void operator delete(void *pointer) noexcept { std::free(pointer); }
+void operator delete(void *pointer, size_t) noexcept { std::free(pointer); }
 namespace esp_brookesia::system::core {
 std::expected<void,std::string> verify_app_package_release_bytes(const std::vector<uint8_t>&,const AppPackageReleaseVerifyOptions&) {return std::unexpected("injected invalid signature");}
 }
@@ -344,11 +356,49 @@ int main(int argc,char**argv){
  fs::path root=argv[1];bool developer=true;
  RuntimePackagePolicy p{.enforce=true,.developer_enabled=[&]{return developer;},.platform_baseline="test"};
  auto inspect=[&](const char*n){return inspect_runtime_package((root/n).string(),"espocket",p);};
+ fail_package_member_allocation = true;
+ auto exhausted = inspect("large-seed.bpk");
+ assert(!exhausted && exhausted.error() == "Package OOM");
+ fail_package_member_allocation = false;
+ assert(inspect("large-seed.bpk"));
+ {
+  System slow_write;slow_write.root=root/"slow-write";slow_write.impl_->package_policy_=p;
+  PackageInstallOptions options;options.developer_confirmed=true;
+  Storage::write_wait_ms=9000;
+  assert(slow_write.install_runtime_app_package((root/"large-seed.bpk").string(),options));
+  Storage::write_wait_ms=30001;
+  auto timed_out=slow_write.install_runtime_app_package((root/"large-seed.bpk").string(),options);
+  assert(!timed_out && timed_out.error()=="injected write timeout");
+  Storage::write_wait_ms=0;
+  assert(validate_installed_runtime_package((slow_write.root/"test.game").string(),"espocket",p));
+ }
  auto app=inspect("super.bpk");assert(app && app->unsigned_exception && app->super_exception);
  assert(inspect("espocket.bpk") && !inspect("espocket.bpk")->super_exception);
  assert(!inspect("other.bpk"));
  developer=false;assert(!inspect("super.bpk"));assert(!inspect("espocket.bpk"));developer=true;
- for(const auto n:{"half.bpk","signed.bpk","traversal.bpk","duplicate.bpk","case.bpk","reserved.bpk","corrupt.bpk","header.bpk"}){
+ assert(inspect("seeds.bpk"));
+ {
+  System seeded;seeded.root=root/"seeded";seeded.impl_->package_policy_=p;
+  PackageInstallOptions options;options.developer_confirmed=true;
+  auto installed_seed=seeded.install_runtime_app_package((root/"seeds.bpk").string(),options);
+  assert(installed_seed);
+  const auto path=seeded.root/"test.game";
+  assert(*Storage::fs_read_text((path/"data/config.pem.example").string(),0)=="default");
+  assert(*Storage::fs_read_text((path/"files/music/0.mp3").string(),0)=="audio");
+  assert(Storage::fs_write_text((path/"data/config.json").string(),"user config",0));
+  assert(Storage::fs_write_text((path/"files/music/0.mp3").string(),"user audio",0));
+  assert(validate_installed_runtime_package(path.string(),"espocket",p));
+  options.replace_existing=true;
+  assert(seeded.install_runtime_app_package((root/"seeds-update.bpk").string(),options));
+  assert(*Storage::fs_read_text((path/"data/config.json").string(),0)=="user config");
+  assert(*Storage::fs_read_text((path/"files/music/0.mp3").string(),0)=="user audio");
+  assert(*Storage::fs_read_text((path/"data/new.json").string(),0)=="new default");
+  assert(*Storage::fs_read_text((path/"files/music/new.mp3").string(),0)=="new audio");
+  assert(validate_installed_runtime_package(path.string(),"espocket",p));
+  std::ofstream(path/"res/root.json")<<"tampered";
+  assert(!validate_installed_runtime_package(path.string(),"espocket",p));
+ }
+ for(const auto n:{"half.bpk","signed.bpk","traversal.bpk","duplicate.bpk","case.bpk","reserved.bpk","private-case.bpk","private-root.bpk","private-entry.bpk","private-resource.bpk","corrupt.bpk","header.bpk"}){
   if(inspect(n)){std::cerr<<"unexpected admission "<<n;return 1;}}
  p.public_key_pem_path="inert.pem";assert(!inspect("signed.bpk"));
  assert(!inspect_runtime_package((root/"super.bpk").string(),"espocket",p,std::string(64,'0')));
@@ -431,8 +481,9 @@ class RuntimePackageAdmissionTest(unittest.TestCase):
             write('mbedtls/md.h', '#pragma once\n'+crypto+'\ninline constexpr int MBEDTLS_MD_SHA256=1;\ninline const int*mbedtls_md_info_from_type(int){return &MBEDTLS_MD_SHA256;}\ninline int mbedtls_md(const int*,const unsigned char*p,size_t n,unsigned char*out){return host_sha256(p,n,out); }\ninline int mbedtls_md_hmac(const int*,const unsigned char*k,size_t kl,const unsigned char*p,size_t n,unsigned char*out){return host_hmac(k,kl,p,n,out);}\n')
             write('esp_random.h', '#pragma once\n#include <random>\ninline void esp_fill_random(void*p,size_t n){std::random_device r;auto bytes=static_cast<unsigned char*>(p);while(n--)*bytes++=static_cast<unsigned char>(r());}\n')
             fixtures=root/'fixtures';fixtures.mkdir()
-            def package(name, systems=None, extra=(), version='1.0.0'):
+            def package(name, systems=None, extra=(), version='1.0.0', entry='app/app.js', resource_dir='res'):
                 manifest={'package':{'id':'test.game','version':version,'systems':systems or ['super']},'runtime':{'type':'JavaScript','entry':'app/app.js','resource_dir':'res'}}
+                manifest['runtime'].update(entry=entry, resource_dir=resource_dir)
                 with zipfile.ZipFile(fixtures/name,'w',zipfile.ZIP_DEFLATED) as archive:
                     archive.writestr('manifest.json',json.dumps(manifest));archive.writestr('app/app.js','export function on_start() {}')
                     archive.writestr('res/profile.json',json.dumps({'root':'root.json','screen_flows':[{'screen_flow':'main','layer':'AppDefault'}]}))
@@ -441,7 +492,13 @@ class RuntimePackageAdmissionTest(unittest.TestCase):
             package('super.bpk');package('update.bpk',version='2.0.0');package('update2.bpk',version='3.0.0');package('espocket.bpk',['espocket']);package('other.bpk',['other'])
             package('half.bpk',extra=[('META-INF/hash.json','{}')])
             package('signed.bpk',extra=[('META-INF/hash.json','{}'),('META-INF/signature.sig','invalid')])
-            for name,member in [('traversal.bpk','res/../escape'),('duplicate.bpk','app/app.js'),('case.bpk','APP/APP.JS'),('reserved.bpk','data/file')]:package(name,extra=[(member,'bad')])
+            seeds=[('data/config.pem.example','default'),('data/config.json','defaults'),('files/music/0.mp3','audio')]
+            package('seeds.bpk',extra=seeds)
+            package('large-seed.bpk',extra=[('files/music/0.mp3', b'a' * 323664)])
+            package('seeds-update.bpk',extra=seeds+[('data/new.json','new default'),('files/music/new.mp3','new audio')],version='2.0.0')
+            package('private-entry.bpk',extra=[('data/code.js','code')],entry='data/code.js')
+            package('private-resource.bpk',resource_dir='files')
+            for name,member in [('traversal.bpk','res/../escape'),('duplicate.bpk','app/app.js'),('case.bpk','APP/APP.JS'),('reserved.bpk','.brookesia-verified.json'),('private-case.bpk','Data/file'),('private-root.bpk','data')]:package(name,extra=[(member,'bad')])
             for name,offset in [('corrupt.bpk',16),('header.bpk',30)]:
                 data=bytearray((fixtures/'super.bpk').read_bytes())
                 if name=='corrupt.bpk':
@@ -451,7 +508,8 @@ class RuntimePackageAdmissionTest(unittest.TestCase):
             helpers=methods[methods.index('std::expected<void, std::string> remove_path_tree_if_exists('):methods.index('std::expected<std::filesystem::path, std::string> get_default_install_app_root(')]
             transaction=methods[methods.index('std::expected<AppId, std::string> System::install_runtime_app_package('):methods.index('std::expected<void, std::string> System::write_runtime_app_member(')]
             prefix='#include \"private/app/package_validation.hpp\"\n#include <optional>\n#include <chrono>\n#include "private/utils.hpp"\n#include "brookesia/system_core/package.hpp"\n#include "brookesia/service_helper/system/storage.hpp"\n'
-            removal='inline std::expected<unsigned,std::string> remove_path_tree(const std::filesystem::path&p,std::string_view) {auto r=service::helper::Storage::fs_remove(p.string(),0);if(!r)return std::unexpected(r.error());return 0;}\n'
+            prefix += '#include "private/filesystem.hpp"\n'
+            removal=''
             combined=prefix+TRANSACTION_ADAPTER+removal+helpers+transaction+'}\n'+HARNESS
             combined=combined.replace(' // Explicit built-in allowlist',TRANSACTION_MATRIX+CACHE_MATRIX+'\n // Explicit built-in allowlist')
             harness=root/'harness.cpp';harness.write_text(combined)

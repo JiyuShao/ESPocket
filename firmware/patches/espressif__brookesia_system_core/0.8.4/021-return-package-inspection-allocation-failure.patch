@@ -1,0 +1,28 @@
+--- a/src/app/package.cpp
++++ b/src/app/package.cpp
+@@ -7,6 +7,7 @@
+ #include "brookesia/system_core/package.hpp"
+ #include <cstdio>
+ #include <memory>
++#include <new>
+ #ifdef ESP_PLATFORM
+ #include "mbedtls/md.h"
+ #endif
+@@ -1151,7 +1152,7 @@
+ std::expected<PackageAdmission, std::string> inspect_runtime_package(
+     std::string_view path, std::string_view system, const RuntimePackagePolicy &policy,
+     std::string_view expected_sha256)
+-{
++try {
+     auto bytes = read_binary_file(fs::path(std::string(path)));
+     if (!bytes) return std::unexpected(bytes.error());
+     auto entries = parse_central_directory(*bytes);
+@@ -1265,6 +1266,8 @@
+         result.signing_key_identity = "sha256:" + *key_digest;
+     }
+     return result;
++} catch (const std::bad_alloc &) {
++    return std::unexpected("Package OOM");
+ }
+ 
+ std::expected<void, std::string> detail::validate_unpacked_runtime_package(

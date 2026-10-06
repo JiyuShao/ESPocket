@@ -41,10 +41,17 @@
     {
       "file": "001-configure-async-stack.patch",
       "sha256": "91b3c9d85a8c368826be835b330bb3376da83950010210943e9b9389d51448ce"
+    },
+    {
+      "file": "002-read-module-source-into-final-buffer.patch",
+      "sha256": "9154b655872a5f208df6be925a638e6018e1f3903cea83e0b1fe60a16996600c"
     }
   ],
   "issue": "../../../../.scratch/008-m8-app-contract/issues/04-resolve-runtime-async-stack-overflow.md",
   "upstream_report": "../../../../.scratch/008-m8-app-contract/records/2026-10-02-runtime-js-async-stack-overflow.md",
   "upstream_submission": "not submitted",
-  "remove_when": "Upstream exposes an equivalent async stack budget; remove after apps and resource regressions pass."
+  "remove_when": "Upstream exposes an equivalent async stack budget and cache-safe source loading without full-size Storage result copies; remove after apps, loader failure cleanup and resource regressions pass.",
+  "related_issues": [
+    ".scratch/005-m5-application-ecosystem/issues/11-runtime-store-gesture-regressions.md"
+  ]
 }

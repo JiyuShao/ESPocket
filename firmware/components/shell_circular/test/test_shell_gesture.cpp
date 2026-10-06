@@ -26,6 +26,17 @@ void move(ShellGestureState &state, ShellGestureDirection direction,
     }, context);
 }
 
+void release(ShellGestureState &state, ShellGestureDirection direction,
+             ShellGestureContext context = {}, bool left = false, bool right = false,
+             float distance = 120)
+{
+    process_shell_gesture(state, {
+        .phase = ShellGesturePhase::Release, .direction = direction,
+        .left_edge = left, .right_edge = right,
+        .start_y = 100, .stop_y = 220, .distance_px = distance,
+    }, context);
+}
+
 int main()
 {
     const std::vector<std::tuple<ShellSurface, ShellGestureDirection, GestureIntent>> paths = {
@@ -52,19 +63,31 @@ int main()
         state.launcher_return_threshold = 93;
         press(state);
         move(state, direction);
-        assert(pending(state) == expected);
+        assert(pending(state) == GestureIntent::None);
+        assert(state.pointer_cancel_pending == (expected != GestureIntent::None));
         assert(state.surface == surface); // The arbiter queues; it never navigates.
         assert(state.activity_generation == 1);
-        move(state, ShellGestureDirection::Down);
-        if (expected != GestureIntent::None) { assert(pending(state) == expected); }
+        release(state, direction);
+        assert(pending(state) == expected);
     }
 
     ShellGestureState short_swipe;
+    press(short_swipe);
+    move(short_swipe, ShellGestureDirection::None, {}, false, false, 10);
+    assert(!short_swipe.click_suppressed);
+    move(short_swipe, ShellGestureDirection::None, {}, false, false, 11);
+    assert(short_swipe.click_suppressed);
+    release(short_swipe, ShellGestureDirection::None, {}, false, false, 0);
+    assert(short_swipe.click_suppressed);
+    press(short_swipe);
+    assert(!short_swipe.click_suppressed);
     short_swipe.launcher_return_threshold = 93;
     press(short_swipe);
     move(short_swipe, ShellGestureDirection::Up, {}, false, false, 92);
+    release(short_swipe, ShellGestureDirection::Up, {}, false, false, 92);
     assert(pending(short_swipe) == GestureIntent::None);
-    move(short_swipe, ShellGestureDirection::Up, {}, false, false, 93);
+    press(short_swipe);
+    release(short_swipe, ShellGestureDirection::Up, {}, false, false, 93);
     assert(pending(short_swipe) == GestureIntent::Launcher);
 
     ShellGestureState asleep;
@@ -72,6 +95,15 @@ int main()
     press(asleep, {.display_on = false});
     move(asleep, ShellGestureDirection::Up, {.display_on = false});
     assert(pending(asleep) == GestureIntent::None && asleep.activity_generation == 0);
+    release(asleep, ShellGestureDirection::Up);
+    assert(pending(asleep) == GestureIntent::None);
+    ShellGestureState interrupted;
+    interrupted.launcher_return_threshold = 93;
+    press(interrupted);
+    move(interrupted, ShellGestureDirection::Up);
+    reset_shell_gesture(interrupted, true);
+    release(interrupted, ShellGestureDirection::Up);
+    assert(pending(interrupted) == GestureIntent::None);
 
     for (bool right_edge : {false, true}) {
         ShellGestureState app;
@@ -81,20 +113,27 @@ int main()
         press(app, root);
         move(app, direction, root, !right_edge, right_edge);
         assert(pending(app) == GestureIntent::None);
+        release(app, direction, root, !right_edge, right_edge);
+        assert(pending(app) == GestureIntent::None);
         const ShellGestureContext framework_root{.app_visible = true, .edge_back_reserved = true};
         press(app, framework_root);
         move(app, direction, framework_root, !right_edge, right_edge);
+        assert(app.pointer_cancel_pending && pending(app) == GestureIntent::None);
+        release(app, direction, framework_root, !right_edge, right_edge);
         assert(pending(app) == GestureIntent::Consume); // No Back, no click-through.
         assert(app.consumed);
         reset_shell_gesture(app, true);
         press(app, root); // AppOwned keeps its custom edge gesture.
         move(app, direction, root, !right_edge, right_edge);
+        assert(!app.pointer_cancel_pending);
+        assert(pending(app) == GestureIntent::None);
+        release(app, direction, root, !right_edge, right_edge);
         assert(pending(app) == GestureIntent::None);
         const ShellGestureContext detail{.app_visible = true, .edge_back_enabled = true};
         press(app, detail);
         move(app, direction, detail); // Normal horizontal App swipe is preserved.
         assert(pending(app) == GestureIntent::None);
-        move(app, direction, detail, !right_edge, right_edge);
+        release(app, direction, detail, !right_edge, right_edge);
         assert(pending(app) == GestureIntent::Back);
     }
 
@@ -105,6 +144,7 @@ int main()
         launcher.launcher_scroll_top = starts_at_top ? 0 : 200;
         press(launcher);
         move(launcher, ShellGestureDirection::Down);
+        assert(launcher.pointer_cancel_pending == starts_at_top);
         assert(pending(launcher) == GestureIntent::None);
         process_shell_gesture(launcher, {.phase = ShellGesturePhase::Release}, {});
         assert(pending(launcher) == (starts_at_top ? GestureIntent::WatchFace : GestureIntent::None));
@@ -156,6 +196,9 @@ int main()
         move(keyboard, ShellGestureDirection::Up, ctx);
         assert(pending(keyboard) == GestureIntent::None);
         move(keyboard, ShellGestureDirection::Right, ctx, true);
+        assert(pending(keyboard) == GestureIntent::None);
+        assert(keyboard.click_suppressed && keyboard.pointer_cancel_pending);
+        release(keyboard, ShellGestureDirection::Right, ctx, true);
         assert(pending(keyboard) == GestureIntent::Back);
         reset_shell_gesture(keyboard, true);
         keyboard.modal_active = true;

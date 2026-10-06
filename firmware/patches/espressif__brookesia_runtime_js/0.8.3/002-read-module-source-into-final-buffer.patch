@@ -1,0 +1,97 @@
+--- a/src/backend.cpp
++++ b/src/backend.cpp
+@@ -8,6 +8,8 @@
+ #include <map>
+ #include <deque>
+ #include <functional>
++#include <limits>
++#include <memory>
+ #include <mutex>
+ #include <cstring>
+ #include <cstdint>
+@@ -131,38 +133,65 @@
+ 
+ std::expected<std::string, std::string> read_all(const std::string &path)
+ {
+-    auto result = service::helper::Storage::fs_read_text(path, STORAGE_FS_TIMEOUT_MS);
+-    if (!result) {
+-        return std::unexpected("Failed to read JavaScript app: " + path + ", error: " + result.error());
+-    }
+-    return result.value();
++    auto info = service::helper::Storage::fs_stat(path, STORAGE_FS_TIMEOUT_MS);
++    if (!info) {
++        return std::unexpected("Failed to stat JavaScript app: " + path + ", error: " + info.error());
++    }
++    if (!info->exists || info->type != service::helper::Storage::FileType::File) {
++        return std::unexpected("JavaScript app path is not a file: " + path);
++    }
++    if (info->size >= std::numeric_limits<size_t>::max()) {
++        return std::unexpected("JavaScript app is too large: " + path);
++    }
++    std::string content(static_cast<size_t>(info->size), '\0');
++    if (!content.empty()) {
++        auto result = service::helper::Storage::fs_read(
++            path, service::RawBuffer(content.data(), content.size()), STORAGE_FS_TIMEOUT_MS);
++        if (!result) {
++            return std::unexpected("Failed to read JavaScript app: " + path + ", error: " + result.error());
++        }
++        if (*result != content.size()) {
++            return std::unexpected("JavaScript app read size mismatch: " + path);
++        }
++    }
++    return content;
+ }
+ 
+ /**
+  * File reader for QuickJS ES-module imports that routes reads through the Storage
+- * service (fs_read_text). The built-in js_load_file uses raw fopen on the calling
++ * service (fs_read). The built-in js_load_file uses raw fopen on the calling
+  * task; when that task stack lives in PSRAM and XIP-from-PSRAM is disabled, the
+  * flash read disables the cache and faults (esp_task_stack_is_sane_cache_disabled).
+  * Storage routes the read onto a cache-safe worker, matching the entry-script path.
+  */
+-uint8_t *brookesia_js_load_file(JSContext *ctx, size_t *pbuf_len, const char *filename)
+-{
+-    auto content = read_all(filename);
+-    if (!content) {
+-        *pbuf_len = 0;
++uint8_t *brookesia_js_load_file(JSContext *ctx, size_t *pbuf_len, const char *filename) try
++{
++    *pbuf_len = 0;
++    auto info = service::helper::Storage::fs_stat(filename, STORAGE_FS_TIMEOUT_MS);
++    if (!info || !info->exists || info->type != service::helper::Storage::FileType::File ||
++            info->size >= std::numeric_limits<size_t>::max()) {
+         return nullptr;
+     }
+-    const std::string &data = content.value();
+-    const size_t len = data.size();
+-    auto *buf = static_cast<uint8_t *>(js_malloc(ctx, len + 1));
+-    if (buf == nullptr) {
+-        *pbuf_len = 0;
++    const size_t source_size = static_cast<size_t>(info->size);
++    auto release_source = [ctx](uint8_t *source) { js_free(ctx, source); };
++    std::unique_ptr<uint8_t, decltype(release_source)> source(
++        static_cast<uint8_t *>(js_malloc(ctx, source_size + 1)), release_source);
++    if (!source) {
+         return nullptr;
+     }
+-    std::memcpy(buf, data.data(), len);
+-    buf[len] = '\0';
+-    *pbuf_len = len;
+-    return buf;
++    if (source_size > 0) {
++        auto result = service::helper::Storage::fs_read(
++            filename, service::RawBuffer(source.get(), source_size), STORAGE_FS_TIMEOUT_MS);
++        if (!result || *result != source_size) {
++            return nullptr;
++        }
++    }
++    source.get()[source_size] = '\0';
++    *pbuf_len = source_size;
++    return source.release();
++} catch (...) {
++    *pbuf_len = 0;
++    return nullptr;
+ }
+ 
+ /** Custom module loader mirroring js_module_loader but with a cache-safe file reader. */

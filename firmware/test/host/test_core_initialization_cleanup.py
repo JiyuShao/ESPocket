@@ -27,6 +27,7 @@ STUB=r'''
 #define BROOKESIA_LOGI(...) ((void)0)
 #define BROOKESIA_LOGD(...) ((void)0)
 #define BROOKESIA_LOGW(...) ((void)0)
+#define BROOKESIA_LOGE(...) ((void)0)
 #define BROOKESIA_SYSTEM_CORE_VER_MAJOR 0
 #define BROOKESIA_SYSTEM_CORE_VER_MINOR 8
 #define BROOKESIA_SYSTEM_CORE_VER_PATCH 4
@@ -42,7 +43,7 @@ namespace lib_utils {
 struct ThreadConfig{};
 struct TaskScheduler {struct StartConfig{std::vector<ThreadConfig> worker_configs;int worker_poll_interval_ms;};bool running=false;
 bool start(StartConfig){if(injected())return false;running=true;++schedulers;return true;}
-void stop(){if(running){--schedulers;running=false;}}bool is_running(){return running;}};
+void stop(){if(running){--schedulers;running=false;}}bool is_running(){return running;}bool is_current_thread_worker(){return false;}};
 struct FunctionGuard {std::function<void()> fn;FunctionGuard(std::function<void()> f):fn(f){}~FunctionGuard(){if(fn)fn();}void release(){fn={};}};
 }
 namespace gui {
@@ -57,14 +58,15 @@ struct SystemHostBridge {template<class... T>SystemHostBridge(T&&...){}auto get_
 struct SystemService{SystemService(auto&) {}};struct GuiService{GuiService(auto&) {}};struct TimerService{TimerService(auto&) {}};
 namespace service {
 struct Binding {bool valid=false;bool is_valid(){return valid;}void release(){valid=false;}};
-struct ServiceManager {bool initialized=false;std::vector<std::string> names;
+struct ServiceManager {bool initialized=false;std::vector<std::string> names;std::map<std::string,std::shared_ptr<void>> services;
 static ServiceManager& get_instance(){static ServiceManager m;return m;}
 bool is_initialized(){return initialized;}bool init(){if(injected())return false;initialized=true;return true;}
 bool add_service(auto ptr){if(injected())return false;std::string name;
 using T=typename decltype(ptr)::element_type;if constexpr(std::is_same_v<T,SystemService>)name="SystemCore";else if constexpr(std::is_same_v<T,GuiService>)name="SystemGui";else name="SystemTimer";
-names.push_back(name);return true;}
+names.push_back(name);services[name]=ptr;return true;}
 bool start(){return !injected();}Binding bind(auto){return {!injected()};}
-void remove_service(std::string name){auto it=std::find(names.begin(),names.end(),name);assert(it!=names.end());names.erase(it);}};
+std::shared_ptr<void> get_service(std::string name){return services[name];}
+void remove_service(std::string name){auto it=std::find(names.begin(),names.end(),name);assert(it!=names.end());names.erase(it);services.erase(name);}};
 }
 namespace esp_brookesia::system::core {
 struct PackagePolicy {bool reuse_verified_installations=false;};

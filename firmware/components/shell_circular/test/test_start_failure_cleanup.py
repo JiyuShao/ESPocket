@@ -21,11 +21,14 @@ class ShellStartFailureCleanupTest(unittest.TestCase):
 #include <string>
 #include <string_view>
 #include <cstdint>
+#include <stdexcept>
 #define ESP_LOGI(...) ((void)0)
 int fail=0,stage=0;bool inject(){return ++stage==fail;}
 int esp_timer_get_time(){return 0;}
 struct Connection {bool active=false;void disconnect(){active=false;}};
 struct Binding {bool valid=false;void release(){valid=false;}};
+struct LvglLock {explicit operator bool() const {return true;}};
+struct PointerClickFilters {void remove(){}};
 namespace esp_brookesia {
 namespace lib_utils {struct FunctionGuard {std::function<void()> fn;FunctionGuard(std::function<void()> f):fn(f){}~FunctionGuard(){if(fn)fn();}void release(){fn={};}};}
 namespace gui {struct Event{std::string path;};}
@@ -40,6 +43,7 @@ namespace espocket {
 constexpr auto HOME_INTENT_TIMER="home";constexpr int HOME_INTENT_INTERVAL_MS=20;
 struct LoadingState {std::mutex mutex;void* overlay=nullptr;};struct KeyboardState {std::mutex mutex;void* overlay=nullptr;};struct MessageDialogState {std::mutex mutex;void* overlay=nullptr;};struct BackOverlayState {void* button=nullptr;void* card_hint=nullptr;};struct HomeGestureState {};
 struct CircularShell {
+std::shared_ptr<PointerClickFilters> pointer_click_filters_;
 struct CallbackState{std::mutex mutex;CircularShell* owner=nullptr;};
 esp_brookesia::system::core::AppContext* context_=nullptr;
 std::shared_ptr<LoadingState> loading_state_;std::shared_ptr<KeyboardState> keyboard_state_;std::shared_ptr<MessageDialogState> message_dialog_state_;
@@ -50,8 +54,8 @@ int last_activity_generation_=0,last_activity_us_=0,home_intent_timer_id_=-1;boo
 uint64_t launcher_generation_=0;int launcher_refresh_at_us_=0;
 std::mutex launcher_intent_mutex_;std::string launcher_intent_;
 std::expected<void,std::string> load_theme_colors(){if(inject())return std::unexpected("theme");return {};}
-std::expected<void,std::string> configure_home_gesture(){display_binding_.valid=true;gesture_connection_.active=true;if(inject())return std::unexpected("gesture");return {};}
-void refresh_launcher(){}void start_status(){}
+std::expected<void,std::string> configure_home_gesture(){display_binding_.valid=true;gesture_connection_.active=true;if(inject())return std::unexpected("gesture");pointer_click_filters_=std::make_shared<PointerClickFilters>();return {};}
+void refresh_launcher(){if(inject())throw std::runtime_error("launcher");}void start_status(){}
 std::expected<void,std::string> on_start(esp_brookesia::system::core::AppContext&);
 };
 ''' + method + r'''
@@ -59,6 +63,10 @@ std::expected<void,std::string> on_start(esp_brookesia::system::core::AppContext
 int main(){for(int point=1;point<=14;++point){stage=0;fail=point;espocket::CircularShell shell;esp_brookesia::system::core::AppContext context;
 assert(!shell.on_start(context));assert(!shell.display_binding_.valid);assert(!shell.gesture_connection_.active);
 assert(!shell.context_);assert(!shell.loading_state_ && !shell.keyboard_state_ && !shell.message_dialog_state_ && !shell.back_overlay_state_ && !shell.home_gesture_state_);assert(!context.t.active);}
+stage=0;fail=15;espocket::CircularShell partial;esp_brookesia::system::core::AppContext partial_context;
+try{(void)partial.on_start(partial_context);assert(false);}catch(const std::runtime_error&){}
+assert(!partial.pointer_click_filters_ && !partial.home_gesture_state_ && !partial.context_);
+assert(!partial.gesture_connection_.active && !partial.display_binding_.valid && !partial_context.t.active);
 stage=0;fail=0;espocket::CircularShell shell;esp_brookesia::system::core::AppContext context;assert(shell.on_start(context));assert(shell.context_ && shell.display_binding_.valid && context.t.active);}
 '''
         with tempfile.TemporaryDirectory(prefix='shell-start-cleanup-') as directory:

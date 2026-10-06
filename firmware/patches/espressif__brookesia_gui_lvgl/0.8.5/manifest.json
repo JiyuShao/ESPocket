@@ -72,9 +72,20 @@
     {
       "file": "001-skip-relative-layout-for-image-offsets.patch",
       "sha256": "24def78ff4824aa464cf7ff47d6f88324db8614d84fd55e451e162333893e21a"
+    },
+    {
+      "file": "002-read-image-files-into-final-buffer.patch",
+      "sha256": "8e2d86ea8e3fc6c4e778e4c940f5f61f98fdfff12c4183e28d6ed0eb7eb8f6ea"
+    },
+    {
+      "file": "003-preserve-single-pointer-tracks.patch",
+      "sha256": "f11b268265fef0f72f268bc485de71056d9c3dd8670b518e02826d0c28e9d562"
     }
   ],
   "issue": ".scratch/005-m5-application-ecosystem/issues/10-reduce-runtime-startup-blocking.md",
-  "reason": "Pure image offsets do not change relative placement anchors; avoid repeated known-layer layout refresh on scrolling.",
-  "remove_when": "Locked upstream provides equivalent offset-only layout behavior and passes the same host/device regression."
+  "reason": "Pure image offsets do not change relative placement anchors; avoid repeated known-layer layout refresh on scrolling. Read image bytes through Storage RawBuffer into the final allocation to avoid full-size text/RPC copies during Weather startup.",
+  "remove_when": "Locked upstream provides equivalent offset-only layout behavior, single-buffer image loading with file-size/read validation, and continuous untracked single-pointer assignment with unchanged multi-touch behavior, and passes the same host/device regressions.",
+  "related_issues": [
+    ".scratch/005-m5-application-ecosystem/issues/11-runtime-store-gesture-regressions.md"
+  ]
 }

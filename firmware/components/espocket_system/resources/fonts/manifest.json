@@ -1,0 +1,11 @@
+{
+  "source": "firmware/managed_components/lvgl__lvgl/scripts/built_in_font/SourceHanSansSC-Normal.otf",
+  "source_sha256": "1ee89e1669362dee13851129c0a8a791a87521eb4148e5efbf5d26596738e25b",
+  "fonttools_version": "4.66.1",
+  "family": "ESPocket CJK",
+  "repertoire": "GB2312, printable Latin-1 and en dash",
+  "codepoints": 7618,
+  "bytes": 1558520,
+  "sha256": "dfa527244c749fee2473ff433daf0490f80f627bfe0b1ac190fb2312baff7d3a",
+  "license": "SIL Open Font License 1.1"
+}

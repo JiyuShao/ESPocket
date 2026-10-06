@@ -9,6 +9,8 @@ namespace espocket {
 void reset_shell_gesture(ShellGestureState &state, bool discard_pending)
 {
     state.consumed.store(true, std::memory_order_release);
+    state.click_suppressed.store(true, std::memory_order_release);
+    state.pointer_cancel_pending.store(false, std::memory_order_release);
     state.launcher_press_started_at_top.store(false, std::memory_order_release);
     state.launcher_pull_distance.store(0, std::memory_order_release);
     if (discard_pending) { state.pending_gesture.store(0, std::memory_order_release); }
@@ -49,30 +51,10 @@ ShellGestureEvent ShellTouchTracker::sample(int32_t x, int32_t y, bool pressed, 
 void process_shell_gesture(ShellGestureState &state, const ShellGestureEvent &event,
                            const ShellGestureContext &context)
 {
-    if (state.modal_active.load(std::memory_order_acquire)) {
-        reset_shell_gesture(state, true);
-        if (event.phase == ShellGesturePhase::Press && context.display_on) {
-            state.activity_generation.fetch_add(1, std::memory_order_acq_rel);
-        }
-        return;
-    }
-    const auto exit_distance_px = state.launcher_return_threshold.load(std::memory_order_acquire);
-    if (state.keyboard_active.load(std::memory_order_acquire)) {
-        if (event.phase == ShellGesturePhase::Press) {
-            state.consumed.store(false, std::memory_order_release);
-            if (context.display_on) state.activity_generation.fetch_add(1, std::memory_order_acq_rel);
-        } else if (context.display_on && event.phase == ShellGesturePhase::Pressing &&
-                   event.distance_px >= exit_distance_px &&
-                   ((event.left_edge && event.direction == ShellGestureDirection::Right) ||
-                    (event.right_edge && event.direction == ShellGestureDirection::Left))) {
-            if (!state.consumed.exchange(true, std::memory_order_acq_rel)) {
-                state.pending_gesture.store(static_cast<uint8_t>(GestureIntent::Back), std::memory_order_release);
-            }
-        }
-        return;
-    }
     if (event.phase == ShellGesturePhase::Press) {
-        state.consumed.store(false, std::memory_order_release);
+        state.consumed.store(state.modal_active.load(std::memory_order_acquire), std::memory_order_release);
+        state.click_suppressed.store(false, std::memory_order_release);
+        state.pointer_cancel_pending.store(false, std::memory_order_release);
         state.launcher_pull_distance.store(0, std::memory_order_release);
         state.launcher_press_started_at_top.store(
             state.surface.load(std::memory_order_acquire) == ShellSurface::Launcher &&
@@ -80,42 +62,83 @@ void process_shell_gesture(ShellGestureState &state, const ShellGestureEvent &ev
             std::memory_order_release
         );
         if (!context.display_on) {
+            reset_shell_gesture(state, true);
             return;
         }
         state.activity_generation.fetch_add(1, std::memory_order_acq_rel);
-        return;
-    }
-    if (event.phase == ShellGesturePhase::Release) {
-        if ((!context.app_visible) &&
-                state.surface.load(std::memory_order_acquire) == ShellSurface::Launcher &&
-                state.launcher_press_started_at_top.load(std::memory_order_acquire) &&
-                state.launcher_pull_distance.load(std::memory_order_acquire) >= exit_distance_px) {
-            state.pending_gesture.store(
-                static_cast<uint8_t>(GestureIntent::WatchFace), std::memory_order_release
-            );
-        } else {
-            state.launcher_pull_distance.store(0, std::memory_order_release);
+        if (state.modal_active.load(std::memory_order_acquire)) {
+            state.pending_gesture.store(0, std::memory_order_release);
+            state.launcher_press_started_at_top.store(false, std::memory_order_release);
         }
         return;
     }
-    if (event.phase != ShellGesturePhase::Pressing ||
-            (!context.display_on)) {
+
+    if (!context.display_on) {
+        reset_shell_gesture(state, true);
+        return;
+    }
+    if (event.distance_px > 10) {
+        state.click_suppressed.store(true, std::memory_order_release);
+    }
+    if (state.modal_active.load(std::memory_order_acquire)) {
+        state.consumed.store(true, std::memory_order_release);
+        state.pending_gesture.store(0, std::memory_order_release);
+        state.launcher_press_started_at_top.store(false, std::memory_order_release);
+        state.launcher_pull_distance.store(0, std::memory_order_release);
         return;
     }
 
-    const bool app_visible = context.app_visible;
-    const auto surface = state.surface.load(std::memory_order_acquire);
-    if (!app_visible && surface == ShellSurface::Launcher &&
-            state.launcher_press_started_at_top.load(std::memory_order_acquire) &&
-            event.direction == ShellGestureDirection::Down) {
-        state.launcher_pull_distance.store(
-            std::max<int32_t>(0, event.stop_y - event.start_y), std::memory_order_release
-        );
-        return; // Launcher commits Home on release only.
-    }
-    if (event.distance_px < exit_distance_px) {
+    if (state.consumed.load(std::memory_order_acquire)) {
         return;
     }
+    const auto exit_distance_px = state.launcher_return_threshold.load(std::memory_order_acquire);
+    if (state.keyboard_active.load(std::memory_order_acquire)) {
+        const bool edge_back = (event.left_edge && event.direction == ShellGestureDirection::Right) ||
+                               (event.right_edge && event.direction == ShellGestureDirection::Left);
+        if (event.distance_px >= exit_distance_px && edge_back) {
+            state.pointer_cancel_pending.store(true, std::memory_order_release);
+            if (event.phase == ShellGesturePhase::Release &&
+                    !state.consumed.exchange(true, std::memory_order_acq_rel)) {
+                state.pending_gesture.store(static_cast<uint8_t>(GestureIntent::Back), std::memory_order_release);
+            }
+        }
+        return;
+    }
+    if (event.phase == ShellGesturePhase::Pressing) {
+        if (!context.app_visible &&
+                state.surface.load(std::memory_order_acquire) == ShellSurface::Launcher &&
+                state.launcher_press_started_at_top.load(std::memory_order_acquire) &&
+                event.direction == ShellGestureDirection::Down) {
+            state.launcher_pull_distance.store(
+                std::max<int32_t>(0, event.stop_y - event.start_y), std::memory_order_release
+            );
+            if (state.launcher_pull_distance.load(std::memory_order_acquire) >= exit_distance_px) {
+                state.pointer_cancel_pending.store(true, std::memory_order_release);
+            }
+            return;
+        }
+    }
+
+    if (event.phase != ShellGesturePhase::Release && event.phase != ShellGesturePhase::Pressing) {
+        return;
+    }
+    if (event.phase == ShellGesturePhase::Release && !context.app_visible &&
+            state.surface.load(std::memory_order_acquire) == ShellSurface::Launcher &&
+            state.launcher_press_started_at_top.load(std::memory_order_acquire) &&
+            state.launcher_pull_distance.load(std::memory_order_acquire) >= exit_distance_px) {
+        state.consumed.store(true, std::memory_order_release);
+        state.pending_gesture.store(
+            static_cast<uint8_t>(GestureIntent::WatchFace), std::memory_order_release
+        );
+        return;
+    }
+    if (event.phase == ShellGesturePhase::Release) {
+        state.launcher_pull_distance.store(0, std::memory_order_release);
+    }
+    if (event.distance_px < exit_distance_px) { return; }
+
+    const bool app_visible = context.app_visible;
+    const auto surface = state.surface.load(std::memory_order_acquire);
 
     GestureIntent intent = GestureIntent::None;
     const bool edge_back =
@@ -168,6 +191,10 @@ void process_shell_gesture(ShellGestureState &state, const ShellGestureEvent &ev
         }
     }
     if (intent == GestureIntent::None) {
+        return;
+    }
+    state.pointer_cancel_pending.store(true, std::memory_order_release);
+    if (event.phase == ShellGesturePhase::Pressing) {
         return;
     }
 

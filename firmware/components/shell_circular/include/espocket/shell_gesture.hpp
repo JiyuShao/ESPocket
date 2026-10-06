@@ -53,6 +53,8 @@ struct ShellGestureState {
     std::mutex input_mutex;
     std::atomic_bool synthetic_input_active = false;
     std::atomic_bool consumed = false;
+    std::atomic_bool pointer_cancel_pending = false;
+    std::atomic_bool click_suppressed = false;
     std::atomic<ShellSurface> surface = ShellSurface::WatchFace;
     std::atomic<uint8_t> pending_gesture = 0;
     std::atomic<uint32_t> activity_generation = 0;

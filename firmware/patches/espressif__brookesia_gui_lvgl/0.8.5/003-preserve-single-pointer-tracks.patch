@@ -1,0 +1,24 @@
+--- a/src/port/private/multi_touch_pointer.hpp
++++ b/src/port/private/multi_touch_pointer.hpp
+@@ -194,9 +194,20 @@
+     {
+         std::array<bool, MAX_INPUT_COUNT> seen = {};
+         const size_t point_count = std::min(points.size(), input_count_);
++        size_t single_slot = INVALID_SLOT;
++        if (point_count == 1 && points.front().track_id == 0) {
++            size_t active_count = 0;
++            for (size_t index = 0; index < input_count_; ++index) {
++                if (slots_[index].active) {
++                    single_slot = index;
++                    ++active_count;
++                }
++            }
++            if (active_count != 1) single_slot = INVALID_SLOT;
++        }
+         for (size_t i = 0; i < point_count; i++) {
+             const auto &point = points[i];
+-            auto slot_index = find_slot_for_point(point, seen);
++            auto slot_index = single_slot != INVALID_SLOT ? single_slot : find_slot_for_point(point, seen);
+             if (slot_index == INVALID_SLOT) {
+                 continue;
+             }

@@ -1,4 +1,5 @@
 #include "shell_internal.hpp"
+#include "pointer_click_filter.hpp"
 
 #include <cmath>
 
@@ -163,6 +164,20 @@ std::expected<void, std::string> CircularShell::configure_home_gesture()
                           );
     if (!gesture_connection_.connected()) {
         return std::unexpected("Failed to subscribe Home gesture events");
+    }
+    {
+        LvglLock lock;
+        if (!lock) {
+            gesture_connection_.disconnect();
+            display_binding_.release();
+            return std::unexpected("Failed to install pointer click filter");
+        }
+        pointer_click_filters_ = std::make_shared<PointerClickFilters>();
+        if (!pointer_click_filters_->install(home_gesture_state_.get())) {
+            gesture_connection_.disconnect();
+            display_binding_.release();
+            return std::unexpected("Failed to install pointer click filter");
+        }
     }
 
     ESP_LOGI(
@@ -334,7 +349,9 @@ std::expected<void, std::string> CircularShell::finish_synthetic_touch(bool canc
     if (!cleared) { return std::unexpected("internal"); }
     if (injected) {
         std::lock_guard input_lock(home_gesture_state_->input_mutex);
-        reset_shell_gesture(*home_gesture_state_, cancelled);
+        if (cancelled) {
+            reset_shell_gesture(*home_gesture_state_, true);
+        }
         home_gesture_state_->synthetic_input_active.store(false, std::memory_order_release);
     }
     return {};

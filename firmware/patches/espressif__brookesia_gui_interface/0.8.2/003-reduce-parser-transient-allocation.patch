@@ -1,0 +1,35 @@
+--- a/src/parser_node.cpp
++++ b/src/parser_node.cpp
+@@ -517,6 +517,7 @@
+         return std::unexpected("Field 'children' must be an array");
+     }
+ 
++    children.reserve(value->as_array().size());
+     for (const auto &child : value->as_array()) {
+         if (!child.is_object()) {
+             return std::unexpected("Child nodes must be objects");
+@@ -798,11 +799,19 @@
+ {
+     BROOKESIA_LOG_TRACE_GUARD();
+ 
+-    auto interaction_object = apply_interaction_templates(source_object, interactions);
+-    if (!interaction_object) {
+-        return std::unexpected(interaction_object.error());
+-    }
+-    const auto &object = *interaction_object;
++    auto refs = parse_string_array(source_object, "interactionRefs");
++    if (!refs) {
++        return std::unexpected(refs.error());
++    }
++    std::optional<boost::json::object> interaction_object;
++    if (!refs->empty()) {
++        auto resolved = apply_interaction_templates(source_object, interactions);
++        if (!resolved) {
++            return std::unexpected(resolved.error());
++        }
++        interaction_object = std::move(*resolved);
++    }
++    const auto &object = interaction_object.has_value() ? *interaction_object : source_object;
+ 
+     BROOKESIA_LOGD("Params: object(keys=%1%), environment(%2%)", object.size(), environment);
+ 

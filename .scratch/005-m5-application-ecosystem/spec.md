@@ -55,6 +55,7 @@ ESPocket 需要官方 Store 与远程 Runtime distribution path，但锁定的�
 - [08 — 取得兼容签名包与发布路径](issues/08-publish-compatible-signed-package.md)
 - [09 — 开发者模式包准入与 Super 兼容运行](issues/09-allow-unsigned-developer-installation.md)
 - [10 — 降低 Runtime 启动阻塞并准确测量](issues/10-reduce-runtime-startup-blocking.md)
+- [11 — Runtime 图标、Weather、Store 安装与手势误点击](issues/11-runtime-store-gesture-regressions.md)
 
 ## Further Notes
 
@@ -99,6 +100,8 @@ ESPocket 需要官方 Store 与远程 Runtime distribution path，但锁定的�
 - 修改范围：ESPocket 产品 policy 接入、Core/Store 版本锁定补丁及 manifest、对应 host/device tests、相关接口文档与本 Effort 状态/证据。禁止修改 managed_components；保留其他聊天的暂存与未提交改动，不自动 push。
 - 验证：最终完整 scripts/check.py 与 Markdown 检查；精确补丁输入、registry lock、Audio config 核对及完整固件构建；app-only 刷机前备份当前设备镜像与 LittleFS，实际 Store 取消/安装、启动、PWR 退出、重启发现、更新失败回滚、开发模式关闭/重新开启。已有有效证据不重复，视觉或物理门槛最多集中请求一次。
 - 停止条件：09 全部验收通过，03 可执行基础完成且发行阻塞明确保留；或剩余工作确实需要人工/新设计/外部条件。设备未验证不得勾选通过。既定设计内修复持续执行，涉及契约或范围变化时同步修订设计与验收定义。
+
+当前 [11 Runtime/Store 回归](issues/11-runtime-store-gesture-regressions.md)已完成图标、手势误点击、原 Weather 内存和字体、下载进度、私有初始文件及包写入超时修复；原 Music Store 安装／重启发现、原 Weather 联网／重开／Home、导航与 Native/Runtime 设备回归通过。普通活动下载取消及重试通过，带同步截图的 1 秒合成指令过期单独保留为失败证据。缺少 Service 的官方包继续准确拒绝，正式发行和其它票的性能／物理门槛保持开放。详细证据见[回归记录](records/2026-10-06-runtime-store-gestures.md)。
 
 ## 全部剩余工作授权
 

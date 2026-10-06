@@ -21,6 +21,7 @@ def exercise(source,directory):
     begin=header.index('    template <typename Result, typename Fn>\n    Result run_task_sync(')
     sync=header[begin:header.index('    std::expected<void, std::string> post_gui_task',begin)]
     begin=header.find('    struct PendingImageSources {')
+    held_worker='true' if begin>=0 else 'false'
     fields=header[begin:header.index('    gui::Runtime::ActionHandler',begin)] if begin>=0 else r'''
     struct PendingImageSources{};
     void clear_pending_gui_image_sources(unsigned){}
@@ -41,6 +42,7 @@ def exercise(source,directory):
 #include <string>
 #include <string_view>
 #include <thread>
+#include <utility>
 #include <vector>
 using namespace std::chrono_literals;
 namespace boost{template<class T>using promise=std::promise<T>;}
@@ -54,16 +56,17 @@ struct System {
  struct Impl {
   struct Record{std::optional<unsigned>document_id=1;}record;
   struct Gui{std::vector<std::string>seen;bool fail=false;std::function<void()>during_apply;
-   bool set_view_src(unsigned,std::string_view,std::string_view src){seen.emplace_back(src);if(during_apply){auto hook=std::move(during_apply);hook();}return !fail;}
+   bool set_view_src(unsigned,std::string_view,std::string_view src){seen.emplace_back(src);if(during_apply){auto hook=std::exchange(during_apply,{});hook();}return !fail;}
   };std::unique_ptr<Gui>gui_runtime_=std::make_unique<Gui>();
   std::mutex mutex,gui_image_source_mutex_;std::condition_variable changed;std::deque<std::function<void()>>tasks;
-  unsigned pending=0,max_pending=0;bool stopping=false,reject_post=false;std::thread worker;
+  unsigned pending=0,max_pending=0;bool stopping=false,reject_post=false;
+  bool hold_worker=''' + held_worker + r''';std::thread worker;
   struct Scheduler {Impl*owner;bool is_running(){return true;}
    bool post(std::function<void()>fn,void*,const std::string&){return owner->post_gui_input_task(std::move(fn)).has_value();}
   };std::unique_ptr<Scheduler>task_scheduler_=std::make_unique<Scheduler>(Scheduler{this});
   bool is_current_task_domain(const std::string&){return false;}
   Impl():worker([this]{std::this_thread::sleep_for(100ms);for(;;){
-   std::function<void()> task;{std::unique_lock lock(mutex);changed.wait(lock,[&]{return stopping||!tasks.empty();});if(stopping&&tasks.empty())return;task=std::move(tasks.front());tasks.pop_front();}
+   std::function<void()> task;{std::unique_lock lock(mutex);changed.wait(lock,[&]{return stopping||(!hold_worker&&!tasks.empty());});if(stopping&&tasks.empty())return;task=std::move(tasks.front());tasks.pop_front();}
    task();{std::lock_guard lock(mutex);--pending;}changed.notify_all();
   }}){}
   ~Impl(){{std::lock_guard lock(mutex);stopping=true;}changed.notify_all();worker.join();}
@@ -74,7 +77,7 @@ struct System {
   }
 ''' + sync + fields + r'''
   std::map<AppId,std::shared_ptr<PendingImageSources>>pending_gui_image_sources_;
-  void drain(){std::unique_lock lock(mutex);changed.wait(lock,[&]{return !pending;});}
+  void drain(){std::unique_lock lock(mutex);hold_worker=false;changed.notify_all();changed.wait(lock,[&]{return !pending;});}
  };std::unique_ptr<Impl>impl_=std::make_unique<Impl>();
  std::expected<void,std::string>gui_set_view_src(AppId,std::string_view,std::string_view);
 };
@@ -122,7 +125,7 @@ int main(){using namespace esp_brookesia::system::core;
     cpp=Path(directory)/'source.cpp';binary=Path(directory)/'source';cpp.write_text(code)
     result=subprocess.run([os.environ.get('CXX','clang++'),'-std=c++23','-pthread',str(cpp),'-o',str(binary)],capture_output=True,text=True)
     if result.returncode:raise AssertionError(result.stderr)
-    return subprocess.run([str(binary)],capture_output=True,text=True,timeout=15).returncode
+    return subprocess.run([str(binary)],capture_output=True,text=True,timeout=15)
 
 
 class ImageSourceBackpressureTest(unittest.TestCase):
@@ -131,13 +134,16 @@ class ImageSourceBackpressureTest(unittest.TestCase):
             # 011 bounded allocation by blocking the App; this is the slow path.
             import json
             manifest=json.loads((PATCHES/'manifest.json').read_text())
-            manifest['patches']=[p for p in manifest['patches'] if not p['file'].startswith('018-')]
+            boundary=next(index for index, patch in enumerate(manifest['patches'])
+                          if patch['file'].startswith('018-'))
+            manifest['patches']=manifest['patches'][:boundary]
             prior=Path(directory)/'prior.json';prior.write_text(json.dumps(manifest))
             for patch in manifest['patches']:
                 (Path(directory)/patch['file']).write_bytes((PATCHES/patch['file']).read_bytes())
             baseline=prepare(CORE,prior,Path(directory)/'baseline')
-            self.assertNotEqual(exercise(baseline,directory),0)
+            self.assertNotEqual(exercise(baseline,directory).returncode,0)
             candidate=prepare(CORE,PATCHES/'manifest.json',Path(directory)/'candidate')
-            self.assertEqual(exercise(candidate,directory),0)
+            result=exercise(candidate,directory)
+            self.assertEqual(result.returncode,0,result.stdout+result.stderr)
 
 if __name__=='__main__':unittest.main()

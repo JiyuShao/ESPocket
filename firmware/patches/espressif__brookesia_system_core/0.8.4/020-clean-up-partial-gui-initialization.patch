@@ -1,0 +1,98 @@
+--- a/src/system/lifecycle.cpp
++++ b/src/system/lifecycle.cpp
+@@ -79,8 +79,14 @@
+         return {};
+     }
+ 
++    if (impl_->task_scheduler_ && impl_->task_scheduler_->is_current_thread_worker()) {
++        return std::unexpected("Cannot initialize system from its scheduler worker");
++    }
+     impl_->initializing_ = true;
+-    lib_utils::FunctionGuard init_cleanup([this]() { deinit(); });
++    lib_utils::FunctionGuard init_cleanup([this, &config]() {
++        config.gui_backend.reset();
++        deinit();
++    });
+ 
+     impl_->system_type_ = config.system_type.empty() ? BROOKESIA_SYSTEM_CORE_DEFAULT_SYSTEM_TYPE : config.system_type;
+     impl_->environment_ = config.environment;
+@@ -404,7 +410,11 @@
+ void System::deinit()
+ {
+     BROOKESIA_LOG_TRACE_GUARD_WITH_THIS();
+-    if (!impl_ || (!impl_->initialized_ && !impl_->initializing_)) {
++    if (!impl_ || (!impl_->initialized_ && !impl_->initializing_ && !impl_->task_scheduler_ && !impl_->gui_runtime_)) {
++        return;
++    }
++    if (impl_->task_scheduler_ && impl_->task_scheduler_->is_current_thread_worker()) {
++        BROOKESIA_LOGE("Cannot deinitialize system from its scheduler worker");
+         return;
+     }
+     stop();
+@@ -461,27 +471,45 @@
+ #endif
+     auto &service_manager = service::ServiceManager::get_instance();
+     if (impl_->timer_service_added_) {
+-        service_manager.remove_service(BROOKESIA_SYSTEM_CORE_TIMER_SERVICE_NAME);
++        if (service_manager.get_service(BROOKESIA_SYSTEM_CORE_TIMER_SERVICE_NAME) == impl_->timer_service_) {
++            service_manager.remove_service(BROOKESIA_SYSTEM_CORE_TIMER_SERVICE_NAME);
++        }
+         impl_->timer_service_added_ = false;
+     }
+     if (impl_->gui_service_added_) {
+-        service_manager.remove_service(BROOKESIA_SYSTEM_CORE_GUI_SERVICE_NAME);
++        if (service_manager.get_service(BROOKESIA_SYSTEM_CORE_GUI_SERVICE_NAME) == impl_->gui_service_) {
++            service_manager.remove_service(BROOKESIA_SYSTEM_CORE_GUI_SERVICE_NAME);
++        }
+         impl_->gui_service_added_ = false;
+     }
+     if (impl_->system_service_added_) {
+-        service_manager.remove_service(BROOKESIA_SYSTEM_CORE_SERVICE_NAME);
++        if (service_manager.get_service(BROOKESIA_SYSTEM_CORE_SERVICE_NAME) == impl_->system_service_) {
++            service_manager.remove_service(BROOKESIA_SYSTEM_CORE_SERVICE_NAME);
++        }
+         impl_->system_service_added_ = false;
+     }
+     if (impl_->runtime_) {
+         impl_->runtime_->deinit();
+     }
+-    auto gui_cleanup_result = impl_->run_task_sync<std::expected<void, std::string>>(
+-                                  SYSTEM_GUI_TASK_GROUP,
+-    [this]() -> std::expected<void, std::string> {
++    auto cleanup_gui = [this]() -> std::expected<void, std::string> {
++        const bool should_lock_gui_thread = impl_->gui_thread_guard_.has_value() &&
++                                            impl_->gui_thread_guard_->lock &&
++                                            impl_->gui_thread_guard_->unlock;
++        if (should_lock_gui_thread) {
++            impl_->gui_thread_guard_->lock();
++        }
++        lib_utils::FunctionGuard unlock_guard([this, should_lock_gui_thread]() {
++            if (should_lock_gui_thread) {
++                impl_->gui_thread_guard_->unlock();
++            }
++        });
+         impl_->stop_live_preview_poll();
+         impl_->gui_runtime_.reset();
+         return {};
+-    },
++    };
++    auto gui_cleanup_result = impl_->run_task_sync<std::expected<void, std::string>>(
++                                  SYSTEM_GUI_TASK_GROUP,
++                                  cleanup_gui,
+     std::unexpected("Failed to post GUI runtime cleanup task")
+                               );
+     if (!gui_cleanup_result) {
+@@ -492,12 +520,7 @@
+         impl_->task_scheduler_.reset();
+     }
+     if (!gui_cleanup_result) {
+-        // Posting failed: first join scheduler callbacks, then release GUI under
+-        // the same backend guard. Do not reset that guard while workers use it.
+-        impl_->execute_task_with_group_context(SYSTEM_GUI_TASK_GROUP, [this]() {
+-            impl_->stop_live_preview_poll();
+-            impl_->gui_runtime_.reset();
+-        });
++        (void)cleanup_gui();
+     }
+     impl_->gui_thread_guard_.reset();
+     impl_->runtime_initialized_ = false;

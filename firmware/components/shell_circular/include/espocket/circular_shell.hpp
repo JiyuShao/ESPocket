@@ -19,6 +19,8 @@
 
 namespace espocket {
 
+class PointerClickFilters;
+
 struct ShellBackUiState {
     bool default_visible = false;
     bool edge_enabled = false;
@@ -173,6 +175,7 @@ private:
     uint32_t display_output_id_;
     ShellHost host_;
     std::shared_ptr<HomeGestureState> home_gesture_state_;
+    std::shared_ptr<PointerClickFilters> pointer_click_filters_;
     std::string touch_output_name_;
     ShellTouchTracker synthetic_touch_tracker_;
     std::shared_ptr<LoadingState> loading_state_;

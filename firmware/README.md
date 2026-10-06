@@ -45,6 +45,8 @@ python3 scripts/firmware/build_patched_firmware.py \
 
 产物位于 `<workspace>/firmware/build/`，配置位于 `<workspace>/firmware/sdkconfig`，输入身份位于 `<workspace>/patch-inputs.json`。生成的 lock 只属于此次构建；registry lock 与补丁 manifest 共同限定产品输入。`--prepare-only` 只准备副本，不构建也不证明设备修复。默认 `--patch-set production` 使用已验收的 Runtime/Core/HAL/Settings/Display/Board Manager 补丁及 playback-only 配置；`--patch-set hal-candidate` 显式试做 HTTP/Audio HAL 候选（普通配置不打开 Audio Processor）；`--patch-set audio-candidate` 另外固定 playback-only 的新增依赖、开启 Player/Processor/Audio Service，并强制 Recorder/AFE/Media Dump/Video 关闭。Audio 候选在 reconfigure 后复核这些选项与精确版本/hash，再构建；实验依赖不改生产 lock。候选不等于设备门槛通过。升级源码/hash 不匹配时停止，不能绕过校验。
 
+产品构建将指令与只读数据留在 Flash，关闭 `SPIRAM_XIP_FROM_PSRAM`、`SPIRAM_FETCH_INSTRUCTIONS` 与 `SPIRAM_RODATA`。此板默认的指令搬运会占用约 5 MiB PSRAM，压缩 Runtime GUI、JS 编译与包解压空间。独立构建入口会纠正旧 sdkconfig 并复核配置；Flash 操作仍由 cache-safe Storage worker 执行，线程栈预算保持既有配置。对应原包和设备结果见 [Runtime / Store 回归票](../.scratch/005-m5-application-ecosystem/issues/11-runtime-store-gesture-regressions.md)。
+
 ## 测试
 
 只约束一个组件、Native App 或 Runtime App 的测试放在该 Owner 的 `test/`；跨模块主机测试放在 `firmware/test/host/`，真实设备测试放在 `firmware/test/device/`。测试可以执行组件行为，也可以分析源码或资源，只要它对稳定约束做出可重复的断言。
@@ -196,7 +198,7 @@ python3 scripts/firmware/run_device_tests.py --suite settings-brightness \
 
 ### Store 请求容量候选
 
-production 已包含 Store 0.8.2 的图标容量延后重试，共七个组件补丁；`--patch-set store-candidate` 保留为同一基线的显式入口。它保留 1 worker / 1 request 配置，不扩大并发、不关闭 TLS 验证、不修改包兼容性或信任判断。设备刷新及退出门槛由 [005/06](../.scratch/005-m5-application-ecosystem/issues/06-adopt-online-store-stability-fix.md) 持有；候选通过 host 回归不代表安装链路可用。
+production 已包含 Store 0.8.2 的图标容量延后重试；`--patch-set store-candidate` 保留为同一基线的显式入口。HTTP 使用 2 workers / 1 request：下载占用一个 worker 时，另一个仍能发布周期进度；单请求限制继续避免 TLS 分配重叠。TLS 验证、包兼容性与信任判断保持启用。设备刷新及退出门槛由 [005/06](../.scratch/005-m5-application-ecosystem/issues/06-adopt-online-store-stability-fix.md) 持有；下载进度复验由 [005/11](../.scratch/005-m5-application-ecosystem/issues/11-runtime-store-gesture-regressions.md) 持有。候选通过 host 回归不代表安装链路可用。
 
 ### 内置字体字形门槛
 

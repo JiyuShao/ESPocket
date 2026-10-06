@@ -104,6 +104,8 @@ enum class ShellSurface {WatchFace,LeftAppCard,RightAppCard};
 struct Gesture {std::atomic_bool modal_active=false;std::atomic_bool keyboard_active=false;};
 void reset_shell_gesture(Gesture&, bool) {}
 struct CircularShell {
+    struct PointerClickFilters {void remove(){}};
+    std::shared_ptr<PointerClickFilters> pointer_click_filters_;
     uint32_t theme_color(std::string_view token) const {
         assert(!token.empty());
         return 0x123456;

@@ -1,5 +1,6 @@
 #include "shell_internal.hpp"
 #include "brookesia/lib_utils/function_guard.hpp"
+#include "pointer_click_filter.hpp"
 
 namespace espocket {
 
@@ -30,6 +31,7 @@ std::expected<void, std::string> CircularShell::on_start(
     esp_brookesia::system::core::AppContext &context
 )
 {
+    if (pointer_click_filters_) return std::unexpected("Previous pointer filter cleanup pending");
     // A failed stop retains revoked presentation storage until GUI cleanup.
     // Never overwrite it with a new Running Instance's state.
     if (loading_state_) {
@@ -51,12 +53,19 @@ std::expected<void, std::string> CircularShell::on_start(
     // Core does not call Native on_stop when on_start fails.
     esp_brookesia::lib_utils::FunctionGuard start_cleanup([this, &context]() {
         gesture_connection_.disconnect();
+        if (pointer_click_filters_) {
+            LvglLock lock;
+            if (lock) {
+                pointer_click_filters_->remove();
+                pointer_click_filters_.reset();
+            }
+        }
         if (home_intent_timer_id_ != esp_brookesia::system::core::INVALID_TIMER_ID) {
             (void)context.timer().stop(home_intent_timer_id_);
         }
         home_intent_timer_id_ = esp_brookesia::system::core::INVALID_TIMER_ID;
         display_binding_.release();
-        home_gesture_state_.reset();
+        if (!pointer_click_filters_) home_gesture_state_.reset();
         loading_state_.reset();
         keyboard_state_.reset();
         message_dialog_state_.reset();
@@ -94,11 +103,6 @@ std::expected<void, std::string> CircularShell::on_start(
     last_activity_generation_ = 0;
     last_activity_us_ = esp_timer_get_time();
     screen_timeout_latched_ = false;
-    auto gesture_result = configure_home_gesture();
-    if (!gesture_result) {
-        return gesture_result;
-    }
-
     auto home_timer = context.timer().start_periodic(
                           HOME_INTENT_TIMER,
                           HOME_INTENT_INTERVAL_MS
@@ -109,6 +113,10 @@ std::expected<void, std::string> CircularShell::on_start(
         );
     }
     home_intent_timer_id_ = *home_timer;
+    auto gesture_result = configure_home_gesture();
+    if (!gesture_result) {
+        return gesture_result;
+    }
 
     callback_state_ = std::make_shared<CallbackState>();
     callback_state_->owner = this;
@@ -134,6 +142,12 @@ std::expected<void, std::string> CircularShell::on_stop(
 )
 {
     (void)context;
+    if (pointer_click_filters_) {
+        LvglLock lock;
+        if (!lock) return std::unexpected("Unable to remove pointer click filter");
+        pointer_click_filters_->remove();
+        pointer_click_filters_.reset();
+    }
     stop_launcher();
     bool overlay_cleanup_pending = false;
     if (loading_state_) {
@@ -389,10 +403,11 @@ std::expected<void, std::string> CircularShell::on_timer(
                                         std::memory_order_acq_rel
                                     )
                                 );
-            if (intent != GestureIntent::None) {
+            const bool cancel_pointer = home_gesture_state_->pointer_cancel_pending.exchange(
+                false, std::memory_order_acq_rel);
+            if (cancel_pointer || intent != GestureIntent::None) {
                 LvglLock lock;
                 if (!lock) return std::unexpected("Unable to consume navigation touch");
-                // A screen change must not turn the held swipe into a new button press.
                 for (auto *input = lv_indev_get_next(nullptr); input != nullptr; input = lv_indev_get_next(input)) {
                     if (lv_indev_get_type(input) == LV_INDEV_TYPE_POINTER) lv_indev_wait_release(input);
                 }

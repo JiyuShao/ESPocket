@@ -1,0 +1,44 @@
+--- a/src/props_image.cpp
++++ b/src/props_image.cpp
+@@ -191,20 +191,33 @@
+     const std::string &path, std::string_view format_name
+ )
+ {
+-    auto content = StorageHelper::fs_read_text(path);
+-    if (!content) {
++    auto info = StorageHelper::fs_stat(path);
++    if (!info) {
+         return std::unexpected(
+-                   "Failed to read " + std::string(format_name) + " image file: " + path +
+-                   ", error: " + content.error()
++                   "Failed to stat " + std::string(format_name) + " image file: " + path +
++                   ", error: " + info.error()
+                );
+     }
+-    if (content->size() > static_cast<size_t>(std::numeric_limits<uint32_t>::max())) {
++    if (!info->exists || info->type != StorageHelper::FileType::File) {
++        return std::unexpected(std::string(format_name) + " image path is not a file: " + path);
++    }
++    if (info->size > std::numeric_limits<uint32_t>::max() ||
++            info->size > std::numeric_limits<size_t>::max()) {
+         return std::unexpected(std::string(format_name) + " image is too large: " + path);
+     }
+ 
+-    std::vector<uint8_t> data(content->size());
+-    if (!content->empty()) {
+-        std::memcpy(data.data(), content->data(), content->size());
++    std::vector<uint8_t> data(static_cast<size_t>(info->size));
++    if (!data.empty()) {
++        auto read_result = StorageHelper::fs_read(path, service::RawBuffer(data.data(), data.size()));
++        if (!read_result) {
++            return std::unexpected(
++                       "Failed to read " + std::string(format_name) + " image file: " + path +
++                       ", error: " + read_result.error()
++                   );
++        }
++        if (*read_result != data.size()) {
++            return std::unexpected(std::string(format_name) + " image file read size mismatch: " + path);
++        }
+     }
+     return data;
+ }

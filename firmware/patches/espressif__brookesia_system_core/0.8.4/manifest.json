@@ -148,12 +148,28 @@
     {
       "file": "018-bound-asynchronous-image-source-queue.patch",
       "sha256": "dcdc35484b311fb18607283722723d78872007830c4dd7243e5779c3476640a3"
+    },
+    {
+      "file": "019-admit-verified-private-data-seeds.patch",
+      "sha256": "a7ec2013f50a38ffc8b3ceb78d3b577fc802b8b3bb519d97bb62efd3ae97bf04"
+    },
+    {
+      "file": "020-clean-up-partial-gui-initialization.patch",
+      "sha256": "7ec9422ed85e0bdad7273cd3dd0b76e85753825b9703dabfe1697f75733efa31"
+    },
+    {
+      "file": "021-return-package-inspection-allocation-failure.patch",
+      "sha256": "4c4d06c675029e323747b20e7b8fa129e73fd704885421e3058466c50a53658f"
+    },
+    {
+      "file": "022-bound-package-write-wait.patch",
+      "sha256": "94aa12bd04a9508f74186ade7acad6d5430655e61d672041c94a4ce788d4d857"
     }
   ],
   "issue": ".scratch/005-m5-application-ecosystem/issues/07-isolate-runtime-keyboard-results.md",
   "upstream_report": ".scratch/005-m5-application-ecosystem/records/2026-10-03-core-failed-stop.md",
   "upstream_submission": "not submitted",
-  "remove_when": "Core owner-scoped keyboard delivery and unconditional failed-stop cleanup pass equivalent regressions and remaining queued-instance gates. Embedded-theme loading must also have an equivalent public System GUI seam. Runtime package admission, developer exceptions, receipt validation and recoverable update must retain equivalent regressions. Same-domain strand sharing and ordered image source backpressure must preserve worker progress, bounded tasks and original-package device regressions. Equivalent partial initialization and failed GUI cleanup regressions pass. Equivalent Owner request identity queries pass revocation and scheduling failure regressions. Runtime staging removes stale members and passes edit/add/delete integrity checks. Periodic callbacks retain at most one queued due callback while executing serially and pass stop/post-failure and original-package timer regressions. Timer instrumentation publishes bounded immutable samples outside the App callback gate and preserves wake/queue/callback metrics and observable report loss. ESP timer diagnostic samples must not preempt drawing; worker priority is restored after output and original-package metrics pass. Image source submissions retain upstream asynchronous acceptance with bounded FIFO commands/bytes and queued-task count; stop, retained-document restart and scheduling failures revoke stale work.",
+  "remove_when": "Core owner-scoped keyboard delivery and unconditional failed-stop cleanup pass equivalent regressions and remaining queued-instance gates. Embedded-theme loading must also have an equivalent public System GUI seam. Runtime package admission, developer exceptions, receipt validation and recoverable update must retain equivalent regressions. Same-domain strand sharing and ordered image source backpressure must preserve worker progress, bounded tasks and original-package device regressions. Equivalent partial initialization and failed GUI cleanup regressions pass. Equivalent Owner request identity queries pass revocation and scheduling failure regressions. Runtime staging removes stale members and passes edit/add/delete integrity checks. Periodic callbacks retain at most one queued due callback while executing serially and pass stop/post-failure and original-package timer regressions. Timer instrumentation publishes bounded immutable samples outside the App callback gate and preserves wake/queue/callback metrics and observable report loss. ESP timer diagnostic samples must not preempt drawing; worker priority is restored after output and original-package metrics pass. Image source submissions retain upstream asynchronous acceptance with bounded FIFO commands/bytes and queued-task count; stop, retained-document restart and scheduling failures revoke stale work. Private seeds remain verified at install and user data preserved during updates. Allocation failures return errors; package writes retain bounded waits. GUI borrowers must be destroyed under the backend guard before product fonts, including rejected cleanup posts; foreign services and worker self-join remain protected.",
   "related_issues": [
     ".scratch/004-m4-device-capabilities/issues/05-fix-settings-controls-rendering.md",
     ".scratch/005-m5-application-ecosystem/issues/03-enforce-core-package-trust.md",
@@ -163,6 +179,7 @@
     ".scratch/019-system-shell-remediation/issues/02-complete-stop-and-normal-restart.md",
     ".scratch/019-system-shell-remediation/issues/05-fallback-unavailable-saved-theme.md",
     ".scratch/019-system-shell-remediation/issues/03-arbitrate-overlay-input-and-deadlines.md",
-    ".scratch/019-system-shell-remediation/issues/08-audit-resource-staging-integrity.md"
+    ".scratch/019-system-shell-remediation/issues/08-audit-resource-staging-integrity.md",
+    ".scratch/005-m5-application-ecosystem/issues/11-runtime-store-gesture-regressions.md"
   ]
 }

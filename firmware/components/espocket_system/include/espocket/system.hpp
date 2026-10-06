@@ -22,6 +22,7 @@ namespace espocket {
 
 class CircularShell;
 class PowerKeyMonitor;
+class ProductFonts;
 class TestInputQueue;
 class TouchInputSequence;
 class OwnerSnapshotQueue;
@@ -122,6 +123,8 @@ protected:
         esp_brookesia::system::core::MessageDialogRequestId request_id) override;
 
 private:
+    std::unique_ptr<ProductFonts> product_fonts_;
+    bool product_initialized_ = false;
     std::expected<void, std::string> init_product_theme();
     std::expected<void, std::string> restore_product_theme();
     void init_cards();

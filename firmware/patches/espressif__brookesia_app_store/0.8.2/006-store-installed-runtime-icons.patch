@@ -1,0 +1,12 @@
+--- a/src/storage/storage.ipp
++++ b/src/storage/storage.ipp
+@@ -507,7 +507,8 @@
+             installed_runtime_apps_.push_back(InstalledAppEntry{
+                 .app = app,
+                 .item_path = {},
+-                .icon_resource_id = {},
++                .icon_resource_id = system::core::has_app_icon_image(app.manifest) ?
++                                    system::core::resolve_app_icon_resource_id(app.manifest) : std::string{},
+                 .pending_icon_resource_id = {},
+             });
+         }

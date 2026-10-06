@@ -77,6 +77,10 @@
     {
       "file": "005-avoid-local-scan-during-remote-refresh.patch",
       "sha256": "b09de87b4edfc0cb67f1453032fcbbc410281fcc393c86eaea4a3bbb8577dec3"
+    },
+    {
+      "file": "006-store-installed-runtime-icons.patch",
+      "sha256": "7fb70ca9886bc65849c9813b68e2ea2a6ff30fc9509ace3a75323775bd2f9277"
     }
   ],
   "issue": ".scratch/005-m5-application-ecosystem/issues/06-adopt-online-store-stability-fix.md",
@@ -94,7 +98,7 @@
     "cmake/esp_platform.cmake": "9b166775b9650802efc292091c7120d39f660298adcef53033d2b18ba9427532",
     "cmake/pc_platform.cmake": "f39f5933e90c753a09e4d716607ee323e14a939499ab66844522e8ab0a5a9025",
     "idf_component.yml": "fed83818cdf69c6166304b640035f0fb347c4ab25a73ff9542c87b57e2d619f6",
-    "include/brookesia/app_store/app_store_app.hpp": "015dac427c446e6305c782d280d74d01a72ba9c462401beeeb0f7f88a85e7311",
+    "include/brookesia/app_store/app_store_app.hpp": "74884f937199ce82e096059a3ddb3f0c47e7b83bc712947c626f3a40b13dbe7a",
     "include/brookesia/app_store/macro_configs.h": "9b24ae5685335373c0a387be6847cd3ab100562609b51d02f2134beccf10ea68",
     "include/brookesia/app_store.hpp": "fbbb6b980b1af2e82aa2bf92977a770830d258e5aafb69774455ccc88c924059",
     "license.txt": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
@@ -115,7 +119,7 @@
     "package/res/screens/app_store.json": "a1152395ee46360da151289b9d6e0408442065fbfe24565d318d6eaae657c9bc",
     "package/res/templates/app_store_item.json": "ad31bcc5dbe907d26b20b2c97963bd65634bd7d6561eec9f14e2fd89c9ff68a2",
     "package/res/templates/press_scale.json": "ff33d66f5b7d30ae98ac808f831c2dca8d7091e7d8779cc422422a21a2bf4f1a",
-    "src/app/lifecycle.ipp": "ed2c33f369bada19a02fe7238d5963b9d52b4fe1b4933801d458866c46f4d107",
+    "src/app/lifecycle.ipp": "b46500a6e970dd7d2edbaae26d88c8b6247569abfe42d4de4a0cfa7b858ba599",
     "src/app/lifecycle_view.cpp": "d9470e92f0365fd540453df031cf963ca9439b60246d1e7759ec548504e80fe6",
     "src/app/provider.ipp": "35c0eb3e12f2e9d741aefadaee11cb056157e15befae7644f5aa603729ccd716",
     "src/app/view_mode.ipp": "2d09c81229e3311968bcb8dabc9b2300a47e40817578bf7a5531c3d73a6e4c3d",
@@ -123,21 +127,21 @@
     "src/i18n/locale.ipp": "6c2064b74811de228777426ce6d01154dc8b58148f18863b4a17b66253e04bba",
     "src/i18n/text.ipp": "e06860b0f6cafa1135c0df2709fc25942167d598fea44c47da82a04de94aeb20",
     "src/install/download.cpp": "1799cbd52b79bc163acb793a7202e8b4c55b4bb193c62ccbd560f59fdc54e8b1",
-    "src/install/download.ipp": "a2cacf491c2b59ee8c693ccc907a1c1a2dd4d15b54f9dc926870042f1ff20968",
+    "src/install/download.ipp": "e280b78824ec31ee8d6a63410201e53122ffbf080f6e135b58cc5351403c6049",
     "src/network/http.cpp": "2ad718d2f2fad3029f145ed0d6097e92068d508a85924d111f0edbdc7cfe3e0d",
-    "src/network/http.ipp": "bda9f68d3751d050f8c68136fbdeb7b5e796ca82ccb22bc6254800ffc9796843",
+    "src/network/http.ipp": "34fda890da857da8b5e0785d8c9c9bf1ebc4be5d69852f57a9a415bb404a33c9",
     "src/network/remote_index.cpp": "ff9d78425580db1f0279c7e41cad4fa2fa1f7bdaeeeb7cb292ce50e082c60e56",
-    "src/network/remote_index.ipp": "e931268bbbc891430c3713ec32049369f8df4050bbdc0c3fc9f7a6450986a949",
+    "src/network/remote_index.ipp": "c49213a812aa243f01f52666ce182a666668785b1b04569a95971301f285af16",
     "src/private/app_store_details.hpp": "482dbccd15320606f8f72ef707132080707b74f11e694c9b55fc466c808eb4ee",
-    "src/private/app_store_impl.hpp": "0ff48c9dda5c20b60b5cca538b75eceb9a997d025f561fe03713f3b2dcde66af",
-    "src/private/app_store_impl_access.hpp": "abe4400ed69dc158298482b349aa8ba05906a559e2c3a530f37f62ed755ed39f",
+    "src/private/app_store_impl.hpp": "d62ec99aeebf1ccdbe168dcd6aa31d26dae9f01d7919acbf3e3e895db0da37a5",
+    "src/private/app_store_impl_access.hpp": "f0c1557c50b8b45b0010f9f1b83e0600a6aa5fd5b5278aee8d5527f14fa73825",
     "src/private/app_store_unit.hpp": "3875d3cd1afcd4f8394ee0e1ce8d897184774d961d65b11265f82116385ea888",
     "src/private/utils.hpp": "9e77344f7a2f26338f7d027facb261c5029c89de4fc96d4135121dc915c69e47",
     "src/screen/catalog.ipp": "bd8cf65d7a688b9392bc09ed810d9727a73259379fe9e4e2484565276b41a5c8",
     "src/screen/catalog_i18n.cpp": "fb664558aee52885f3483dfe4c8e82b546493f574c189e6179a28fb36629c6f3",
     "src/storage/catalog_model.ipp": "dac53ce34ae71057c4f5a1f9dad36a29720ed992aac4b904f70fe97ec7c7f5cb",
     "src/storage/icons.ipp": "271191dbc4fc1ede1c654b6e163a048ee3e4dfd6167a52d8907351b902ff8f4e",
-    "src/storage/storage.ipp": "35ce0bb50435e666783a3df293228acbc6d06eff36df83beffc613f5349afa14",
+    "src/storage/storage.ipp": "492f9053b9428b8d1a5b9475ae72abaf943acfaad50b705403605a6b696cc46d",
     "src/storage/storage_catalog_icons.cpp": "c144e7d461d1ae7b9fa29c5144116b5c4b671e3172110d9844b5494b9225fc97"
   },
   "related_issues": [

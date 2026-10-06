@@ -123,9 +123,20 @@
     {
       "file": "001-preserve-declared-image-preloads.patch",
       "sha256": "0b66110672ea12dc881e4a22f5d76ba4059b7bf2fcebe022119571fa9de2090e"
+    },
+    {
+      "file": "002-return-gui-root-allocation-failure.patch",
+      "sha256": "46199398089f095cd04ead42d7dbcfb36d948ee54002e4a87b22f3e1c0755085"
+    },
+    {
+      "file": "003-reduce-parser-transient-allocation.patch",
+      "sha256": "b6c616a2660a7f9746b1992e0d8afe178f5ed27ad1d6e39907577d7dbc166322"
     }
   ],
   "issue": ".scratch/005-m5-application-ecosystem/issues/10-reduce-runtime-startup-blocking.md",
-  "reason": "Declared preloads are owned by the document; switching animation frames must not release them and invalidate decoded cache entries. Transient sources and document unload keep their existing release semantics.",
-  "remove_when": "Locked upstream preserves declared preloads across source updates and passes the same resource lifecycle and original-package device regression."
+  "reason": "Declared preloads are owned by the document; switching animation frames must not release them and invalidate decoded cache entries. Transient sources and document unload keep their existing release semantics. GUI root parsing allocation failures return an expected error to Core so startup can roll back instead of leaving its synchronous owner waiting. Parser children reserve their known count and nodes without interaction references avoid copying recursive JSON subtrees, reducing measured Weather allocation pressure without changing parsed output or validation.",
+  "remove_when": "Locked upstream preserves declared preloads across source updates and passes the same resource lifecycle and original-package device regression. Upstream also returns GUI root allocation failures without an escaping exception and passes the same failure/retry regression, and avoids parser allocation amplification with matching output and error behavior.",
+  "related_issues": [
+    ".scratch/005-m5-application-ecosystem/issues/11-runtime-store-gesture-regressions.md"
+  ]
 }

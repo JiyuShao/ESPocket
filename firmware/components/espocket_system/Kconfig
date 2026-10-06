@@ -1,5 +1,10 @@
 menu "ESPocket"
 
+    config ESPOCKET_PRODUCT_CJK_FONT
+        bool
+        default y
+        select LV_USE_TINY_TTF
+
     config ESPOCKET_PACKAGE_ACCEPTANCE_TEST
         bool "Test only: run signed package and Developer Mode acceptance"
         default n

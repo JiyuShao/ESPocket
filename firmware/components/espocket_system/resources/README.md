@@ -31,3 +31,11 @@ Theme `styles.<name>` 的普通属性直接写在样式对象上，例如 `{"bgC
 `python3 scripts/firmware/check_glyphs.py` 检查 Shell 与维护 Native/Runtime JSON，按两种主题的 styleRefs、内联样式与继承字号解析，用真实 LVGL cmap 验证字符。错误包含文件、节点、U+ 码点和实际字体。`python3 scripts/check.py` 包含对应主机门槛；独立补丁构建用生成后的 sdkconfig 再校验，避免本地 defaults 与构建配置不同。单独检查有效配置可用 `--sdkconfig <path>`。
 
 此门槛只证明这些 literal label 的内置字体码点覆盖；动态输入、翻译绑定、第三方 App、文件/image font 和实际排版像素需各自验证，不能据此宣称所有文本都能正确渲染。
+
+## 中文字体资源
+
+System 为 Runtime App 提供全局 `zh_CN` 字体资源。`fonts/espocket_cjk.otf` 嵌入 App 镜像，来自锁定 LVGL 中的 Source Han Sans SC，派生字体名为 ESPocket CJK；许可见 [OFL.txt](fonts/OFL.txt)，来源、生成器版本和内容摘要见 [manifest.json](fonts/manifest.json)。字符集为 GB2312、可打印 Latin-1 与 en dash，涵盖原 Weather 包的静态文字；不宣称完整 Unicode CJK 覆盖。
+
+Tiny TTF 直接读取嵌入数据，按注册字号解码字形，每个字号使用四项缓存。System 持有原生字体，Core 先清理使用字体的 GUI，再释放字体和 Display。第三方包的未声明字体引用仍需解析为已存在的真实字体资源。
+
+构建使用已生成资产，不依赖 fontTools。需要更新资产时，在独立 Python 环境安装 `fonttools==4.66.1`，运行 `python scripts/firmware/prepare_product_font.py`；输入 SHA 不匹配会停止。主机测试用实际 Tiny TTF outline decoder 核对全部字符和小／大字号，生成器不会修改上游字体。

@@ -1,6 +1,8 @@
 #include "system_internal.hpp"
 #include "runtime_render_probe.hpp"
 #include "espocket_builtin_packages.hpp"
+#include "product_fonts.hpp"
+#include "brookesia/lib_utils/function_guard.hpp"
 
 extern const char dark_theme_start[] asm("_binary_espocket_dark_theme_json_start");
 extern const char dark_theme_end[] asm("_binary_espocket_dark_theme_json_end");
@@ -45,6 +47,9 @@ System::~System()
 std::expected<void, std::string> System::init()
 {
     if (startup_failed_) return std::unexpected("Critical startup failure requires explicit device restart");
+    if (product_initialized_) {
+        return {};
+    }
     auto &service_manager = esp_brookesia::service::ServiceManager::get_instance();
     if (!service_manager.init()) {
         return std::unexpected("Failed to initialize ServiceManager");
@@ -58,8 +63,21 @@ std::expected<void, std::string> System::init()
         return display_result;
     }
 
+    esp_brookesia::lib_utils::FunctionGuard cleanup_guard([this]() {
+        product_fonts_.reset();
+        stop_display();
+    });
+    auto fonts = ProductFonts::create();
+    if (!fonts) {
+        return std::unexpected(fonts.error());
+    }
+    product_fonts_ = std::move(*fonts);
+    auto backend = std::make_unique<esp_brookesia::gui::lvgl::Backend>();
+    if (auto registered = product_fonts_->register_with(*backend); !registered) {
+        return registered;
+    }
     esp_brookesia::system::core::System::Config config;
-    config.gui_backend = std::make_unique<esp_brookesia::gui::lvgl::Backend>();
+    config.gui_backend = std::move(backend);
     config.environment = {
         .width_px = static_cast<int32_t>(display_width_),
         .height_px = static_cast<int32_t>(display_height_),
@@ -85,9 +103,10 @@ std::expected<void, std::string> System::init()
     auto result = esp_brookesia::system::core::System::init(std::move(config));
     if (!result) {
         stop_runtime_navigation();
-        stop_display();
         return result;
     }
+    product_initialized_ = true;
+    cleanup_guard.release();
     return {};
 }
 
@@ -488,6 +507,8 @@ void System::on_deinit()
     launch_source_ = ShellSurface::WatchFace;
     lifecycle_restore_surface_ = ShellSurface::WatchFace;
     lifecycle_restore_pending_ = false;
+    product_initialized_ = false;
+    product_fonts_.reset();
     stop_display();
 }
 

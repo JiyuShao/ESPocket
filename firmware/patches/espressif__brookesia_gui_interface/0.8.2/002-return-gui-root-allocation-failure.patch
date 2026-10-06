@@ -1,0 +1,20 @@
+--- a/src/runtime.cpp
++++ b/src/runtime.cpp
+@@ -35,7 +35,7 @@
+     return impl_->load(root_path, std::move(*document), environment);
+ }
+ 
+-std::expected<DocumentId, std::string> Runtime::load_file(std::string_view path, const Environment &environment)
++std::expected<DocumentId, std::string> Runtime::load_file(std::string_view path, const Environment &environment) try
+ {
+     const std::string path_string(path);
+     const auto total_start = RuntimeProfileClock::now();
+@@ -98,6 +98,8 @@
+         runtime_profile_elapsed_ms(total_start, stage_end)
+     );
+     return result;
++} catch (const std::bad_alloc &) {
++    return std::unexpected("GUI out of memory");
+ }
+ 
+ std::expected<void, std::string> Runtime::load_theme(const ThemeAsset &theme)
