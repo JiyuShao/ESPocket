@@ -55,3 +55,7 @@
 第四版声源播放前没有 Decoder 输出扩容，播放后出现一次首次输出扩容，确认真实 Decoder 输出路径已执行；结合无截图的 50 秒窗口和正常 Home 收尾验证真实链路。第三版用户确认响度够用、破音改善后要求继续降低最大音量，第四版已按要求设置并刷入 350%／85% 的数字上限。第四版的听感问题已异步询问，尚未收到新的反馈；不宣称破音完全消失或所有音源无失真，后续听感反馈按新证据继续处理。
 
 完整源码回归通过，最新 Markdown 检查 284 文件通过。暂存普通源码的 `git diff --cached --check` 通过；三个新增 unified patch 保留协议要求的单个空格空上下文行，逐行检查确认没有其他尾部空白。原包、账号和用户文件没有替换，只有 App 分区更新；本地合并和 worktree 清理由工作票最后一项收尾。
+
+## 本地交付
+
+修复提交 `2bdd2e15ff5e616271fd6b3ac6f40540bd1be98c` 已从 detached worktree 快进合并到本地 main。桌面已将 `/Users/jiyu/.codex/worktrees/chat-round-usability/ESPocket` 归档，attachment 为 `archived_worktree`；`git worktree list --porcelain` 仅剩主仓库，`git branch` 仅有 main，合并后主仓库干净。没有 push。独立候选、镜像与真机原始日志保留于 `/private/tmp/`，账号、原包和用户数据保留于设备；最终固件身份为 `94b3da4b0`。
