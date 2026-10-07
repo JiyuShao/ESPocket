@@ -29,6 +29,11 @@ void System::handle_screen_timeout()
             !display_on_.load(std::memory_order_acquire)) {
         return;
     }
+    const auto active = get_active_app();
+    if (active && active->manifest.kind == esp_brookesia::system::core::AppKind::Runtime &&
+            active->manifest.id == "brookesia.general.ai_chatbot") {
+        return;
+    }
     auto result = set_display_on(false);
     if (!result) {
         ESP_LOGW(TAG, "Automatic screen-off failed: %s", result.error().c_str());

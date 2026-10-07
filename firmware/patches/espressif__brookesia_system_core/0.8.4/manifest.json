@@ -168,12 +168,16 @@
     {
       "file": "023-install-budget-and-app-presentation.patch",
       "sha256": "d9f72e9a7c1278953ab412b06b4a87a10a6233508865e00f557eb54b521c0022"
+    },
+    {
+      "file": "024-product-gui-document-presentation.patch",
+      "sha256": "b6e5ff14bc4a908aafa55bdcd6e2c80f4c0f1231b1a51bb1c6b0bd26d1486e9e"
     }
   ],
   "issue": ".scratch/005-m5-application-ecosystem/issues/07-isolate-runtime-keyboard-results.md",
   "upstream_report": ".scratch/005-m5-application-ecosystem/records/2026-10-03-core-failed-stop.md",
   "upstream_submission": "not submitted",
-  "remove_when": "Core owner-scoped keyboard delivery and unconditional failed-stop cleanup pass equivalent regressions and remaining queued-instance gates. Embedded-theme loading must also have an equivalent public System GUI seam. Runtime package admission, developer exceptions, receipt validation and recoverable update must retain equivalent regressions. Same-domain strand sharing and ordered image source backpressure must preserve worker progress, bounded tasks and original-package device regressions. Equivalent partial initialization and failed GUI cleanup regressions pass. Equivalent Owner request identity queries pass revocation and scheduling failure regressions. Runtime staging removes stale members and passes edit/add/delete integrity checks. Periodic callbacks retain at most one queued due callback while executing serially and pass stop/post-failure and original-package timer regressions. Timer instrumentation publishes bounded immutable samples outside the App callback gate and preserves wake/queue/callback metrics and observable report loss. ESP timer diagnostic samples must not preempt drawing; worker priority is restored after output and original-package metrics pass. Image source submissions retain upstream asynchronous acceptance with bounded FIFO commands/bytes and queued-task count; stop, retained-document restart and scheduling failures revoke stale work. Private seeds remain verified at install and user data preserved during updates. Allocation failures return errors; package writes retain bounded waits. GUI borrowers must be destroyed under the backend guard before product fonts, including rejected cleanup posts; foreign services and worker self-join remain protected.",
+  "remove_when": "Core owner-scoped keyboard delivery and unconditional failed-stop cleanup pass equivalent regressions and remaining queued-instance gates. Embedded-theme loading must also have an equivalent public System GUI seam. Runtime package admission, developer exceptions, receipt validation and recoverable update must retain equivalent regressions. Same-domain strand sharing and ordered image source backpressure must preserve worker progress, bounded tasks and original-package device regressions. Equivalent partial initialization and failed GUI cleanup regressions pass. Equivalent Owner request identity queries pass revocation and scheduling failure regressions. Runtime staging removes stale members and passes edit/add/delete integrity checks. Periodic callbacks retain at most one queued due callback while executing serially and pass stop/post-failure and original-package timer regressions. Timer instrumentation publishes bounded immutable samples outside the App callback gate and preserves wake/queue/callback metrics and observable report loss. ESP timer diagnostic samples must not preempt drawing; worker priority is restored after output and original-package metrics pass. Image source submissions retain upstream asynchronous acceptance with bounded FIFO commands/bytes and queued-task count; stop, retained-document restart and scheduling failures revoke stale work. Private seeds remain verified at install and user data preserved during updates. Allocation failures return errors; package writes retain bounded waits. GUI borrowers must be destroyed under the backend guard before product fonts, including rejected cleanup posts; foreign services and worker self-join remain protected. Remove the presentation document seam when the official Core supports product-owned GUI document selection with the original App Controller and resource base.",
   "related_issues": [
     ".scratch/004-m4-device-capabilities/issues/05-fix-settings-controls-rendering.md",
     ".scratch/005-m5-application-ecosystem/issues/03-enforce-core-package-trust.md",
@@ -185,7 +189,8 @@
     ".scratch/019-system-shell-remediation/issues/03-arbitrate-overlay-input-and-deadlines.md",
     ".scratch/019-system-shell-remediation/issues/08-audit-resource-staging-integrity.md",
     ".scratch/005-m5-application-ecosystem/issues/11-runtime-store-gesture-regressions.md",
-    ".scratch/005-m5-application-ecosystem/issues/12-storage-round-display-and-runtime-usability.md"
+    ".scratch/005-m5-application-ecosystem/issues/12-storage-round-display-and-runtime-usability.md",
+    ".scratch/005-m5-application-ecosystem/issues/16-chat-round-display-and-audio-usability.md"
   ],
   "patched_files": {
     ".component_hash": "63f95854db7ae1a1fad3cd229aa6bd55772e696aaaf55db5a3cd559e9daf8d67",
@@ -221,7 +226,7 @@
     "include/brookesia/system_core/system/batch.hpp": "26f202415915be8bb4c093ba1187ebfdafe7ba774f5e9c526f641c579ad5c573",
     "include/brookesia/system_core/system/gui_access.hpp": "1c2bec4a34329d05343c560c3a945a366937ab3516f7763f063c6305ad3f611e",
     "include/brookesia/system_core/system/storage.hpp": "80140583b0651b7ab2bef6b65bcf571597c0bdef76aa25821d694e2eb0baaab0",
-    "include/brookesia/system_core/system/system.hpp": "129dde3aa8ac66203f7bafbc97a1e910610c8be13151939b9eeae3d20519c162",
+    "include/brookesia/system_core/system/system.hpp": "5429aa60a6713e887f58782daf790e2ecfc6e0d02f9645f19aceec23df0b67fc",
     "include/brookesia/system_core/system.hpp": "39a296b75da84cd916273734c432e0c2dfb68643444386dce9821cdffb54b1c9",
     "include/brookesia/system_core.hpp": "66ba704eeebb40d4682689da1b9278238a6aa41b67cc3d202e512cc48fc6dcb3",
     "license.txt": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
@@ -251,7 +256,7 @@
     "src/service/timer.cpp": "1db681b8b123ed2b0649f02497d1bc3661fc42e29c87916b7eccd2846a998e1a",
     "src/service/utils.cpp": "55991ca2161dffe1fd9c3a936d71cd80091d4236df480f4733544b9248c29d22",
     "src/system/core.cpp": "f5580c80615c4d645cb91526880aa844357250dfde509961b8d5425373b965cf",
-    "src/system/gui.cpp": "3c7b840c50bd1e9342dc1dae0f01705b2b0f3e6af91a8aea25691775713704d7",
+    "src/system/gui.cpp": "8a3b34384e0d996bc87cb5aa27cdaa466d308fd7f6b3b7c4db1d57f4aa4b53f4",
     "src/system/gui_access.cpp": "cffe7aa6bc55c18cbf82381f01b66ec746324bd9dd1a7068b79d1cf9b2c60407",
     "src/system/gui_preferences.cpp": "9279442fb20aebdca56765e24da218420f0564ae08c6df9a06e2a4cd1579587c",
     "src/system/lifecycle.cpp": "e11f941556aac7761435920fe1c932cfbdb76bda61fa081230822fe986282014",

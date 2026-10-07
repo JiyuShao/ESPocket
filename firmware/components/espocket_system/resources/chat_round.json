@@ -1,0 +1,103 @@
+{
+  "version": "0.1.0",
+  "assets": [
+    "constants/default.json", "i18n/en.json", "images/index.json", "flows/ai_chatbot.json", "flows/chrome.json",
+    {
+      "type": "viewScreen", "id": "ai_chatbot_chrome",
+      "commonProps": {"scrollable": false, "clickable": false},
+      "bindings": {"commonProps.hidden": "commonProps.hidden"},
+      "children": [
+        {"type": "label", "id": "title", "placement": {"mode": "absolute", "x": "132dp", "y": "26dp", "width": "202dp", "height": "38dp"}, "style": {"textColor": "#2F3033", "fontSize": "22sp", "textAlign": "center"}, "labelProps": {"text": "AI Chatbot", "longMode": "dot"}, "bindings": {"labelProps.text": "labelProps.text"}},
+        {"type": "label", "id": "status", "placement": {"mode": "absolute", "x": "90dp", "y": "69dp", "width": "286dp", "height": "30dp"}, "style": {"textColor": "#777173", "fontSize": "16sp", "textAlign": "center"}, "labelProps": {"text": "Starting", "longMode": "dot"}, "bindings": {"labelProps.text": "labelProps.text"}},
+        {"type": "button", "id": "chat", "commonProps": {"scrollable": false}, "placement": {"mode": "absolute", "x": "107dp", "y": "365dp", "width": "118dp", "height": "48dp"}, "style": {"bgColor": "#E8362D", "radius": "24dp", "padding": "0dp"}, "bindings": {"style.bgColor": "style.bgColor", "style.borderColor": "style.borderColor", "style.borderWidth": "style.borderWidth"}, "events": [{"type": "clicked", "action": "ai_chatbot.chat.open.chat"}], "children": [
+          {"type": "image", "id": "icon", "commonProps": {"hidden": true}, "imageProps": {"src": "${image.nav.chat}"}, "bindings": {"style.imageRecolor": "style.imageRecolor", "style.imageRecolorOpacity": "style.imageRecolorOpacity"}},
+          {"type": "label", "id": "label", "placement": {"mode": "absolute", "x": "0dp", "y": "9dp", "width": "118dp", "height": "30dp"}, "style": {"textColor": "#FFFFFF", "fontSize": "18sp", "textAlign": "center"}, "labelProps": {"text": "Chat", "longMode": "dot"}, "bindings": {"labelProps.text": "labelProps.text", "style.textColor": "style.textColor"}}
+        ]},
+        {"type": "button", "id": "settings", "commonProps": {"scrollable": false}, "placement": {"mode": "absolute", "x": "241dp", "y": "365dp", "width": "118dp", "height": "48dp"}, "style": {"bgColor": "#FFF9F8", "borderColor": "#E4D9D5", "borderWidth": "1dp", "radius": "24dp", "padding": "0dp"}, "bindings": {"style.bgColor": "style.bgColor", "style.borderColor": "style.borderColor", "style.borderWidth": "style.borderWidth"}, "events": [{"type": "clicked", "action": "ai_chatbot.chat.open.settings"}], "children": [
+          {"type": "image", "id": "icon", "commonProps": {"hidden": true}, "imageProps": {"src": "${image.nav.settings}"}, "bindings": {"style.imageRecolor": "style.imageRecolor", "style.imageRecolorOpacity": "style.imageRecolorOpacity"}},
+          {"type": "label", "id": "label", "placement": {"mode": "absolute", "x": "0dp", "y": "9dp", "width": "118dp", "height": "30dp"}, "style": {"textColor": "#777173", "fontSize": "18sp", "textAlign": "center"}, "labelProps": {"text": "Settings", "longMode": "dot"}, "bindings": {"labelProps.text": "labelProps.text", "style.textColor": "style.textColor"}}
+        ]},
+        {"type": "button", "id": "clear", "commonProps": {"scrollable": false, "hidden": true}, "placement": {"mode": "absolute", "x": "181dp", "y": "425dp", "width": "104dp", "height": "32dp"}, "style": {"bgColor": "#F3EEEE", "radius": "16dp", "padding": "0dp"}, "bindings": {"commonProps.hidden": "commonProps.hidden"}, "events": [{"type": "clicked", "action": "ai_chatbot.history.clear"}], "children": [
+          {"type": "label", "id": "label", "placement": {"mode": "absolute", "x": "0dp", "y": "1dp", "width": "104dp", "height": "30dp"}, "style": {"textColor": "#777173", "fontSize": "16sp", "textAlign": "center"}, "labelProps": {"text": "Clear", "longMode": "dot"}, "bindings": {"labelProps.text": "labelProps.text"}}
+        ]}
+      ]
+    },
+    {
+      "type": "viewScreen", "id": "ai_chatbot_chat", "commonProps": {"scrollable": false}, "style": {"bgColor": "#F3EEEE"},
+      "children": [
+        {"type": "container", "id": "content", "commonProps": {"scrollable": false}, "placement": {"mode": "absolute", "x": "40dp", "y": "108dp", "width": "386dp", "height": "248dp"}, "children": [
+          {"type": "container", "id": "empty_state", "commonProps": {"scrollable": false}, "placement": {"mode": "absolute", "x": "0dp", "y": "0dp", "width": "386dp", "height": "248dp"}, "bindings": {"commonProps.hidden": "commonProps.hidden"}, "children": [
+            {"type": "container", "id": "status_chip_network", "commonProps": {"scrollable": false}, "placement": {"mode": "absolute", "x": "16dp", "y": "8dp", "width": "354dp", "height": "36dp"}, "children": [
+              {"type": "label", "id": "status_label", "placement": {"mode": "absolute", "x": "8dp", "y": "3dp", "width": "96dp", "height": "30dp"}, "style": {"fontSize": "16sp", "textColor": "#777173"}, "labelProps": {"text": "Network", "longMode": "dot"}},
+              {"type": "label", "id": "status_value", "placement": {"mode": "absolute", "x": "110dp", "y": "3dp", "width": "236dp", "height": "30dp"}, "style": {"fontSize": "18sp", "textColor": "#2F3033"}, "labelProps": {"text": "Waiting", "longMode": "dot"}, "bindings": {"labelProps.text": "labelProps.text"}}
+            ]},
+            {"type": "container", "id": "status_chip_agent", "commonProps": {"scrollable": false}, "placement": {"mode": "absolute", "x": "16dp", "y": "50dp", "width": "354dp", "height": "36dp"}, "children": [
+              {"type": "label", "id": "status_label", "placement": {"mode": "absolute", "x": "8dp", "y": "3dp", "width": "96dp", "height": "30dp"}, "style": {"fontSize": "16sp", "textColor": "#777173"}, "labelProps": {"text": "Agent", "longMode": "dot"}},
+              {"type": "label", "id": "status_value", "placement": {"mode": "absolute", "x": "110dp", "y": "3dp", "width": "236dp", "height": "30dp"}, "style": {"fontSize": "18sp", "textColor": "#2F3033"}, "labelProps": {"text": "Offline", "longMode": "dot"}, "bindings": {"labelProps.text": "labelProps.text"}}
+            ]},
+            {"type": "container", "id": "status_chip_cloud", "commonProps": {"scrollable": false}, "placement": {"mode": "absolute", "x": "16dp", "y": "92dp", "width": "354dp", "height": "36dp"}, "children": [
+              {"type": "label", "id": "status_label", "placement": {"mode": "absolute", "x": "8dp", "y": "3dp", "width": "96dp", "height": "30dp"}, "style": {"fontSize": "16sp", "textColor": "#777173"}, "labelProps": {"text": "Cloud", "longMode": "dot"}},
+              {"type": "label", "id": "status_value", "placement": {"mode": "absolute", "x": "110dp", "y": "3dp", "width": "236dp", "height": "30dp"}, "style": {"fontSize": "18sp", "textColor": "#2F3033"}, "labelProps": {"text": "Ready", "longMode": "dot"}, "bindings": {"labelProps.text": "labelProps.text"}}
+            ]},
+            {"type": "label", "id": "message_title", "placement": {"mode": "absolute", "x": "36dp", "y": "146dp", "width": "314dp", "height": "30dp"}, "style": {"fontSize": "20sp", "textColor": "#2F3033", "textAlign": "center"}, "labelProps": {"text": "Ready to talk", "longMode": "dot"}},
+            {"type": "label", "id": "message", "placement": {"mode": "absolute", "x": "36dp", "y": "184dp", "width": "314dp", "height": "64dp"}, "style": {"fontSize": "18sp", "textColor": "#777173", "textAlign": "center"}, "labelProps": {"text": "Waiting for the agent", "longMode": "wrap"}, "bindings": {"labelProps.text": "labelProps.text"}}
+          ]},
+          {"type": "container", "id": "chat_panel", "commonProps": {"scrollable": false, "hidden": true}, "placement": {"mode": "absolute", "x": "0dp", "y": "0dp", "width": "386dp", "height": "248dp"}, "bindings": {"commonProps.hidden": "commonProps.hidden"}, "children": [
+            {"type": "container", "id": "list", "commonProps": {"scrollable": true}, "placement": {"mode": "absolute", "x": "8dp", "y": "0dp", "width": "370dp", "height": "248dp"}, "layout": {"type": "flex", "flexFlow": "column", "gap": "12dp"}, "children": [
+              {"type": "container", "id": "items", "commonProps": {"scrollable": false}, "placement": {"mode": "flow", "width": "match", "height": "wrap", "alignSelf": "stretch"}, "layout": {"type": "flex", "flexFlow": "column", "gap": "12dp"}, "children": []}
+            ]}
+          ]}
+        ]}
+      ]
+    },
+    {
+      "type": "viewScreen", "id": "ai_chatbot_settings", "commonProps": {"scrollable": false}, "style": {"bgColor": "#F3EEEE"},
+      "children": [
+        {"type": "container", "id": "content", "commonProps": {"scrollable": false}, "placement": {"mode": "absolute", "x": "54dp", "y": "120dp", "width": "358dp", "height": "220dp"}, "children": [
+          {"type": "label", "id": "caption", "placement": {"mode": "absolute", "x": "16dp", "y": "0dp", "width": "326dp", "height": "30dp"}, "style": {"fontSize": "18sp", "textColor": "#777173"}, "labelProps": {"text": "Settings", "longMode": "dot"}},
+          {"type": "templateRef", "id": "agent", "templateId": "nav_menu_item", "overrides": {".": {"placement": {"mode": "absolute", "x": "0dp", "y": "40dp", "width": "358dp", "height": "84dp"}, "events": [{"type": "clicked", "action": "ai_chatbot.settings.open.agent_select"}]}, "title": {"labelProps": {"text": "Agent", "longMode": "dot"}}, "value": {"labelProps": {"text": "AI Chatbot", "longMode": "dot"}}}},
+          {"type": "container", "id": "status", "commonProps": {"scrollable": false}, "placement": {"mode": "absolute", "x": "0dp", "y": "140dp", "width": "358dp", "height": "76dp"}, "style": {"bgColor": "#FFF9F8", "radius": "20dp", "padding": "0dp"}, "children": [
+            {"type": "label", "id": "value", "placement": {"mode": "absolute", "x": "16dp", "y": "10dp", "width": "326dp", "height": "60dp"}, "style": {"fontSize": "18sp", "textColor": "#777173"}, "labelProps": {"text": "Starting", "longMode": "wrap"}, "bindings": {"labelProps.text": "labelProps.text"}}
+          ]}
+        ]}
+      ]
+    },
+    {
+      "type": "viewScreen", "id": "ai_chatbot_select", "commonProps": {"scrollable": false}, "style": {"bgColor": "#F3EEEE"},
+      "children": [
+        {"type": "label", "id": "title", "placement": {"mode": "absolute", "x": "132dp", "y": "26dp", "width": "202dp", "height": "38dp"}, "style": {"fontSize": "22sp", "textColor": "#2F3033", "textAlign": "center"}, "labelProps": {"text": "Select agent", "longMode": "dot"}, "bindings": {"labelProps.text": "labelProps.text"}},
+        {"type": "button", "id": "back", "commonProps": {"scrollable": false}, "placement": {"mode": "absolute", "x": "90dp", "y": "70dp", "width": "80dp", "height": "40dp"}, "style": {"bgColor": "#FFF9F8", "radius": "20dp", "padding": "0dp"}, "events": [{"type": "clicked", "action": "ai_chatbot.select.back"}], "children": [
+          {"type": "label", "id": "label", "placement": {"mode": "absolute", "x": "0dp", "y": "5dp", "width": "80dp", "height": "30dp"}, "style": {"fontSize": "18sp", "textColor": "#2F3033", "textAlign": "center"}, "labelProps": {"text": "Back", "longMode": "dot"}, "bindings": {"labelProps.text": "labelProps.text"}}
+        ]},
+        {"type": "label", "id": "subtitle", "placement": {"mode": "absolute", "x": "184dp", "y": "76dp", "width": "200dp", "height": "30dp"}, "style": {"fontSize": "16sp", "textColor": "#777173"}, "labelProps": {"text": "Choose AI service", "longMode": "dot"}, "bindings": {"labelProps.text": "labelProps.text"}},
+        {"type": "container", "id": "list_card", "commonProps": {"scrollable": false}, "placement": {"mode": "absolute", "x": "54dp", "y": "128dp", "width": "358dp", "height": "212dp"}, "children": [
+          {"type": "container", "id": "empty_state", "commonProps": {"scrollable": false}, "placement": {"mode": "absolute", "x": "0dp", "y": "0dp", "width": "358dp", "height": "212dp"}, "bindings": {"commonProps.hidden": "commonProps.hidden"}, "children": [
+            {"type": "label", "id": "message", "placement": {"mode": "absolute", "x": "16dp", "y": "60dp", "width": "326dp", "height": "60dp"}, "style": {"fontSize": "18sp", "textColor": "#777173", "textAlign": "center"}, "labelProps": {"text": "Agent manager unavailable", "longMode": "wrap"}, "bindings": {"labelProps.text": "labelProps.text"}},
+            {"type": "label", "id": "hint", "placement": {"mode": "absolute", "x": "16dp", "y": "130dp", "width": "326dp", "height": "60dp"}, "style": {"fontSize": "16sp", "textColor": "#777173", "textAlign": "center"}, "labelProps": {"text": "Connect an agent to continue.", "longMode": "wrap"}}
+          ]},
+          {"type": "container", "id": "list", "commonProps": {"hidden": true, "scrollable": true}, "placement": {"mode": "absolute", "x": "0dp", "y": "0dp", "width": "358dp", "height": "212dp"}, "layout": {"type": "flex", "flexFlow": "column", "gap": "12dp"}, "bindings": {"commonProps.hidden": "commonProps.hidden"}, "children": []}
+        ]}
+      ]
+    },
+    {"type": "viewTemplate", "id": "chat_message_agent", "node": {"type": "container", "commonProps": {"scrollable": false}, "placement": {"mode": "flow", "width": "match", "height": "wrap", "alignSelf": "stretch"}, "layout": {"type": "flex", "flexFlow": "row", "mainAlign": "start", "crossAlign": "start"}, "children": [
+      {"type": "container", "id": "bubble", "commonProps": {"scrollable": false}, "placement": {"mode": "flow", "width": "94%", "height": "wrap", "alignSelf": "start"}, "style": {"bgColor": "#FFF9F8", "radius": "20dp", "padding": "14dp"}, "children": [
+        {"type": "label", "id": "text", "placement": {"mode": "flow", "width": "match", "height": "wrap", "alignSelf": "stretch"}, "style": {"textColor": "#2F3033", "fontSize": "20sp"}, "labelProps": {"text": "", "longMode": "wrap"}}
+      ]}
+    ]}},
+    {"type": "viewTemplate", "id": "chat_message_user", "node": {"type": "container", "commonProps": {"scrollable": false}, "placement": {"mode": "flow", "width": "match", "height": "wrap", "alignSelf": "stretch"}, "layout": {"type": "flex", "flexFlow": "row", "mainAlign": "end", "crossAlign": "start"}, "children": [
+      {"type": "container", "id": "bubble", "commonProps": {"scrollable": false}, "placement": {"mode": "flow", "width": "94%", "height": "wrap", "alignSelf": "end"}, "style": {"bgColor": "#E8362D", "radius": "20dp", "padding": "14dp"}, "children": [
+        {"type": "label", "id": "text", "placement": {"mode": "flow", "width": "match", "height": "wrap", "alignSelf": "stretch"}, "style": {"textColor": "#FFFFFF", "fontSize": "20sp"}, "labelProps": {"text": "", "longMode": "wrap"}}
+      ]}
+    ]}},
+    {"type": "viewTemplate", "id": "menu_item", "node": {"type": "button", "commonProps": {"scrollable": false}, "placement": {"mode": "flow", "width": "match", "height": "70dp", "alignSelf": "stretch"}, "style": {"bgColor": "#FFF9F8", "borderColor": "#E4D9D5", "borderWidth": "1dp", "radius": "20dp", "padding": "0dp"}, "events": [{"type": "clicked", "action": "ai_chatbot.agent.select"}], "children": [
+      {"type": "label", "id": "title", "placement": {"mode": "absolute", "x": "16dp", "y": "8dp", "width": "250dp", "height": "30dp"}, "style": {"fontSize": "20sp", "textColor": "#2F3033"}, "labelProps": {"text": "Agent", "longMode": "dot"}, "bindings": {"labelProps.text": "labelProps.text"}},
+      {"type": "label", "id": "value", "placement": {"mode": "absolute", "x": "16dp", "y": "38dp", "width": "326dp", "height": "30dp"}, "style": {"fontSize": "16sp", "textColor": "#777173"}, "labelProps": {"text": "", "longMode": "dot"}, "bindings": {"labelProps.text": "labelProps.text"}}
+    ]}},
+    {"type": "viewTemplate", "id": "nav_menu_item", "node": {"type": "button", "commonProps": {"scrollable": false}, "placement": {"mode": "flow", "width": "match", "height": "84dp", "alignSelf": "stretch"}, "style": {"bgColor": "#FFF9F8", "borderColor": "#E4D9D5", "borderWidth": "1dp", "radius": "20dp", "padding": "0dp"}, "children": [
+      {"type": "label", "id": "title", "placement": {"mode": "absolute", "x": "16dp", "y": "10dp", "width": "280dp", "height": "30dp"}, "style": {"fontSize": "16sp", "textColor": "#777173"}, "labelProps": {"text": "Agent", "longMode": "dot"}, "bindings": {"labelProps.text": "labelProps.text"}},
+      {"type": "label", "id": "value", "placement": {"mode": "absolute", "x": "16dp", "y": "42dp", "width": "280dp", "height": "32dp"}, "style": {"fontSize": "20sp", "textColor": "#2F3033"}, "labelProps": {"text": "AI Chatbot", "longMode": "dot"}, "bindings": {"labelProps.text": "labelProps.text"}},
+      {"type": "label", "id": "chevron", "placement": {"mode": "absolute", "x": "314dp", "y": "26dp", "width": "24dp", "height": "32dp"}, "style": {"fontSize": "20sp", "textColor": "#777173"}, "labelProps": {"text": ">", "longMode": "dot"}}
+    ]}}
+  ],
+  "variants": [{"when": "${expr(${env.language} == \"zh_CN\")}", "assets": ["i18n/zh_CN.json"]}]
+}

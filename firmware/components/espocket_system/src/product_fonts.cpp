@@ -1,6 +1,7 @@
 #include "product_fonts.hpp"
 
 #include <exception>
+#include <algorithm>
 
 #include "brookesia/gui_lvgl/backend.hpp"
 #include "esp_lv_adapter.h"
@@ -52,6 +53,12 @@ std::expected<std::unique_ptr<ProductFonts>, std::string> ProductFonts::create()
         }
         fonts->default_fonts_[index] = *latin_fonts[latin_index];
         fonts->default_fonts_[index].fallback = fonts->fonts_[index];
+        const auto ascent = std::max(
+            fonts->default_fonts_[index].line_height - fonts->default_fonts_[index].base_line,
+            fonts->fonts_[index]->line_height - fonts->fonts_[index]->base_line);
+        const auto descent = std::max(fonts->default_fonts_[index].base_line, fonts->fonts_[index]->base_line);
+        fonts->default_fonts_[index].base_line = descent;
+        fonts->default_fonts_[index].line_height = ascent + descent;
     }
     return fonts;
 }

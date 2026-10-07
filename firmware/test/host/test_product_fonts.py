@@ -13,7 +13,7 @@ LVGL = r'''
 #pragma once
 #include <cstddef>
 #include <cstdint>
-struct lv_font_t { int32_t size; const lv_font_t *fallback = nullptr; };
+struct lv_font_t { int32_t size; const lv_font_t *fallback = nullptr; int32_t line_height = 20, base_line = 4; };
 inline constexpr lv_font_t lv_font_montserrat_10{10}, lv_font_montserrat_12{12},
     lv_font_montserrat_14{14}, lv_font_montserrat_16{16}, lv_font_montserrat_18{18},
     lv_font_montserrat_20{20}, lv_font_montserrat_32{32};
@@ -103,7 +103,7 @@ lv_font_t *lv_tiny_ttf_create_data_ex(const void *data, size_t data_size,
     assert(shared_data == data && shared_size == data_size);
     created_sizes.push_back(size);
     if (failed_creation == created_sizes.size()) return nullptr;
-    auto *font = new lv_font_t{size};
+    auto *font = new lv_font_t{size, nullptr, size + 10, 7};
     assert(live_fonts.insert(font).second);
     return font;
 }
@@ -165,6 +165,8 @@ void check_mixed_language_default(const Backend &backend) {
                 auto *font = reinterpret_cast<const lv_font_t *>(variant.native_src);
                 assert(font->fallback && live_fonts.contains(const_cast<lv_font_t *>(font->fallback)));
                 assert(font->fallback->size == variant.native_size);
+                assert(font->line_height - font->base_line >= font->fallback->line_height - font->fallback->base_line);
+                assert(font->base_line >= font->fallback->base_line);
                 const std::vector<int32_t> latin_sizes{10, 12, 14, 16, 18, 20, 32};
                 int32_t expected_latin_size = 10;
                 for (auto size : latin_sizes) if (size <= variant.native_size) expected_latin_size = size;

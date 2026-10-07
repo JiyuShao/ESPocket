@@ -125,12 +125,16 @@
     {
       "file": "003-separate-playback-callback-from-close-lock.patch",
       "sha256": "0127447a3a8101419688c43cf9219d6facbd7c07be9732455d2bfbf7e6f966f6"
+    },
+    {
+      "file": "004-bounded-decoder-output-gain.patch",
+      "sha256": "7ef533dbededc014eb4d2f3426971b7784a71721be8f9c1d22fb003ea2a8fa34"
     }
   ],
   "issue": ".scratch/005-m5-application-ecosystem/issues/06-adopt-online-store-stability-fix.md",
   "upstream_report": ".scratch/005-m5-application-ecosystem/records/2026-10-03-http-cancel-patch.md",
   "upstream_submission": "not submitted",
-  "remove_when": "Official HAL cancellation no longer mutates an active client and equivalent open/read/retry/timeout/stop regressions pass. Active playback close must also join final events without sharing the lifecycle lock with callback delivery.",
+  "remove_when": "Official HAL cancellation no longer mutates an active client and equivalent open/read/retry/timeout/stop regressions pass. Active playback close must also join final events without sharing the lifecycle lock with callback delivery. Remove decoder output gain when the official Audio processor supplies bounded voice gain at the actual Codec output, preserving volume, mute and playback-only unity.",
   "additional_issue": ".scratch/004-m4-device-capabilities/issues/04-adopt-playback-only-audio.md",
   "additional_report": ".scratch/004-m4-device-capabilities/records/2026-10-03-playback-only-patch.md",
   "patched_files": {
@@ -142,7 +146,7 @@
     "README.md": "212293d7aa28f22b86d10a174dac05310e7b7c452b4b54d550442ad0cc629cea",
     "README_CN.md": "6ac66b8d5e9e1d126a18478fab4148ee8d42c7a300dfa797a06361f7b437eba9",
     "idf_component.yml": "f3d70326811700f934dd362223737b5ce5f3d4d1d4dd24abc44a167d0c435256",
-    "include/brookesia/hal_adaptor/audio/device.hpp": "e01cbe82317ce975b0b3d2bed0d2326afc862c12adc4bceccb6da038fce59265",
+    "include/brookesia/hal_adaptor/audio/device.hpp": "7e5cf009e8d61b722e4042712d7ae5d158735b17a587446832fbf083a8136776",
     "include/brookesia/hal_adaptor/bluetooth/ble/device.hpp": "0e3d12a93d73fa8ad17363592574d0760684b6ac56f537c0d26107aa7fd04a71",
     "include/brookesia/hal_adaptor/bluetooth/device.hpp": "c24254588586d7f177c21dc74bd67211babb619a83bb22d11bc7fe34c171432f",
     "include/brookesia/hal_adaptor/display/device.hpp": "6948f3b8e0e1dcdb1f52cb82334d27f6b958b6b02b44ede67095d9b835640f12",
@@ -160,8 +164,9 @@
     "src/audio/codec_recorder_impl.cpp": "e302476826642f4d947495872fede0219f4b19ba8092655fe3500fca36aca5dc",
     "src/audio/codec_recorder_impl.hpp": "74c4c2857b09309a05ca29b3d5182dfadba385b7d1e7b4d4aafba05771156b0b",
     "src/audio/device.cpp": "800e6be7e6c41975df44b58a115f5b108fefa54b9ce0afa6391ebecf8b3179a5",
-    "src/audio/processor_impl.cpp": "01432f71920d3680e07a1fd13cc32da8aa8565716bfca00217ff5257b7785872",
-    "src/audio/processor_impl.hpp": "b02ef843de7e858e14c4eb22a1d338cea29b5b6ee9367813ac15aaf4b37224be",
+    "src/audio/pcm_gain.hpp": "ac202ca06ec8a47adcde41a895b496cf9693b1e71d53ba9adc3486dd746969e6",
+    "src/audio/processor_impl.cpp": "249ed61e71cdb8d13ebfdbcc2afd7ab31f57600505568e8323961f9234e8df33",
+    "src/audio/processor_impl.hpp": "dc659f7f37684a19053e4cf96e4c09d310fb5c2e1c2acc18b3712a319d21e206",
     "src/audio/processor_type_converter.cpp": "0618d16bea8b075e1ace7f83b41022d1ce19c225e1c2dd1dceb0f5406ea8d70d",
     "src/audio/processor_type_converter.hpp": "2f48bd178f92a1d54ed2a85d9ed41d817d80e7626dbec28b3613fef3a1cb65ac",
     "src/bluetooth/a2dp_sink.cpp": "d98ce743aef08be6f20b0117fa853b3ec927294fbf744deaef99105b5459bd8b",
@@ -242,6 +247,7 @@
     "test_apps/sdkconfig.defaults.esp32s31": "191e47ca8a6e4259c6b700b50b0f2e512fd886e6a9eef28e68fb1efe41e8b3f5",
     "tools/media_lib_sal_esp_tls_idf6.patch": "a1f2e9ae82188bff575f86a8cc0e0a3949f73d53219d1acb67779291b25eef43"
   },
+  "decoder_gain_issue": ".scratch/005-m5-application-ecosystem/issues/16-chat-round-display-and-audio-usability.md",
   "active_close_issue": ".scratch/005-m5-application-ecosystem/issues/13-xiaozhi-and-launcher-performance.md",
   "active_close_reason": "Keep serialized acquire/release lifetime control separate from playback callback storage so active playback close can join its final worker event without waiting on its own lifecycle mutex."
 }

@@ -1,21 +1,23 @@
 configure_file("${CMAKE_CURRENT_LIST_DIR}/resources/dark_theme.json" "${CMAKE_CURRENT_BINARY_DIR}/espocket_dark_theme.json" COPYONLY)
 configure_file("${CMAKE_CURRENT_LIST_DIR}/resources/light_theme.json" "${CMAKE_CURRENT_BINARY_DIR}/espocket_light_theme.json" COPYONLY)
 configure_file("${CMAKE_CURRENT_LIST_DIR}/resources/fonts/espocket_cjk.otf" "${CMAKE_CURRENT_BINARY_DIR}/espocket_cjk.otf" COPYONLY)
+configure_file("${CMAKE_CURRENT_LIST_DIR}/resources/chat_round.json" "${CMAKE_CURRENT_BINARY_DIR}/espocket_chat_round.json" COPYONLY)
+configure_file("${CMAKE_CURRENT_LIST_DIR}/resources/calculator_round.json" "${CMAKE_CURRENT_BINARY_DIR}/espocket_calculator_round.json" COPYONLY)
 
 idf_component_register(
     SRCS "src/system.cpp" "src/system_lifecycle.cpp" "src/system_navigation.cpp" "src/product_fonts.cpp"
         "src/system_display.cpp" "src/system_message_dialog.cpp" "src/system_timeout.cpp" "src/system_power.cpp" "src/power_key_monitor.cpp" "src/settings_navigation_adapter.cpp"
         "src/native_page_installation.cpp" "src/system_test_input.cpp"
         "src/system_runtime_navigation.cpp" "src/runtime_navigation_provider.cpp"
-        "src/system_cards.cpp" "src/card_document.cpp" "src/system_package_acceptance.cpp" "src/runtime_render_probe.cpp"
-    EMBED_TXTFILES "${CMAKE_CURRENT_BINARY_DIR}/espocket_dark_theme.json" "${CMAKE_CURRENT_BINARY_DIR}/espocket_light_theme.json"
+        "src/system_cards.cpp" "src/card_document.cpp" "src/system_package_acceptance.cpp" "src/runtime_render_probe.cpp" "src/round_resources.cpp"
+    EMBED_TXTFILES "${CMAKE_CURRENT_BINARY_DIR}/espocket_dark_theme.json" "${CMAKE_CURRENT_BINARY_DIR}/espocket_light_theme.json" "${CMAKE_CURRENT_BINARY_DIR}/espocket_chat_round.json" "${CMAKE_CURRENT_BINARY_DIR}/espocket_calculator_round.json"
     EMBED_FILES "${CMAKE_CURRENT_BINARY_DIR}/espocket_cjk.otf"
     INCLUDE_DIRS "include"
     REQUIRES brookesia_system_core brookesia_service_manager espocket_navigation espocket_semantics freertos
     PRIV_REQUIRES
         hello espocket_test_adapter shell_circular esp_lvgl_adapter lvgl
         brookesia_app_settings brookesia_app_store brookesia_gui_lvgl
-        brookesia_service_display brookesia_service_helper brookesia_lib_utils
+        brookesia_service_display brookesia_service_helper brookesia_lib_utils brookesia_hal_adaptor
         esp_driver_gpio esp_timer esp_app_format brookesia_runtime_manager nvs_flash
 )
 

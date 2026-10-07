@@ -1,0 +1,38 @@
+--- a/include/brookesia/system_core/system/system.hpp
++++ b/include/brookesia/system_core/system/system.hpp
+@@ -97,6 +97,7 @@
+         struct AppPresentation {
+             gui::Environment environment;
+             std::optional<gui::GuiViewport> viewport;
++            std::string_view root_document = {};
+         };
+         std::function<AppPresentation(const AppManifest &, const gui::Environment &)> app_presentation;
+         /** Storage roots and install target policy. */
+--- a/src/system/gui.cpp
++++ b/src/system/gui.cpp
+@@ -508,7 +508,14 @@
+         record.presentation = config_.app_presentation ? config_.app_presentation(record.info.manifest, environment_) :
+             System::Config::AppPresentation{environment_, {}};
+         std::expected<gui::DocumentId, std::string> load_result = std::unexpected("Invalid GUI root");
+-        if (descriptor.root_kind == GuiRootKind::File) {
++        if (!record.presentation->root_document.empty()) {
++            load_result = gui_runtime_->load_json(
++                              record.info.manifest.id,
++                              record.presentation->root_document,
++                              resolve_app_resource_dir(record.info.manifest),
++                              record.presentation->environment
++                          );
++        } else if (descriptor.root_kind == GuiRootKind::File) {
+             load_result = gui_runtime_->load_file(
+                               resolve_app_resource_path(record.info.manifest, descriptor.root),
+                               record.presentation->environment
+@@ -525,7 +532,8 @@
+             return std::unexpected(load_result.error());
+         }
+         record.document_id = *load_result;
+-        if (config_.enable_gui_live_preview && descriptor.root_kind == GuiRootKind::File) {
++        if (config_.enable_gui_live_preview && record.presentation->root_document.empty() &&
++                descriptor.root_kind == GuiRootKind::File) {
+             auto preview_result = enable_live_preview_for_document(
+                                       *record.document_id,
+                                       config_.gui_live_preview_options

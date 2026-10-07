@@ -107,12 +107,17 @@ int main(){
 #define BROOKESIA_DESCRIBE_ENUM_TO_STR(...) ""
 enum class GuiLayer {Default}; enum class MountStackMode {Replace};
 ''' + types + r'''
-struct lv_obj_t {lv_obj_t*parent=nullptr;int x=0,y=0,width=466,height=466;bool hidden=false;};
+struct lv_obj_t {lv_obj_t*parent=nullptr;int x=0,y=0,width=466,height=466;bool hidden=false;int color=0,opacity=0;std::vector<lv_obj_t*>children;};
 struct lv_display_t {};
 constexpr int LV_OBJ_FLAG_HIDDEN=1,LV_OBJ_FLAG_SCROLLABLE=2,LV_OBJ_FLAG_CLICKABLE=4;
+constexpr int LV_PART_MAIN=0;
 int containers=0;
-auto*lv_obj_create(lv_obj_t*parent){++containers;auto*object=new lv_obj_t;object->parent=parent;return object;}
-void lv_obj_delete(lv_obj_t*object){--containers;delete object;}
+auto*lv_obj_create(lv_obj_t*parent){++containers;auto*object=new lv_obj_t;object->parent=parent;parent->children.push_back(object);return object;}
+void lv_obj_delete(lv_obj_t*object){for(auto*child:object->children)lv_obj_delete(child);--containers;delete object;}
+int lv_obj_get_style_bg_color(lv_obj_t*object,int){return object->color;}
+int lv_obj_get_style_bg_opa(lv_obj_t*object,int){return object->opacity;}
+void lv_obj_set_style_bg_color(lv_obj_t*object,int color,int){object->color=color;}
+void lv_obj_set_style_bg_opa(lv_obj_t*object,int opacity,int){object->opacity=opacity;}
 void lv_obj_set_parent(lv_obj_t*object,lv_obj_t*parent){object->parent=parent;}
 auto*lv_obj_get_parent(lv_obj_t*object){return object->parent;}
 bool lv_obj_is_valid(lv_obj_t*object){return object!=nullptr;}
@@ -133,7 +138,7 @@ enum class PlacementApplyMask {All};
 struct BackendImpl {
  lv_obj_t layer,screen;lv_display_t display;Record record{true,&screen};
  std::unordered_map<unsigned,MountTarget> mounted_targets;
- std::unordered_map<unsigned,lv_obj_t*> mounted_viewports;
+ std::unordered_map<unsigned,lv_obj_t*> mounted_frames;
  Record*find_record(BackendHandle){return &record;}
  std::string resolve_display_id(const std::string&){return "display";}
  lv_display_t*resolve_display(const std::string&){return &display;}
@@ -149,6 +154,10 @@ void apply_placement(BackendImpl&,Record&record,int,PlacementApplyMask,bool){rec
 void refresh_frame_view(BackendImpl&,Record&,int){}
 ''' + methods + r'''
 #include "PRODUCT_PRESENTATION"
+namespace espocket {
+std::string_view chat_round_document(){return "round-chat-document";}
+std::string_view calculator_round_document(){return "round-calculator-document";}
+}
 int main(){
  BackendImpl backend;BackendHandle handle(1);MountTarget native;
  using namespace esp_brookesia;
@@ -164,10 +173,14 @@ int main(){
  manifest.id="brookesia.general.ai_chatbot";
  manifest.version="0.2.1";
  auto landscape=espocket::round_app_presentation(manifest,environment);
- assert(landscape.viewport->width==329 && landscape.viewport->height==197);
- assert(landscape.viewport->x==68 && landscape.viewport->y==134);
- assert(std::abs(landscape.environment.width_px/landscape.environment.density-800)<0.001);
- assert(landscape.environment.height_px==landscape.viewport->height);
+ assert(!landscape.viewport && !landscape.root_document.empty());
+ assert(landscape.environment.width_px==466 && landscape.environment.height_px==466);
+ assert(std::abs(landscape.environment.density-1)<0.001);
+ manifest.id="brookesia.general.calculator";manifest.version="0.3.0";
+ auto calculator=espocket::round_app_presentation(manifest,environment);
+ assert(!calculator.viewport && !calculator.root_document.empty());
+ assert(calculator.environment.width_px==466 && calculator.environment.density==1);
+ manifest.id="brookesia.general.ai_chatbot";
  manifest.version="0.3.0";
  assert(espocket::round_app_presentation(manifest,environment).viewport->height==329);
  manifest.id="";
@@ -177,10 +190,14 @@ int main(){
  assert(backend.mount_screen(handle,native));assert(backend.screen.parent==&backend.layer);assert(backend.screen.width==466);assert(containers==0);
  MountTarget runtime;runtime.viewport=presentation.viewport;
  for(int iteration=0;iteration<100;++iteration){
-  assert(backend.mount_screen(handle,runtime));assert(containers==1);assert(backend.screen.width==329);
+  backend.screen.color=iteration;backend.screen.opacity=255;
+  assert(backend.mount_screen(handle,runtime));assert(containers==2);assert(backend.screen.width==329);
   assert(backend.screen.parent->x==68 && backend.screen.parent->y==68);
+  auto *frame=backend.screen.parent->parent;
+  assert(frame->parent==&backend.layer && frame->width==466 && frame->height==466);
+  assert(frame->color==iteration && frame->opacity==255);
   assert(backend.mounted_targets.at(1).viewport->width==329);
-  assert(backend.mount_screen(handle,runtime));assert(containers==1);
+  assert(backend.mount_screen(handle,runtime));assert(containers==2);
   assert(backend.unmount_screen(handle));assert(containers==0);assert(backend.screen.hidden);
   assert(backend.screen.parent==&backend.layer);
  }
@@ -198,7 +215,7 @@ namespace gui {using GuiViewport=::GuiViewport;struct Environment{int width_px,h
 namespace system::core {
 enum class AppKind {Native,Runtime};
 struct AppManifest{AppKind kind;std::vector<std::string>supported_systems;std::string id,version;};
-struct System{struct Config{struct AppPresentation{gui::Environment environment;std::optional<gui::GuiViewport>viewport;};};};
+struct System{struct Config{struct AppPresentation{gui::Environment environment;std::optional<gui::GuiViewport>viewport;std::string_view root_document;};};};
 }
 }
 ''')

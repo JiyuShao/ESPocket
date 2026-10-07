@@ -27,6 +27,8 @@ struct System {
     bool display_ok = true, stop_ok = true;
     int stops = 0, display_calls = 0;
     std::optional<esp_brookesia::system::core::AppInfo> app;
+    bool foreground = false;
+    auto get_active_app() const { return foreground ? app : std::nullopt; }
     std::expected<void, std::string> set_display_on(bool value) {
         ++display_calls;
         if (!display_ok) return std::unexpected("display_failed");
@@ -48,6 +50,14 @@ TEST = r'''
 using namespace espocket;
 using namespace esp_brookesia::system::core;
 int main() {
+    System conversation;
+    conversation.app = AppInfo{{AppKind::Runtime, true, "brookesia.general.ai_chatbot"}};
+    conversation.foreground = true;
+    conversation.handle_screen_timeout();
+    assert(conversation.display_on_ && conversation.display_calls == 0 && conversation.stops == 0);
+    conversation.foreground = false;
+    conversation.handle_screen_timeout();
+    assert(!conversation.display_on_ && conversation.display_calls == 1);
     for (auto kind : {AppKind::Native, AppKind::Runtime}) {
         System s; s.app = AppInfo{{kind, true, "sample"}};
         s.handle_screen_timeout();

@@ -34,6 +34,7 @@ class AudioPlaybackOnlyTest(unittest.TestCase):
 #include <mutex>
 #include <string>
 #include <iostream>
+__PCM_GAIN__
 #define BROOKESIA_LOG_TRACE_GUARD_WITH_THIS()
 #define BROOKESIA_LOGW(...)
 #define BROOKESIA_LOGE(...)
@@ -74,7 +75,9 @@ struct AudioProcessorCore {
     std::mutex playback_callback_mutex_;
     std::shared_ptr<audio::CodecPlayerIface> player_iface_=std::make_shared<audio::CodecPlayerIface>();
     std::shared_ptr<audio::CodecRecorderIface> recorder_iface_;
-    struct {struct {Format player;} playback;} config_;
+    struct {struct {Format player;} playback;struct {uint16_t output_gain_percent=100, output_peak_percent=100;} decoder;} config_;
+    uint8_t player_bits_=16;
+    bool is_decoder_started()const{return false;}
     void* playback_handle_=nullptr;audio::PlaybackIface::EventCallback playback_callback_;bool is_opened_=false;
     void on_recorder_input_data(uint8_t*,int){} void on_playback_event(uint8_t){}
     bool open_common(audio::PlaybackIface::EventCallback);
@@ -91,6 +94,8 @@ int main(){AudioProcessorCore core;
     if(!duplex.open_common({}) || recorder_opens!=1 || !observed_manager.rec_io.read_cb)return 4;
 }
 '''
+        gain = hal / 'src/audio/pcm_gain.hpp'
+        harness = harness.replace('__PCM_GAIN__', gain.read_text() + '\nusing namespace esp_brookesia::hal;' if gain.exists() else '')
         with tempfile.TemporaryDirectory(prefix='espocket-audio-only-') as directory:
             source=Path(directory)/'test.cpp';source.write_text(harness)
             binary=Path(directory)/'test'

@@ -2,7 +2,15 @@
 
 ESPocket System 加载 dark/light 主题，再启动 App。主题集中定义背景、表面、文字、边框、主色、状态色与控件颜色，样式通过 `${color.<语义路径>}` 引用；覆盖官方 Settings/Store、Circular Shell 与 Hello App 的 named style token；Brookesia GUI Runtime 持有注册和解析事实。资源嵌入固件，不写 NVS 或用户文件，不为 App 复制 GUI runtime。
 
-slider/switch 的 main、indicator、knob 样式必须明确可见；官方资源升级新增 styleRefs 时，host contract check 应失败，不能忽略缺少的样式。圆屏页面几何仍由 App 资源负责。
+slider/switch 的 main、indicator、knob 样式必须明确可见；官方资源升级新增 styleRefs 时，host contract check 应失败，不能忽略缺少的样式。App 默认拥有页面几何；已锁定版本可由产品提供圆屏呈现资源。
+
+## Runtime 圆屏呈现
+
+System 的 AppPresentation 为 AI Chatbot 0.2.1 和 Calculator 0.3.0 选择嵌入的圆屏 GUI 文档，沿用原包的资源目录、screen flow、JS Controller、事件和生命周期。正文使用真实 20px 字号；计算按键声明 24sp，当前 Latin 字形按内置字体规则选用 20px。控件落在圆内安全区域。原安装文件与 receipt 不变，升级到未知版本自动回到通用兼容布局。
+
+其他矩形 Runtime App 保留内接安全 viewport，Backend 以 App 自身背景铺满屏幕，并与 viewport 一起挂载、替换和释放；不拦截 Shell Overlay 或额外保留输入控件。通用兼容不能自动重排未知 App 的四角控制，专门布局仍须按实际 Controller 契约适配与验收。
+
+默认混合字体的行高合并 Montserrat 与中文 fallback 的 ascent／descent，避免较高的中文跨行覆盖。前台 AI Chatbot 保持亮屏，Home 后恢复普通息屏策略；输出经真实 Audio Owner 增强至最多 3.5 倍 PCM 振幅，按音频块的峰值限制统一增益，并将峰值上限设为满幅的 85%，避免削平或逐样本压缩波形。原音量／Mute 控制仍生效。满幅瞬时峰会限制同块的增益；增益上限不能代替扬声器听感验收。真机结果由 [005/16](../../../../.scratch/005-m5-application-ecosystem/issues/16-chat-round-display-and-audio-usability.md) 持有。
 
 本次修复与候选视觉门槛见 [004/05](../../../../.scratch/004-m4-device-capabilities/issues/05-fix-settings-controls-rendering.md)。
 

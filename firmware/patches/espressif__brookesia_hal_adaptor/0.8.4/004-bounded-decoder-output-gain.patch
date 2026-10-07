@@ -1,0 +1,104 @@
+--- a/include/brookesia/hal_adaptor/audio/device.hpp
++++ b/include/brookesia/hal_adaptor/audio/device.hpp
+@@ -81,6 +81,8 @@
+  * @brief Decoder backend configuration for the ESP audio processor.
+  */
+ struct AudioProcessorDecoderConfig {
++    uint16_t output_gain_percent = 100;
++    uint16_t output_peak_percent = 100;
+     lib_utils::ThreadConfig feeder_task{
+         .core_id = 1,
+         .priority = 5,
+@@ -227,7 +229,7 @@
+ BROOKESIA_DESCRIBE_STRUCT(AudioProcessorMixerGainConfig, (), (initial_gain, target_gain, transition_time));
+ BROOKESIA_DESCRIBE_STRUCT(AudioProcessorPlaybackConfig, (), (player, player_task, mixer_gain));
+ BROOKESIA_DESCRIBE_STRUCT(AudioProcessorEncoderConfig, (), (recorder_task, fetcher_task));
+-BROOKESIA_DESCRIBE_STRUCT(AudioProcessorDecoderConfig, (), (feeder_task, mixer_gain));
++BROOKESIA_DESCRIBE_STRUCT(AudioProcessorDecoderConfig, (), (feeder_task, mixer_gain, output_gain_percent, output_peak_percent));
+ BROOKESIA_DESCRIBE_STRUCT(AudioProcessorAFE_VAD_Config, (), (mode, min_speech_ms, min_noise_ms));
+ BROOKESIA_DESCRIBE_STRUCT(AudioProcessorAFE_WakeNetConfig, (), (
+                               model_partition_label, mn_language, start_timeout_ms, end_timeout_ms
+--- a/src/audio/processor_impl.cpp
++++ b/src/audio/processor_impl.cpp
+@@ -20,6 +20,7 @@
+ #include "brookesia/lib_utils/function_guard.hpp"
+ #include "private/utils.hpp"
+ #include "processor_impl.hpp"
++#include "pcm_gain.hpp"
+ #include "processor_type_converter.hpp"
+ 
+ #if BROOKESIA_HAL_ADAPTOR_AUDIO_ENABLE_PROCESSOR_IMPL
+@@ -185,10 +186,15 @@
+         if (recorder_iface_) recorder_iface_->close();
+     });
+ 
++    player_bits_ = player_config.bits;
+     auto player_write_cb = +[](uint8_t *data, int size, void *ctx) {
+-        auto player_iface = static_cast<audio::CodecPlayerIface *>(ctx);
+-        BROOKESIA_CHECK_NULL_RETURN(player_iface, ESP_FAIL, "Invalid player context");
+-        return player_iface->write_data(data, size) ? ESP_OK : ESP_FAIL;
++        auto *core = static_cast<AudioProcessorCore *>(ctx);
++        BROOKESIA_CHECK_NULL_RETURN(core, ESP_FAIL, "Invalid player context");
++        if (core->is_decoder_started() && core->player_bits_ == 16 && size > 0) {
++            apply_bounded_pcm_gain(data, static_cast<size_t>(size), core->config_.decoder.output_gain_percent,
++                                   core->config_.decoder.output_peak_percent);
++        }
++        return core->player_iface_->write_data(data, size) ? ESP_OK : ESP_FAIL;
+     };
+     auto recorder_read_cb = +[](uint8_t *data, int size, void *ctx) {
+         auto self = static_cast<AudioProcessorCore *>(ctx);
+@@ -208,7 +214,7 @@
+             .read_cb = nullptr,
+             .read_ctx = nullptr,
+             .write_cb = player_write_cb,
+-            .write_ctx = player_iface_.get(),
++            .write_ctx = this,
+         },
+         .rec_io = {
+             .read_cb = recorder_iface_ ? recorder_read_cb : nullptr,
+--- a/src/audio/processor_impl.hpp
++++ b/src/audio/processor_impl.hpp
+@@ -87,6 +87,7 @@
+     std::atomic_bool is_encoder_started_ = false;
+     std::atomic_bool is_encoder_paused_ = false;
+     std::atomic_bool is_decoder_started_ = false;
++    uint8_t player_bits_ = 16;
+     std::string afe_model_partition_label_;
+     std::string afe_mn_language_;
+ };
+--- /dev/null
++++ b/src/audio/pcm_gain.hpp
+@@ -0,0 +1,33 @@
++#pragma once
++
++#include <cstddef>
++#include <cstdint>
++#include <cstring>
++
++namespace esp_brookesia::hal {
++inline void apply_bounded_pcm_gain(uint8_t *data, size_t size, uint16_t gain_percent, uint16_t peak_percent = 100)
++{
++    if (!data || size % sizeof(int16_t) != 0 || (gain_percent <= 100 && peak_percent >= 100)) return;
++    int32_t peak = 0;
++    for (size_t offset = 0; offset < size; offset += sizeof(int16_t)) {
++        int16_t sample;
++        std::memcpy(&sample, data + offset, sizeof(sample));
++        const auto magnitude = sample < 0 ? -static_cast<int32_t>(sample) : static_cast<int32_t>(sample);
++        if (magnitude > peak) peak = magnitude;
++    }
++    if (peak == 0) return;
++    int32_t numerator = gain_percent > 100 ? gain_percent : 100;
++    int32_t denominator = 100;
++    const auto peak_limit = 32767 * static_cast<int32_t>(peak_percent < 100 ? peak_percent : 100) / 100;
++    if (peak * numerator > peak_limit * denominator) {
++        numerator = peak_limit;
++        denominator = peak;
++    }
++    for (size_t offset = 0; offset < size; offset += sizeof(int16_t)) {
++        int16_t sample;
++        std::memcpy(&sample, data + offset, sizeof(sample));
++        sample = static_cast<int16_t>(static_cast<int32_t>(sample) * numerator / denominator);
++        std::memcpy(data + offset, &sample, sizeof(sample));
++    }
++}
++}

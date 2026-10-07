@@ -1,4 +1,5 @@
 #include "system_internal.hpp"
+#include "brookesia/hal_adaptor/audio/device.hpp"
 #include "runtime_render_probe.hpp"
 #include "espocket_builtin_packages.hpp"
 #include "product_fonts.hpp"
@@ -50,6 +51,12 @@ std::expected<void, std::string> System::init()
     if (startup_failed_) return std::unexpected("Critical startup failure requires explicit device restart");
     if (product_initialized_) {
         return {};
+    }
+    esp_brookesia::hal::AudioProcessorConfig audio_config;
+    audio_config.decoder.output_gain_percent = 350;
+    audio_config.decoder.output_peak_percent = 85;
+    if (!esp_brookesia::hal::AudioDevice::get_instance().set_processor_config(audio_config)) {
+        return std::unexpected("Failed to configure voice output gain");
     }
     auto &service_manager = esp_brookesia::service::ServiceManager::get_instance();
     if (!service_manager.init()) {

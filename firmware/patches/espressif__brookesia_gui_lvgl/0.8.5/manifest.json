@@ -92,14 +92,19 @@
     {
       "file": "006-batch-relative-layout-at-gui-owner.patch",
       "sha256": "feb4f912251fe68ac6fdde7b75253cb7a4f8f30c8dffac4514b6a9d114fb5da6"
+    },
+    {
+      "file": "007-extend-compatible-app-background.patch",
+      "sha256": "f96272e7ccb7eb5d1ec9406c76ec48206689cf72634f0f017774beb864afbb50"
     }
   ],
   "issue": ".scratch/005-m5-application-ecosystem/issues/10-reduce-runtime-startup-blocking.md",
   "reason": "Pure image offsets do not change relative placement anchors; avoid repeated known-layer layout refresh on scrolling. Read image bytes through Storage RawBuffer into the final allocation to avoid full-size text/RPC copies during Weather startup.",
-  "remove_when": "Locked upstream provides equivalent offset-only layout behavior, single-buffer image loading with file-size/read validation, and continuous untracked single-pointer assignment with unchanged multi-touch behavior, and passes the same host/device regressions.",
+  "remove_when": "Locked upstream provides equivalent offset-only layout behavior, single-buffer image loading with file-size/read validation, and continuous untracked single-pointer assignment with unchanged multi-touch behavior, and passes the same host/device regressions. Remove the background frame when the official viewport mount supports App background extension with matching remount, unload, and input-coordinate regressions.",
   "related_issues": [
     ".scratch/005-m5-application-ecosystem/issues/11-runtime-store-gesture-regressions.md",
-    ".scratch/005-m5-application-ecosystem/issues/12-storage-round-display-and-runtime-usability.md"
+    ".scratch/005-m5-application-ecosystem/issues/12-storage-round-display-and-runtime-usability.md",
+    ".scratch/005-m5-application-ecosystem/issues/16-chat-round-display-and-audio-usability.md"
   ],
   "patched_files": {
     ".component_hash": "8e1dcec44a524fc09aa9af653468370b7843fb66b48f81627141c4479ec94421",
@@ -120,7 +125,7 @@
     "include/brookesia/gui_lvgl.hpp": "8647e4c74b698009bb3ead025211717075b6644ccd15f2c37eb82134c5738561",
     "license.txt": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
     "src/animation.cpp": "4ebe6d728320c77c3cbd4f6d195fd980c786d110569ccf506cd7bae1003782a5",
-    "src/backend.cpp": "711ceff1ff7d08d3cefacfde24a24e9061c405bc459706010bfe56f4b65eeadf",
+    "src/backend.cpp": "c7e418f42e2cce85003d94fb93a55240c683e67b2a755ba80d96336cbc95134d",
     "src/event.cpp": "557a5c2b391bc96ce5dc3b41b1c6dc4765b3e0128ab27ff177ec40e3c2900128",
     "src/factory.cpp": "46054e96194153781559befb3ca187c2ef39bc267b49516ccb4cf3936197245b",
     "src/layout.cpp": "503e8cea539cc14523bce0333581786aaafbaabb5f4873318ff14fb5d65d64e3",
@@ -134,7 +139,7 @@
     "src/port/wasm/threading.cpp": "0d478e3767a9891d5dc88423afbcbc05ed53fe5de58bae9be7cf8fb0dde5b9b5",
     "src/private/props_impl.hpp": "6966c65f4ba9dc455ca7c20619ae1e8676f7e3159128d17d4403ce5d4703902d",
     "src/private/style_impl.hpp": "84bf5a84ea7ea88c4c603f042646dfbf1265b7cc08802b7e08b7572f4fd21323",
-    "src/private/types.hpp": "14f52e3527895e478aa593a45da92890b92f9b4691d1cda154a59aa20770843c",
+    "src/private/types.hpp": "b7398bbdfe67ea271e5c646a3baed9d69f9cc37fbecf7a5dfd78d33c8d32b4a3",
     "src/private/utils.hpp": "d67ca3c999e2b97eb635dd07b7e500d1b91b1c1830ed062b6b6cba6e369ee80f",
     "src/props.cpp": "ae892d59d8bfee55549cfea70e61a6f90f4e6f89480267084cb4a96289f7f044",
     "src/props_common.cpp": "b15506a58fcad5fbcf929ea67cb21c065e024ea50476e1f90633dcd3208cd9e8",

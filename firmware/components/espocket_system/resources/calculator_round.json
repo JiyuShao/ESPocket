@@ -1,0 +1,1002 @@
+{
+  "version": "0.1.0",
+  "assets": [
+    "constants/default.json",
+    "images/index.json",
+    {
+      "type": "screenFlow",
+      "id": "calculator",
+      "initial": "calculator",
+      "screens": [
+        "calculator"
+      ],
+      "transitions": []
+    },
+    {
+      "type": "viewScreen",
+      "id": "calculator",
+      "commonProps": {
+        "scrollable": false
+      },
+      "styleRefs": [
+        "app.page"
+      ],
+      "style": {
+        "padding": "0dp"
+      },
+      "children": [
+        {
+          "type": "container",
+          "id": "page",
+          "commonProps": {
+            "scrollable": false
+          },
+          "placement": {
+            "mode": "absolute",
+            "x": "0dp",
+            "y": "0dp",
+            "width": "466dp",
+            "height": "466dp"
+          },
+          "children": [
+            {
+              "type": "container",
+              "id": "display",
+              "styleRefs": [
+                "app.card"
+              ],
+              "style": {
+                "padding": "0dp",
+                "bgOpacity": 0,
+                "borderWidth": "0dp"
+              },
+              "placement": {
+                "mode": "absolute",
+                "x": "132dp",
+                "y": "26dp",
+                "width": "202dp",
+                "height": "98dp"
+              },
+              "children": [
+                {
+                  "type": "label",
+                  "id": "history",
+                  "styleRefs": [
+                    "app.caption"
+                  ],
+                  "bindings": {
+                    "labelProps.text": "labelProps.text"
+                  },
+                  "labelProps": {
+                    "text": "",
+                    "longMode": "dot"
+                  },
+                  "style": {
+                    "fontSize": "16sp",
+                    "textAlign": "right"
+                  },
+                  "placement": {
+                    "mode": "absolute",
+                    "x": "0dp",
+                    "y": "0dp",
+                    "width": "202dp",
+                    "height": "26dp"
+                  }
+                },
+                {
+                  "type": "label",
+                  "id": "formula",
+                  "styleRefs": [
+                    "app.pageTitle"
+                  ],
+                  "bindings": {
+                    "labelProps.text": "labelProps.text"
+                  },
+                  "labelProps": {
+                    "text": "0",
+                    "longMode": "dot"
+                  },
+                  "style": {
+                    "fontSize": "32sp",
+                    "textAlign": "right"
+                  },
+                  "placement": {
+                    "mode": "absolute",
+                    "x": "0dp",
+                    "y": "28dp",
+                    "width": "202dp",
+                    "height": "42dp"
+                  }
+                },
+                {
+                  "type": "label",
+                  "id": "result",
+                  "styleRefs": [
+                    "app.cardSubtitle"
+                  ],
+                  "bindings": {
+                    "labelProps.text": "labelProps.text"
+                  },
+                  "labelProps": {
+                    "text": "",
+                    "longMode": "dot"
+                  },
+                  "style": {
+                    "fontSize": "18sp",
+                    "textAlign": "right"
+                  },
+                  "placement": {
+                    "mode": "absolute",
+                    "x": "0dp",
+                    "y": "70dp",
+                    "width": "202dp",
+                    "height": "28dp"
+                  }
+                }
+              ]
+            },
+            {
+              "type": "container",
+              "id": "keypad",
+              "placement": {
+                "mode": "absolute",
+                "x": "0dp",
+                "y": "0dp",
+                "width": "466dp",
+                "height": "466dp"
+              },
+              "children": [
+                {
+                  "type": "button",
+                  "id": "clear",
+                  "styleRefs": [
+                    "app.secondaryChip"
+                  ],
+                  "style": {
+                    "radius": "24dp",
+                    "padding": "0dp"
+                  },
+                  "events": [
+                    {
+                      "type": "clicked",
+                      "action": "calculator.key.clear"
+                    }
+                  ],
+                  "layout": {
+                    "type": "flex",
+                    "mainAlign": "center",
+                    "crossAlign": "center"
+                  },
+                  "placement": {
+                    "mode": "absolute",
+                    "x": "66dp",
+                    "y": "134dp",
+                    "width": "76dp",
+                    "height": "48dp"
+                  },
+                  "children": [
+                    {
+                      "type": "label",
+                      "id": "label",
+                      "labelProps": {
+                        "text": "C"
+                      },
+                      "styleRefs": [
+                        "app.cardTitle"
+                      ],
+                      "style": {
+                        "fontSize": "24sp"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "button",
+                  "id": "divide",
+                  "styleRefs": [
+                    "app.primaryChip"
+                  ],
+                  "style": {
+                    "radius": "24dp",
+                    "padding": "0dp"
+                  },
+                  "events": [
+                    {
+                      "type": "clicked",
+                      "action": "calculator.key.divide"
+                    }
+                  ],
+                  "layout": {
+                    "type": "flex",
+                    "mainAlign": "center",
+                    "crossAlign": "center"
+                  },
+                  "placement": {
+                    "mode": "absolute",
+                    "x": "152dp",
+                    "y": "134dp",
+                    "width": "76dp",
+                    "height": "48dp"
+                  },
+                  "children": [
+                    {
+                      "type": "label",
+                      "id": "label",
+                      "labelProps": {
+                        "text": "/"
+                      },
+                      "styleRefs": [
+                        "app.selectableLabelSelected"
+                      ],
+                      "style": {
+                        "textColor": "${color.primary.on}",
+                        "fontSize": "24sp"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "button",
+                  "id": "multiply",
+                  "styleRefs": [
+                    "app.primaryChip"
+                  ],
+                  "style": {
+                    "radius": "24dp",
+                    "padding": "0dp"
+                  },
+                  "events": [
+                    {
+                      "type": "clicked",
+                      "action": "calculator.key.multiply"
+                    }
+                  ],
+                  "layout": {
+                    "type": "flex",
+                    "mainAlign": "center",
+                    "crossAlign": "center"
+                  },
+                  "placement": {
+                    "mode": "absolute",
+                    "x": "238dp",
+                    "y": "134dp",
+                    "width": "76dp",
+                    "height": "48dp"
+                  },
+                  "children": [
+                    {
+                      "type": "label",
+                      "id": "label",
+                      "labelProps": {
+                        "text": "x"
+                      },
+                      "styleRefs": [
+                        "app.selectableLabelSelected"
+                      ],
+                      "style": {
+                        "textColor": "${color.primary.on}",
+                        "fontSize": "24sp"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "button",
+                  "id": "backspace",
+                  "styleRefs": [
+                    "app.secondaryChip"
+                  ],
+                  "style": {
+                    "radius": "24dp",
+                    "padding": "0dp"
+                  },
+                  "events": [
+                    {
+                      "type": "clicked",
+                      "action": "calculator.key.backspace"
+                    }
+                  ],
+                  "layout": {
+                    "type": "flex",
+                    "mainAlign": "center",
+                    "crossAlign": "center"
+                  },
+                  "placement": {
+                    "mode": "absolute",
+                    "x": "324dp",
+                    "y": "134dp",
+                    "width": "76dp",
+                    "height": "48dp"
+                  },
+                  "children": [
+                    {
+                      "type": "label",
+                      "id": "label",
+                      "labelProps": {
+                        "text": "Del"
+                      },
+                      "styleRefs": [
+                        "app.cardTitle"
+                      ],
+                      "style": {
+                        "fontSize": "24sp"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "button",
+                  "id": "digit_7",
+                  "styleRefs": [
+                    "button"
+                  ],
+                  "style": {
+                    "radius": "24dp",
+                    "padding": "0dp"
+                  },
+                  "events": [
+                    {
+                      "type": "clicked",
+                      "action": "calculator.key.digit_7"
+                    }
+                  ],
+                  "layout": {
+                    "type": "flex",
+                    "mainAlign": "center",
+                    "crossAlign": "center"
+                  },
+                  "placement": {
+                    "mode": "absolute",
+                    "x": "66dp",
+                    "y": "192dp",
+                    "width": "76dp",
+                    "height": "48dp"
+                  },
+                  "children": [
+                    {
+                      "type": "label",
+                      "id": "label",
+                      "labelProps": {
+                        "text": "7"
+                      },
+                      "styleRefs": [
+                        "app.cardTitle"
+                      ],
+                      "style": {
+                        "fontSize": "24sp"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "button",
+                  "id": "digit_8",
+                  "styleRefs": [
+                    "button"
+                  ],
+                  "style": {
+                    "radius": "24dp",
+                    "padding": "0dp"
+                  },
+                  "events": [
+                    {
+                      "type": "clicked",
+                      "action": "calculator.key.digit_8"
+                    }
+                  ],
+                  "layout": {
+                    "type": "flex",
+                    "mainAlign": "center",
+                    "crossAlign": "center"
+                  },
+                  "placement": {
+                    "mode": "absolute",
+                    "x": "152dp",
+                    "y": "192dp",
+                    "width": "76dp",
+                    "height": "48dp"
+                  },
+                  "children": [
+                    {
+                      "type": "label",
+                      "id": "label",
+                      "labelProps": {
+                        "text": "8"
+                      },
+                      "styleRefs": [
+                        "app.cardTitle"
+                      ],
+                      "style": {
+                        "fontSize": "24sp"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "button",
+                  "id": "digit_9",
+                  "styleRefs": [
+                    "button"
+                  ],
+                  "style": {
+                    "radius": "24dp",
+                    "padding": "0dp"
+                  },
+                  "events": [
+                    {
+                      "type": "clicked",
+                      "action": "calculator.key.digit_9"
+                    }
+                  ],
+                  "layout": {
+                    "type": "flex",
+                    "mainAlign": "center",
+                    "crossAlign": "center"
+                  },
+                  "placement": {
+                    "mode": "absolute",
+                    "x": "238dp",
+                    "y": "192dp",
+                    "width": "76dp",
+                    "height": "48dp"
+                  },
+                  "children": [
+                    {
+                      "type": "label",
+                      "id": "label",
+                      "labelProps": {
+                        "text": "9"
+                      },
+                      "styleRefs": [
+                        "app.cardTitle"
+                      ],
+                      "style": {
+                        "fontSize": "24sp"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "button",
+                  "id": "subtract",
+                  "styleRefs": [
+                    "app.primaryChip"
+                  ],
+                  "style": {
+                    "radius": "24dp",
+                    "padding": "0dp"
+                  },
+                  "events": [
+                    {
+                      "type": "clicked",
+                      "action": "calculator.key.subtract"
+                    }
+                  ],
+                  "layout": {
+                    "type": "flex",
+                    "mainAlign": "center",
+                    "crossAlign": "center"
+                  },
+                  "placement": {
+                    "mode": "absolute",
+                    "x": "324dp",
+                    "y": "192dp",
+                    "width": "76dp",
+                    "height": "48dp"
+                  },
+                  "children": [
+                    {
+                      "type": "label",
+                      "id": "label",
+                      "labelProps": {
+                        "text": "-"
+                      },
+                      "styleRefs": [
+                        "app.selectableLabelSelected"
+                      ],
+                      "style": {
+                        "textColor": "${color.primary.on}",
+                        "fontSize": "24sp"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "button",
+                  "id": "digit_4",
+                  "styleRefs": [
+                    "button"
+                  ],
+                  "style": {
+                    "radius": "24dp",
+                    "padding": "0dp"
+                  },
+                  "events": [
+                    {
+                      "type": "clicked",
+                      "action": "calculator.key.digit_4"
+                    }
+                  ],
+                  "layout": {
+                    "type": "flex",
+                    "mainAlign": "center",
+                    "crossAlign": "center"
+                  },
+                  "placement": {
+                    "mode": "absolute",
+                    "x": "66dp",
+                    "y": "250dp",
+                    "width": "76dp",
+                    "height": "48dp"
+                  },
+                  "children": [
+                    {
+                      "type": "label",
+                      "id": "label",
+                      "labelProps": {
+                        "text": "4"
+                      },
+                      "styleRefs": [
+                        "app.cardTitle"
+                      ],
+                      "style": {
+                        "fontSize": "24sp"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "button",
+                  "id": "digit_5",
+                  "styleRefs": [
+                    "button"
+                  ],
+                  "style": {
+                    "radius": "24dp",
+                    "padding": "0dp"
+                  },
+                  "events": [
+                    {
+                      "type": "clicked",
+                      "action": "calculator.key.digit_5"
+                    }
+                  ],
+                  "layout": {
+                    "type": "flex",
+                    "mainAlign": "center",
+                    "crossAlign": "center"
+                  },
+                  "placement": {
+                    "mode": "absolute",
+                    "x": "152dp",
+                    "y": "250dp",
+                    "width": "76dp",
+                    "height": "48dp"
+                  },
+                  "children": [
+                    {
+                      "type": "label",
+                      "id": "label",
+                      "labelProps": {
+                        "text": "5"
+                      },
+                      "styleRefs": [
+                        "app.cardTitle"
+                      ],
+                      "style": {
+                        "fontSize": "24sp"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "button",
+                  "id": "digit_6",
+                  "styleRefs": [
+                    "button"
+                  ],
+                  "style": {
+                    "radius": "24dp",
+                    "padding": "0dp"
+                  },
+                  "events": [
+                    {
+                      "type": "clicked",
+                      "action": "calculator.key.digit_6"
+                    }
+                  ],
+                  "layout": {
+                    "type": "flex",
+                    "mainAlign": "center",
+                    "crossAlign": "center"
+                  },
+                  "placement": {
+                    "mode": "absolute",
+                    "x": "238dp",
+                    "y": "250dp",
+                    "width": "76dp",
+                    "height": "48dp"
+                  },
+                  "children": [
+                    {
+                      "type": "label",
+                      "id": "label",
+                      "labelProps": {
+                        "text": "6"
+                      },
+                      "styleRefs": [
+                        "app.cardTitle"
+                      ],
+                      "style": {
+                        "fontSize": "24sp"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "button",
+                  "id": "add",
+                  "styleRefs": [
+                    "app.primaryChip"
+                  ],
+                  "style": {
+                    "radius": "24dp",
+                    "padding": "0dp"
+                  },
+                  "events": [
+                    {
+                      "type": "clicked",
+                      "action": "calculator.key.add"
+                    }
+                  ],
+                  "layout": {
+                    "type": "flex",
+                    "mainAlign": "center",
+                    "crossAlign": "center"
+                  },
+                  "placement": {
+                    "mode": "absolute",
+                    "x": "324dp",
+                    "y": "250dp",
+                    "width": "76dp",
+                    "height": "48dp"
+                  },
+                  "children": [
+                    {
+                      "type": "label",
+                      "id": "label",
+                      "labelProps": {
+                        "text": "+"
+                      },
+                      "styleRefs": [
+                        "app.selectableLabelSelected"
+                      ],
+                      "style": {
+                        "textColor": "${color.primary.on}",
+                        "fontSize": "24sp"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "button",
+                  "id": "digit_1",
+                  "styleRefs": [
+                    "button"
+                  ],
+                  "style": {
+                    "radius": "24dp",
+                    "padding": "0dp"
+                  },
+                  "events": [
+                    {
+                      "type": "clicked",
+                      "action": "calculator.key.digit_1"
+                    }
+                  ],
+                  "layout": {
+                    "type": "flex",
+                    "mainAlign": "center",
+                    "crossAlign": "center"
+                  },
+                  "placement": {
+                    "mode": "absolute",
+                    "x": "66dp",
+                    "y": "308dp",
+                    "width": "76dp",
+                    "height": "48dp"
+                  },
+                  "children": [
+                    {
+                      "type": "label",
+                      "id": "label",
+                      "labelProps": {
+                        "text": "1"
+                      },
+                      "styleRefs": [
+                        "app.cardTitle"
+                      ],
+                      "style": {
+                        "fontSize": "24sp"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "button",
+                  "id": "digit_2",
+                  "styleRefs": [
+                    "button"
+                  ],
+                  "style": {
+                    "radius": "24dp",
+                    "padding": "0dp"
+                  },
+                  "events": [
+                    {
+                      "type": "clicked",
+                      "action": "calculator.key.digit_2"
+                    }
+                  ],
+                  "layout": {
+                    "type": "flex",
+                    "mainAlign": "center",
+                    "crossAlign": "center"
+                  },
+                  "placement": {
+                    "mode": "absolute",
+                    "x": "152dp",
+                    "y": "308dp",
+                    "width": "76dp",
+                    "height": "48dp"
+                  },
+                  "children": [
+                    {
+                      "type": "label",
+                      "id": "label",
+                      "labelProps": {
+                        "text": "2"
+                      },
+                      "styleRefs": [
+                        "app.cardTitle"
+                      ],
+                      "style": {
+                        "fontSize": "24sp"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "button",
+                  "id": "digit_3",
+                  "styleRefs": [
+                    "button"
+                  ],
+                  "style": {
+                    "radius": "24dp",
+                    "padding": "0dp"
+                  },
+                  "events": [
+                    {
+                      "type": "clicked",
+                      "action": "calculator.key.digit_3"
+                    }
+                  ],
+                  "layout": {
+                    "type": "flex",
+                    "mainAlign": "center",
+                    "crossAlign": "center"
+                  },
+                  "placement": {
+                    "mode": "absolute",
+                    "x": "238dp",
+                    "y": "308dp",
+                    "width": "76dp",
+                    "height": "48dp"
+                  },
+                  "children": [
+                    {
+                      "type": "label",
+                      "id": "label",
+                      "labelProps": {
+                        "text": "3"
+                      },
+                      "styleRefs": [
+                        "app.cardTitle"
+                      ],
+                      "style": {
+                        "fontSize": "24sp"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "button",
+                  "id": "percent",
+                  "styleRefs": [
+                    "app.primaryChip"
+                  ],
+                  "style": {
+                    "radius": "24dp",
+                    "padding": "0dp"
+                  },
+                  "events": [
+                    {
+                      "type": "clicked",
+                      "action": "calculator.key.percent"
+                    }
+                  ],
+                  "layout": {
+                    "type": "flex",
+                    "mainAlign": "center",
+                    "crossAlign": "center"
+                  },
+                  "placement": {
+                    "mode": "absolute",
+                    "x": "324dp",
+                    "y": "308dp",
+                    "width": "76dp",
+                    "height": "48dp"
+                  },
+                  "children": [
+                    {
+                      "type": "label",
+                      "id": "label",
+                      "labelProps": {
+                        "text": "%"
+                      },
+                      "styleRefs": [
+                        "app.selectableLabelSelected"
+                      ],
+                      "style": {
+                        "textColor": "${color.primary.on}",
+                        "fontSize": "24sp"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "button",
+                  "id": "digit_0",
+                  "styleRefs": [
+                    "button"
+                  ],
+                  "style": {
+                    "radius": "24dp",
+                    "padding": "0dp"
+                  },
+                  "events": [
+                    {
+                      "type": "clicked",
+                      "action": "calculator.key.digit_0"
+                    }
+                  ],
+                  "layout": {
+                    "type": "flex",
+                    "mainAlign": "center",
+                    "crossAlign": "center"
+                  },
+                  "placement": {
+                    "mode": "absolute",
+                    "x": "106dp",
+                    "y": "366dp",
+                    "width": "110dp",
+                    "height": "48dp"
+                  },
+                  "children": [
+                    {
+                      "type": "label",
+                      "id": "label",
+                      "labelProps": {
+                        "text": "0"
+                      },
+                      "styleRefs": [
+                        "app.cardTitle"
+                      ],
+                      "style": {
+                        "fontSize": "24sp"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "button",
+                  "id": "decimal",
+                  "styleRefs": [
+                    "button"
+                  ],
+                  "style": {
+                    "radius": "24dp",
+                    "padding": "0dp"
+                  },
+                  "events": [
+                    {
+                      "type": "clicked",
+                      "action": "calculator.key.decimal"
+                    }
+                  ],
+                  "layout": {
+                    "type": "flex",
+                    "mainAlign": "center",
+                    "crossAlign": "center"
+                  },
+                  "placement": {
+                    "mode": "absolute",
+                    "x": "230dp",
+                    "y": "366dp",
+                    "width": "56dp",
+                    "height": "48dp"
+                  },
+                  "children": [
+                    {
+                      "type": "label",
+                      "id": "label",
+                      "labelProps": {
+                        "text": "."
+                      },
+                      "styleRefs": [
+                        "app.cardTitle"
+                      ],
+                      "style": {
+                        "fontSize": "24sp"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "button",
+                  "id": "equals",
+                  "styleRefs": [
+                    "app.primaryChip"
+                  ],
+                  "style": {
+                    "radius": "24dp",
+                    "padding": "0dp"
+                  },
+                  "events": [
+                    {
+                      "type": "clicked",
+                      "action": "calculator.key.equals"
+                    }
+                  ],
+                  "layout": {
+                    "type": "flex",
+                    "mainAlign": "center",
+                    "crossAlign": "center"
+                  },
+                  "placement": {
+                    "mode": "absolute",
+                    "x": "300dp",
+                    "y": "366dp",
+                    "width": "60dp",
+                    "height": "48dp"
+                  },
+                  "children": [
+                    {
+                      "type": "label",
+                      "id": "label",
+                      "labelProps": {
+                        "text": "="
+                      },
+                      "styleRefs": [
+                        "app.selectableLabelSelected"
+                      ],
+                      "style": {
+                        "textColor": "${color.primary.on}",
+                        "fontSize": "24sp"
+                      }
+                    }
+                  ]
+                }
+              ],
+              "commonProps": {
+                "scrollable": false,
+                "clickable": false
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
