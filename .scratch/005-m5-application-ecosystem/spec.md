@@ -106,6 +106,8 @@ ESPocket 需要官方 Store 与远程 Runtime distribution path，但锁定的�
 
 ## 全部剩余工作授权
 
+2026-10-07：[15](issues/15-enable-xiaozhi-voice-conversation.md) 已完成，正式普通镜像 `bf237d3c7` 接通实际麦克风／小智语音，英文界面的中文识别与回复可读，并修复联合回归捕获的 timer 取消竞态和音频借用超时重置。完整问答、三次实际回复中 Home、八个非 Camera App、113 步系统回归及 156 项 host checks（1 项已有 skip）通过；电脑声源的两次未响应不作成功或识别率证据，详见[记录](records/2026-10-07-xiaozhi-voice-conversation.md)。实现已合并本地 main，任务 worktree 已归档，本地仅 main；原有发行／物理门槛继续由各自票持有。
+
 2026-10-07 用户明确要求完整修复小智语音，由 [15](issues/15-enable-xiaozhi-voice-conversation.md) 持有正式录音、编码、上传／回复及退出验收；此前 14 的临时硬件验证仅为已完成前置，不代表目标已经完成。
 
 2026-10-07 新增 [14](issues/14-verify-official-microphone-capability.md)：用户要求验证官方音频能力与实际麦克风。官方实现和双麦克风三轮受控短音采样已验证，现有产品镜像已恢复。服务器现在认可设备激活，实际会话仍失败在录音关闭导致的 AudioEncoder0 缺失；未启用正式产品录音或宣称完整小智对话可用。来源、测量与恢复结果见[记录](records/2026-10-07-official-microphone-verification.md)。

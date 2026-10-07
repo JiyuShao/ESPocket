@@ -4,7 +4,7 @@
 
 **Blocked by:** 无；设备已获小智服务器激活认可，硬件验证由 [14](14-verify-official-microphone-capability.md) 完成。
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 ## Scope
 
@@ -21,7 +21,7 @@
 - [x] 周期任务取消与再次排队竞态回归通过，联合 App 启动／退出不再触发已捕获的调度器空定时器 panic。
 - [x] 延迟音频消费不再因借用缓冲完成等待而重置正常 Decoder 流；最终完整声学回复与退出通过。
 - [x] 完整 host checks、Markdown、完整构建和最终普通镜像验证通过。
-- [ ] 记录身份、测量、失败、未验证项及实际使用方法，合并本地 main 并清理任务 worktree。
+- [x] 记录身份、测量、失败、未验证项及实际使用方法，合并本地 main 并清理任务 worktree。
 
 ## Comments
 
@@ -31,4 +31,10 @@
 
 用户已确认真实语音正常，并报告对话文字显示空白方块；字体修复及真机文字验收同属本票。
 
-最终普通镜像 `bf237d3c7` 的真实问答／中文截图、累计三次实际回复中的 Home／重进、八个非 Camera 原包和 113 步 Native／Runtime 系统回归通过，156 项 host checks（1 项已有 skip）与精确构建／App-only 校验通过。两次电脑播音未取得回复单独记为未响应，未冒充连续三轮成功或识别率证明；具体条件和局限保留在同一记录。本票接下来完成已授权的本地合并与清理。
+最终普通镜像 `bf237d3c7` 的真实问答／中文截图、累计三次实际回复中的 Home／重进、八个非 Camera 原包和 113 步 Native／Runtime 系统回归通过，156 项 host checks（1 项已有 skip）与精确构建／App-only 校验通过。两次电脑播音未取得回复单独记为未响应，未冒充连续三轮成功或识别率证明；具体条件和局限保留在同一记录。合并与清理结果见下。
+
+## Resolution
+
+正式产品接通官方 Recorder／AFE／Opus／XiaoZhi；准确匹配动态任务释放、拒绝无效模型头并将 TLS 动态内存移到 PSRAM。默认字体保留 Montserrat 并提供共享有界中文 fallback；真实 Owner 内修复 timer 取消／再次排队竞态及逐包借用完成超时误重置音频流。
+
+实现与验收提交 `5850a8b` 已快进合并本地 main。任务 worktree 已归档并移除 checkout；实际 Git worktree list 仅主仓库，本地 branch list 仅 main，没有 push。普通镜像 `bf237d3c7` 留在设备，最后为 Watch Face，录音已停止。使用方法与所有失败／未响应轮次保留在[记录](../records/2026-10-07-xiaozhi-voice-conversation.md)。

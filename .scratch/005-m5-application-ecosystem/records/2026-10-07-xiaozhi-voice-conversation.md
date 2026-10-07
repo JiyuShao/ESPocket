@@ -107,3 +107,7 @@
 ## 数据保留
 
 本轮只向 App 地址 `0x60000` 写产品镜像，不写 LittleFS、NVS、model、分区表或 bootloader。旧普通镜像与已有备份保持可回滚，既有官方 BPK 与用户数据不改写；不 push。
+
+## 本地合并与清理
+
+实现与验收提交 `5850a8b` 已从 detached 任务 worktree 快进合并本地 main。Codex worktree 归档已完成，实际 checkout 已移除；Git worktree list 仅 `/Users/jiyu/Code/personal/@projects/ESPocket`，本地 branch list 仅 main。没有 push，固件／源副本／旧镜像回滚资料仍位于前述 `/private/tmp` 路径，原始 managed components 在主仓库保留。最后设备套件的实际快照为 Watch Face、空 foregroundAppId、inputBusy false；测试结束未重新开启 AI 或 Recorder。
