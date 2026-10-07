@@ -34,6 +34,11 @@ std::expected<std::unique_ptr<ProductFonts>, std::string> ProductFonts::create()
     auto fonts = std::unique_ptr<ProductFonts>(new ProductFonts());
     const auto data_size = reinterpret_cast<uintptr_t>(espocket_cjk_end) -
                            reinterpret_cast<uintptr_t>(espocket_cjk_start);
+    const std::array<const lv_font_t *, 7> latin_fonts{
+        &lv_font_montserrat_10, &lv_font_montserrat_12, &lv_font_montserrat_14,
+        &lv_font_montserrat_16, &lv_font_montserrat_18, &lv_font_montserrat_20,
+        &lv_font_montserrat_32};
+    constexpr std::array<int32_t, 7> latin_sizes{10, 12, 14, 16, 18, 20, 32};
     for (size_t index = 0; index < sizes_.size(); ++index) {
         fonts->fonts_[index] = lv_tiny_ttf_create_data_ex(
             espocket_cjk_start, data_size, sizes_[index], LV_FONT_KERNING_NONE,
@@ -41,6 +46,12 @@ std::expected<std::unique_ptr<ProductFonts>, std::string> ProductFonts::create()
         if (fonts->fonts_[index] == nullptr) {
             return std::unexpected("Failed to create zh_CN font size " + std::to_string(sizes_[index]));
         }
+        size_t latin_index = 0;
+        for (size_t candidate = 0; candidate < latin_sizes.size(); ++candidate) {
+            if (latin_sizes[candidate] <= sizes_[index]) latin_index = candidate;
+        }
+        fonts->default_fonts_[index] = *latin_fonts[latin_index];
+        fonts->default_fonts_[index].fallback = fonts->fonts_[index];
     }
     return fonts;
 }
@@ -67,6 +78,16 @@ std::expected<void, std::string> ProductFonts::register_with(
     }
     if (!backend.register_font_resource(resource)) {
         return std::unexpected("Failed to register product font zh_CN");
+    }
+    resource.id = "default";
+    resource.primary_src = "default";
+    resource.languages = {"en", "zh_CN"};
+    resource.native_fonts.clear();
+    for (size_t index = 0; index < sizes_.size(); ++index) {
+        resource.native_fonts.push_back({reinterpret_cast<uintptr_t>(&default_fonts_[index]), sizes_[index]});
+    }
+    if (!backend.register_font_resource(resource)) {
+        return std::unexpected("Failed to register product default font");
     }
     return {};
 }

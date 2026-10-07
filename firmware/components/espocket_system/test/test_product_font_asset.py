@@ -45,8 +45,9 @@ int main(int argc, char **argv) {
     assert(stbtt_InitFont(&font, data.data(), 0));
     const int codepoints[] = {CODEPOINTS};
     for (auto codepoint : codepoints) assert(stbtt_FindGlyphIndex(&font, codepoint) != 0);
-    for (auto size : {12, 18, 28, 64}) {
-        for (auto codepoint : {0x5317, 0x4eac, 0x6674, 0x6e29, 0x31, 0xb0}) {
+    for (auto size : {10, 12, 18, 28, 64}) {
+        for (auto codepoint : {0x5317, 0x4eac, 0x6674, 0x6e29, 0x4f60, 0x597d,
+                              0x4e00, 0x52a0, 0x7b49, 0x4e8e, 0x51e0, 0x31, 0xb0}) {
             int width = 0, height = 0;
             auto *bitmap = stbtt_GetCodepointBitmap(&font, 0, stbtt_ScaleForPixelHeight(&font, size),
                 codepoint, &width, &height, nullptr, nullptr);

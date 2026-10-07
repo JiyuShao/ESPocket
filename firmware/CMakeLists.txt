@@ -21,7 +21,7 @@ endif()
 # This does not relax warnings or modify managed component sources.
 idf_component_get_property(espocket_hal_adaptor_lib espressif__brookesia_hal_adaptor COMPONENT_LIB)
 idf_component_get_property(espocket_hal_adaptor_dir espressif__brookesia_hal_adaptor COMPONENT_DIR)
-foreach(espocket_hal_source IN ITEMS src/display/device.cpp src/audio/device.cpp src/audio/codec_player_impl.cpp)
+foreach(espocket_hal_source IN ITEMS src/display/device.cpp src/audio/device.cpp src/audio/codec_player_impl.cpp src/audio/codec_recorder_impl.cpp)
     set_property(SOURCE "${espocket_hal_adaptor_dir}/${espocket_hal_source}"
         TARGET_DIRECTORY ${espocket_hal_adaptor_lib}
         APPEND PROPERTY COMPILE_OPTIONS

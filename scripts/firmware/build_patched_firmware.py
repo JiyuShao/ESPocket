@@ -26,6 +26,8 @@ PATCH_SETS = {
 
 PATCH_SETS['production'] += (('espressif__mcp-c-sdk', '2.0.1'),)
 PATCH_SETS['production'] += (('espressif__brookesia_agent_manager', '0.8.2'),)
+PATCH_SETS['production'] += (('espressif__esp_xiaozhi', '0.1.2'),)
+PATCH_SETS['production'] += (('espressif__esp-sr', '2.4.4'),)
 PATCH_SETS['gui-candidate'] = PATCH_SETS['production']
 PATCH_SETS['scheduler-candidate'] = PATCH_SETS['gui-candidate']
 
@@ -61,6 +63,32 @@ AUDIO_OPTIONS = {
     'CONFIG_BROOKESIA_GUI_LVGL_DISPLAY_SOURCE_BUFFER_HEIGHT': 40,
 }
 
+VOICE_OPTIONS = {
+    'CONFIG_BROOKESIA_HAL_ADAPTOR_AUDIO_ENABLE_CODEC_RECORDER_IMPL': True,
+    'CONFIG_BROOKESIA_HAL_ADAPTOR_AUDIO_CODEC_RECORDER_BITS': 16,
+    'CONFIG_BROOKESIA_HAL_ADAPTOR_AUDIO_CODEC_RECORDER_CHANNELS': 2,
+    'CONFIG_BROOKESIA_HAL_ADAPTOR_AUDIO_CODEC_RECORDER_SAMPLE_RATE': 16000,
+    'CONFIG_BROOKESIA_HAL_ADAPTOR_AUDIO_CODEC_RECORDER_MIC_LAYOUT': '"MM"',
+    'CONFIG_BROOKESIA_HAL_ADAPTOR_AUDIO_CODEC_RECORDER_GENERAL_GAIN': '"30.0"',
+    'CONFIG_BROOKESIA_HAL_ADAPTOR_AUDIO_CODEC_RECORDER_CHANNEL_GAINS': '"{}"',
+    'CONFIG_AUDIO_AFE_ENABLE': True,
+    'CONFIG_AUDIO_ENCODER_OPUS_SUPPORT': True,
+    'CONFIG_AUDIO_DECODER_OPUS_SUPPORT': True,
+    'CONFIG_XIAOZHI_AUDIO_TASK_ALLOC_STATIC': False,
+    'CONFIG_XIAOZHI_AUDIO_TASK_ALLOC_DYNAMIC': True,
+    'CONFIG_XIAOZHI_STACK_IN_PSRAM': True,
+    'CONFIG_XIAOZHI_AUDIO_TASK_STACK_SIZE': 8192,
+    'CONFIG_ESP_WIFI_STATIC_RX_BUFFER_NUM': 10,
+    'CONFIG_ESP_WIFI_STATIC_TX_BUFFER_NUM': 8,
+    'CONFIG_ESP_WIFI_TX_BA_WIN': 6,
+    'CONFIG_MBEDTLS_INTERNAL_MEM_ALLOC': False,
+    'CONFIG_MBEDTLS_EXTERNAL_MEM_ALLOC': True,
+    'CONFIG_MBEDTLS_DEFAULT_MEM_ALLOC': False,
+    'CONFIG_MBEDTLS_CUSTOM_MEM_ALLOC': False,
+}
+
+VOICE_PATCH_SETS = frozenset(('production', 'store-candidate', 'gui-candidate', 'scheduler-candidate'))
+
 STORAGE_OPTIONS = {
     'CONFIG_ESPTOOLPY_FLASHSIZE_16MB': False,
     'CONFIG_ESPTOOLPY_FLASHSIZE_32MB': True,
@@ -91,6 +119,30 @@ def configure_display_transfer(text):
     if not matched or int(matched[2]) not in (9320, DISPLAY_TRANSFER_BYTES):
         raise ValueError('Unexpected generated display SPI configuration')
     return text[:matched.start()] + matched[1] + str(DISPLAY_TRANSFER_BYTES) + matched[3] + text[matched.end():]
+
+
+def configure_voice_input(text):
+    pattern = re.compile(r'const static dev_audio_codec_config_t esp_bmgr_audio_adc_cfg = \{.*?\n\};', re.DOTALL)
+    matched = pattern.search(text)
+    if not matched:
+        raise ValueError('Unexpected generated audio ADC configuration')
+    original = matched[0]
+    values = {
+        'chip': ('"es7210"', '"es7210"'),
+        'adc_enabled': ('true', 'true'),
+        'adc_max_channel': ('2', '2'),
+        'adc_channel_mask': ('0x7', '0x3'),
+        'adc_channel_labels': ('"NA,RE,FR,FL"', '"FL,FR"'),
+        'adc_init_gain': ('0', '30'),
+    }
+    configured = original
+    for name, (previous, expected) in values.items():
+        field = re.compile(r'(\.' + name + r' = )([^\n]+)(,\n)')
+        selected = field.search(configured)
+        if not selected or selected[2] not in (previous, expected):
+            raise ValueError(f'Unexpected generated audio ADC configuration: {name}')
+        configured = field.sub(lambda selection: selection[1] + expected + selection[3], configured, count=1)
+    return text[:matched.start()] + configured + text[matched.end():]
 
 
 def configure_performance(text):
@@ -140,14 +192,15 @@ def audio_dependencies(root):
     return dependencies
 
 
-def display_options(display_buffer_height):
+def display_options(display_buffer_height, *, voice=False):
     if display_buffer_height not in (40, 80):
         raise ValueError('Unsupported display buffer height')
-    return {**AUDIO_OPTIONS, 'CONFIG_BROOKESIA_GUI_LVGL_DISPLAY_SOURCE_BUFFER_HEIGHT': display_buffer_height}
+    return {**AUDIO_OPTIONS, **(VOICE_OPTIONS if voice else {}),
+            'CONFIG_BROOKESIA_GUI_LVGL_DISPLAY_SOURCE_BUFFER_HEIGHT': display_buffer_height}
 
 
-def configure_audio_candidate(text, *, display_buffer_height=40):
-    options = display_options(display_buffer_height)
+def configure_audio_candidate(text, *, display_buffer_height=40, voice=False):
+    options = display_options(display_buffer_height, voice=voice)
     lines = [line for line in text.splitlines() if not any(
         line.startswith(key + '=') or line.startswith('# ' + key + ' ')
         for key in options)]
@@ -159,8 +212,8 @@ def configure_audio_candidate(text, *, display_buffer_height=40):
     return '\n'.join(lines) + '\n'
 
 
-def verify_audio_config(text, *, display_buffer_height=40):
-    options = display_options(display_buffer_height)
+def verify_audio_config(text, *, display_buffer_height=40, voice=False):
+    options = display_options(display_buffer_height, voice=voice)
     for key, enabled in options.items():
         if type(enabled) is bool:
             valid = (key + '=y' in text.splitlines()) == enabled
@@ -246,6 +299,9 @@ def stage(root, workspace, sdkconfig, patch_set='production', *, display_buffer_
     # Board Manager emits absolute component paths. Keep the copied board input
     # inside this workspace, rather than selecting a component from the checkout.
     generated_board = firmware / 'components/gen_bmgr_codes'
+    audio_devices = generated_board / 'gen_board_device_config.c'
+    if audio_devices.is_file() and patch_set in VOICE_PATCH_SETS:
+        audio_devices.write_text(configure_voice_input(audio_devices.read_text()))
     display_peripheral = generated_board / 'gen_board_periph_config.c'
     if display_peripheral.is_file() and patch_set == 'production':
         display_peripheral.write_text(configure_display_transfer(display_peripheral.read_text()))
@@ -291,7 +347,8 @@ def stage(root, workspace, sdkconfig, patch_set='production', *, display_buffer_
     if patch_set == 'production':
         config.write_text(configure_storage(config.read_text()))
     if patch_set in ('production', 'audio-candidate', 'display-candidate', 'store-candidate', 'gui-candidate', 'scheduler-candidate'):
-        config.write_text(configure_audio_candidate(config.read_text(), display_buffer_height=display_buffer_height))
+        config.write_text(configure_audio_candidate(config.read_text(), display_buffer_height=display_buffer_height,
+                                                   voice=patch_set in VOICE_PATCH_SETS))
         config.write_text(configure_performance(config.read_text()))
     elif display_buffer_height != 40:
         display_options(display_buffer_height)
@@ -307,6 +364,7 @@ def stage(root, workspace, sdkconfig, patch_set='production', *, display_buffer_
     config.write_text('\n'.join(lines) + '\nCONFIG_BROOKESIA_RUNTIME_JS_ASYNC_STACK_SIZE=16384\n')
     (workspace / 'patch-inputs.json').write_text(json.dumps({
         'patch_set': patch_set,
+        'voice_enabled': patch_set in VOICE_PATCH_SETS,
         'product_display_transfer_bytes': DISPLAY_TRANSFER_BYTES if patch_set == 'production' else None,
         'audio_candidate_dependencies': audio_extra,
         'display_buffer_height': next((int(line.split('=')[1]) for line in config.read_text().splitlines()
@@ -341,7 +399,13 @@ def main():
                 verify_storage_config((firmware / 'sdkconfig').read_text())
                 verify_performance_config((firmware / 'sdkconfig').read_text())
             if args.patch_set in ('production', 'audio-candidate', 'display-candidate', 'store-candidate', 'gui-candidate', 'scheduler-candidate'):
-                verify_audio_config((firmware / 'sdkconfig').read_text(), display_buffer_height=args.display_buffer_height)
+                verify_audio_config((firmware / 'sdkconfig').read_text(), display_buffer_height=args.display_buffer_height,
+                                    voice=args.patch_set in VOICE_PATCH_SETS)
+            if args.patch_set in VOICE_PATCH_SETS:
+                generated_audio = firmware / 'components/gen_bmgr_codes/gen_board_device_config.c'
+                configured_audio = generated_audio.read_text()
+                if configure_voice_input(configured_audio) != configured_audio:
+                    raise ValueError('Configured product microphone channels changed after reconfigure')
             glyph_errors = check_glyphs(args.workspace.resolve(), (firmware / 'sdkconfig').read_text())
             if glyph_errors:
                 raise ValueError('Configured glyph coverage failed: ' + '\n'.join(glyph_errors))

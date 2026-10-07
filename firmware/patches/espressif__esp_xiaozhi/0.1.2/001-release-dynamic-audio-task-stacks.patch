@@ -1,0 +1,23 @@
+--- a/src/esp_xiaozhi_chat.c
++++ b/src/esp_xiaozhi_chat.c
+@@ -861,7 +861,11 @@
+     if (evt != NULL) {
+         xEventGroupSetBits(evt, ESP_XIAOZHI_CHAT_RECV_TASK_EXITED);
+     }
++#if CONFIG_XIAOZHI_AUDIO_TASK_ALLOC_STATIC
+     vTaskDelete(NULL);
++#else
++    vTaskDeleteWithCaps(NULL);
++#endif
+ }
+ 
+ static esp_err_t esp_xiaozhi_chat_create_audio_input_task(esp_xiaozhi_chat_t *xiaozhi_chat)
+@@ -984,7 +988,7 @@
+     EventGroupHandle_t evt = NULL;
+     if (!xiaozhi_chat || !xiaozhi_chat->udp || !xiaozhi_chat->udp->audio_receive_events) {
+         ESP_LOGE(TAG, "Invalid parameter in audio input task");
+-        vTaskDelete(NULL);
++        esp_xiaozhi_chat_audio_input_exit(NULL);
+         return;
+     }
+ 

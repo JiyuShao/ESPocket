@@ -36,6 +36,8 @@ Theme `styles.<name>` 的普通属性直接写在样式对象上，例如 `{"bgC
 
 System 为 Runtime App 提供全局 `zh_CN` 字体资源。`fonts/espocket_cjk.otf` 嵌入 App 镜像，来自锁定 LVGL 中的 Source Han Sans SC，派生字体名为 ESPocket CJK；许可见 [OFL.txt](fonts/OFL.txt)，来源、生成器版本和内容摘要见 [manifest.json](fonts/manifest.json)。字符集为 GB2312、可打印 Latin-1 与 en dash，涵盖原 Weather 包的静态文字；不宣称完整 Unicode CJK 覆盖。
 
-Tiny TTF 直接读取嵌入数据，按注册字号解码字形，每个字号使用四项缓存。System 持有原生字体，Core 先清理使用字体的 GUI，再释放字体和 Display。第三方包的未声明字体引用仍需解析为已存在的真实字体资源。
+Tiny TTF 直接读取嵌入数据，按注册字号解码字形；24 px 以下使用 96 项缓存，28–40 px 使用 48 项，其余使用 16 项。System 持有原生字体，Core 先清理使用字体的 GUI，再释放字体和 Display。第三方包的未声明字体引用仍需解析为已存在的真实字体资源。
+
+System 同时注册 `default` 资源：产品拥有的 Montserrat 副本保留原英文／符号字形，以同字号中文字体作为 LVGL fallback。动态中文内容不受英文界面语言限制；`zh_CN` 和默认字体共用上述字库与缓存，退出 App 不会销毁 System 的借用字体。
 
 构建使用已生成资产，不依赖 fontTools。需要更新资产时，在独立 Python 环境安装 `fonttools==4.66.1`，运行 `python scripts/firmware/prepare_product_font.py`；输入 SHA 不匹配会停止。主机测试用实际 Tiny TTF outline decoder 核对全部字符和小／大字号，生成器不会修改上游字体。

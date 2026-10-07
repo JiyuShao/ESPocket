@@ -8,6 +8,16 @@ GUI Interface 0.8.2 的[预加载资源归属补丁](espressif__brookesia_gui_in
 
 Agent Manager 0.8.2 的[会话阶段录音初始化补丁](espressif__brookesia_agent_manager/0.8.2/001-defer-capture-until-conversation.patch)将 capture DataFlow 的获取从服务启动移到会话启动。账号激活可以在 playback-only 产品上运行；实际会话仍要求真实录音接口，不伪造输入或吞掉缺少接口的错误。默认 production 精确选择该补丁；验收由 [005/13](../../.scratch/005-m5-application-ecosystem/issues/13-xiaozhi-and-launcher-performance.md)持有。
 
+同一 Owner 的[音频队列所有权补丁](espressif__brookesia_agent_manager/0.8.2/002-own-queued-agent-audio-packets.patch)通过官方 DataFlow `write_copy` 将 Opus 包交给现有有界 Decoder 队列。旧同步借用路径把 200 ms 消费延迟误判为流故障并重置 Decoder；复制后调用者可安全归还输入，实际消费仍由 Audio Owner 管理。保留原队列容量和 20 ms 入队超时，满队列、关闭和写入失败继续报告，不增加另一套音频队列。真实 ingress 方法回归覆盖延迟消费、输入复用、Home 清理、准入失败及半双工条件；完整播放与退出门槛由 [005/15](../../.scratch/005-m5-application-ecosystem/issues/15-enable-xiaozhi-voice-conversation.md)持有。
+
+2026-10-07 的正式产品语音装配由 [005/15](../../.scratch/005-m5-application-ecosystem/issues/15-enable-xiaozhi-voice-conversation.md)持有：独立构建启用官方 Recorder／AFE，准确选择 ES7210 MIC1/MIC2 的双通道配置，既有 playback-only 与会话阶段 capture 补丁仍保留。该装配使用官方 Opus／Agent DataFlow，不另建录音或云协议实现。
+
+XiaoZhi 0.1.2 的[动态音频任务释放补丁](espressif__esp_xiaozhi/0.1.2/001-release-dynamic-audio-task-stacks.patch)修复官方动态／PSRAM 任务创建后仍调用普通 `vTaskDelete` 的不匹配。正常退出和无效参数退出统一匹配 `vTaskDeleteWithCaps`；静态模式仍使用原 API。真实退出函数的 host 回归覆盖 32 次释放、空参数和静态模式；同一 [005/15](../../.scratch/005-m5-application-ecosystem/issues/15-enable-xiaozhi-voice-conversation.md)持有真机会话及反复 Home 门槛。
+
+Lib Utils 0.8.2 的[定时器生命周期补丁](espressif__brookesia_lib_utils/0.8.2/003-serialize-timer-scheduling-and-cancellation.patch)修复周期回调决定再次排队后，取消／移除任务并释放 timer 导致的 LoadProhibited。每个任务拥有短时 timer 锁，统一保护排队、取消、暂停／恢复、restart 和 shutdown；回调运行时不持该锁。timer／promise 完成初始化后才发布 task handle，已取消或关闭中的任务不重新排队。执行真实 delayed／periodic／cancel／remove 方法的并发回归，在 expiry 与 async_wait 之间强制取消，原版失败、修复通过；普通镜像联合 App／语音退出由 [005/15](../../.scratch/005-m5-application-ecosystem/issues/15-enable-xiaozhi-voice-conversation.md)持有。
+
+ESP-SR 2.4.4 的[模型头校验补丁](espressif__esp-sr/2.4.4/001-reject-empty-or-invalid-model-header.patch)在读取模型数量后、分配与 mmap 前拒绝空、读取失败或超出分区头预算的模型；失败不增加初始化引用计数。真实 mmap／init 方法的 host 回归覆盖零模型、擦除、短分区、读取失败、超预算、缺失分区、设备残留旧镜像头以及有效模型复用。不会写模型分区；未请求 WakeNet／命令检测的官方 AFE 可以继续无本地模型运行。故障回溯与真机门槛由同一 [005/15](../../.scratch/005-m5-application-ecosystem/issues/15-enable-xiaozhi-voice-conversation.md)持有。
+
 HAL 0.8.4 的[活跃播放关闭回调补丁](espressif__brookesia_hal_adaptor/0.8.4/003-separate-playback-callback-from-close-lock.patch)把 playback callback 存储与 acquire／release 生命周期锁分开。关闭仍串行等待真实音频 worker；最终 STOPPED 回调可完成，不等待关闭线程持有的生命周期锁。真实 close／release／event 方法的并发主机回归和小智播报中 Home 真机回归由同一 [005/13](../../.scratch/005-m5-application-ecosystem/issues/13-xiaozhi-and-launcher-performance.md)持有。
 
 已接受 [Runtime JS 0.8.3 异步栈配置补丁](espressif__brookesia_runtime_js/0.8.3/001-configure-async-stack.patch)，由 [ADR-0015](../../docs/adr/0015-runtime-async-stack-patch-exception.md)限定授权。manifest 锁定完整原始源码与补丁 hash，上游问题尚未提交。构建与设备验收状态以 [008/04](../../.scratch/008-m8-app-contract/issues/04-resolve-runtime-async-stack-overflow.md)为准。

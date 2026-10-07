@@ -62,7 +62,9 @@ class PatchedFirmwareStageTest(unittest.TestCase):
                          ('espressif__esp_lv_decoder', '0.4.3'),
                      ('espressif__esp-boost', '0.6.0'),
                      ('espressif__mcp-c-sdk', '2.0.1'),
-                     ('espressif__brookesia_agent_manager', '0.8.2')))
+                     ('espressif__brookesia_agent_manager', '0.8.2'),
+                     ('espressif__esp_xiaozhi', '0.1.2'),
+                     ('espressif__esp-sr', '2.4.4')))
         self.assertEqual(BUILDER.PATCH_SETS['store-candidate'], BUILDER.PATCH_SETS['production'])
 
     def setUp(self):
@@ -281,3 +283,49 @@ class AudioCandidateConfigTest(unittest.TestCase):
         ]:
             with self.subTest(wrong=wrong), self.assertRaisesRegex(ValueError, 'configuration'):
                 BUILDER.verify_audio_config(text.replace(old, wrong))
+
+    def test_voice_profile_rejects_unavailable_capture_and_format_drift(self):
+        playback = BUILDER.configure_audio_candidate('')
+        with self.assertRaisesRegex(ValueError, 'configuration'):
+            BUILDER.verify_audio_config(playback, voice=True)
+        voice = BUILDER.configure_audio_candidate(playback, voice=True)
+        BUILDER.verify_audio_config(voice, voice=True)
+        self.assertIn('CONFIG_XIAOZHI_AUDIO_TASK_ALLOC_DYNAMIC=y', voice)
+        self.assertIn('CONFIG_XIAOZHI_STACK_IN_PSRAM=y', voice)
+        self.assertIn('CONFIG_ESP_WIFI_STATIC_TX_BUFFER_NUM=8', voice)
+        self.assertIn('CONFIG_MBEDTLS_EXTERNAL_MEM_ALLOC=y', voice)
+        for old, wrong in (
+            ('CONFIG_BROOKESIA_HAL_ADAPTOR_AUDIO_ENABLE_CODEC_RECORDER_IMPL=y', '# CONFIG_BROOKESIA_HAL_ADAPTOR_AUDIO_ENABLE_CODEC_RECORDER_IMPL is not set'),
+            ('CONFIG_AUDIO_AFE_ENABLE=y', '# CONFIG_AUDIO_AFE_ENABLE is not set'),
+            ('CONFIG_AUDIO_ENCODER_OPUS_SUPPORT=y', '# CONFIG_AUDIO_ENCODER_OPUS_SUPPORT is not set'),
+            ('CONFIG_XIAOZHI_AUDIO_TASK_STACK_SIZE=8192', 'CONFIG_XIAOZHI_AUDIO_TASK_STACK_SIZE=2048'),
+            ('RECORDER_CHANNELS=2', 'RECORDER_CHANNELS=1'),
+            ('RECORDER_SAMPLE_RATE=16000', 'RECORDER_SAMPLE_RATE=48000'),
+            ('RECORDER_MIC_LAYOUT="MM"', 'RECORDER_MIC_LAYOUT="MR"'),
+            ('RECORDER_CHANNEL_GAINS="{}"', 'RECORDER_CHANNEL_GAINS="{\\"0\\":0.0}"'),
+            ('CONFIG_XIAOZHI_STACK_IN_PSRAM=y', '# CONFIG_XIAOZHI_STACK_IN_PSRAM is not set'),
+            ('CONFIG_ESP_WIFI_STATIC_TX_BUFFER_NUM=8', 'CONFIG_ESP_WIFI_STATIC_TX_BUFFER_NUM=16'),
+            ('CONFIG_MBEDTLS_EXTERNAL_MEM_ALLOC=y', '# CONFIG_MBEDTLS_EXTERNAL_MEM_ALLOC is not set'),
+        ):
+            with self.subTest(wrong=wrong), self.assertRaisesRegex(ValueError, 'configuration'):
+                BUILDER.verify_audio_config(voice.replace(old, wrong), voice=True)
+
+    def test_voice_board_input_selects_the_two_physical_microphones(self):
+        original = '''const static dev_audio_codec_config_t esp_bmgr_audio_adc_cfg = {
+    .name = "audio_adc",
+    .chip = "es7210",
+    .adc_enabled = true,
+    .adc_max_channel = 2,
+    .adc_channel_mask = 0x7,
+    .adc_channel_labels = "NA,RE,FR,FL",
+    .adc_init_gain = 0,
+};
+'''
+        configured = BUILDER.configure_voice_input(original)
+        self.assertIn('.adc_channel_mask = 0x3,', configured)
+        self.assertIn('.adc_channel_labels = "FL,FR",', configured)
+        self.assertIn('.adc_init_gain = 30,', configured)
+        self.assertEqual(BUILDER.configure_voice_input(configured), configured)
+        for wrong in (original.replace('es7210', 'es8311'), original.replace('0x7', '0xf')):
+            with self.assertRaisesRegex(ValueError, 'Unexpected'):
+                BUILDER.configure_voice_input(wrong)

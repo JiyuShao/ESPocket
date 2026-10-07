@@ -1,0 +1,153 @@
+--- a/src/private/task_scheduler_impl.hpp
++++ b/src/private/task_scheduler_impl.hpp
+@@ -26,6 +26,7 @@
+ #endif
+ 
+ #if !BROOKESIA_LIB_UTILS_USE_WASM_SINGLE_THREAD_SCHEDULER
++#   include "boost/thread/recursive_mutex.hpp"
+ #   include "boost/asio/executor_work_guard.hpp"
+ #   include "boost/asio/io_context.hpp"
+ #   include "boost/asio/steady_timer.hpp"
+@@ -53,6 +54,7 @@
+ #if BROOKESIA_LIB_UTILS_USE_WASM_SINGLE_THREAD_SCHEDULER
+         std::atomic<uint64_t> generation = 0;
+ #else
++        boost::recursive_mutex timer_mutex;
+         std::shared_ptr<boost::asio::steady_timer> timer;
+ #endif
+         std::atomic<TaskState> state = TaskState::Running;
+--- a/src/task_scheduler.cpp
++++ b/src/task_scheduler.cpp
+@@ -223,7 +223,9 @@
+     // Cancel all pending tasks
+     {
+         boost::lock_guard<boost::mutex> lock(mutex_);
++        is_running_.store(false);
+         for (auto& [id, handle] : tasks_) {
++            boost::lock_guard<boost::recursive_mutex> timer_lock(handle->timer_mutex);
+             handle->state = TaskState::Canceled;
+             if (handle->timer) {
+                 handle->timer->cancel();
+@@ -758,7 +760,8 @@
+         return false;
+     }
+ 
+-    auto &handle = it->second;
++    auto handle = it->second;
++    boost::lock_guard<boost::recursive_mutex> timer_lock(handle->timer_mutex);
+ 
+     // Check if task type supports timer restart
+     if (handle->type != TaskType::Delayed && handle->type != TaskType::Periodic) {
+@@ -979,28 +982,29 @@
+     std::shared_ptr<boost::asio::strand<boost::asio::io_context::executor_type>> strand;
+     {
+         boost::lock_guard lock(mutex_);
+-        tasks_[handle->id] = handle;
++        if (!is_running() || !io_context_ || io_context_->stopped()) {
++            return nullptr;
++        }
+         // If group is specified, add to group mapping
+         if (!group.empty()) {
+-            groups_[group].insert(handle->id);
+             // Check if group has strand configured
+             auto strand_it = strands_.find(group);
+             if (strand_it != strands_.end()) {
+                 strand = strand_it->second;
+             }
+         }
++        if (strand) {
++            handle->timer = std::make_shared<boost::asio::steady_timer>(*strand);
++        } else {
++            handle->timer = std::make_shared<boost::asio::steady_timer>(*io_context_);
++        }
++        handle->promise = std::make_shared<boost::promise<bool>>();
++        handle->future = handle->promise->get_future().share();
++        tasks_[handle->id] = handle;
++        if (!group.empty()) groups_[group].insert(handle->id);
+         total_tasks_++;
+     }
+ 
+-    // Create timer with strand executor if available, otherwise use io_context executor
+-    if (strand) {
+-        handle->timer = std::make_shared<boost::asio::steady_timer>(*strand);
+-    } else {
+-        handle->timer = std::make_shared<boost::asio::steady_timer>(*io_context_);
+-    }
+-    handle->promise = std::make_shared<boost::promise<bool>>();
+-    handle->future = handle->promise->get_future().share();
+-
+     BROOKESIA_LOGD("Created Task[%1%] (group: %2%)", handle->id, group);
+ 
+     return handle;
+@@ -1011,6 +1015,11 @@
+     BROOKESIA_LOG_TRACE_GUARD_WITH_THIS();
+ 
+     BROOKESIA_LOGD("Params: handle(Task[%1%])", handle->id);
++
++    boost::lock_guard<boost::recursive_mutex> timer_lock(handle->timer_mutex);
++    if (handle->state != TaskState::Running || !handle->timer) {
++        return;
++    }
+ 
+     handle->timer->expires_after(std::chrono::milliseconds(handle->interval_ms));
+     handle->timer->async_wait([this, handle, task = std::move(task)](const boost::system::error_code & ec) {
+@@ -1062,6 +1071,11 @@
+ void TaskScheduler::Impl::schedule_periodic(std::shared_ptr<TaskHandle> handle, PeriodicTask task)
+ {
+     // BROOKESIA_LOG_TRACE_GUARD_WITH_THIS();
++
++    boost::lock_guard<boost::recursive_mutex> timer_lock(handle->timer_mutex);
++    if (handle->state != TaskState::Running || !handle->timer) {
++        return;
++    }
+ 
+     handle->timer->expires_after(std::chrono::milliseconds(handle->interval_ms));
+     handle->timer->async_wait([this, handle, task](const boost::system::error_code & ec) {
+@@ -1148,7 +1162,8 @@
+         return;
+     }
+ 
+-    auto &handle = it->second;
++    auto handle = it->second;
++    boost::lock_guard<boost::recursive_mutex> timer_lock(handle->timer_mutex);
+     handle->state = TaskState::Canceled;
+     if (handle->timer) {
+         handle->timer->cancel();
+@@ -1181,7 +1196,8 @@
+         return false;
+     }
+ 
+-    auto &handle = it->second;
++    auto handle = it->second;
++    boost::lock_guard<boost::recursive_mutex> timer_lock(handle->timer_mutex);
+ 
+     // Check if task type supports suspend
+     if (handle->type != TaskType::Delayed && handle->type != TaskType::Periodic) {
+@@ -1226,7 +1242,8 @@
+         return false;
+     }
+ 
+-    auto &handle = it->second;
++    auto handle = it->second;
++    boost::lock_guard<boost::recursive_mutex> timer_lock(handle->timer_mutex);
+ 
+     // Check if task type supports resume
+     if (handle->type != TaskType::Delayed && handle->type != TaskType::Periodic) {
+@@ -1382,10 +1399,13 @@
+     // Clean up task handle
+     auto it = tasks_.find(task_id);
+     if (it != tasks_.end()) {
+-        // Ensure timer is canceled and cleaned up
+-        if (it->second && it->second->timer) {
+-            it->second->timer->cancel();
+-            it->second->timer.reset();
++        auto handle = it->second;
++        if (handle) {
++            boost::lock_guard<boost::recursive_mutex> timer_lock(handle->timer_mutex);
++            if (handle->timer) {
++                handle->timer->cancel();
++                handle->timer.reset();
++            }
+         }
+         tasks_.erase(it);
+     }

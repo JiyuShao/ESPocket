@@ -17,6 +17,8 @@
 
 ## Resolution
 
+2026-10-07 后续范围修订：用户明确要求完整修复小智对话，授权启用正式产品录音与音频编码。[005/15](../../005-m5-application-ecosystem/issues/15-enable-xiaozhi-voice-conversation.md) 持有新装配与完整语音验收；本票保留此前 playback-only 的历史验收，不再将旧 Recorder 关闭要求作为新工作的禁止条件。
+
 2026-10-03：采用 ADR-0016 授权维护的 HAL playback-only 修复路径；原始 managed_components 不改，Recorder/AFE 保持关闭。实际 player 输出与 DAC 统一为 16000/stereo/16bit，81 项 host checks、完整构建、启动、官方 Playback/Storage 生命周期门槛通过。用户在修正 fixture `7a72035bd` 对实际出声、降低音量及 PWR Home 停止确认“都正常”，完成一次必要物理验收。
 
 本票接受经过验证的 `audio-candidate` 路径；默认 production 的依赖清单与配置尚未合入 Audio，不能据此声称正式发布已完成。不含测试音的对应镜像及恢复结果见听感记录。重复 I2S disable 告警由 [07](07-fix-audio-playback-teardown.md) 独立承接，不把功能验收当作 teardown 告警已经消失。

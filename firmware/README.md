@@ -43,7 +43,15 @@ python3 scripts/firmware/build_patched_firmware.py \
 
 先加载 ESP-IDF 环境。workspace 必须不存在且位于源码 checkout 外；每次独立构建保留各自证据。入口复制工程和已物化依赖，准确应用 hash 锁定补丁，使用 Component Manager override_path 选择副本，再执行完整构建并核对选中的组件路径。原始 managed_components、sdkconfig 和 dependencies.lock 不写入。工程副本把全部 Registry 版本约束为原始 lock 的精确版本，构建后核对版本和 component hash，阻止切换 override 时顺带升级传递依赖。当前产品预算为 16 KiB，上游默认仍为 8 KiB。
 
-产物位于 `<workspace>/firmware/build/`，配置位于 `<workspace>/firmware/sdkconfig`，输入身份位于 `<workspace>/patch-inputs.json`。生成的 lock 只属于此次构建；registry lock 与补丁 manifest 共同限定产品输入。`--prepare-only` 只准备副本，不构建也不证明设备修复。默认 `--patch-set production` 使用已验收的 Runtime/Core/HAL/Settings/Display/Board Manager 补丁及 playback-only 配置；`--patch-set hal-candidate` 显式试做 HTTP/Audio HAL 候选（普通配置不打开 Audio Processor）；`--patch-set audio-candidate` 另外固定 playback-only 的新增依赖、开启 Player/Processor/Audio Service，并强制 Recorder/AFE/Media Dump/Video 关闭。Audio 候选在 reconfigure 后复核这些选项与精确版本/hash，再构建；实验依赖不改生产 lock。候选不等于设备门槛通过。升级源码/hash 不匹配时停止，不能绕过校验。
+产物位于 `<workspace>/firmware/build/`，配置位于 `<workspace>/firmware/sdkconfig`，输入身份位于 `<workspace>/patch-inputs.json`。生成的 lock 只属于此次构建；registry lock 与补丁 manifest 共同限定产品输入。`--prepare-only` 只准备副本，不构建也不证明设备修复。默认 `--patch-set production` 使用已接受的 Runtime/Core/HAL/Settings/Display/Board Manager 补丁，启用 Player/Recorder/Processor/Audio Service 和 AFE；Media Dump/Video 关闭。`--patch-set hal-candidate` 显式试做 HTTP/Audio HAL 候选（普通配置不打开 Audio Processor）；历史 `--patch-set audio-candidate` 仍固定 playback-only 的新增依赖、开启 Player/Processor/Audio Service，并强制 Recorder/AFE/Media Dump/Video 关闭。构建在 reconfigure 后复核音频选项与精确版本/hash；产品还复核生成的麦克风配置，漂移时停止。实验依赖不改生产 lock，候选不等于设备门槛通过。升级源码/hash 不匹配时停止，不能绕过校验。
+
+正式产品的 ES7210 Recorder 使用 MIC1/MIC2、16 kHz、双通道 16 bit、`MM` 布局和 30 dB 增益，逐通道覆盖为空；生成板级配置将上游三通道 mask `0x7` 改为双麦克风 `0x3`，避免将扬声器参考通道误纳入双通道采集。小智通过官方音频服务编码为 mono Opus 并上传，采用半双工：监听时采集，说话时暂停采集。硬件证据与语音验收分别由 [麦克风验证](../.scratch/005-m5-application-ecosystem/issues/14-verify-official-microphone-capability.md)和 [完整语音对话](../.scratch/005-m5-application-ecosystem/issues/15-enable-xiaozhi-voice-conversation.md)持有。
+
+回复的 Opus 包通过官方 DataFlow 复制到 Audio Decoder 自有的 32 KiB 有界队列，调用者归还输入后继续异步消费；保留 20 ms 入队超时与关闭／满队列错误。不再逐包借用调用者缓冲并将 200 ms 消费延迟当作故障重置播放流，Home 继续通过实际 Audio Owner 关闭并清理队列。
+
+启用 AFE 增加内部静态数据；沿用旧内存配置时，真机 Wi-Fi 只能分配 7/10 个 RX 缓冲并启动失败。语音产品选用官方小智动态任务栈／PSRAM 配置，保留 8 KiB 栈大小；Wi-Fi 静态 TX 缓冲为 8 个，TX BA window 仍为 6，静态 RX 仍为 10。这样将音频任务栈的 8 KiB 移至 PSRAM，并减少约 12.8 KiB 常驻 TX 缓冲，保留内部 RAM 给 DMA 和网络；不是通过缩小线程栈解决分配失败。
+
+语音产品的 mbedTLS 使用官方外部 SPIRAM 分配策略。真实 Recorder／Opus 启动后，旧内部专用策略在 `mbedtls_ssl_setup` 返回 `-0x008D`（内存不足），无法建立小智 MQTT TLS 连接；16 KiB 入站／4 KiB 出站缓冲及密码、证书校验配置保持完整，动态 TLS 内存由 PSRAM 承担。模型分区为空或残留旧镜像头时，受维护的 ESP-SR 补丁拒绝无效模型数量并安全返回；无 WakeNet／命令检测请求的 AFE 继续工作，不能将这一配置称为本地唤醒词支持。
 
 产品构建将指令与只读数据留在 Flash，关闭 `SPIRAM_XIP_FROM_PSRAM`、`SPIRAM_FETCH_INSTRUCTIONS` 与 `SPIRAM_RODATA`。此板默认的指令搬运会占用约 5 MiB PSRAM，压缩 Runtime GUI、JS 编译与包解压空间。独立构建入口会纠正旧 sdkconfig 并复核配置；Flash 操作仍由 cache-safe Storage worker 执行，线程栈预算保持既有配置。对应原包和设备结果见 [Runtime / Store 回归票](../.scratch/005-m5-application-ecosystem/issues/11-runtime-store-gesture-regressions.md)。
 
@@ -209,6 +217,8 @@ python3 scripts/firmware/run_device_tests.py --suite settings-brightness \
 production 已包含 Store 0.8.2 的图标容量延后重试；`--patch-set store-candidate` 保留为同一基线的显式入口。HTTP 使用 2 workers / 1 request：下载占用一个 worker 时，另一个仍能发布周期进度；单请求限制继续避免 TLS 分配重叠。TLS 验证、包兼容性与信任判断保持启用。设备刷新及退出门槛由 [005/06](../.scratch/005-m5-application-ecosystem/issues/06-adopt-online-store-stability-fix.md) 持有；下载进度复验由 [005/11](../.scratch/005-m5-application-ecosystem/issues/11-runtime-store-gesture-regressions.md) 持有。候选通过 host 回归不代表安装链路可用。
 
 ### 内置字体字形门槛
+
+产品默认字体保留已配置的 Montserrat 英文与符号，以产品拥有的只读字体副本连接同字号 CJK fallback；英文界面的动态中文对话也能使用已嵌入的 GB2312 字库。`zh_CN` 资源保留独立注册，共享同一组有界 TinyTTF 缓存，不复制字库或修改 LVGL 内置字体。Host 检查执行实际 Runtime 默认字体解析及字库轮廓解码；英文界面语言不代表动态内容只含英文。
 
 `python3 scripts/firmware/check_glyphs.py` 检查维护 JSON 的 literal label 是否由实际选定内置字体覆盖；有效固件配置可通过 `--sdkconfig` 指定。它已接入 host tests 与独立补丁构建的 reconfigure 后检查。范围与图标开发规则见 [资源说明](components/espocket_system/resources/README.md#内置字体与图标检查)。
 

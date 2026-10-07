@@ -39,7 +39,7 @@
     "include/brookesia/agent_manager/state_machine.hpp": "3267968042c2199b615561dbb07bafb4bd755a50b117b46dcc00f4eb5eb5f206",
     "include/brookesia/agent_manager.hpp": "71315cdae4a0b38c1065ed0e7f5d9b9a6c29a62652aaa6e769e6a3c2d8ede220",
     "license.txt": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
-    "src/base.cpp": "1ca75c462c8e068614df14d2cde2b31244ce65b50d237459d6f67f1ce6d1d541",
+    "src/base.cpp": "3df8727ce1324471ec61c24ee14d143fac5051c473ae29f6dc9cf706e20a22af",
     "src/manager.cpp": "5e7719a8a8a4bd539291d76beb2505caa02f5e4efb669026b951f64d8fddc345",
     "src/private/utils.hpp": "ee85455cf89a7c9c8cae14d537e687aa811f7e1bcc8fd253c462d6be94da954f",
     "src/state_machine.cpp": "c2222d61917e2fef43b2a15103bc0e7c828394b65984307a7f23cc08e53720e6"
@@ -48,10 +48,17 @@
     {
       "file": "001-defer-capture-until-conversation.patch",
       "sha256": "e0dd13e451f96545996f48e33255ebdaa32c5f1d6e9c38575c6d78dfa8c91947"
+    },
+    {
+      "file": "002-own-queued-agent-audio-packets.patch",
+      "sha256": "21f3497c3b408a12721d6e0df2908f157c11199aee30a06669a82cc9ba13f8b5"
     }
   ],
-  "issue": ".scratch/005-m5-application-ecosystem/issues/13-xiaozhi-and-launcher-performance.md",
-  "reason": "Agent service initialization and cloud activation do not require microphone capture; acquire capture at conversation startup while preserving real missing-input failures.",
-  "remove_when": "Upstream separates activation from audio capture initialization and activation/capture lifecycle regression passes.",
-  "upstream_submission": "not submitted"
+  "reason": "Agent service initialization and cloud activation do not require microphone capture; acquire capture at conversation startup while preserving real missing-input failures. Queue owned Opus packets through the existing bounded Audio DataFlow copy operation; decoder scheduling latency must not reset a healthy stream or retain caller buffers.",
+  "remove_when": "Upstream separates activation from audio capture initialization and activation/capture lifecycle regression passes. Upstream audio ingress supports owned asynchronous packets and full playback/Home regression passes.",
+  "upstream_submission": "not submitted",
+  "issues": [
+    ".scratch/005-m5-application-ecosystem/issues/13-xiaozhi-and-launcher-performance.md",
+    ".scratch/005-m5-application-ecosystem/issues/15-enable-xiaozhi-voice-conversation.md"
+  ]
 }

@@ -1,0 +1,63 @@
+--- a/src/model_path.c
++++ b/src/model_path.c
+@@ -308,6 +308,17 @@
+ srmodel_list_t *srmodel_mmap_init(const esp_partition_t *partition)
+ {
+     if (static_srmodels == NULL) {
++        uint8_t model_header[4];
++        if (partition == NULL || partition->size < sizeof(model_header) ||
++            esp_partition_read(partition, 0, model_header, sizeof(model_header)) != ESP_OK) {
++            return NULL;
++        }
++        uint32_t model_count = read_int32((char *)model_header);
++        if (model_count == 0 || model_count >
++            (partition->size - sizeof(model_header)) / (SRMODEL_STRING_LENGTH + sizeof(uint32_t))) {
++            ESP_LOGW(TAG, "No valid speech model header in partition %s", partition->label);
++            return NULL;
++        }
+         static_srmodels = srmodel_list_alloc();
+     } else {
+         return static_srmodels;
+@@ -509,30 +520,26 @@
+ 
+ srmodel_list_t *esp_srmodel_init(const char *partition_label)
+ {
+-    srmodel_init_refcount ++;
++    srmodel_list_t *models = NULL;
+ #ifdef ESP_PLATFORM
+-
+ #ifdef CONFIG_MODEL_IN_SDCARD
+-    // Read model data from SD card
+-    return srmodel_sdcard_init(partition_label);
++    models = srmodel_sdcard_init(partition_label);
+ #else
+-    // Read model data from flash partition
+-    const esp_partition_t *partition = NULL;
+-    // find spiffs partition
+-    partition = esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_ANY, partition_label);
+-
++    const esp_partition_t *partition = esp_partition_find_first(
++        ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_ANY, partition_label);
+     if (partition) {
+-        return srmodel_mmap_init(partition);
++        models = srmodel_mmap_init(partition);
+     } else {
+         ESP_LOGE(TAG, "Can not find %s in partition table", partition_label);
+     }
+-
+-    return NULL;
+-#endif
+-
++#endif
+ #else
+-    return srmodel_sdcard_init(partition_label);
+-#endif
++    models = srmodel_sdcard_init(partition_label);
++#endif
++    if (models != NULL) {
++        srmodel_init_refcount ++;
++    }
++    return models;
+ }
+ 
+ void esp_srmodel_deinit(srmodel_list_t *models)

@@ -25,6 +25,7 @@ private:
     ProductFonts() = default;
     static constexpr std::array<int32_t, 16> sizes_{10, 11, 12, 13, 14, 15, 16, 18, 20, 22, 24, 28, 32, 40, 48, 64};
     std::array<lv_font_t *, sizes_.size()> fonts_{};
+    std::array<lv_font_t, sizes_.size()> default_fonts_{};
 };
 
 }

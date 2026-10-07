@@ -106,6 +106,8 @@ ESPocket 需要官方 Store 与远程 Runtime distribution path，但锁定的�
 
 ## 全部剩余工作授权
 
+2026-10-07 用户明确要求完整修复小智语音，由 [15](issues/15-enable-xiaozhi-voice-conversation.md) 持有正式录音、编码、上传／回复及退出验收；此前 14 的临时硬件验证仅为已完成前置，不代表目标已经完成。
+
 2026-10-07 新增 [14](issues/14-verify-official-microphone-capability.md)：用户要求验证官方音频能力与实际麦克风。官方实现和双麦克风三轮受控短音采样已验证，现有产品镜像已恢复。服务器现在认可设备激活，实际会话仍失败在录音关闭导致的 AudioEncoder0 缺失；未启用正式产品录音或宣称完整小智对话可用。来源、测量与恢复结果见[记录](records/2026-10-07-official-microphone-verification.md)。
 
 2026-10-06 新增 [13](issues/13-xiaozhi-and-launcher-performance.md)：实际选择并验证小智，修复阻碍配置的显示入口，对照 Launcher 绘制并落实有效方案。沿用数据保护和完成后本地合并／清理授权。
