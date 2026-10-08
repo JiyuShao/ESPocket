@@ -16,8 +16,7 @@ extern const char light_theme_end[] asm("_binary_espocket_light_theme_json_end")
 namespace espocket {
 
 System::System()
-    : launch_source_(ShellSurface::WatchFace),
-      lifecycle_restore_surface_(ShellSurface::WatchFace)
+    : foreground_restoration_(ShellSurface::WatchFace)
 {}
 
 std::expected<std::vector<LauncherApp>, std::string> System::launcher_apps(std::string_view language) const
@@ -295,6 +294,9 @@ std::expected<void, std::string> System::on_init()
             return foreground_app_id_.load(std::memory_order_acquire) !=
                    esp_brookesia::system::core::INVALID_APP_ID;
         },
+        .quick_settings_display = [this](bool visible, bool restore) {
+            return set_quick_settings_display(visible, restore);
+        },
         .screen_timeout = [this]() {
             handle_screen_timeout();
         },
@@ -442,7 +444,7 @@ std::expected<void, std::string> System::on_start()
         return std::unexpected("Failed to start PWR input: " + power_result.error());
     }
     display_on_.store(true, std::memory_order_release);
-    resume_app_id_ = esp_brookesia::system::core::INVALID_APP_ID;
+    foreground_restoration_.reset();
     if (test_adapter_) {
         auto started = test_adapter_->start();
         if (!started) {
@@ -482,8 +484,8 @@ void System::on_stop()
         if (!result) ESP_LOGE(TAG, "Circular Shell stop failed: %s", result.error().c_str());
     }
     foreground_app_id_.store(INVALID_APP_ID, std::memory_order_release);
-    resume_app_id_ = INVALID_APP_ID;
-    lifecycle_restore_pending_ = false;
+    foreground_restoration_.reset();
+    pending_card_.reset();
 }
 
 void System::on_deinit()
@@ -527,10 +529,8 @@ void System::on_deinit()
     foreground_token_->store(0, std::memory_order_release);
     stopping_.store(false, std::memory_order_release);
     display_on_.store(true, std::memory_order_release);
-    resume_app_id_ = esp_brookesia::system::core::INVALID_APP_ID;
-    launch_source_ = ShellSurface::WatchFace;
-    lifecycle_restore_surface_ = ShellSurface::WatchFace;
-    lifecycle_restore_pending_ = false;
+    foreground_restoration_.reset();
+
     product_initialized_ = false;
     product_fonts_.reset();
     stop_display();

@@ -72,6 +72,11 @@ esp_brookesia::system::core::AppGuiDescriptor CircularShell::get_gui_descriptor(
                 .layer = esp_brookesia::system::core::GuiAppLayer::AppDefault,
             },
             {
+                .screen_flow = "quick_settings_flow",
+                .layer = esp_brookesia::system::core::GuiAppLayer::SystemTop,
+                .mount_mode = esp_brookesia::gui::MountStackMode::Stack,
+            },
+            {
                 .screen_flow = "overlay_flow",
                 .layer = esp_brookesia::system::core::GuiAppLayer::SystemTop,
                 .mount_mode = esp_brookesia::gui::MountStackMode::Stack,

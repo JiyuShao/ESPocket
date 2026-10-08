@@ -30,9 +30,8 @@ void System::handle_screen_timeout()
         return;
     }
     const auto active = get_active_app();
-    if (active && active->manifest.kind == esp_brookesia::system::core::AppKind::Runtime &&
-            (active->manifest.id == "espocket.app.ai_chatbot" ||
-             active->manifest.id == "brookesia.general.ai_chatbot")) {
+    if (active && active->state == esp_brookesia::system::core::AppState::Running &&
+            active->manifest.keep_screen_on) {
         return;
     }
     auto result = set_display_on(false);
@@ -42,8 +41,8 @@ void System::handle_screen_timeout()
     }
 
 #if CONFIG_ESPOCKET_M6_RECLAIM_ON_TIMEOUT_TEST || CONFIG_ESPOCKET_M8_RECLAIM_NATIVE_TEST || CONFIG_ESPOCKET_M8_RECLAIM_RUNTIME_TEST
-    if (resume_app_id_ != esp_brookesia::system::core::INVALID_APP_ID) {
-        const auto target = resume_app_id_;
+    if (const auto sleeping = foreground_restoration_.sleeping_instance()) {
+        const auto target = sleeping->app_id;
         const auto app = get_app(target);
         using esp_brookesia::system::core::AppKind;
         const bool selected = app && app->manifest.visible &&

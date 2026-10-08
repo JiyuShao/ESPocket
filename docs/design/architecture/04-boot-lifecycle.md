@@ -53,3 +53,11 @@ Exposure Decision：System、Shell 和 Service 可以注册与各自生命周期
 PowerKeyMonitor 只采样和暂存短按事件，System 消费并执行 Home、Screen Off 或 Wake。Circular Shell 不读取按键计数、不转发 PWR Home；其通用 ShellHost tick 提供维护节拍。同一处理周期中的 PWR 先于未提交的键盘或确认结果，已提交操作仍由真实 Owner 核实。App 启动等待不得阻塞 PWR Home 的产品响应目标。
 
 停止时 System 先撤销产品执行入口并设置 stopping guard，停止按键采样，再停止 Shell 与全部受管 App，防止旧输入进入新运行；deinit 进一步释放资源。正常重复运行与关键失败后显式重启的保证分开。
+
+## 可见 App 的分阶段启动
+
+System 向 Core 请求可见 App 启动；Core 在原 AppRecord 持有 Starting、取消及回滚阶段，GUI 准备在真实 GUI task 中执行，App Owner 等待期间继续处理其他节拍。只有完成最终 hook 才提交成功，停止或失败不能复活取消的实例。System 不创建启动工作队列或镜像状态，仍使用 Core AppInfo 和完成 hooks。
+
+启动阶段内的同步 callback 与 GUI parse 不提供强制抢占；分阶段只释放阶段之间与 GUI future 等待时的 App Owner。输入响应时延还取决于每个阶段的耗时与 GUI 锁占用。
+
+Core 的公开同步启动与分阶段启动共用私有准入、Runtime 启动、生命周期调用、Running 提交和资源清理操作；两种入口仅保留各自调度及兼容语义。准入与生命周期失败由同一分类报告，不再各自维护错误提示。

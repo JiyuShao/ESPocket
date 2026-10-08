@@ -10,7 +10,7 @@ class ChatNavigationTest(unittest.TestCase):
     def test_page_actions_back_and_stale_completions(self):
         script = r'''
 const fs = require('fs'), vm = require('vm'), assert = require('assert');
-const source = fs.readFileSync(process.argv[1], 'utf8').replace(/^import[^\n]+\n/, '');
+const source = fs.readFileSync(require('path').join(require('path').dirname(process.argv[1]),'operations.js'),'utf8').replace(/^export /gm,'')+'\n'+fs.readFileSync(process.argv[1], 'utf8').replace(/^import[^\n]+\n/gm, '');
 const requests = [], effects = [];
 let stack = ['ai_chatbot_chat'], fail = false, pending;
 const context = vm.createContext({

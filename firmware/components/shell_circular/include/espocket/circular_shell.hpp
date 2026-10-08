@@ -38,6 +38,8 @@ struct ShellHost {
     std::function<std::expected<std::string_view, std::string>(std::string_view)> theme_resource;
     std::function<bool()> display_on;
     std::function<bool()> app_visible;
+    // System temporarily selects GUI; restoration must validate source and running instance.
+    std::function<std::expected<void, std::string>(bool visible, bool restore)> quick_settings_display;
     std::function<void()> screen_timeout;
     std::function<std::expected<void, std::string>(std::string_view, ShellSurface)> launch_app;
     std::function<void()> back;
@@ -97,6 +99,9 @@ public:
     std::expected<void, std::string> show_launcher();
     std::expected<void, std::string> show_surface(ShellSurface surface);
     ShellSurface current_surface() const;
+    ShellSurface underlying_surface() const;
+    bool quick_settings_open() const;
+    std::expected<void, std::string> dismiss_quick_settings(bool restore_display = true);
     std::expected<void, std::string> handle_gesture(const ShellGestureEvent &event);
     std::expected<void, std::string> inject_synthetic_touch(int32_t x, int32_t y, bool pressed, bool first);
     std::expected<void, std::string> finish_synthetic_touch(bool cancelled);
@@ -112,7 +117,6 @@ public:
     void hide_loading(esp_brookesia::system::core::AppId app_id, bool startup = false);
     void discard_overlay_choices();
     bool cancel_keyboard_input();
-    void suspend_keyboard_input(bool suspend);
     void hide_keyboard(
         esp_brookesia::system::core::AppId app_id,
         esp_brookesia::system::core::KeyboardRequestId request_id
@@ -151,10 +155,12 @@ private:
         std::string_view display_name
     );
     std::expected<void, std::string> render_message_dialog(
-        const esp_brookesia::system::core::MessageDialogOptions &options);
+        const esp_brookesia::system::core::MessageDialogOptions &options, bool display_on);
     void poll_message_dialog();
     void poll_keyboard();
-    void refresh_overlay_input();
+    bool refresh_overlay_input();
+    void prepare_overlay_input();
+    void complete_overlay_input();
     void sync_default_back(bool visible);
     void sync_card_hint(bool visible);
     void refresh_launcher();
@@ -187,6 +193,8 @@ private:
     std::shared_ptr<CallbackState> callback_state_;
     esp_brookesia::system::core::AppContext *context_ = nullptr;
     bool status_refresh_deferred_ = false;
+    bool quick_settings_cleanup_pending_ = false;
+    ShellSurface quick_settings_return_surface_ = ShellSurface::WatchFace;
     esp_brookesia::system::core::TimerId home_intent_timer_id_ =
         esp_brookesia::system::core::INVALID_TIMER_ID;
     esp_brookesia::system::core::TimerId status_timer_id_ =

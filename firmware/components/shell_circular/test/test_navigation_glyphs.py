@@ -47,7 +47,7 @@ class NavigationGlyphTest(unittest.TestCase):
             for char in hint['labelProps']['text']:
                 self.assertIn(ord(char), supported, f'{hint["id"]}: missing U+{ord(char):04X}')
         symbols = (ROOT / 'firmware/managed_components/lvgl__lvgl/src/font/lv_symbol_def.h').read_text()
-        source = (COMPONENT / 'src/circular_shell.cpp').read_text()
+        source = (COMPONENT / 'src/shell_overlay.cpp').read_text()
         pull = next(h for h in hints if h['id'] == 'pull_hint')
         supported = glyphs(max(s for s in enabled if s <= int(pull['style']['fontSize'][:-2])))
         for line in source.splitlines():

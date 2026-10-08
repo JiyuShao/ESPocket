@@ -106,7 +106,9 @@ std::expected<void, std::string> System::resume_card()
     const bool right = std::ranges::find(configuration.right, key) != configuration.right.end();
     if (!left && !right) return shell_->show_watch_face();
     pause_card();
-    if (auto shown = shell_->show_surface(left ? ShellSurface::LeftAppCard : ShellSurface::RightAppCard); !shown) return shown;
+    if (!shell_->quick_settings_open()) {
+        if (auto shown = shell_->show_surface(left ? ShellSurface::LeftAppCard : ShellSurface::RightAppCard); !shown) return shown;
+    }
     do { ++next_card_generation_; } while (next_card_generation_ == 0);
     card_generation_ = next_card_generation_;
     if (!card_session_->show(key)) {
@@ -156,6 +158,7 @@ void System::drain_card_actions()
 {
     if (!card_actions_ || !card_session_) return;
     const auto generation = card_session_->visibility() == CardVisibility::Visible && display_on_.load() &&
+        !(shell_ && shell_->quick_settings_open()) &&
         foreground_token_->load() == 0 ? card_generation_ : 0;
     card_actions_->drain(card_owner_id_, generation, static_cast<uint64_t>(esp_timer_get_time() / 1000),
         [this](uint32_t app, std::string_view action) -> NavigationRequestQueue::Result {
@@ -170,7 +173,7 @@ void System::drain_card_actions()
             const auto opened = card_session_->open_app([this](const CardKey &key, std::string_view) {
                 pending_card_ = key;
                 const auto launched = launch_app(key.app_id, shell_->current_surface());
-                pending_card_.reset();
+                if (!launched) pending_card_.reset();
                 return launched.has_value();
             });
             card_generation_ = 0;

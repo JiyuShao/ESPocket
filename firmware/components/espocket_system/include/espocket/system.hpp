@@ -18,6 +18,7 @@
 #include "espocket/card_registry.hpp"
 #include "espocket/card_model.hpp"
 #include "espocket/brightness.hpp"
+#include "espocket/foreground_restoration.hpp"
 
 namespace espocket {
 
@@ -165,12 +166,14 @@ private:
     void handle_back_timeout();
     std::expected<void, std::string> launch_app(std::string_view manifest_id, ShellSurface source);
     std::expected<void, std::string> set_display_on(bool on);
+    std::expected<void, std::string> set_quick_settings_display(bool visible, bool restore);
     void show_watch_face();
     void restore_surface(ShellSurface surface);
     void init_reset_resume();
     void remember_reset_resume(const esp_brookesia::system::core::AppInfo &app);
     void clear_reset_resume();
     void restore_after_hardware_reset();
+    std::optional<RunningInstanceIdentity> current_foreground_instance() const;
     void clear_foreground(const esp_brookesia::system::core::AppInfo &app);
     void restore_home_after_lifecycle(const esp_brookesia::system::core::AppInfo &app);
     std::shared_ptr<PageNavigator> navigator_for(esp_brookesia::system::core::AppId app_id) const;
@@ -180,6 +183,7 @@ private:
         esp_brookesia::system::core::AppId app_id,
         std::shared_ptr<PageNavigator> navigator
     );
+
 
     esp_brookesia::service::ServiceBinding display_binding_;
     std::shared_ptr<CircularShell> shell_;
@@ -245,11 +249,7 @@ private:
     uint64_t package_policy_retry_at_ms_ = 0;
     uint32_t package_policy_retry_delay_ms_ = 1000;
     std::atomic_bool display_on_ = true;
-    esp_brookesia::system::core::AppId resume_app_id_ =
-        esp_brookesia::system::core::INVALID_APP_ID;
-    ShellSurface launch_source_;
-    ShellSurface lifecycle_restore_surface_;
-    bool lifecycle_restore_pending_ = false;
+    ForegroundRestorationProjection foreground_restoration_;
     bool startup_failed_ = false;
     std::atomic_bool stopping_ = false;
     std::atomic_bool runtime_stop_failed_ = false;

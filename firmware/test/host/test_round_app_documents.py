@@ -51,8 +51,14 @@ class RoundAppDocumentTest(unittest.TestCase):
             path.write_text(json.dumps(asset))
         source = self.directory / 'chat.json'
         source.write_text(json.dumps(document))
-        status, metrics, spec = exercise(self.binary, source)
-        self.assertEqual(status, 0, spec)
+        for name in ('dark', 'light'):
+            palette = json.loads((ROOT / f'firmware/components/espocket_system/resources/{name}_theme.json').read_text())['assets'][0]['data']['colors']
+            colors = {group+'.'+key: value for group, values in palette.items() for key, value in values.items()}
+            status, metrics, spec = exercise(self.binary, source, colors=colors)
+            self.assertEqual(status, 0, spec)
+            screens = json.loads(spec)['screens']
+            chat = next(screen for screen in screens if screen['id'] == 'ai_chatbot_chat')
+            self.assertEqual(chat['style']['bg_color'], '${color.bg.base}')
         parsed = json.loads(spec)
         paths = {path: node for screen in parsed['screens'] for path, node in walk(screen)}
         for path in [

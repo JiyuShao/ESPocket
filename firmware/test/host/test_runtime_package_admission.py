@@ -42,7 +42,7 @@ struct AppGuiDescriptor {GuiRootKind root_kind; std::string root; AppGuiResource
 struct RuntimeAppResourceDescriptor {std::string icon_id; bool preload_dom; AppGuiDescriptor gui;};
 struct AppManifest {
  std::string id,name,version,app_path,entry,resource_dir,icon_id;
- AppKind kind=AppKind::Runtime; bool visible=true,preload_dom=false;
+ AppKind kind=AppKind::Runtime; bool visible=true,preload_dom=false,keep_screen_on=false;
  std::map<std::string,std::string> localized_names;
  std::vector<std::string> supported_systems,arguments;
  std::vector<AppManifestService> services;
@@ -418,6 +418,10 @@ int main(int argc,char**argv){
   if(inspect(n)){std::cerr<<"unexpected admission "<<n;return 1;}}
  p.public_key_pem_path="inert.pem";assert(!inspect("signed.bpk"));
  assert(!inspect_runtime_package((root/"super.bpk").string(),"espocket",p,std::string(64,'0')));
+ assert(!read_app_package_manifest((root/"super.bpk").string(),"super")->keep_screen_on);
+ assert(read_app_package_manifest((root/"awake.bpk").string(),"espocket")->keep_screen_on);
+ assert(!read_app_package_manifest((root/"sleep.bpk").string(),"espocket")->keep_screen_on);
+ assert(!read_app_package_manifest((root/"bad-policy.bpk").string(),"espocket"));
  assert(app->artifact_sha256==argv[2]);
  auto staged=unpack_app_package_to((root/"super.bpk").string(),(root/"apps").string(),"super",app->artifact_sha256);assert(staged);
  assert(!unpack_app_package_to((root/"super.bpk").string(),(root/"bad").string(),"super",std::string(64,'0')));
@@ -497,8 +501,10 @@ class RuntimePackageAdmissionTest(unittest.TestCase):
             write('mbedtls/md.h', '#pragma once\n'+crypto+'\ninline constexpr int MBEDTLS_MD_SHA256=1;\ninline const int*mbedtls_md_info_from_type(int){return &MBEDTLS_MD_SHA256;}\ninline int mbedtls_md(const int*,const unsigned char*p,size_t n,unsigned char*out){return host_sha256(p,n,out); }\ninline int mbedtls_md_hmac(const int*,const unsigned char*k,size_t kl,const unsigned char*p,size_t n,unsigned char*out){return host_hmac(k,kl,p,n,out);}\n')
             write('esp_random.h', '#pragma once\n#include <random>\ninline void esp_fill_random(void*p,size_t n){std::random_device r;auto bytes=static_cast<unsigned char*>(p);while(n--)*bytes++=static_cast<unsigned char>(r());}\n')
             fixtures=root/'fixtures';fixtures.mkdir()
-            def package(name, systems=None, extra=(), version='1.0.0', entry='app/app.js', resource_dir='res'):
+            def package(name, systems=None, extra=(), version='1.0.0', entry='app/app.js', resource_dir='res', keep_screen_on=None):
                 manifest={'package':{'id':'test.game','version':version,'systems':systems or ['super']},'runtime':{'type':'JavaScript','entry':'app/app.js','resource_dir':'res'}}
+                if keep_screen_on is not None:
+                    manifest['package']['keep_screen_on'] = keep_screen_on
                 manifest['runtime'].update(entry=entry, resource_dir=resource_dir)
                 with zipfile.ZipFile(fixtures/name,'w',zipfile.ZIP_DEFLATED) as archive:
                     archive.writestr('manifest.json',json.dumps(manifest));archive.writestr('app/app.js','export function on_start() {}')
@@ -506,6 +512,9 @@ class RuntimePackageAdmissionTest(unittest.TestCase):
                     archive.writestr('res/root.json','{}')
                     for member,value in extra:archive.writestr(member,value)
             package('super.bpk');package('update.bpk',version='2.0.0');package('update2.bpk',version='3.0.0');package('espocket.bpk',['espocket']);package('other.bpk',['other'])
+            package('awake.bpk', ['espocket'], keep_screen_on=True)
+            package('sleep.bpk', ['espocket'], keep_screen_on=False)
+            package('bad-policy.bpk', ['espocket'], keep_screen_on='true')
             package('half.bpk',extra=[('META-INF/hash.json','{}')])
             package('signed.bpk',extra=[('META-INF/hash.json','{}'),('META-INF/signature.sig','invalid')])
             seeds=[('data/config.pem.example','default'),('data/config.json','defaults'),('files/music/0.mp3','audio')]

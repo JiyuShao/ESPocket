@@ -10,7 +10,7 @@ class SleepRecoveryTest(unittest.TestCase):
     def test_sleep_header_wakeup_and_instance_fencing(self):
         script = r'''
 const fs=require('fs'), vm=require('vm'),assert=require('assert');
-const source=fs.readFileSync(process.argv[1],'utf8').replace(/^import[^\n]+\n/,'');
+const source=fs.readFileSync(require('path').join(require('path').dirname(process.argv[1]),'operations.js'),'utf8').replace(/^export /gm,'')+'\n'+fs.readFileSync(process.argv[1],'utf8').replace(/^import[^\n]+\n/gm,'');
 const c=vm.createContext({createI18nBundle:()=>({}),brookesia:{print:()=>{}}});vm.runInContext(source,c);
 const calls=[];let completions=[];
 c.tr=key=>key;c.localizedText=value=>value.key;c.networkReady=c.internetReady=c.agentReady=true;
@@ -29,9 +29,9 @@ c.navigationAlive=true;c.navigationEpoch=1;
  c.handleGeneralEventHappened('Awake',false);
  assert.notEqual(c.composeHeaderStatus(),'status.agent_sleeping');
  // A failed action from the old running instance must not rewrite a restarted instance.
- ++c.navigationEpoch;c.agentWakeSubmitted=true;
+ ++c.navigationEpoch;c.operations.begin("wake");
  completions.shift()({success:false,error:'old'});await Promise.resolve();
- assert.equal(c.agentWakeSubmitted,true);
+ assert.equal(c.operations.pending("wake"),true);
 })().catch(e=>{console.error(e);process.exitCode=1;});
 '''
         subprocess.run(['node', '-e', script, str(APP / 'src/app/chatbot/lifecycle.js')], check=True)

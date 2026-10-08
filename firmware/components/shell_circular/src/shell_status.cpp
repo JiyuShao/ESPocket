@@ -132,7 +132,7 @@ void CircularShell::refresh_status()
 {
     // Status belongs to the hidden Shell while an App is foreground. Defer
     // synchronous Service and GUI calls on the shared App callback task.
-    if (host_.app_visible && host_.app_visible()) {
+    if (host_.app_visible && host_.app_visible() && !quick_settings_open()) {
         status_refresh_deferred_ = true;
         return;
     }

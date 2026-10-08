@@ -75,9 +75,9 @@ void System::restore_after_hardware_reset()
                reset_resume_apps_.contains(candidate.app_id);
     });
     if (app == apps.end()) return;
-    auto started = start_app(app->app_id); // Normal Core package trust and lifecycle remain authoritative.
+    auto started = launch_app(app->manifest.id, ShellSurface::WatchFace); // Same phased Core trust/lifecycle as a user launch.
     if (!started) ESP_LOGW(TAG, "Hardware reset App recovery failed: %s", started.error().c_str());
-    else ESP_LOGI(TAG, "Hardware reset App restored: %s", app->manifest.id.c_str());
+    else ESP_LOGI(TAG, "Hardware reset App recovery requested: %s", app->manifest.id.c_str());
 }
 
 } // namespace espocket

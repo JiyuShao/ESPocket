@@ -46,6 +46,12 @@ _Avoid_: hidden test app、长期隐藏样例
 App 从一次成功启动到停止、崩溃或回收之间的单次运行身份。
 _Avoid_: App installation、persistent app identity
 
+**Foreground Restoration Projection（前台恢复投影）**：
+依据当前 Running Instance 的有效性选择页面呈现和显示来源的恢复目标；不重新启动 App，不延长 Running Instance 生命周期。
+
+**Build Candidate（构建候选）**：
+基于确定输入生成、等待后续验收的交付产物；候选身份与已通过的验收证据分别记录。
+
 ## Shell 交互
 
 **Watch Face**：

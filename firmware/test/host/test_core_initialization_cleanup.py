@@ -36,7 +36,7 @@ constexpr auto BROOKESIA_SYSTEM_CORE_SERVICE_NAME="SystemCore";
 constexpr auto BROOKESIA_SYSTEM_CORE_GUI_SERVICE_NAME="SystemGui";
 constexpr auto BROOKESIA_SYSTEM_CORE_TIMER_SERVICE_NAME="SystemTimer";
 constexpr int BROOKESIA_SYSTEM_CORE_WORKER_POLL_INTERVAL_MS=1;
-constexpr auto SYSTEM_GUI_TASK_GROUP="gui",SYSTEM_GUI_INPUT_TASK_GROUP="gui-input",SYSTEM_APP_INPUT_TASK_GROUP="input";
+constexpr auto SYSTEM_GUI_TASK_GROUP="gui",SYSTEM_GUI_INPUT_TASK_GROUP="gui-input",SYSTEM_APP_INPUT_TASK_GROUP="input",SYSTEM_APP_TASK_GROUP="app";
 int fail=0,stage=0,schedulers=0,guis=0,runtimes=0,product_inits=0,product_deinits=0;bool reject_gui=false;
 bool injected(){return ++stage==fail;}
 namespace lib_utils {
@@ -97,6 +97,7 @@ std::expected<void,std::string> initialize_storage_layout(){if(injected())return
 struct Root {std::string generic_string() const{return "root";}};std::vector<Root> get_app_scan_roots(){return {};}
 void load_gui_preferences(){}std::expected<void,std::string> show_startup_overlay(){if(injected())return std::unexpected("overlay");return {};}
 void hide_startup_overlay(){}std::expected<void,std::string> install_unpacked_apps(){if(injected())return std::unexpected("packages");return {};}
+void advance_app_starts(bool=false){}
 void cancel_app_timers(auto&){}void unload_runtime(auto&){}void clear_pending_gui_bindings(int){}void clear_pending_gui_image_sources(int){}void clear_all_pending_gui_image_sources(){}void unload_gui(auto&){}void unregister_app_gui_resources(auto&){}void unregister_app_icon_resource(auto&){}void stop_live_preview_poll(){}
 template<class R,class F>R run_task_sync(auto,F f,R rejected){if(reject_gui && task_scheduler_ && task_scheduler_->running)return rejected;return f();}
 void execute_task_with_group_context(auto,auto f){assert(!task_scheduler_);f();}

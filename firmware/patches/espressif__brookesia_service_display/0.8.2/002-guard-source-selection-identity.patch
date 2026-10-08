@@ -1,0 +1,53 @@
+--- a/include/brookesia/service_display/service_display.hpp
++++ b/include/brookesia/service_display/service_display.hpp
+@@ -107,7 +107,11 @@
+     std::expected<void, std::string> request_output(std::string_view source_name, std::string_view output_name);
+     std::expected<void, std::string> release_output(uint32_t source_id, std::string_view output_name);
+     std::expected<void, std::string> release_output(std::string_view source_name, std::string_view output_name);
+-    std::expected<void, std::string> set_active_source(std::string_view output_name, std::string_view source_name);
++    // Both identities are checked under the Display Owner mutex before switching.
++    struct SourceSelectionGuard { uint32_t current_id; uint32_t next_id; };
++    std::expected<void, std::string> set_active_source(
++        std::string_view output_name, std::string_view source_name,
++        std::optional<SourceSelectionGuard> guard = std::nullopt);
+     std::expected<std::string, std::string> get_active_source(std::string_view output_name) const;
+     std::expected<void, std::string> set_active_source_role(std::string_view output_name, std::string_view role);
+     std::expected<std::string, std::string> get_active_role(std::string_view output_name) const;
+--- a/src/display_output_source.cpp
++++ b/src/display_output_source.cpp
+@@ -634,7 +634,7 @@
+ 
+ 
+ std::expected<void, std::string> Display::set_active_source(
+-    std::string_view output_name, std::string_view source_name
++    std::string_view output_name, std::string_view source_name, std::optional<SourceSelectionGuard> guard
+ )
+ {
+     BROOKESIA_LOG_TRACE_GUARD_WITH_THIS();
+@@ -656,6 +656,9 @@
+         auto &output = outputs_.at(output_id.value());
+         resolved_output_name = output.info.name;
+         previous_source_id = output.active_source_id;
++        if (guard && guard->current_id != previous_source_id) {
++            return std::unexpected("Active display source changed");
++        }
+         if (previous_source_id != INVALID_SOURCE_ID) {
+             previous_source_name = sources_.at(previous_source_id).info.name;
+         }
+@@ -666,10 +669,16 @@
+                 return std::unexpected(source_id.error());
+             }
+             next_source_id = source_id.value();
++            if (guard && guard->next_id != next_source_id) {
++                return std::unexpected("Selected display source identity changed");
++            }
+             auto &source = sources_.at(next_source_id);
+             next_source_name = source.info.name;
+             source.requested_outputs.insert(resolved_output_name);
+         } else {
++            if (guard && guard->next_id != INVALID_SOURCE_ID) {
++                return std::unexpected("Selected display source identity changed");
++            }
+             next_source_name.clear();
+         }
+ 

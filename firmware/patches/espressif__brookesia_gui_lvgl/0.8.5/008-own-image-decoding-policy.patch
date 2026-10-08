@@ -1,0 +1,141 @@
+--- /dev/null
++++ b/include/brookesia/gui_lvgl/image_decoding.hpp
+@@ -0,0 +1,21 @@
++#pragma once
++#include <cstdint>
++#include <expected>
++#include <string>
++
++namespace esp_brookesia::gui::lvgl {
++// LVGL decoders and cache are global. Configure once after decoder registration,
++// release before decoder destruction. All calls require the GUI thread guard.
++// Failure leaves every decoder callback unchanged. This policy covers Native and Runtime images.
++struct ImageDecodePolicy {
++    uint32_t cache_bytes = 0;
++    uint32_t workspace_bytes = 0;
++};
++struct ImageDecodeStatistics {
++    uint64_t attempts = 0, successes = 0, total_us = 0, max_us = 0, pressure_evictions = 0;
++};
++std::expected<void, std::string> configure_image_decoding(ImageDecodePolicy policy);
++void release_image_decoding();
++void set_image_decode_statistics_enabled(bool enabled);
++ImageDecodeStatistics take_image_decode_statistics();
++} // namespace esp_brookesia::gui::lvgl
+--- /dev/null
++++ b/src/image_decoding.cpp
+@@ -0,0 +1,104 @@
++#include "brookesia/gui_lvgl/image_decoding.hpp"
++#include <algorithm>
++#include <array>
++#include <cstring>
++#include "lvgl.h"
++#include "src/draw/lv_image_decoder_private.h"
++#include "src/misc/cache/instance/lv_image_cache.h"
++#ifdef ESP_PLATFORM
++#include "esp_heap_caps.h"
++#include "esp_timer.h"
++#endif
++
++namespace esp_brookesia::gui::lvgl {
++namespace {
++struct DecoderHook { lv_image_decoder_t *decoder = nullptr; lv_image_decoder_open_f_t open = nullptr; };
++std::array<DecoderHook, 8> hooks;
++ImageDecodePolicy policy;
++ImageDecodeStatistics statistics;
++bool installed = false, collect = false;
++uint64_t now_us()
++{
++#ifdef ESP_PLATFORM
++    return esp_timer_get_time();
++#else
++    return static_cast<uint64_t>(lv_tick_get()) * 1000;
++#endif
++}
++bool is_png(const lv_image_decoder_dsc_t *dsc)
++{
++    if (dsc->src_type == LV_IMAGE_SRC_FILE) {
++        const auto *name = static_cast<const char *>(dsc->src);
++        const auto size = std::strlen(name);
++        return size >= 4 && std::strcmp(name + size - 4, ".png") == 0;
++    }
++    if (dsc->src_type != LV_IMAGE_SRC_VARIABLE) return false;
++    const auto *source = static_cast<const lv_image_dsc_t *>(dsc->src);
++    constexpr uint8_t signature[]{137,80,78,71,13,10,26,10};
++    return source && source->data && source->data_size >= sizeof(signature) &&
++        std::memcmp(source->data, signature, sizeof(signature)) == 0;
++}
++lv_result_t open_image(lv_image_decoder_t *decoder, lv_image_decoder_dsc_t *dsc)
++{
++    auto found = std::find_if(hooks.begin(), hooks.end(), [decoder](const auto &hook) { return hook.decoder == decoder; });
++    if (found == hooks.end() || !found->open) return LV_RESULT_INVALID;
++    const bool png = is_png(dsc);
++    // The locked decoders' normal output fits within ARGB8888. Oversized images
++    // remain renderable without occupying the bounded shared cache.
++    const auto decoded_bytes = static_cast<uint64_t>(lv_draw_buf_width_to_stride(dsc->header.w, LV_COLOR_FORMAT_ARGB8888)) * dsc->header.h;
++    if (policy.cache_bytes && decoded_bytes > policy.cache_bytes) dsc->args.no_cache = true;
++#ifdef ESP_PLATFORM
++    if (png && policy.cache_bytes &&
++        (heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM) < decoded_bytes ||
++         heap_caps_get_free_size(MALLOC_CAP_SPIRAM) < decoded_bytes + policy.workspace_bytes)) {
++        lv_image_cache_drop(nullptr);
++        if (collect) ++statistics.pressure_evictions;
++    }
++#endif
++    const auto start = collect && png ? now_us() : 0;
++    const auto result = found->open(decoder, dsc);
++    if (collect && png) {
++        const auto elapsed = now_us() - start;
++        ++statistics.attempts;
++        statistics.successes += result == LV_RESULT_OK;
++        statistics.total_us += elapsed;
++        statistics.max_us = std::max(statistics.max_us, elapsed);
++    }
++    return result;
++}
++} // namespace
++std::expected<void, std::string> configure_image_decoding(ImageDecodePolicy requested)
++{
++    if (installed) return std::unexpected("image_decoding_already_configured");
++    std::array<DecoderHook, 8> proposed{};
++    size_t used = 0;
++    for (auto *decoder = lv_image_decoder_get_next(nullptr); decoder; decoder = lv_image_decoder_get_next(decoder)) {
++        if (!decoder->open_cb) continue;
++        if (used == proposed.size()) return std::unexpected("image_decoder_capacity");
++        proposed[used++] = {decoder, decoder->open_cb};
++    }
++    if (!used) return std::unexpected("image_decoders_unavailable");
++    // Preflight the whole set so a rejected configuration cannot partially wrap it.
++    hooks = proposed; policy = requested; statistics = {}; collect = false;
++    lv_image_cache_resize(policy.cache_bytes, true);
++    for (size_t index = 0; index < used; ++index) lv_image_decoder_set_open_cb(hooks[index].decoder, open_image);
++    installed = true;
++    return {};
++}
++void release_image_decoding()
++{
++    for (auto &hook : hooks) {
++        if (hook.decoder && hook.decoder->open_cb == open_image) lv_image_decoder_set_open_cb(hook.decoder, hook.open);
++        hook = {};
++    }
++    installed = false; collect = false; statistics = {};
++}
++void set_image_decode_statistics_enabled(bool enabled)
++{
++    statistics = {}; collect = enabled;
++}
++ImageDecodeStatistics take_image_decode_statistics()
++{
++    const auto result = statistics; statistics = {}; return result;
++}
++} // namespace esp_brookesia::gui::lvgl
+--- a/cmake/esp_platform.cmake
++++ b/cmake/esp_platform.cmake
+@@ -6,6 +6,7 @@
+     INCLUDE_DIRS ${COMPONENT_INCLUDE_DIRS}
+     PRIV_INCLUDE_DIRS ${COMPONENT_PRIVATE_INCLUDE_DIRS}
+     REQUIRES ${COMPONENT_REQUIRES}
++    PRIV_REQUIRES esp_timer heap
+ )
+ 
+ include(package_manager)

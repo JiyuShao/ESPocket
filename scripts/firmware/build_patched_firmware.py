@@ -2,6 +2,8 @@
 """Build the accepted patch baseline in an isolated firmware project copy."""
 
 import argparse
+import hashlib
+import os
 import json
 import re
 from pathlib import Path
@@ -9,7 +11,7 @@ import shutil
 import subprocess
 import sys
 
-from prepare_patched_component import digest, inventory, prepare
+from prepare_patched_component import digest, inventory, prepare, relative_path
 from check_glyphs import check as check_glyphs
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -376,7 +378,137 @@ def stage(root, workspace, sdkconfig, patch_set='production', *, display_buffer_
         'original_registry_lock_sha256': digest(source / 'dependencies.lock'),
         'firmware_project': str(firmware),
     }, indent=2) + '\n')
+    snapshot_inputs(workspace, sdkconfig)
     return firmware
+
+
+def product_inventory(firmware):
+    """Local build inputs; IDF owns generated config, cache and filesystem output."""
+    excluded = {'build', 'managed_components', 'sdkconfig', 'sdkconfig.old',
+                'dependencies.lock', 'littlefs', 'node_modules', '__pycache__'}
+    return {name: value for name, value in inventory_filtered(firmware, excluded).items()}
+
+
+def inventory_filtered(directory, excluded):
+    result = {}
+    for base, dirs, files in os.walk(directory, followlinks=False):
+        dirs[:] = sorted(name for name in dirs if name not in excluded)
+        for name in dirs + files:
+            path = Path(base) / name
+            if path.is_symlink():
+                raise ValueError(f'Symlink not supported: {path}')
+        for name in sorted(files):
+            if name not in excluded:
+                path = Path(base) / name
+                result[path.relative_to(directory).as_posix()] = digest(path)
+    return result
+
+
+def snapshot_inputs(workspace, sdkconfig):
+    evidence = workspace / 'inputs'
+    evidence.mkdir()
+    firmware = workspace / 'firmware'
+    shutil.copyfile(sdkconfig, evidence / 'sdkconfig.original')
+    shutil.copyfile(firmware / 'dependencies.lock', evidence / 'dependencies.original.lock')
+    shutil.copyfile(firmware / 'sdkconfig', evidence / 'sdkconfig.prepared')
+    shutil.copyfile(workspace / 'patch-inputs.json', evidence / 'patch-inputs.json')
+    snapshot = {'schema_version': 1, 'status': 'prepared',
+                'product_files': product_inventory(firmware),
+                'patched_files': inventory(workspace / 'patched_components'),
+                'evidence_files': inventory(evidence),
+                'transformations': ['board paths relocated into isolated workspace',
+                                    'patch-set configuration and board audio/display settings',
+                                    'registry constraints pinned; maintained patches applied exactly']}
+    payload = json.dumps(snapshot, sort_keys=True, separators=(',', ':')).encode()
+    snapshot['input_fingerprint'] = hashlib.sha256(payload).hexdigest()
+    (workspace / 'input-snapshot.json').write_text(json.dumps(snapshot, indent=2) + '\n')
+
+
+def verify_inputs(workspace):
+    saved = json.loads((workspace / 'input-snapshot.json').read_text())
+    fingerprint = saved.pop('input_fingerprint')
+    payload = json.dumps(saved, sort_keys=True, separators=(',', ':')).encode()
+    if hashlib.sha256(payload).hexdigest() != fingerprint:
+        raise ValueError('Input snapshot fingerprint mismatch')
+    for key, actual in [('product_files', product_inventory(workspace / 'firmware')),
+                        ('patched_files', inventory(workspace / 'patched_components')),
+                        ('evidence_files', inventory(workspace / 'inputs'))]:
+        if saved[key] != actual:
+            raise ValueError(f'Staged immutable input drift: {key}')
+    return fingerprint
+
+
+def verify_selected_components(workspace, patch_set):
+    description = json.loads((workspace / 'firmware/build/project_description.json').read_text())
+    for component, _ in PATCH_SETS[patch_set]:
+        selected = Path(description['build_component_info'][component]['dir']).resolve()
+        expected = workspace.resolve() / 'patched_components' / component
+        if selected != expected:
+            raise ValueError(f'Build selected unexpected patched source: {selected}')
+
+
+def archive_candidate(workspace):
+    """Called only after IDF build and config/lock/source verification succeeds."""
+    fingerprint = verify_inputs(workspace)
+    firmware = workspace / 'firmware'
+    build = firmware / 'build'
+    candidate = workspace / 'candidate'
+    if candidate.exists():
+        raise ValueError('Candidate already exists; preserve build evidence')
+    flash = json.loads((build / 'flasher_args.json').read_text())
+    images = flash['flash_files']
+    if not isinstance(images, dict) or not images:
+        raise ValueError('Empty flash image set')
+    artifacts = {}
+    def add(source, name):
+        if not source.is_file() or source.is_symlink():
+            raise ValueError(f'Missing or unsafe candidate artifact: {source}')
+        if name in artifacts or name == 'manifest.json':
+            raise ValueError(f'Duplicate candidate artifact: {name}')
+        artifacts[name] = source
+    for offset, name in images.items():
+        int(offset, 0)
+        path = relative_path(name)
+        if path.suffix != '.bin':
+            raise ValueError(f'Unexpected flash image type: {name}')
+        source = build / path
+        if not source.resolve().is_relative_to(build.resolve()):
+            raise ValueError(f'Flash image escapes build: {name}')
+        add(source, path.as_posix())
+    for name in ('flasher_args.json', 'flash_args', 'project_description.json'):
+        add(build / name, name)
+    project = json.loads((build / 'project_description.json').read_text())['project_name']
+    elf = relative_path(project + '.elf')
+    add(build / elf, elf.as_posix())
+    for name in ('sdkconfig', 'dependencies.lock', 'main/idf_component.yml'):
+        add(firmware / name, 'configuration/' + name)
+    add(workspace / 'input-snapshot.json', 'inputs/input-snapshot.json')
+    for name in inventory(workspace / 'inputs'):
+        add(workspace / 'inputs' / name, 'inputs/' + name)
+    # Archive patch bytes as well as their source and resulting inventories.
+    for name in inventory(firmware / 'patches'):
+        add(firmware / 'patches' / name, 'patches/' + name)
+    manifest = {'schema_version': 1, 'status': 'built_candidate',
+                'deployed': False, 'physical_validation': False,
+                'filesystem_role': 'fresh filesystem; not a device migration image',
+                'input_fingerprint': fingerprint, 'flash_files': images,
+                'config_flags': [line for line in (firmware / 'sdkconfig').read_text().splitlines()
+                                 if line.startswith('CONFIG_') or line.startswith('# CONFIG_')],
+                'artifacts': {name: {'bytes': source.stat().st_size, 'sha256': digest(source)}
+                              for name, source in sorted(artifacts.items())}}
+    pending = workspace / 'candidate.pending'
+    if pending.exists():
+        raise ValueError('Incomplete candidate archive exists; preserve failure evidence')
+    pending.mkdir()
+    for name, source in artifacts.items():
+        target = pending / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source, target)
+        if digest(target) != manifest['artifacts'][name]['sha256']:
+            raise ValueError(f'Candidate copy mismatch: {name}')
+    (pending / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
+    pending.rename(candidate)
+    return candidate
 
 
 def main():
@@ -395,7 +527,7 @@ def main():
         print(f'Prepared firmware: {firmware}', flush=True)
         if not args.prepare_only:
             subprocess.run(['idf.py', '-C', str(firmware), 'reconfigure'], check=True)
-            verify_registry_lock(ROOT / 'firmware/dependencies.lock', firmware / 'dependencies.lock', args.patch_set)
+            verify_registry_lock(args.workspace.resolve() / 'inputs/dependencies.original.lock', firmware / 'dependencies.lock', args.patch_set, root=args.workspace.resolve())
             if args.patch_set == 'production':
                 verify_storage_config((firmware / 'sdkconfig').read_text())
                 verify_performance_config((firmware / 'sdkconfig').read_text())
@@ -410,14 +542,13 @@ def main():
             glyph_errors = check_glyphs(args.workspace.resolve(), (firmware / 'sdkconfig').read_text())
             if glyph_errors:
                 raise ValueError('Configured glyph coverage failed: ' + '\n'.join(glyph_errors))
-            description = json.loads((firmware / 'build/project_description.json').read_text())
-            for component, _ in PATCH_SETS[args.patch_set]:
-                selected = description['build_component_info'][component]['dir']
-                expected = args.workspace.resolve() / 'patched_components' / component
-                if Path(selected).resolve() != expected:
-                    raise ValueError(f'Build selected unexpected patched source: {selected}')
+            verify_inputs(args.workspace.resolve())
+            verify_selected_components(args.workspace.resolve(), args.patch_set)
             subprocess.run(['idf.py', '-C', str(firmware), 'build'], check=True)
-            verify_registry_lock(ROOT / 'firmware/dependencies.lock', firmware / 'dependencies.lock', args.patch_set)
+            verify_registry_lock(args.workspace.resolve() / 'inputs/dependencies.original.lock', firmware / 'dependencies.lock', args.patch_set, root=args.workspace.resolve())
+            verify_selected_components(args.workspace.resolve(), args.patch_set)
+            candidate = archive_candidate(args.workspace.resolve())
+            print(f'Built candidate: {candidate}', flush=True)
             print(f'Verified patched components: {[item[0] for item in PATCH_SETS[args.patch_set]]}', flush=True)
     except (ValueError, KeyError, OSError, subprocess.CalledProcessError) as error:
         parser.exit(1, f'Patched build failed: {error}\n')

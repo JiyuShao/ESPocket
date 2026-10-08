@@ -1,7 +1,10 @@
 #include "system_internal.hpp"
+#include "brookesia/service_display/service_display.hpp"
 #include "brookesia/lib_utils/function_guard.hpp"
 #include "esp_lv_adapter.h"
 #include "lvgl.h"
+
+#include <utility>
 
 namespace espocket {
 
@@ -14,10 +17,8 @@ std::expected<void, std::string> System::set_display_on(bool on)
         return {};
     }
 
+    const auto sleeping_instance = on ? std::nullopt : current_foreground_instance();
     if (!on) {
-        auto active = get_active_app();
-        resume_app_id_ = active.has_value() && active->app_id != shell_id_ && active->manifest.visible ?
-                         active->app_id : esp_brookesia::system::core::INVALID_APP_ID;
         auto input_result = shell_->set_display_on(false);
         if (!input_result) {
             return input_result;
@@ -44,15 +45,52 @@ std::expected<void, std::string> System::set_display_on(bool on)
         }
     }
     display_on_.store(on, std::memory_order_release);
-    if (!on) pause_card();
+    if (!on) {
+        foreground_restoration_.screen_off(sleeping_instance);
+        pause_card();
+    }
     else if (foreground_token_->load() == 0 &&
-        (shell_->current_surface() == ShellSurface::LeftAppCard || shell_->current_surface() == ShellSurface::RightAppCard)) {
+        (shell_->underlying_surface() == ShellSurface::LeftAppCard || shell_->underlying_surface() == ShellSurface::RightAppCard)) {
         if (auto resumed = resume_card(); !resumed) {
             ESP_LOGW(TAG, "Card wake presentation failed: %s", resumed.error().c_str());
         }
     }
     ESP_LOGI(TAG, "M6 display state: %s", on ? "On" : "Off");
     return {};
+}
+
+std::expected<void, std::string> System::set_quick_settings_display(bool visible, bool restore)
+{
+    auto &display = esp_brookesia::service::Display::get_instance();
+    const auto output = DisplaySource::get_instance().output_name();
+    if (output.empty()) return std::unexpected("GUI Display source is unavailable");
+    if (visible) {
+        if (!display_on_.load(std::memory_order_acquire)) return std::unexpected("Display is off");
+        const auto active = display.get_active_source(output);
+        if (!active) return std::unexpected(active.error());
+        const auto sources = display.get_sources();
+        const auto previous = std::ranges::find_if(sources, [&](const auto &source) { return source.name == *active; });
+        if (previous == sources.end()) return std::unexpected("Active source identity is unavailable");
+        const auto gui_id = DisplaySource::get_instance().source_id();
+        auto selected = display.set_active_source(output, esp_brookesia::gui::lvgl::DISPLAY_SOURCE_NAME,
+            esp_brookesia::service::Display::SourceSelectionGuard{previous->id, gui_id});
+        if (!selected) return selected;
+        foreground_restoration_.quick_settings_opened(
+            {previous->id, gui_id, previous->name}, current_foreground_instance());
+        return {};
+    }
+    const auto saved = foreground_restoration_.quick_settings_closed(current_foreground_instance(), restore);
+    if (!saved) return {};
+    const auto active = display.get_active_source(output);
+    // Never override a newer Owner's routing or restore a re-registered same-name source.
+    if (!active || *active != esp_brookesia::gui::lvgl::DISPLAY_SOURCE_NAME) return {};
+    const auto sources = display.get_sources();
+    const auto original = std::ranges::find_if(sources, [&](const auto &source) {
+        return source.id == saved->source_id && source.name == saved->source_name;
+    });
+    if (original == sources.end()) return {};
+    return display.set_active_source(output, original->name,
+        esp_brookesia::service::Display::SourceSelectionGuard{saved->gui_source_id, original->id});
 }
 
 void System::report_startup_failure(std::string_view reason)

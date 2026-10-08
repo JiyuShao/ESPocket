@@ -16,7 +16,7 @@
 | ID | Requirement |
 |---|---|
 | INT-001 | Watch Face 必须是唯一 Home，也是 Home Space 的中心锚点。 |
-| INT-002 | 从 Watch Face 上滑必须进入 Launcher，下滑必须进入 Quick Settings，左右滑必须在 Cards 间移动；四种周边页面都属于 Home Space。 |
+| INT-002 | 从 Watch Face 上滑必须进入 Launcher，下滑必须打开 Quick Settings，左右滑必须在 Cards 间移动；Launcher 与 Cards 属于 Home Space，Quick Settings 为可从各页面打开的临时系统覆盖。 |
 | INT-003 | 任一时刻必须只有一个顶层 Surface 可见；临时系统层不得进入普通 Back 历史。 |
 | INT-004 | PWR 短按在亮屏非 Home 时必须返回 Watch Face，在亮屏 Watch Face 时必须息屏，在息屏时必须唤醒。 |
 | INT-006 | Home 与 Back 必须保持不同语义，不得互相替代。 |
@@ -24,21 +24,22 @@
 | INT-008 | 息屏期间触摸不得触发页面动作；基础唤醒入口为 PWR。 |
 | INT-010 | Card 是 Home Space 中的一级位置，可展示 Shell 内容或同一 App 的专门 App Card 形态；需要多级流程时进入完整 App 页面。 |
 | INT-011 | Launcher 只负责发现和启动 App，不得成为 Home。 |
-| INT-017 | 从 Launcher 向下、Quick Settings 向上、左右 Card 向表盘方向滑动时，必须能返回 Watch Face；周边页应有轻微的返回方向提示。 |
+| INT-017 | 从 Launcher 内容区域向下、左右 Card 向表盘方向滑动时，必须能返回 Watch Face；Quick Settings 向上收起并恢复仍有效的原页面；周边页应有轻微的返回方向提示。 |
 | INT-018 | Circular Shell 的 Launcher 使用每页最多四个入口的纵向分页列表；上滑下一页、下滑上一页，越过阈值并松手后一次切换，不连续滚动或播放翻页动画。第一页继续下拉才返回 Watch Face；拉动期间提供方向与阈值提示，并取消本次触摸的 App 点击。页码可见，最后一页上滑保持当前页；重新进入 Launcher 从第一页开始。 |
 | INT-019 | 用户可增删和排序左右 Card；Quick Settings 与 Launcher 的位置固定。 |
 | INT-020 | 所有页面不得显示 Shell 常驻顶部状态栏。App 自行呈现所需状态信息；临时系统告警可覆盖当前页面。 |
-| INT-022 | Home Space 周边页以反方向手势返回 Watch Face；App 的子页面 Back 返回 App 页面栈的上一项，App Root 没有 Back。 |
-| INT-023 | App 子页面默认提供可见 Back 与 Edge Back；App 可以接管两种默认入口，自定义返回 UI 与手势，也可不显示可见 Back；自定义返回使用统一 Back 语义。普通滚动、横滑与 Long Press 归 App；PWR Home 不可关闭。 |
+| INT-022 | Launcher 与 Cards 以反方向手势返回 Watch Face；Quick Settings 收起恢复原页面；App 的子页面 Back 返回 App 页面栈的上一项，App Root 没有 Back。 |
+| INT-023 | App 子页面默认提供可见 Back 与 Edge Back；App 可以接管两种默认入口，自定义返回 UI 与手势，也可不显示可见 Back；自定义返回使用统一 Back 语义。普通滚动、横滑与 Long Press 归 App；顶部边缘下拉保留为全局 Quick Settings 入口；PWR Home 不可关闭。 |
 | INT-024 | App Card 上的横滑由 Home Space 处理；Card 内纵向交互与轻量操作归 App。Card 打开完整 App 后，PWR Home 直接返回 Watch Face。 |
 | INT-025 | 完整 App 页面的 Back 请求可由 App 暂缓确认；待决期间不得重复执行 Back，超时必须取消并报告错误。PWR Home、App 停止或崩溃使待决请求失效。 |
 | INT-026 | Quick Settings 的直接切换必须立即生效并停留在原 Surface；进入完整 Settings App 后遵守 App Page 栈与 Root 无 Back 的规则。 |
-| INT-028 | 确认弹窗、键盘与 Loading 同时存在时，确认弹窗优先接收输入；键盘暂停输入并保留草稿，仅在弹窗结束且原请求仍有效时恢复；Loading 为最低优先级反馈。 |
+| INT-028 | Quick Settings 打开时临时优先显示并保留底层请求身份；收起后只恢复仍有效的请求。其余情况下确认弹窗、键盘与 Loading 同时存在时，确认弹窗优先接收输入；键盘暂停输入并保留草稿，仅在弹窗结束且原请求仍有效时恢复；Loading 为最低优先级反馈。 |
 | INT-029 | 键盘呈现期间的 Back 必须取消当前输入，不得导航底层 App 页面；这不产生 App Page 栈的 pop，App Root 无页面 Back 的规则保持有效。 |
 | INT-030 | 同一处理周期内，PWR 必须先于尚未提交的确认或输入结果处理；已提交的操作继续按真实 Owner 结果核实，不得报告为已撤销。 |
 | INT-031 | 系统拥有的提示可以在 Home 后继续呈现；Watch Face 上的 PWR 仍按 INT-004 息屏。息屏期间暂停提示的自动关闭呈现计时，唤醒后仅恢复仍有效的提示。 |
 | INT-032 | 提示呈现计时暂停不得延长操作超时、授权期限或 Owner 生命周期；请求失效后不得因为唤醒而重新获得执行资格。 |
 | INT-033 | 首版 Loading 必须覆盖 App 启动等待和 App 主动请求的等待反馈；具体操作的进度、超时、取消与结果继续由真实 Owner 定义。 |
+| INT-035 | 任一正常运行的亮屏页面均支持顶部边缘下拉打开 Quick Settings；松手后呈现临时系统覆盖，不改变 App Page 栈或 Running Instance。收起恢复原页面，Home 清除临时覆盖；底层确认期限和操作超时不得延长。 |
 | INT-034 | App 启动期间，有效 PWR 短按被识别后，返回 Watch Face 的目标上限为 250 ms；Loading 呈现不得替代该响应要求的验证。 |
 
 旧要求的替代关系：INT-005 → INT-022、INT-023；INT-009 → INT-023、INT-024；INT-012 → INT-026；INT-014 → INT-027。旧 ID 保留在 Git 历史中，不再表示当前产品要求。

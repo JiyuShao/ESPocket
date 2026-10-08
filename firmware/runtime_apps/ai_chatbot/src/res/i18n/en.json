@@ -71,6 +71,7 @@
                     "status.configured_agent": "Configured {0}",
                     "status.device_service_unavailable": "Device service unavailable",
                     "status.empty_chat": "Waiting for the agent to start",
+                    "status.loading_agents": "Loading assistants",
                     "status.get_agent_list_failed": "Get agent list failed: {0}",
                     "status.listening": "Listening",
                     "status.listening_while_speaking": "Listening while speaking",

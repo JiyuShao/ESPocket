@@ -63,19 +63,15 @@ std::expected<void, std::string> System::launch_app(
     if (std::count_if(apps.begin(), apps.end(), [manifest_id](const auto &candidate) {
             return candidate.manifest.id == manifest_id;
         }) != 1 || !app->manifest.visible) return std::unexpected("App identity unavailable");
-    launch_source_ = source;
-    lifecycle_restore_surface_ = source;
-    lifecycle_restore_pending_ = true;
-    // This feedback does not make synchronous Core startup preemptible.
+    using esp_brookesia::system::core::AppState;
+    if (app->state == AppState::Running || app->state == AppState::Starting) return {};
+    // Request acceptance precedes product bookkeeping: a rejected second launch
+    // must not overwrite the first launch's restoration target or Loading owner.
+    auto result = request_app_start(app->app_id);
+    if (!result) return result;
+    foreground_restoration_.launch_requested(app->app_id, source);
     auto loading = shell_->show_loading(app->app_id, true);
     if (!loading) ESP_LOGW(TAG, "Startup feedback unavailable: %s", loading.error().c_str());
-    auto result = start_app(app->app_id);
-    shell_->hide_loading(app->app_id, true);
-    if (!result) {
-        restore_surface(source);
-        lifecycle_restore_pending_ = false;
-        return result;
-    }
     return {};
 }
 

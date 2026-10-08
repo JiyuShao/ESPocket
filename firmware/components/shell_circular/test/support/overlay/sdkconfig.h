@@ -1,0 +1,2 @@
+#pragma once
+#define CONFIG_ESPOCKET_M6_SCREEN_TIMEOUT_SECONDS 30

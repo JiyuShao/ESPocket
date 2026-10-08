@@ -43,6 +43,10 @@ python3 scripts/firmware/build_patched_firmware.py \
 
 先加载 ESP-IDF 环境。workspace 必须不存在且位于源码 checkout 外；每次独立构建保留各自证据。入口复制工程和已物化依赖，准确应用 hash 锁定补丁，使用 Component Manager override_path 选择副本，再执行完整构建并核对选中的组件路径。原始 managed_components、sdkconfig 和 dependencies.lock 不写入。工程副本把全部 Registry 版本约束为原始 lock 的精确版本，构建后核对版本和 component hash，阻止切换 override 时顺带升级传递依赖。当前产品预算为 16 KiB，上游默认仍为 8 KiB。
 
+成功构建后自动生成 `<workspace>/candidate/`：保存 flasher_args 引用的全部镜像（含 bootloader、分区表、模型、App 与 LittleFS）、ELF、配置、lock、补丁字节和输入证明。`manifest.json` 记录各产物大小/hash、实际配置及输入 fingerprint；`deployed` 与 `physical_validation` 均为 false。LittleFS 是全新文件系统候选，替换已有设备数据前须另走备份与迁移流程。
+
+stage 时保存实际副本的产品源码、补丁 inventory 和原始配置/lock；reconfigure 与 build 后复核不可变输入及选中的 patched 路径。构建验证不再依赖构建期间可能变化的 checkout。`--prepare-only` 只写 prepared 输入记录，失败不生成成功 candidate；不覆盖已有 workspace 或 candidate，保留日志与失败证据。
+
 产物位于 `<workspace>/firmware/build/`，配置位于 `<workspace>/firmware/sdkconfig`，输入身份位于 `<workspace>/patch-inputs.json`。生成的 lock 只属于此次构建；registry lock 与补丁 manifest 共同限定产品输入。`--prepare-only` 只准备副本，不构建也不证明设备修复。默认 `--patch-set production` 使用已接受的 Runtime/Core/HAL/Settings/Display/Board Manager 补丁，启用 Player/Recorder/Processor/Audio Service 和 AFE；Media Dump/Video 关闭。`--patch-set hal-candidate` 显式试做 HTTP/Audio HAL 候选（普通配置不打开 Audio Processor）；历史 `--patch-set audio-candidate` 仍固定 playback-only 的新增依赖、开启 Player/Processor/Audio Service，并强制 Recorder/AFE/Media Dump/Video 关闭。构建在 reconfigure 后复核音频选项与精确版本/hash；产品还复核生成的麦克风配置，漂移时停止。实验依赖不改生产 lock，候选不等于设备门槛通过。升级源码/hash 不匹配时停止，不能绕过校验。
 
 正式产品的 ES7210 Recorder 使用 MIC1/MIC2、16 kHz、双通道 16 bit、`MM` 布局和 30 dB 增益，逐通道覆盖为空；生成板级配置将上游三通道 mask `0x7` 改为双麦克风 `0x3`，避免将扬声器参考通道误纳入双通道采集。小智通过官方音频服务编码为 mono Opus 并上传，采用半双工：监听时采集，说话时暂停采集。硬件证据与语音验收分别由 [麦克风验证](../.scratch/005-m5-application-ecosystem/issues/14-verify-official-microphone-capability.md)和 [完整语音对话](../.scratch/005-m5-application-ecosystem/issues/15-enable-xiaozhi-voice-conversation.md)持有。
@@ -259,4 +263,23 @@ python3 scripts/firmware/prepare_software_aec_candidate.py \
 
 工具核对完整 HAL 补丁清单并复制 System／Chat 源码，记录输入 hash，只准备构建；不访问设备、不刷写。随后在该副本用 IDF 6.0.1 完整构建。若使用本地依赖 override，另保存每个组件目录 inventory、依赖 lock 与主组件 YAML，保留锁定版本与已批准补丁，不用版本替换绕过解析失败。离线构建不能证明声学效果。候选沿用 WakeNet／AgentManager 唤醒词打断路径；普通说话的全双工打断不在此次验收范围。
 
-聊天 0.1.2 对固定 GUI bindings 只提交变化值，失败后重试、实例重建时清空缓存。包位于本地 Chat 的 dist 目录；更新必须重新构建固件中的精确 immutable allowlist，并从最新设备 LittleFS 备份使用 `stage_local_runtime_apps.py --update-builtins` 保留数据。真机步骤与回退要求由 [020/05](../.scratch/020-local-runtime-apps/issues/05-aec-interruption-candidate.md) 持有。
+聊天从 0.1.2 起对固定 GUI bindings 只提交变化值，失败后重试、实例重建时清空缓存。包位于本地 Chat 的 dist 目录；更新必须重新构建固件中的精确 immutable allowlist，并从最新设备 LittleFS 备份使用 `stage_local_runtime_apps.py --update-builtins` 保留数据。真机步骤与回退要求由 [020/05](../.scratch/020-local-runtime-apps/issues/05-aec-interruption-candidate.md) 持有。
+
+
+### 全局 Quick Settings
+
+正常亮屏页面可从顶部边缘下拉打开系统 Quick Settings，松手提交；上滑收起后保留原页面。466px profile 的顶部区域为 37px，触发距离 93px。Watch Face 保留整页下拉；App 内容区域滚动继续由 App 处理。面板是独立 SystemTop flow，不进入 App Page 栈，不结束对话或重新启动 App；Keyboard／Dialog 临时隐藏，原请求身份与期限不改变，收起仅恢复有效请求。
+
+非 GUI source 临时切至 LVGL，返回同时核对 Running Instance token 与 Display 注册 ID；Display Owner 的原子身份 guard 拒绝新来源或同名重注册的恢复。息屏不接受触摸；唤醒保留仍有效的覆盖，PWR Home 清除覆盖并保持原导航规则。系统启动失败页不提供这个入口。实现与尚未完成的物理验收由 [021](../.scratch/021-global-quick-settings/spec.md) 持有。
+
+### Owner 整改候选
+
+Chat 0.1.3 的普通界面与动态导航绑定使用产品语义颜色，并声明 `package.keep_screen_on: true`。该声明经原 Core 包信任路径验证，仅对当前前台 Running 生效；System 不再按 Chat identity 特判。更新 BPK 必须重建精确 immutable allowlist，并从最新设备备份保留更新，不能只刷 App 镜像。
+
+GUI LVGL 的 ImageDecodePolicy 持有 decoder/cache 内部实现；System 通过公共 header 配置缓存预算和 64 KiB workspace，并读取聚合统计。接口在真实 GUI thread guard 下使用；完整 decoder 集合通过检查才安装，重复配置拒绝，释放不覆盖较新的 callback。原 System decoder 回归已移至 GUI Owner 接口的 host tests。
+
+产品启动改为 Core 请求与分阶段推进：每次 System Owner tick 在 PWR 后处理一个阶段，GUI 准备以 future 非阻塞等待，成功／失败通过原 hooks 处理。同步阶段内的长 callback 与 GUI parse 仍需独立耗时治理；当前不宣称 250ms 已满足。候选未部署，视觉、性能与启动响应由 [023](../.scratch/023-owner-seam-remediation/spec.md) 验收。
+
+Shell Overlay 的呈现仲裁、清理重试与结果交付集中在 CircularShell 私有 `shell_overlay.cpp` implementation；Keyboard 与 Dialog 保留各自绘制。Core 保留请求身份和最终结果裁决，Dialog 自动关闭的呈现计时仍由 Shell 持有。[024](../.scratch/024-shell-overlay-presentation/spec.md) 跟踪真实 interface 回归与真机条件；[host adapter 说明](components/shell_circular/test/support/overlay/README.md)记录替换范围与验证限制。
+
+启动响应治理候选使用 Chat 0.1.5 的异步 Agent discovery、网络探测、Agent 配置与 AppData 配置／Coze 私钥读取。锁定 Core 的 `CONFIG_BROOKESIA_SYSTEM_CORE_ENABLE_PROFILE_LOG` 可记录 `App start phase` 的 `owner_ms`，以及原有 GUI prepare 分步骤耗时；诊断开关仅在隔离候选中开启，不以日志代替真实 PWR／顶部下拉测量。剩余同步阶段与 250ms 验收由 [023/04](../.scratch/023-owner-seam-remediation/issues/04-phased-app-start.md) 持有。

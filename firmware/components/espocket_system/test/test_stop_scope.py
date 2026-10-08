@@ -11,9 +11,11 @@ class StopScopeTest(unittest.TestCase):
         body=text[text.index('void System::on_stop()'):text.index('void System::on_deinit()')]
         harness=r'''
 #include <atomic>
+#include "espocket/foreground_restoration.hpp"
 #include <cassert>
 #include <expected>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 #define ESP_LOGE(...) ((void)0)
@@ -21,11 +23,14 @@ class StopScopeTest(unittest.TestCase):
 namespace esp_brookesia::system::core {constexpr int INVALID_APP_ID=0;enum class AppState{Installed,Running,Paused,Stopped,Error};struct AppInfo{int app_id;AppState state;struct{std::string id;}manifest;};}
 namespace espocket {
 struct Entry {bool closed=false;void close(){closed=true;}void stop(){closed=true;}void cancel_pending(){closed=true;}std::expected<void,std::string> cancel(){closed=true;return {};}};
+enum class ShellSurface : uint8_t {WatchFace};
 struct System {
 std::atomic_bool stopping_=false;std::atomic<int> foreground_app_id_=2;
 std::shared_ptr<std::atomic<int>> foreground_token_=std::make_shared<std::atomic<int>>(22);
 std::shared_ptr<Entry> test_snapshots_=std::make_shared<Entry>(),card_actions_=std::make_shared<Entry>(),test_adapter_=std::make_shared<Entry>(),power_key_monitor_=std::make_shared<Entry>(),test_touch_input_=std::make_shared<Entry>(),test_power_input_=std::make_shared<Entry>();
-bool navigation_closed=false,card_paused=false,lifecycle_restore_pending_=true;int shell_id_=1,resume_app_id_=2;
+std::optional<int> pending_card_=77;
+ForegroundRestorationProjection foreground_restoration_{ShellSurface::WatchFace};
+bool navigation_closed=false,card_paused=false;int shell_id_=1;
 std::vector<int> stopped;
 void stop_runtime_navigation(){navigation_closed=true;}void pause_card(){card_paused=true;}
 auto list_apps(){using namespace esp_brookesia::system::core;return std::vector<AppInfo>{{1,AppState::Running,{"shell"}},{2,AppState::Running,{"native"}},{3,AppState::Paused,{"background"}},{4,AppState::Running,{"runtime"}},{5,AppState::Installed,{"installed"}},{6,AppState::Stopped,{"stopped"}},{7,AppState::Error,{"failed"}}};}
@@ -34,9 +39,9 @@ void on_stop();
 };
 ''' + body + r'''
 }
-int main(){espocket::System s;s.on_stop();assert((s.stopped==std::vector<int>{2,3,4,7,1}));assert(s.foreground_app_id_==0 && s.resume_app_id_==0 && !s.lifecycle_restore_pending_);}
+int main(){espocket::System s;s.on_stop();assert((s.stopped==std::vector<int>{2,3,4,7,1}));assert(s.foreground_app_id_==0 && !s.foreground_restoration_.sleeping_instance() && !s.pending_card_);}
 '''
         with tempfile.TemporaryDirectory(prefix='system-stop-scope-') as directory:
             cpp=Path(directory)/'test.cpp';binary=Path(directory)/'test';cpp.write_text(harness)
-            subprocess.run([os.environ.get('CXX','clang++'),'-std=c++23',str(cpp),'-o',str(binary)],check=True)
+            subprocess.run([os.environ.get('CXX','clang++'),'-std=c++23','-I',str(ROOT/'firmware/components/espocket_system/include'),str(cpp),'-o',str(binary)],check=True)
             subprocess.run([str(binary)],check=True,timeout=10)

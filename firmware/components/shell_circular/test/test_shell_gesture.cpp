@@ -44,7 +44,7 @@ int main()
         {ShellSurface::WatchFace, ShellGestureDirection::Down, GestureIntent::QuickSettings},
         {ShellSurface::WatchFace, ShellGestureDirection::Left, GestureIntent::BrightnessCard},
         {ShellSurface::WatchFace, ShellGestureDirection::Right, GestureIntent::BatteryCard},
-        {ShellSurface::QuickSettings, ShellGestureDirection::Up, GestureIntent::WatchFace},
+        {ShellSurface::QuickSettings, ShellGestureDirection::Up, GestureIntent::CloseQuickSettings},
         {ShellSurface::QuickSettings, ShellGestureDirection::Down, GestureIntent::None},
         {ShellSurface::BatteryCard, ShellGestureDirection::Left, GestureIntent::WatchFace},
         {ShellSurface::BatteryCard, ShellGestureDirection::Right, GestureIntent::None},
@@ -229,6 +229,58 @@ int main()
         move(keyboard, ShellGestureDirection::Right, {.display_on=false, .app_visible=true}, true);
         assert(pending(keyboard) == GestureIntent::None);
     }
+
+    // The same top-edge sequence opens settings over every underlying surface,
+    // foreground App, keyboard and modal. Navigation still commits at release.
+    for (const auto surface : {ShellSurface::WatchFace, ShellSurface::Launcher,
+            ShellSurface::LeftAppCard, ShellSurface::RightAppCard}) {
+        for (bool app_visible : {false, true}) {
+            for (int overlay = 0; overlay < 3; ++overlay) {
+                ShellGestureState global;
+                global.surface = surface;
+                global.launcher_return_threshold = 93;
+                global.modal_active = overlay == 1;
+                global.keyboard_active = overlay == 2;
+                const ShellGestureContext context{.app_visible = app_visible};
+                process_shell_gesture(global, {.phase=ShellGesturePhase::Press, .start_y=5}, context);
+                const ShellGestureEvent down{.phase=ShellGesturePhase::Pressing,
+                    .direction=ShellGestureDirection::Down, .start_y=5, .stop_y=125, .distance_px=120};
+                auto early = down;
+                early.direction=ShellGestureDirection::None;early.distance_px=20;early.stop_y=25;
+                process_shell_gesture(global, early, context);
+                assert(pending(global)==GestureIntent::None && !global.consumed);
+                process_shell_gesture(global, down, context);
+                assert(pending(global) == GestureIntent::None && global.pointer_cancel_pending);
+                auto end = down; end.phase=ShellGesturePhase::Release;
+                process_shell_gesture(global, end, context);
+                assert(pending(global) == GestureIntent::QuickSettings);
+                assert(global.surface == surface);
+            }
+        }
+    }
+    ShellGestureState top_cancelled;
+    top_cancelled.launcher_return_threshold=93;
+    const ShellGestureEvent top_end{.phase=ShellGesturePhase::Release,
+        .direction=ShellGestureDirection::Down, .start_y=5, .stop_y=125, .distance_px=120};
+    process_shell_gesture(top_cancelled, {.phase=ShellGesturePhase::Press, .start_y=5}, {.app_visible=true});
+    reset_shell_gesture(top_cancelled,true);
+    process_shell_gesture(top_cancelled,top_end,{.app_visible=true});
+    assert(pending(top_cancelled)==GestureIntent::None);
+    ShellGestureState ordinary_app;
+    ordinary_app.launcher_return_threshold = 93;
+    press(ordinary_app, {.app_visible=true});
+    move(ordinary_app, ShellGestureDirection::Down, {.app_visible=true});
+    release(ordinary_app, ShellGestureDirection::Down, {.app_visible=true});
+    assert(pending(ordinary_app) == GestureIntent::None && !ordinary_app.pointer_cancel_pending);
+    // A settings overlay closes even when the underlying App or dialog is active.
+    ShellGestureState quick;
+    quick.surface=ShellSurface::QuickSettings; quick.modal_active=true;
+    quick.keyboard_active=true; quick.launcher_return_threshold=93;
+    press(quick, {.app_visible=true});
+    move(quick, ShellGestureDirection::Up, {.app_visible=true});
+    assert(pending(quick)==GestureIntent::None && quick.pointer_cancel_pending);
+    release(quick, ShellGestureDirection::Up, {.app_visible=true});
+    assert(pending(quick)==GestureIntent::CloseQuickSettings);
 
     ShellTouchTracker tracker;
     tracker.geometry = {.width = 466, .horizontal_edge = 27, .vertical_edge = 37,

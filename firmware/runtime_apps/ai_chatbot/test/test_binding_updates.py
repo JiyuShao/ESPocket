@@ -10,7 +10,7 @@ class BindingUpdatesTest(unittest.TestCase):
     def test_unchanged_retry_and_instance_reset(self):
         script = r'''
 const fs=require('fs'),vm=require('vm'),assert=require('assert');
-const source=fs.readFileSync(process.argv[1],'utf8').replace(/^import[^\n]+\n/,'');
+const source=fs.readFileSync(require('path').join(require('path').dirname(process.argv[1]),'operations.js'),'utf8').replace(/^export /gm,'')+'\n'+fs.readFileSync(process.argv[1],'utf8').replace(/^import[^\n]+\n/gm,'');
 const c=vm.createContext({createI18nBundle:()=>({}),brookesia:{print:()=>{}}});vm.runInContext(source,c);
 const batches=[];let succeeds=true;
 c.gui=(_name,p)=>{batches.push(p.Commands[0].Params.Updates);return {success:succeeds};};

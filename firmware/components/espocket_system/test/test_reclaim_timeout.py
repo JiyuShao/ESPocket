@@ -9,6 +9,7 @@ COMPONENT = Path(__file__).resolve().parents[1]
 STUB = r'''
 #pragma once
 #include <atomic>
+#include "espocket/foreground_restoration.hpp"
 #include <cstdint>
 #include <expected>
 #include <optional>
@@ -17,13 +18,16 @@ namespace esp_brookesia::system::core {
 using AppId = uint32_t;
 constexpr AppId INVALID_APP_ID = 0;
 enum class AppKind { Native, Runtime };
-struct Manifest { AppKind kind; bool visible = true; std::string id = "sample"; };
-struct AppInfo { Manifest manifest; };
+enum class AppState { Running, Paused, Stopped };
+struct Manifest { AppKind kind; bool visible = true; std::string id = "sample"; bool keep_screen_on = false; };
+struct AppInfo { Manifest manifest; AppState state = AppState::Running; };
 }
 namespace espocket {
+enum class ShellSurface : uint8_t {WatchFace};
 struct System {
+    ForegroundRestorationProjection foreground_restoration_{ShellSurface::WatchFace};
+    System(){foreground_restoration_.screen_off(RunningInstanceIdentity{7,1});}
     std::atomic_bool stopping_ = false, display_on_ = true;
-    uint32_t resume_app_id_ = 7;
     bool display_ok = true, stop_ok = true;
     int stops = 0, display_calls = 0;
     std::optional<esp_brookesia::system::core::AppInfo> app;
@@ -36,7 +40,7 @@ struct System {
     }
     auto get_app(uint32_t) const { return app; }
     std::expected<void, std::string> stop_app(uint32_t id) {
-        if (id != resume_app_id_) return std::unexpected("wrong_target");
+        if (id != 7) return std::unexpected("wrong_target");
         ++stops;
         return stop_ok ? std::expected<void, std::string>{} : std::unexpected("stop_failed");
     }
@@ -51,7 +55,7 @@ using namespace espocket;
 using namespace esp_brookesia::system::core;
 int main() {
     System conversation;
-    conversation.app = AppInfo{{AppKind::Runtime, true, "brookesia.general.ai_chatbot"}};
+    conversation.app = AppInfo{{AppKind::Runtime, true, "arbitrary.voice.app", true}};
     conversation.foreground = true;
     conversation.handle_screen_timeout();
     assert(conversation.display_on_ && conversation.display_calls == 0 && conversation.stops == 0);
@@ -59,6 +63,13 @@ int main() {
     conversation.handle_screen_timeout();
     assert(!conversation.display_on_ && conversation.display_calls == 1);
     for (auto kind : {AppKind::Native, AppKind::Runtime}) {
+        System leased; leased.app = AppInfo{{kind, true, "unrelated.id", true}}; leased.foreground = true;
+        leased.handle_screen_timeout(); assert(leased.display_calls == 0);
+        leased.app->state = AppState::Stopped;
+        leased.handle_screen_timeout(); assert(leased.display_calls == 1);
+        System no_opt_in; no_opt_in.app = AppInfo{{kind, true, "espocket.app.ai_chatbot", false}};
+        no_opt_in.foreground = true; no_opt_in.handle_screen_timeout(); assert(no_opt_in.display_calls == 1);
+
         System s; s.app = AppInfo{{kind, true, "sample"}};
         s.handle_screen_timeout();
         const bool selected = kind == AppKind::Native ? EXPECT_NATIVE : EXPECT_RUNTIME;
@@ -68,7 +79,7 @@ int main() {
     System invalid; invalid.app = AppInfo{{AppKind::Native, false, "hidden"}};
     invalid.handle_screen_timeout(); assert(invalid.stops == 0);
     System missing; missing.handle_screen_timeout(); assert(missing.stops == 0);
-    System no_resume; no_resume.resume_app_id_ = INVALID_APP_ID;
+    System no_resume; no_resume.foreground_restoration_.screen_off(std::nullopt);
     no_resume.app = AppInfo{{AppKind::Native, true, "native"}};
     no_resume.handle_screen_timeout(); assert(no_resume.stops == 0);
     System display_failure; display_failure.display_ok = false;
@@ -94,7 +105,7 @@ class ReclaimTimeoutTest(unittest.TestCase):
                 (root / 'test.cpp').write_text(TEST)
                 binary = root / 'test'
                 subprocess.run([
-                    os.environ.get('CXX', 'clang++'), '-std=c++23', '-I', str(root),
+                    os.environ.get('CXX', 'clang++'), '-std=c++23', '-I', str(root), '-I',str(COMPONENT/'include'),
                     f'-DCONFIG_ESPOCKET_M8_RECLAIM_NATIVE_TEST={native}',
                     f'-DCONFIG_ESPOCKET_M8_RECLAIM_RUNTIME_TEST={runtime}',
                     f'-DCONFIG_ESPOCKET_M6_RECLAIM_ON_TIMEOUT_TEST={legacy}',

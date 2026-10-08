@@ -6,7 +6,7 @@ slider/switch 的 main、indicator、knob 样式必须明确可见；官方资�
 
 ## Runtime 圆屏呈现
 
-System 的 AppPresentation 为 AI Chatbot 0.2.1 和 Calculator 0.3.0 选择嵌入的圆屏 GUI 文档，沿用原包的资源目录、screen flow、JS Controller、事件和生命周期。正文使用真实 20px 字号；计算按键声明 24sp，当前 Latin 字形按内置字体规则选用 20px。控件落在圆内安全区域。原安装文件与 receipt 不变，升级到未知版本自动回到通用兼容布局。
+本地 Chat 与 Calculator Runtime App 自己持有圆屏 GUI 文档、screen flow、JS Controller、事件和生命周期，源码位于 `firmware/runtime_apps/`，独立生成 BPK；System 不再按这两个 App 的身份或版本选择专用 GUI 文档。正文使用真实 20px 字号；计算按键声明 24sp，当前 Latin 字形按内置字体规则选用 20px。控件落在圆内安全区域。
 
 其他矩形 Runtime App 保留内接安全 viewport，Backend 以 App 自身背景铺满屏幕，并与 viewport 一起挂载、替换和释放；不拦截 Shell Overlay 或额外保留输入控件。通用兼容不能自动重排未知 App 的四角控制，专门布局仍须按实际 Controller 契约适配与验收。
 

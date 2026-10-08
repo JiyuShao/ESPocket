@@ -71,6 +71,7 @@
                     "status.configured_agent": "已配置 {0}",
                     "status.device_service_unavailable": "Device 服务不可用",
                     "status.empty_chat": "等待智能体启动",
+                    "status.loading_agents": "正在加载助手",
                     "status.get_agent_list_failed": "获取智能体列表失败：{0}",
                     "status.listening": "正在监听",
                     "status.listening_while_speaking": "边说话边监听",

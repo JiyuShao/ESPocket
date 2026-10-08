@@ -19,6 +19,7 @@ namespace espocket {
 struct CircularShell {
  struct Host {std::function<bool()> app_visible;} host_;
  bool status_refresh_deferred_=false;
+ bool quick=false; bool quick_settings_open() const {return quick;}
  unsigned calls=0;
  void refresh_status();
  void refresh_clock(){++calls;}void refresh_wifi(){++calls;}
@@ -34,8 +35,10 @@ int main() {
  assert(shell.calls==0 && shell.status_refresh_deferred_);
  visible=false;shell.refresh_status();
  assert(shell.calls==5 && !shell.status_refresh_deferred_);
+ visible=true;shell.quick=true;shell.refresh_status();assert(shell.calls==10);
+ shell.quick=false;
  // Absence of a foreground provider preserves the standalone Shell behavior.
- shell.host_.app_visible={};shell.refresh_status();assert(shell.calls==10);
+ shell.host_.app_visible={};shell.refresh_status();assert(shell.calls==15);
 }
 '''
         with tempfile.TemporaryDirectory() as directory:

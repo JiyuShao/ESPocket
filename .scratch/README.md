@@ -26,6 +26,12 @@
 | 018 | [System 与 CircularShell 参考审计](018-system-super-reference-audit/spec.md) | 2026-10-04 用户在 grill-with-docs 中选择完整系统审计 |
 | 019 | [System 与 CircularShell 整改及 Super 功能对齐路线图](019-system-shell-remediation/spec.md) | 2026-10-04 用户确认完整后续整改范围，并提出默认对齐 Super 已接通功能 |
 | 020 | [聊天与计算器本地 Runtime App 包](020-local-runtime-apps/spec.md) | 用户要求将聊天与计算器迁为本地 Runtime App 包，并替换 Store 安装版 |
+| 021 | [全局下拉 Quick Settings](021-global-quick-settings/spec.md) | 用户要求任何页面和场景下拉打开 Quick Settings |
+| 022 | [Loading 呈现与全仓分层审查](022-loading-code-audit/spec.md) | 用户要求改进 Loading 并使用 code-review 全仓检查分层与硬编码 |
+| 023 | [主题、渲染、电源与启动 Owner 整改](023-owner-seam-remediation/spec.md) | 用户批准 code-review 后四项整改方案 |
+| 024 | [Shell Overlay 呈现集中与真实 interface 回归](024-shell-overlay-presentation/spec.md) | 用户选择架构候选01并确认范围与最终方案 |
+| 025 | [前台恢复投影与隔离构建候选流程](025-restoration-candidate-flow/spec.md) | 用户批准 Running Instance 前台恢复投影与隔离构建候选流程 |
+| 026 | [聊天 App 异步操作归属](026-chat-operation-ownership/spec.md) | 用户选择架构候选01并确认范围及旧结果失效语义 |
 
 ## 当前工作入口
 

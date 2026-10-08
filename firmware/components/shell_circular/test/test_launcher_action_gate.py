@@ -13,7 +13,7 @@ class LauncherActionGate(unittest.TestCase):
     def test_queued_fixed_actions_do_not_start_a_second_foreground(self):
         source = (OWNER / 'src/circular_shell.cpp').read_text()
         method = source[source.index('std::expected<void, std::string> CircularShell::on_action('):
-                        source.index('std::expected<void, std::string> CircularShell::on_timer(')]
+                        source.index('} // namespace espocket', source.index('std::expected<void, std::string> CircularShell::on_action('))]
         constants = sorted(set(re.findall(r'\b[A-Z][A-Z_]+\b', method)) - {'Launcher'})
         prefix = r'''
 #include <atomic>
@@ -26,19 +26,20 @@ class LauncherActionGate(unittest.TestCase):
 #include <vector>
 namespace esp_brookesia::system::core { struct AppContext {}; }
 namespace espocket {
-enum class ShellSurface { WatchFace, Launcher };
+enum class ShellSurface { WatchFace, Launcher, QuickSettings };
 struct Gesture { std::atomic<int> launcher_pull_distance{0}, launcher_return_threshold{100}; std::atomic<bool> modal_active{false}; };
 struct Host { std::function<bool()> app_visible; struct { std::function<bool()> enabled; std::function<std::expected<void,std::string>(bool)> set_enabled; } developer_mode; };
 class CircularShell {
 public:
  Host host_; ShellSurface surface=ShellSurface::Launcher;
  std::unique_ptr<Gesture> home_gesture_state_=std::make_unique<Gesture>();
- std::vector<std::string> opened; bool visible=false;
+ std::vector<std::string> opened; bool visible=false;int mutations=0;
+ bool quick_settings_open() const {return surface==ShellSurface::QuickSettings;}
  ShellSurface current_surface() { return surface; }
  std::expected<void,std::string> on_action(esp_brookesia::system::core::AppContext &, std::string_view);
  std::expected<void,std::string> open_app(std::string_view id,std::string_view) { opened.emplace_back(id); visible=true; return {}; }
- std::expected<void,std::string> step_brightness() { return {}; }
- std::expected<void,std::string> toggle_wifi() { return {}; }
+ std::expected<void,std::string> step_brightness() { ++mutations;return {}; }
+ std::expected<void,std::string> toggle_wifi() { ++mutations;return {}; }
  void set_status_text(std::string_view,std::string_view) {}
  void refresh_developer_mode() {}
 };
@@ -61,6 +62,13 @@ int main() {
  shell.surface=ShellSurface::Launcher; shell.home_gesture_state_->modal_active=true;
  shell.on_action(context, OPEN_APP_STORE_ACTION);
  if (shell.opened.size()!=2) throw std::runtime_error("modal allowed underlying Launcher action");
+ shell.surface=ShellSurface::WatchFace;
+ shell.on_action(context, OPEN_SETTINGS_QUICK_ACTION);
+ shell.on_action(context, STEP_BRIGHTNESS_QUICK_ACTION);
+ shell.on_action(context, TOGGLE_WIFI_ACTION);
+ if(shell.opened.size()!=2 || shell.mutations!=0)throw std::runtime_error("retired settings overlay changed Owner state");
+ shell.surface=ShellSurface::QuickSettings;shell.on_action(context, STEP_BRIGHTNESS_QUICK_ACTION);
+ if(shell.mutations!=1)throw std::runtime_error("active settings action was rejected");
 }
 '''
         with tempfile.TemporaryDirectory(prefix='espocket-launcher-gate-') as temporary:

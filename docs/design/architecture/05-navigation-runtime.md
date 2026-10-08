@@ -23,7 +23,7 @@ ESPocket 的导航接口包含声明、转移和观察三部分：App 安装时�
 
 | ID | Invariant |
 |---|---|
-| NAV-001 | Watch Face、Cards、Quick Settings 与 Launcher 是 Shell Surface；前台完整 App 由 System Core 管理。 |
+| NAV-001 | Watch Face、Cards 与 Launcher 是 Home Space Surface；Quick Settings 以独立 SystemTop flow 临时覆盖任意正常运行页面。前台完整 App 仍由 System Core 管理，覆盖不改变 Running Instance 或 App Page 栈。 |
 | NAV-005 | PWR Home、Screen Off 与 Wake 由 `espocket::System` 编排，App 不得拦截。 |
 | NAV-006 | Display State 与导航正交；息屏不执行 Back 或 Home。 |
 | NAV-007 | Native 与 Runtime App 使用不同 Adapter 接入同一生命周期与导航 Seam。 |
@@ -68,3 +68,9 @@ Exposure Decision：开放稳定导航语义，不开放 GUI 坐标点击、原�
 - 规定手势识别算法、动画时长或 UI Widget 层级。
 - 建立跨 App 返回链或保证 App 后台驻留。
 - 在 ESPocket 产品层复制 System Core 的 App 安装与运行状态机。
+
+## 前台恢复投影
+
+System 的 Foreground Restoration Projection 集中保存发起启动的 Home Space Surface、息屏目标与 Quick Settings 的显示返回目标。每次恢复从 Core 当前 active App 的 Running/visible 状态和 System 已提交的 Running Instance 代次重新投影；同一 App ID 的新实例不能恢复旧实例的显示来源。显示注册身份仍由 Display 的原子选择 guard 校验。
+
+投影不保存 App 状态、不启动 App、不复制 Page 栈；真实生命周期继续由 Core 管理，Page 栈由 App Page Navigator 管理。Home 清除显示返回目标，System stop/deinit 清除所有恢复目标。无有效实例时回到 Home Space；Shell 自身的显示路由可以在没有前台 App 时恢复。

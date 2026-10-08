@@ -5,11 +5,12 @@
       "en": "AI Chatbot",
       "zh_CN": "AI \u804a\u5929\u673a\u5668\u4eba"
     },
-    "version": "0.1.2",
+    "version": "0.1.6",
     "visible": true,
     "systems": [
       "espocket"
-    ]
+    ],
+    "keep_screen_on": true
   },
   "runtime": {
     "type": "JavaScript",

@@ -1,0 +1,812 @@
+--- a/src/app/manager.cpp
++++ b/src/app/manager.cpp
+@@ -25,6 +25,7 @@
+ #include "private/utils.hpp"
+ #include "private/heap_trace.hpp"
+ #include "private/runtime/call_context.hpp"
++#include "private/runtime/dataflow_cleanup.hpp"
+ #include "private/system/impl.hpp"
+ #include "brookesia/service_manager/dataflow/registry.hpp"
+ #include "brookesia/service_manager/service/manager.hpp"
+@@ -41,20 +42,6 @@
+ 
+ using SteadyClock = std::chrono::steady_clock;
+ using SteadyTimePoint = SteadyClock::time_point;
+-
+-template<typename RuntimeAppId>
+-void release_runtime_dataflow_operations(const std::optional<RuntimeAppId> &runtime_app_id)
+-{
+-    if (!runtime_app_id.has_value()) {
+-        return;
+-    }
+-
+-    auto &service_manager = service::ServiceManager::get_instance();
+-    if (!service_manager.is_initialized()) {
+-        return;
+-    }
+-    service_manager.get_dataflow_registry().release_operations_for_owner(std::to_string(*runtime_app_id));
+-}
+ 
+ int64_t elapsed_ms_since(SteadyTimePoint started_at, SteadyTimePoint ended_at = SteadyClock::now())
+ {
+@@ -266,6 +253,7 @@
+         return std::unexpected(record_result.error());
+     }
+     auto &record = *record_result.value();
++    if (record.pending_start) return std::unexpected("app_start_in_progress");
+     if (record.info.manifest.kind == AppKind::Native) {
+         if (!record.native_app || !record.context) {
+             return std::unexpected("Native app is not available");
+@@ -532,11 +520,12 @@
+     auto record_result = impl_->get_record(app_id);
+     if (!record_result) return std::unexpected(record_result.error());
+     auto &record = *record_result.value();
++    if (record.pending_start) return std::unexpected("app_start_in_progress");
+     if (record.info.state == AppState::Running || record.info.state == AppState::Paused) {
+         auto stopped = stop_app(app_id);
+         if (!stopped) return stopped;
+     }
+-    release_runtime_dataflow_operations(record.runtime_app_id);
++    detail::release_runtime_dataflow_operations(record.runtime_app_id);
+     impl_->cleanup_app_transient_resources(record);
+     impl_->unload_runtime(record);
+     auto cleanup = impl_->run_task_sync<std::expected<void, std::string>>(
+@@ -572,6 +561,7 @@
+         return std::unexpected(record_result.error());
+     }
+     auto &record = *record_result.value();
++    if (record.pending_start) return std::unexpected("app_start_in_progress");
+     if (record.info.state == AppState::Running || record.info.state == AppState::Paused) {
+         auto stop_result = stop_app(app_id);
+         if (!stop_result) {
+@@ -579,7 +569,7 @@
+         }
+     }
+     const auto uninstalled_app = record.info;
+-    release_runtime_dataflow_operations(record.runtime_app_id);
++    detail::release_runtime_dataflow_operations(record.runtime_app_id);
+     if (record.native_app && record.context) {
+         record.native_app->on_uninstall(*record.context);
+     } else if (record.info.manifest.kind == AppKind::Runtime) {
+@@ -631,6 +621,169 @@
+     return {};
+ }
+ 
++void System::Impl::report_app_start_failure(AppRecord &record, const std::string &error, AppStartFailureKind kind)
++{
++    owner_.on_app_start_failed(record.info, error);
++    if (kind == AppStartFailureKind::Admission) {
++        show_app_admission_error_dialog(owner_, record.info, error == "developer_mode_required" ?
++            "Enable Developer Mode to run this app. Installed content is retained." : error);
++    } else {
++        show_lifecycle_error_dialog(owner_, record.info, "start", LIFECYCLE_ON_START, error);
++    }
++}
++
++std::expected<void, std::string> System::Impl::admit_app_start(AppRecord &record)
++{
++    if (record.info.manifest.kind != AppKind::Runtime) return {};
++    if (package_policy_.enforce) {
++        const auto started_at = SteadyClock::now();
++        auto admitted = validate_installed_runtime_package(record.info.manifest.app_path, owner_.get_system_type(), package_policy_);
++        SYSTEM_CORE_PROFILE_LOGI(
++            "App start profile: id(%1%), manifest(%2%), stage(package_admission), elapsed_ms(%3%)",
++            record.info.app_id, record.info.manifest.id, elapsed_ms_since(started_at));
++        if (!admitted) return std::unexpected(admitted.error());
++    }
++    // Preserve synchronous start_app's admission check for an already-running
++    // Runtime App, without rechecking services used by that running instance.
++    if (record.info.state == AppState::Running) return {};
++    const auto failures = detail::evaluate_service_requirements(record.info.manifest, service::ServiceManager::get_instance());
++    for (const auto &failure : failures) {
++        const auto local_version = failure.registered ? failure.local_version : "<none>";
++        BROOKESIA_LOGW(
++            "App service requirement failed: phase(start), app_id(%1%), manifest(%2%), rpc(%3%), "
++            "required_version(%4%), local_version(%5%), reason(%6%)",
++            record.info.app_id, record.info.manifest.id, failure.requirement.name,
++            failure.requirement.version, local_version, failure.reason);
++    }
++    if (!failures.empty()) return std::unexpected(detail::format_service_requirement_failures(failures));
++    return {};
++}
++
++std::expected<void, std::string> System::Impl::start_app_runtime(AppRecord &record)
++{
++    if (record.info.manifest.kind != AppKind::Runtime || record.runtime_started) return {};
++    auto result = runtime_->start_app(*record.runtime_app_id);
++    record.runtime_started = result.has_value();
++    return result;
++}
++
++std::expected<void, std::string> System::Impl::call_app_start(AppRecord &record)
++{
++    if (record.info.manifest.kind == AppKind::Runtime) return call_runtime_lifecycle(record, LIFECYCLE_ON_START);
++    if (!record.native_app || !record.context) return std::unexpected("Native app is not available");
++    return record.native_app->on_start(*record.context);
++}
++
++std::expected<void, std::string> System::Impl::commit_app_start(AppRecord &record)
++{
++    record.info.state = AppState::Running;
++    active_app_id_ = record.info.app_id;
++    return owner_.on_app_started(record.info);
++}
++
++void System::Impl::release_app_start_runtime(AppRecord &record)
++{
++    detail::release_runtime_dataflow_operations(record.runtime_app_id);
++    if (record.info.manifest.kind == AppKind::Runtime) unload_runtime(record);
++}
++
++void System::Impl::rollback_app_start_gui(AppRecord &record)
++{
++    clear_pending_gui_bindings(record.info.app_id);
++    unload_gui(record);
++    unregister_app_gui_resources(record);
++}
++
++std::expected<void, std::string> System::Impl::prepare_app_start_gui(AppRecord &record)
++{
++    const auto gui_profile_started_at = SteadyClock::now();
++    auto log_gui_profile = [&](const char *stage, SteadyTimePoint stage_started_at)
++    {
++        const auto now = SteadyClock::now();
++        SYSTEM_CORE_PROFILE_LOGI(
++            "App GUI prepare profile: manifest(%1%), stage(%2%), elapsed_ms(%3%), total_ms(%4%)",
++            record.info.manifest.id,
++            stage,
++            elapsed_ms_since(stage_started_at, now),
++            elapsed_ms_since(gui_profile_started_at, now)
++        );
++    };
++    auto heap_before_gui = heap_trace::capture();
++    heap_trace::log("system.gui", "before prepare", record.info.manifest.id, heap_before_gui);
++    const auto resource_started_at = SteadyClock::now();
++    auto resource_result = register_app_gui_resources(record);
++    if (!resource_result)
++    {
++        log_gui_profile("resource_registration_failed", resource_started_at);
++        return resource_result;
++    }
++    log_gui_profile("resource_registration", resource_started_at);
++    heap_trace::log(
++        "system.gui",
++        "after resource registration",
++        record.info.manifest.id,
++        heap_trace::capture(),
++        &heap_before_gui
++    );
++    const auto root_started_at = SteadyClock::now();
++    auto gui_result = ensure_gui_loaded(record);
++    if (!gui_result)
++    {
++        log_gui_profile("root_load_failed", root_started_at);
++        unregister_app_gui_resources(record);
++        return gui_result;
++    }
++    log_gui_profile("root_load", root_started_at);
++    heap_trace::log(
++        "system.gui",
++        "after root load",
++        record.info.manifest.id,
++        heap_trace::capture(),
++        &heap_before_gui
++    );
++    if (record.document_id.has_value())
++    {
++        const auto screen_flow_started_at = SteadyClock::now();
++        for (const auto &flow_entry : record.gui_descriptor.screen_flows) {
++            auto target = map_manifest_target(record.info.manifest.kind, flow_entry);
++            if (!target) {
++                log_gui_profile("screen_flow_mount_failed", screen_flow_started_at);
++                unload_gui(record);
++                unregister_app_gui_resources(record);
++                return std::unexpected(target.error());
++            }
++            if (!gui_runtime_->has_screen_flow(*record.document_id, flow_entry.screen_flow)) {
++                log_gui_profile("screen_flow_mount_failed", screen_flow_started_at);
++                unload_gui(record);
++                unregister_app_gui_resources(record);
++                return std::unexpected("App GUI screen flow is not found: " + flow_entry.screen_flow);
++            }
++            if (record.presentation) target->viewport = record.presentation->viewport;
++            auto flow_result = gui_runtime_->start_screen_flow(
++                                   *record.document_id,
++                                   flow_entry.screen_flow,
++                                   *target
++                               );
++            if (!flow_result) {
++                log_gui_profile("screen_flow_mount_failed", screen_flow_started_at);
++                unload_gui(record);
++                unregister_app_gui_resources(record);
++                return flow_result;
++            }
++            heap_trace::log(
++                "system.gui",
++                "after screen flow mount",
++                record.info.manifest.id,
++                heap_trace::capture(),
++                &heap_before_gui
++            );
++        }
++        log_gui_profile("screen_flow_mount", screen_flow_started_at);
++    }
++    log_gui_profile("total", gui_profile_started_at);
++    return {};
++}
++
+ std::expected<void, std::string> System::start_app(AppId app_id)
+ {
+     return start_app(app_id, AppStartOptions{});
+@@ -653,52 +806,16 @@
+         return std::unexpected(record_result.error());
+     }
+     auto &record = *record_result.value();
++    if (record.pending_start) return std::unexpected("app_start_in_progress");
+     // Count package admission in startup latency; it runs before GUI/runtime loading.
+     const auto start_profile_started_at = SteadyClock::now();
+-    if (record.info.manifest.kind == AppKind::Runtime && impl_->package_policy_.enforce) {
+-        auto admitted = validate_installed_runtime_package(record.info.manifest.app_path, get_system_type(), impl_->package_policy_);
+-        SYSTEM_CORE_PROFILE_LOGI(
+-            "App start profile: id(%1%), manifest(%2%), stage(package_admission), elapsed_ms(%3%)",
+-            app_id, record.info.manifest.id, elapsed_ms_since(start_profile_started_at));
+-        if (!admitted) {
+-            record.info.last_error = admitted.error();
+-            on_app_start_failed(record.info, admitted.error());
+-            show_app_admission_error_dialog(*this, record.info,
+-                admitted.error() == "developer_mode_required" ?
+-                "Enable Developer Mode to run this app. Installed content is retained." : admitted.error());
+-            return std::unexpected(admitted.error());
+-        }
+-    }
+-    if (record.info.state == AppState::Running) {
+-        return {};
+-    }
+-
+-    if (record.info.manifest.kind == AppKind::Runtime) {
+-        const auto service_failures = detail::evaluate_service_requirements(
+-                                          record.info.manifest,
+-                                          service::ServiceManager::get_instance()
+-                                      );
+-        if (!service_failures.empty()) {
+-            const auto error = detail::format_service_requirement_failures(service_failures);
+-            record.info.last_error = error;
+-            for (const auto &failure : service_failures) {
+-                const auto local_version = failure.registered ? failure.local_version : "<none>";
+-                BROOKESIA_LOGW(
+-                    "App service requirement failed: phase(start), app_id(%1%), manifest(%2%), rpc(%3%), "
+-                    "required_version(%4%), local_version(%5%), reason(%6%)",
+-                    app_id,
+-                    record.info.manifest.id,
+-                    failure.requirement.name,
+-                    failure.requirement.version,
+-                    local_version,
+-                    failure.reason
+-                );
+-            }
+-            on_app_start_failed(record.info, error);
+-            show_app_admission_error_dialog(*this, record.info, error);
+-            return std::unexpected(error);
+-        }
+-    }
++    auto admission = impl_->admit_app_start(record);
++    if (!admission) {
++        record.info.last_error = admission.error();
++        impl_->report_app_start_failure(record, admission.error(), Impl::AppStartFailureKind::Admission);
++        return admission;
++    }
++    if (record.info.state == AppState::Running) return {};
+ 
+     auto log_start_profile = [&](const char *stage, SteadyTimePoint stage_started_at) {
+         const auto now = SteadyClock::now();
+@@ -744,92 +861,7 @@
+     auto gui_prepare_result = impl_->run_task_sync<std::expected<void, std::string>>(
+                                   SYSTEM_GUI_TASK_GROUP,
+     [this, &record]() -> std::expected<void, std::string> {
+-        const auto gui_profile_started_at = SteadyClock::now();
+-        auto log_gui_profile = [&](const char *stage, SteadyTimePoint stage_started_at)
+-        {
+-            const auto now = SteadyClock::now();
+-            SYSTEM_CORE_PROFILE_LOGI(
+-                "App GUI prepare profile: manifest(%1%), stage(%2%), elapsed_ms(%3%), total_ms(%4%)",
+-                record.info.manifest.id,
+-                stage,
+-                elapsed_ms_since(stage_started_at, now),
+-                elapsed_ms_since(gui_profile_started_at, now)
+-            );
+-        };
+-        auto heap_before_gui = heap_trace::capture();
+-        heap_trace::log("system.gui", "before prepare", record.info.manifest.id, heap_before_gui);
+-        const auto resource_started_at = SteadyClock::now();
+-        auto resource_result = impl_->register_app_gui_resources(record);
+-        if (!resource_result)
+-        {
+-            log_gui_profile("resource_registration_failed", resource_started_at);
+-            return resource_result;
+-        }
+-        log_gui_profile("resource_registration", resource_started_at);
+-        heap_trace::log(
+-            "system.gui",
+-            "after resource registration",
+-            record.info.manifest.id,
+-            heap_trace::capture(),
+-            &heap_before_gui
+-        );
+-        const auto root_started_at = SteadyClock::now();
+-        auto gui_result = impl_->ensure_gui_loaded(record);
+-        if (!gui_result)
+-        {
+-            log_gui_profile("root_load_failed", root_started_at);
+-            impl_->unregister_app_gui_resources(record);
+-            return gui_result;
+-        }
+-        log_gui_profile("root_load", root_started_at);
+-        heap_trace::log(
+-            "system.gui",
+-            "after root load",
+-            record.info.manifest.id,
+-            heap_trace::capture(),
+-            &heap_before_gui
+-        );
+-        if (record.document_id.has_value())
+-        {
+-            const auto screen_flow_started_at = SteadyClock::now();
+-            for (const auto &flow_entry : record.gui_descriptor.screen_flows) {
+-                auto target = map_manifest_target(record.info.manifest.kind, flow_entry);
+-                if (!target) {
+-                    log_gui_profile("screen_flow_mount_failed", screen_flow_started_at);
+-                    impl_->unload_gui(record);
+-                    impl_->unregister_app_gui_resources(record);
+-                    return std::unexpected(target.error());
+-                }
+-                if (!impl_->gui_runtime_->has_screen_flow(*record.document_id, flow_entry.screen_flow)) {
+-                    log_gui_profile("screen_flow_mount_failed", screen_flow_started_at);
+-                    impl_->unload_gui(record);
+-                    impl_->unregister_app_gui_resources(record);
+-                    return std::unexpected("App GUI screen flow is not found: " + flow_entry.screen_flow);
+-                }
+-                if (record.presentation) target->viewport = record.presentation->viewport;
+-                auto flow_result = impl_->gui_runtime_->start_screen_flow(
+-                                       *record.document_id,
+-                                       flow_entry.screen_flow,
+-                                       *target
+-                                   );
+-                if (!flow_result) {
+-                    log_gui_profile("screen_flow_mount_failed", screen_flow_started_at);
+-                    impl_->unload_gui(record);
+-                    impl_->unregister_app_gui_resources(record);
+-                    return flow_result;
+-                }
+-                heap_trace::log(
+-                    "system.gui",
+-                    "after screen flow mount",
+-                    record.info.manifest.id,
+-                    heap_trace::capture(),
+-                    &heap_before_gui
+-                );
+-            }
+-            log_gui_profile("screen_flow_mount", screen_flow_started_at);
+-        }
+-        log_gui_profile("total", gui_profile_started_at);
+-        return {};
++        return impl_->prepare_app_start_gui(record);
+     },
+     std::unexpected("Failed to post app GUI prepare task")
+                               );
+@@ -837,20 +869,15 @@
+     if (!gui_prepare_result) {
+         record.info.state = AppState::Error;
+         record.info.last_error = gui_prepare_result.error();
+-        on_app_start_failed(record.info, gui_prepare_result.error());
+-        show_lifecycle_error_dialog(*this, record.info, "start", LIFECYCLE_ON_START, gui_prepare_result.error());
++        impl_->report_app_start_failure(record, gui_prepare_result.error());
+         return gui_prepare_result;
+     }
+ 
+     std::expected<void, std::string> start_result = {};
+     if (record.info.manifest.kind == AppKind::Native) {
+-        if (!record.native_app || !record.context) {
+-            start_result = std::unexpected("Native app is not available");
+-        } else {
+-            const auto native_start_started_at = SteadyClock::now();
+-            start_result = record.native_app->on_start(*record.context);
+-            log_start_profile("native_on_start", native_start_started_at);
+-        }
++        const auto native_start_started_at = SteadyClock::now();
++        start_result = impl_->call_app_start(record);
++        log_start_profile("native_on_start", native_start_started_at);
+     } else {
+         auto heap_before_runtime = heap_trace::capture();
+         heap_trace::log("system.runtime", "before runtime load", record.info.manifest.id, heap_before_runtime);
+@@ -874,8 +901,7 @@
+                     heap_before_runtime_start
+                 );
+                 const auto runtime_start_started_at = SteadyClock::now();
+-                start_result = impl_->runtime_->start_app(*record.runtime_app_id);
+-                record.runtime_started = start_result.has_value();
++                start_result = impl_->start_app_runtime(record);
+                 log_start_profile("runtime_start_app", runtime_start_started_at);
+                 heap_trace::log(
+                     "system.runtime",
+@@ -894,7 +920,7 @@
+                     heap_before_lifecycle
+                 );
+                 const auto runtime_lifecycle_started_at = SteadyClock::now();
+-                start_result = impl_->call_runtime_lifecycle(record, LIFECYCLE_ON_START);
++                start_result = impl_->call_app_start(record);
+                 log_start_profile("runtime_lifecycle_on_start", runtime_lifecycle_started_at);
+                 heap_trace::log(
+                     "system.runtime",
+@@ -909,17 +935,12 @@
+ 
+     if (!start_result) {
+         impl_->cleanup_app_transient_resources(record);
+-        release_runtime_dataflow_operations(record.runtime_app_id);
+-        if (record.info.manifest.kind == AppKind::Runtime) {
+-            impl_->unload_runtime(record);
+-        }
++        impl_->release_app_start_runtime(record);
+ 
+         auto rollback_result = impl_->run_task_sync<std::expected<void, std::string>>(
+                                    SYSTEM_GUI_TASK_GROUP,
+         [this, &record]() -> std::expected<void, std::string> {
+-            impl_->clear_pending_gui_bindings(record.info.app_id);
+-            impl_->unload_gui(record);
+-            impl_->unregister_app_gui_resources(record);
++            impl_->rollback_app_start_gui(record);
+             return {};
+         },
+         std::unexpected("Failed to post app GUI rollback task")
+@@ -929,14 +950,11 @@
+         }
+         record.info.state = AppState::Error;
+         record.info.last_error = start_result.error();
+-        on_app_start_failed(record.info, start_result.error());
+-        show_lifecycle_error_dialog(*this, record.info, "start", LIFECYCLE_ON_START, start_result.error());
++        impl_->report_app_start_failure(record, start_result.error());
+         return start_result;
+     }
+-    record.info.state = AppState::Running;
+-    impl_->active_app_id_ = app_id;
+     const auto started_hook_started_at = SteadyClock::now();
+-    auto hook_result = on_app_started(record.info);
++    auto hook_result = impl_->commit_app_start(record);
+     log_start_profile("on_app_started_hook", started_hook_started_at);
+     if (!hook_result) {
+         BROOKESIA_LOGW("App started hook failed, stopping app: id(%1%), error(%2%)", app_id, hook_result.error());
+@@ -1013,6 +1031,11 @@
+         return std::unexpected(record_result.error());
+     }
+     auto &record = *record_result.value();
++    if (record.pending_start) {
++        record.pending_start->cancelled = true;
++        record.info.state = AppState::Stopping;
++        return {}; // Completion/rollback runs after the in-flight GUI phase returns.
++    }
+     if (record.info.state == AppState::Stopped || record.info.state == AppState::Installed) {
+         impl_->cleanup_app_transient_resources(record);
+         return {};
+@@ -1021,7 +1044,7 @@
+     heap_trace::log("system.stop", "before stop", record.info.manifest.id, heap_before_stop);
+     record.info.state = AppState::Stopping;
+     impl_->cleanup_app_transient_resources(record);
+-    release_runtime_dataflow_operations(record.runtime_app_id);
++    detail::release_runtime_dataflow_operations(record.runtime_app_id);
+     std::expected<void, std::string> stop_result = {};
+     if (record.info.manifest.kind == AppKind::Native) {
+         if (record.native_app && record.context) {
+@@ -1134,6 +1157,7 @@
+         return std::unexpected(record_result.error());
+     }
+     auto &record = *record_result.value();
++    if (record.pending_start) return std::unexpected("app_start_in_progress");
+     if (record.info.manifest.kind == AppKind::Native && record.native_app && record.context) {
+         auto result = record.native_app->on_pause(*record.context);
+         if (!result) {
+@@ -1167,6 +1191,7 @@
+         return std::unexpected(record_result.error());
+     }
+     auto &record = *record_result.value();
++    if (record.pending_start) return std::unexpected("app_start_in_progress");
+     if (record.info.manifest.kind == AppKind::Native && record.native_app && record.context) {
+         auto result = record.native_app->on_resume(*record.context);
+         if (!result) {
+--- a/src/private/system/impl.hpp
++++ b/src/private/system/impl.hpp
+@@ -54,6 +54,17 @@
+ 
+ class System::Impl {
+ public:
++    enum class AppStartFailureKind { Admission, Lifecycle };
++    struct PendingAppStart {
++        enum class Phase { Admission, GuiDispatch, GuiWait, RuntimeLoad, RuntimeStart, Lifecycle, Commit, Rollback, RollbackWait };
++        Phase phase = Phase::Admission;
++        bool cancelled = false;
++        bool callback_attempted = false;
++        AppStartFailureKind failure_kind = AppStartFailureKind::Lifecycle;
++        std::string error;
++        std::string stop_error;
++        boost::unique_future<std::expected<void, std::string>> gui_result;
++    };
+     struct AppRecord {
+         AppInfo info;
+         AppGuiDescriptor gui_descriptor;
+@@ -75,6 +86,7 @@
+         bool runtime_loaded = false;
+         bool runtime_started = false;
+         bool preload_dom = false;
++        std::shared_ptr<PendingAppStart> pending_start;
+     };
+ 
+     struct PendingTimer {
+@@ -207,6 +219,17 @@
+     std::expected<const AppRecord *, std::string> get_record(AppId app_id) const;
+     void cleanup_app_transient_resources(AppRecord &record);
+ 
++    std::expected<void, std::string> prepare_app_start_gui(AppRecord &record);
++    bool advancing_app_starts_ = false;
++    void advance_app_starts(bool drain = false);
++    std::expected<void, std::string> admit_app_start(AppRecord &record);
++    std::expected<void, std::string> start_app_runtime(AppRecord &record);
++    std::expected<void, std::string> call_app_start(AppRecord &record);
++    std::expected<void, std::string> commit_app_start(AppRecord &record);
++    void release_app_start_runtime(AppRecord &record);
++    void rollback_app_start_gui(AppRecord &record);
++    void report_app_start_failure(AppRecord &record, const std::string &error,
++                                  AppStartFailureKind kind = AppStartFailureKind::Lifecycle);
+     std::expected<void, std::string> ensure_runtime_initialized();
+     std::expected<void, std::string> ensure_gui_loaded(AppRecord &record);
+     std::expected<void, std::string> prepare_installed_app_gui(AppRecord &record);
+--- a/include/brookesia/system_core/system/system.hpp
++++ b/include/brookesia/system_core/system/system.hpp
+@@ -165,7 +165,9 @@
+     void deinit();
+ 
+     /**
+-     * @brief Process pending timer events from the host event loop.
++     * @brief Process pending timer/lifecycle events from the host event loop.
++     * A phased start advances one phase per call; call regularly on the App Owner.
++     * Blocking App callbacks and GUI operations must still bound their own work.
+      */
+     void process_timers();
+ 
+@@ -198,6 +200,10 @@
+ 
+     std::expected<void, std::string> start_app(AppId app_id);
+     std::expected<void, std::string> start_app(AppId app_id, const AppStartOptions &options);
++    // Accept a phased start, completed through on_app_started/on_app_start_failed.
++    // Call process_timers regularly. stop_app cancels it; a second distinct request
++    // is rejected until its cleanup completes. Existing synchronous start_app is unchanged.
++    std::expected<void, std::string> request_app_start(AppId app_id);
+     std::expected<void, std::string> stop_app(AppId app_id);
+     std::expected<void, std::string> pause_app(AppId app_id);
+     std::expected<void, std::string> resume_app(AppId app_id);
+--- a/src/system/lifecycle.cpp
++++ b/src/system/lifecycle.cpp
+@@ -403,6 +403,10 @@
+         return;
+     }
+     on_stop();
++    (void)impl_->run_task_sync<std::expected<void, std::string>>(
++        SYSTEM_APP_TASK_GROUP, [this]() -> std::expected<void, std::string> {
++            impl_->advance_app_starts(true); return {};
++        }, std::unexpected("Failed to drain app startup"));
+     impl_->started_ = false;
+     BROOKESIA_LOGI("System core stopped");
+ }
+@@ -418,6 +422,7 @@
+         return;
+     }
+     stop();
++    impl_->advance_app_starts(true); // Join GUI preparation before records can be erased.
+     impl_->hide_startup_overlay();
+     for (auto &[_, record] : impl_->apps_) {
+         if (record.info.state == AppState::Running || record.info.state == AppState::Paused) {
+@@ -553,6 +558,14 @@
+ void System::process_timers()
+ {
+     BROOKESIA_LOG_TRACE_GUARD_WITH_THIS();
++    if (impl_->should_schedule_app_task()) {
++        (void)impl_->run_task_sync<std::expected<void, std::string>>(
++            SYSTEM_APP_TASK_GROUP, [this]() -> std::expected<void, std::string> {
++                impl_->advance_app_starts(); return {};
++            }, std::unexpected("Failed to post lifecycle progress"));
++        return;
++    }
++    impl_->advance_app_starts();
+ }
+ 
+ namespace {
+--- /dev/null
++++ b/src/private/runtime/dataflow_cleanup.hpp
+@@ -0,0 +1,21 @@
++#pragma once
++#include <optional>
++#include <string>
++#include "brookesia/service_manager/dataflow/registry.hpp"
++#include "brookesia/service_manager/service/manager.hpp"
++namespace esp_brookesia::system::core::detail {
++template<typename RuntimeAppId>
++void release_runtime_dataflow_operations(const std::optional<RuntimeAppId> &runtime_app_id)
++{
++    if (!runtime_app_id.has_value()) {
++        return;
++    }
++
++    auto &service_manager = service::ServiceManager::get_instance();
++    if (!service_manager.is_initialized()) {
++        return;
++    }
++    service_manager.get_dataflow_registry().release_operations_for_owner(std::to_string(*runtime_app_id));
++}
++
++}
+--- /dev/null
++++ b/src/app/start_progress.cpp
+@@ -0,0 +1,166 @@
++#include "brookesia/system_core/macro_configs.h"
++#include "private/utils.hpp"
++#include <chrono>
++#include "brookesia/lib_utils/function_guard.hpp"
++#include "private/system/impl.hpp"
++
++namespace esp_brookesia::system::core {
++std::expected<void, std::string> System::request_app_start(AppId app_id)
++{
++    if (impl_->should_schedule_app_task()) {
++        return impl_->run_task_sync<std::expected<void, std::string>>(
++            SYSTEM_APP_TASK_GROUP, [this, app_id]() { return request_app_start(app_id); },
++            std::unexpected("Failed to post app start request"));
++    }
++    auto found = impl_->get_record(app_id);
++    if (!found) return std::unexpected(found.error());
++    auto &record = **found;
++    if (record.pending_start) return record.pending_start->cancelled ?
++        std::expected<void, std::string>(std::unexpected("app_start_cancelling")) : std::expected<void, std::string>{};
++    for (const auto &[_, other] : impl_->apps_) {
++        if (other.pending_start) return std::unexpected("another_app_start_in_progress");
++    }
++    if (record.info.state == AppState::Running) return {};
++    if (record.info.state == AppState::Paused || record.info.state == AppState::Stopping || record.info.state == AppState::Starting)
++        return std::unexpected("app_state_not_startable");
++    if (!impl_->task_scheduler_ || !impl_->task_scheduler_->is_running())
++        return std::unexpected("app_scheduler_unavailable");
++    record.pending_start = std::make_shared<Impl::PendingAppStart>();
++    record.info.state = AppState::Starting;
++    record.info.last_error.clear();
++    return {};
++}
++
++void System::Impl::advance_app_starts(bool drain)
++{
++    if (advancing_app_starts_) return;
++    advancing_app_starts_ = true;
++    struct ProgressGuard { bool &active; ~ProgressGuard() { active = false; } } guard{advancing_app_starts_};
++    using Phase = PendingAppStart::Phase;
++    for (auto &[id, record] : apps_) {
++        auto start = record.pending_start;
++        if (!start) continue;
++        if (drain) start->cancelled = true;
++        do {
++#if BROOKESIA_SYSTEM_CORE_ENABLE_PROFILE_LOG
++            const auto phase = start->phase;
++            const auto phase_started = std::chrono::steady_clock::now();
++            const auto manifest_id = record.info.manifest.id;
++            lib_utils::FunctionGuard phase_profile([&, manifest_id]() {
++                const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
++                    std::chrono::steady_clock::now() - phase_started).count();
++                // Do not log every nonblocking future poll. Record actual phase
++                // transitions and unexpectedly long Owner occupancy.
++                if (phase == start->phase &&
++                        (phase == Phase::GuiWait || phase == Phase::RollbackWait) && elapsed < 250) return;
++                static constexpr const char *names[] = {
++                    "admission", "gui_dispatch", "gui_wait", "runtime_load", "runtime_start",
++                    "lifecycle", "commit", "rollback", "rollback_wait"
++                };
++                BROOKESIA_LOGI("App start phase: app(%1%), phase(%2%), owner_ms(%3%), cancelled(%4%)",
++                    manifest_id, names[static_cast<size_t>(phase)], elapsed, start->cancelled);
++            });
++#endif
++            if (start->cancelled && start->phase != Phase::GuiWait && start->phase != Phase::RollbackWait)
++                start->phase = Phase::Rollback;
++            std::expected<void, std::string> result;
++            auto post_gui = [&](bool rollback) {
++                auto promise = std::make_shared<boost::promise<std::expected<void, std::string>>>();
++                start->gui_result = promise->get_future();
++                auto work = [this, promise, record_ptr = &record, rollback]() {
++                    try {
++                        if (rollback) {
++                            rollback_app_start_gui(*record_ptr);
++                            promise->set_value({});
++                        } else promise->set_value(prepare_app_start_gui(*record_ptr));
++                    } catch (...) { promise->set_exception(boost::current_exception()); }
++                };
++                if (drain || !task_scheduler_ || !task_scheduler_->is_running()) {
++                    execute_task_with_group_context(SYSTEM_GUI_TASK_GROUP, std::move(work));
++                    return true;
++                }
++                return static_cast<bool>(task_scheduler_->post(std::move(work), nullptr, SYSTEM_GUI_TASK_GROUP));
++            };
++            const auto attempted_phase = start->phase;
++            try {
++            switch (start->phase) {
++            case Phase::Admission:
++                result = admit_app_start(record);
++                start->phase = Phase::GuiDispatch;
++                break;
++            case Phase::GuiDispatch:
++                if (!post_gui(false)) result = std::unexpected("Failed to post app GUI preparation");
++                else start->phase = Phase::GuiWait;
++                break;
++            case Phase::GuiWait:
++            case Phase::RollbackWait:
++                if (!drain && start->gui_result.wait_for(boost::chrono::milliseconds(0)) != boost::future_status::ready) break;
++                try { result = start->gui_result.get(); }
++                catch (const std::exception &error) { result = std::unexpected(error.what()); }
++                catch (...) { result = std::unexpected("App GUI preparation exception"); }
++                if (start->phase == Phase::RollbackWait) {
++                    if (!result) {
++                        record.info.last_error = result.error();
++                        start->phase = Phase::Rollback;
++                        return; // Retain cleanup ownership; next Owner tick retries rollback.
++                    }
++                    record.pending_start.reset();
++                    if (active_app_id_ == id) active_app_id_ = INVALID_APP_ID;
++                    record.info.state = start->cancelled && start->stop_error.empty() ? AppState::Stopped : AppState::Error;
++                    record.info.last_error = start->stop_error.empty() ? start->error : start->stop_error;
++                    if (start->cancelled && !start->stop_error.empty()) owner_.on_app_stop_failed(record.info, start->stop_error);
++                    else if (start->cancelled) owner_.on_app_stopped(record.info);
++                    else report_app_start_failure(record, start->error, start->failure_kind);
++                    break;
++                }
++                start->phase = start->cancelled ? Phase::Rollback : Phase::RuntimeLoad;
++                break;
++            case Phase::RuntimeLoad:
++                if (record.info.manifest.kind == AppKind::Runtime) result = ensure_runtime_loaded(record);
++                start->phase = Phase::RuntimeStart;
++                break;
++            case Phase::RuntimeStart:
++                result = start_app_runtime(record);
++                start->phase = Phase::Lifecycle;
++                break;
++            case Phase::Lifecycle:
++                start->callback_attempted = true;
++                result = call_app_start(record);
++                start->phase = Phase::Commit;
++                break;
++            case Phase::Commit:
++                result = commit_app_start(record);
++                if (result) record.pending_start.reset();
++                break;
++            case Phase::Rollback:
++                cleanup_app_transient_resources(record);
++                if (start->callback_attempted) {
++                    start->callback_attempted = false;
++                    try {
++                        std::expected<void, std::string> stopped;
++                        if (record.info.manifest.kind == AppKind::Runtime) stopped = call_runtime_lifecycle(record, LIFECYCLE_ON_STOP);
++                        else if (record.native_app && record.context) stopped = record.native_app->on_stop(*record.context);
++                        if (!stopped) start->stop_error = stopped.error();
++                    } catch (const std::exception &error) { start->stop_error = error.what(); }
++                    catch (...) { start->stop_error = "App stop exception during startup rollback"; }
++                }
++                release_app_start_runtime(record);
++                if (!post_gui(true)) {
++                    record.info.last_error = "Failed to post app GUI rollback";
++                    return; // Keep the record pinned until a later tick can clean it.
++                }
++                start->phase = Phase::RollbackWait;
++                break;
++            }
++            } catch (const std::exception &error) { result = std::unexpected(error.what()); }
++            catch (...) { result = std::unexpected("App startup exception"); }
++            if (!result) {
++                if (attempted_phase == Phase::Admission) start->failure_kind = AppStartFailureKind::Admission;
++                start->error = result.error();
++                start->phase = Phase::Rollback;
++            }
++            if (!record.pending_start) break;
++        } while (drain);
++    }
++}
++} // namespace esp_brookesia::system::core

@@ -13,7 +13,7 @@
 | ID | Requirement |
 |---|---|
 | SCA-001 | 系统状态来自真实 Wi-Fi、SNTP、Device Owner；未知、缺失、读取失败和有效结果必须可区分，不把 Service 不可用显示为关闭或零值。状态呈现不创建第二套 Service 状态事实。 |
-| SCA-002 | 状态栏展开与 App 内临时状态呈现保留为对齐目标；Watch Face 下拉仍进入 Quick Settings，App 页面普通滚动和 Back 不被系统新增手势静默接管。临时呈现不改变 App Page 栈与唯一 Home。 |
+| SCA-002 | 全局顶部边缘下拉打开 Quick Settings；App 内临时状态呈现不改变 App Page 栈与唯一 Home，内容区域普通滚动和 Back 仍归原 Owner。息屏及未运行系统不接受该触摸入口。 |
 | SCA-003 | 保留设备上的 Settings → Utils → Shell 调试链路，包括 Memory/Thread 浮层、阈值和已有 GUI 调试控制。开发者模式作为产品准入；不支持的采集指标显示不可用，不能以缓存或零值冒充实时数据。设备浮层不能由电脑查询替代。 |
 | SCA-004 | 语言切换、字体预载和回退属于产品范围。支持语言由实际字体与翻译资源共同确定；localized manifest name、键盘文本显示和中文输入法是不同能力。App 作者负责其文案，系统负责其维护的 Surface、Overlay 与官方 App 适配。 |
 | SCA-005 | Light/Dark 运行中刷新属于产品范围；切换不得重启 App、改变 Page 或 Running Instance，亦不得重新提交键盘/Dialog 结果。启动偏好临时回退继续遵守 OVR-013、OVR-015。 |

@@ -52,7 +52,7 @@ void process_shell_gesture(ShellGestureState &state, const ShellGestureEvent &ev
                            const ShellGestureContext &context)
 {
     if (event.phase == ShellGesturePhase::Press) {
-        state.consumed.store(state.modal_active.load(std::memory_order_acquire), std::memory_order_release);
+        state.consumed.store(false, std::memory_order_release);
         state.click_suppressed.store(false, std::memory_order_release);
         state.pointer_cancel_pending.store(false, std::memory_order_release);
         state.launcher_pull_distance.store(0, std::memory_order_release);
@@ -79,6 +79,33 @@ void process_shell_gesture(ShellGestureState &state, const ShellGestureEvent &ev
     }
     if (event.distance_px > 10) {
         state.click_suppressed.store(true, std::memory_order_release);
+    }
+    // Reserve only a top-edge pull globally. Ordinary App content keeps its
+    // vertical gestures; Quick Settings is a temporary layer, not App Back.
+    if (!state.consumed.load(std::memory_order_acquire)) {
+        const bool quick_open = state.surface.load(std::memory_order_acquire) == ShellSurface::QuickSettings;
+        const bool top_pull = event.start_y >= 0 &&
+            event.start_y < state.quick_settings_top_edge.load(std::memory_order_acquire) &&
+            event.direction == ShellGestureDirection::Down;
+        const auto distance = state.launcher_return_threshold.load(std::memory_order_acquire);
+        if ((top_pull || (quick_open && event.direction == ShellGestureDirection::Up)) &&
+                event.distance_px >= distance) {
+            state.pointer_cancel_pending.store(true, std::memory_order_release);
+            if (event.phase == ShellGesturePhase::Release &&
+                    !state.consumed.exchange(true, std::memory_order_acq_rel)) {
+                state.pending_gesture.store(static_cast<uint8_t>(quick_open ?
+                    (top_pull ? GestureIntent::Consume : GestureIntent::CloseQuickSettings) :
+                    GestureIntent::QuickSettings), std::memory_order_release);
+            }
+            return;
+        }
+        // Short samples must not let a modal consume a top-edge candidate
+        // before Display has enough distance to resolve its direction.
+        if (event.start_y >= 0 && event.start_y < state.quick_settings_top_edge.load() &&
+                event.phase == ShellGesturePhase::Pressing &&
+                (event.direction == ShellGestureDirection::None || top_pull)) return;
+        // The covered App's Back, keyboard and Launcher never receive this layer's swipes.
+        if (quick_open) return;
     }
     if (state.modal_active.load(std::memory_order_acquire)) {
         state.consumed.store(true, std::memory_order_release);
@@ -175,7 +202,7 @@ void process_shell_gesture(ShellGestureState &state, const ShellGestureEvent &ev
             break;
         case ShellSurface::QuickSettings:
             if (event.direction == ShellGestureDirection::Up) {
-                intent = GestureIntent::WatchFace;
+                intent = GestureIntent::CloseQuickSettings;
             }
             break;
         case ShellSurface::Launcher:

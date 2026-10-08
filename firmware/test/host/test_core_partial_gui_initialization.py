@@ -134,7 +134,7 @@ struct ServiceManager {
 namespace system::core {
 using AppId = int;
 constexpr int INVALID_APP_ID = 0;
-constexpr const char *SYSTEM_GUI_TASK_GROUP = "gui", *SYSTEM_GUI_INPUT_TASK_GROUP = "gui_input";
+constexpr const char *SYSTEM_GUI_TASK_GROUP = "gui", *SYSTEM_GUI_INPUT_TASK_GROUP = "gui_input", *SYSTEM_APP_TASK_GROUP = "app";
 constexpr const char *SYSTEM_APP_INPUT_TASK_GROUP = "input";
 std::vector<lib_utils::ThreadConfig> make_scheduler_worker_configs() { return {}; }
 struct StorageFileLocation {};
@@ -238,6 +238,7 @@ struct System {
         void cancel_app_timers(AppRecord &) {}
         void unload_runtime(AppRecord &) {}
         void clear_pending_gui_bindings(int) {}
+        void advance_app_starts(bool=false) {}
         void clear_pending_gui_image_sources(int) {}
         void clear_all_pending_gui_image_sources() {}
         void unload_gui(AppRecord &) {}

@@ -109,6 +109,7 @@ std::expected<void, std::string> CircularShell::configure_home_gesture()
     config.threshold.vertical_edge = gesture_vertical_edge_px(output->height);
     const auto exit_distance_px = gesture_exit_distance_px(static_cast<int32_t>(output->height));
     home_gesture_state_->launcher_return_threshold.store(exit_distance_px, std::memory_order_release);
+    home_gesture_state_->quick_settings_top_edge.store(config.threshold.vertical_edge, std::memory_order_release);
     auto config_result = display.set_touch_gesture_config(output->id, config);
     if (!config_result) {
         return std::unexpected("Failed to configure Home gesture: " + config_result.error());
@@ -223,6 +224,10 @@ std::expected<void, std::string> CircularShell::open_app(
         return std::unexpected("Failed to start " + std::string(display_name) + ": " + result.error());
     }
 
+    if (quick_settings_open()) {
+        auto closed = dismiss_quick_settings(false);
+        if (!closed) return closed;
+    }
     ESP_LOGI(LAUNCHER_TAG, "Opened %.*s", static_cast<int>(display_name.size()), display_name.data());
     return {};
 }
@@ -237,76 +242,9 @@ std::expected<void, std::string> CircularShell::show_launcher()
     return show_surface(ShellSurface::Launcher);
 }
 
-std::expected<void, std::string> CircularShell::show_surface(ShellSurface surface)
-{
-    if (context_ == nullptr) {
-        return std::unexpected("Circular Shell is not running");
-    }
-    std::string_view action;
-    switch (surface) {
-    case ShellSurface::WatchFace: action = "open_watch_face"; break;
-    case ShellSurface::BatteryCard: action = "open_battery_card"; break;
-    case ShellSurface::BrightnessCard: action = "open_brightness_card"; break;
-    case ShellSurface::QuickSettings: action = "open_quick_settings"; break;
-    case ShellSurface::Launcher: action = "open_launcher"; break;
-    case ShellSurface::LeftAppCard:
-    case ShellSurface::RightAppCard: action = "open_app_card"; break;
-    }
-    auto result = context_->gui().trigger_screen_flow(PAGE_FLOW, action);
-    if (result && home_gesture_state_) {
-        home_gesture_state_->surface.store(surface, std::memory_order_release);
-        home_gesture_state_->activity_generation.fetch_add(1, std::memory_order_acq_rel);
-        if (surface == ShellSurface::Launcher) {
-            home_gesture_state_->launcher_pull_distance.store(0, std::memory_order_release);
-            result = show_launcher_page(0);
-        } else {
-            home_gesture_state_->launcher_pull_distance.store(0, std::memory_order_release);
-        }
-    }
-    if (result && host_.surface_changed) host_.surface_changed(surface);
-    if (result) sync_card_hint(surface == ShellSurface::LeftAppCard || surface == ShellSurface::RightAppCard);
-    return result;
-}
-
-ShellSurface CircularShell::current_surface() const
-{
-    return home_gesture_state_ ?
-           home_gesture_state_->surface.load(std::memory_order_acquire) :
-           ShellSurface::WatchFace;
-}
-
 bool CircularShell::is_watch_face() const
 {
     return current_surface() == ShellSurface::WatchFace;
-}
-
-std::expected<void, std::string> CircularShell::set_display_on(bool on)
-{
-    LvglLock lock;
-    if (!lock) {
-        return std::unexpected("Failed to lock LVGL while changing display input state");
-    }
-    for (auto *input = lv_indev_get_next(nullptr); input != nullptr; input = lv_indev_get_next(input)) {
-        if (lv_indev_get_type(input) == LV_INDEV_TYPE_POINTER) {
-            lv_indev_enable(input, on);
-        }
-    }
-    if (message_dialog_state_) {
-        std::lock_guard state_lock(message_dialog_state_->mutex);
-        const auto now = esp_timer_get_time();
-        if (!on && message_dialog_state_->paused_at_us < 0) message_dialog_state_->paused_at_us = now;
-        if (on && message_dialog_state_->paused_at_us >= 0) {
-            if (message_dialog_state_->deadline_us) {
-                message_dialog_state_->deadline_us += now - message_dialog_state_->paused_at_us;
-            }
-            message_dialog_state_->paused_at_us = -1;
-        }
-    }
-    if (on) {
-        last_activity_us_ = esp_timer_get_time();
-        screen_timeout_latched_ = false;
-    }
-    return {};
 }
 
 } // namespace espocket

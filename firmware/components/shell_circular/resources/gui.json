@@ -1028,7 +1028,6 @@
         "watch_face",
         "battery_card",
         "brightness_card",
-        "quick_settings",
         "launcher",
         "app_card"
       ],
@@ -1048,11 +1047,6 @@
           "from": [],
           "action": "open_brightness_card",
           "to": "brightness_card"
-        },
-        {
-          "from": [],
-          "action": "open_quick_settings",
-          "to": "quick_settings"
         },
         {
           "from": [],
@@ -1200,6 +1194,36 @@
           }
         ]
       }
+    },
+    {
+      "type": "viewScreen",
+      "id": "quick_settings_closed",
+      "commonProps": {
+        "hidden": true,
+        "scrollable": false
+      },
+      "children": []
+    },
+    {
+      "type": "screenFlow",
+      "id": "quick_settings_flow",
+      "screens": [
+        "quick_settings_closed",
+        "quick_settings"
+      ],
+      "initial": "quick_settings_closed",
+      "transitions": [
+        {
+          "from": [],
+          "action": "open_quick_settings",
+          "to": "quick_settings"
+        },
+        {
+          "from": [],
+          "action": "close_quick_settings",
+          "to": "quick_settings_closed"
+        }
+      ]
     }
   ]
 }

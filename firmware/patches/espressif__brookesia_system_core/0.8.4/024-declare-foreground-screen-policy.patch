@@ -1,0 +1,67 @@
+--- a/include/brookesia/system_core/app/types.hpp
++++ b/include/brookesia/system_core/app/types.hpp
+@@ -204,6 +204,9 @@
+     std::string version = "0.1.0";
+     AppKind kind = AppKind::Native;
+     bool visible = true;
++    // Opt-in automatic screen-off exemption while this instance is foreground Running.
++    // This never prevents explicit power/Home or survives stop/reclaim.
++    bool keep_screen_on = false;
+     /**
+      * @brief Preload and retain this app's GUI DOM when it is installed.
+      *
+@@ -231,6 +234,7 @@
+         version,
+         kind,
+         visible,
++        keep_screen_on,
+         preload_dom,
+         icon_id,
+         supported_systems,
+--- a/src/app/package.cpp
++++ b/src/app/package.cpp
+@@ -691,11 +691,12 @@
+         "runtime",
+         "services",
+     });
+-    warn_unknown_manifest_fields(**package, "package", std::array<std::string_view, 5> {
++    warn_unknown_manifest_fields(**package, "package", std::array<std::string_view, 6> {
+         "id",
+         "name",
+         "version",
+         "visible",
++        "keep_screen_on",
+         "systems",
+     });
+     warn_unknown_manifest_fields(**runtime, "runtime", std::array<std::string_view, 4> {
+@@ -709,19 +710,21 @@
+     auto version = get_required_string(**package, "package", "version");
+     auto localized_names = get_optional_localized_names(**package, "package", "name");
+     auto visible = get_optional_bool(**package, "package", "visible", true);
++    auto keep_screen_on = get_optional_bool(**package, "package", "keep_screen_on", false);
+     auto systems = get_optional_string_array(**package, "package", "systems");
+     auto services = get_manifest_services(root);
+     auto runtime_type_string = get_required_string(**runtime, "runtime", "type");
+     auto entry = get_required_string(**runtime, "runtime", "entry");
+     auto resource_dir = get_optional_string(**runtime, "runtime", "resource_dir");
+     auto arguments = get_optional_string_array(**runtime, "runtime", "arguments");
+-    if (!id || !version || !localized_names || !visible || !systems || !services ||
++    if (!id || !version || !localized_names || !visible || !keep_screen_on || !systems || !services ||
+             !runtime_type_string || !entry || !resource_dir || !arguments) {
+         return std::unexpected(
+                    !id ? id.error() :
+                    !version ? version.error() :
+                    !localized_names ? localized_names.error() :
+                    !visible ? visible.error() :
++                   !keep_screen_on ? keep_screen_on.error() :
+                    !systems ? systems.error() :
+                    !services ? services.error() :
+                    !runtime_type_string ? runtime_type_string.error() :
+@@ -751,6 +754,7 @@
+     manifest.version = *version;
+     manifest.kind = AppKind::Runtime;
+     manifest.visible = *visible;
++    manifest.keep_screen_on = *keep_screen_on;
+     manifest.supported_systems = *systems;
+     manifest.runtime_type = *runtime_type;
+     manifest.app_path = package_dir.generic_string();

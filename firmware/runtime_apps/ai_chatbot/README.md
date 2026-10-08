@@ -1,6 +1,6 @@
 # AI Chatbot 本地 Runtime App
 
-应用身份为 `espocket.app.ai_chatbot`，版本 `0.1.2`，支持 `espocket`。圆屏界面、业务 JavaScript 和导航声明都位于本 App 的 `src/`，平台不替换界面文档。
+应用身份为 `espocket.app.ai_chatbot`，版本 `0.1.6`，支持 `espocket`。圆屏界面、业务 JavaScript 和导航声明都位于本 App 的 `src/`，平台不替换界面文档。
 
 ## 构建
 
@@ -21,3 +21,15 @@ python3 scripts/firmware/prepare_local_runtime_apps.py --app ai_chatbot
 - 来源版本和原包摘要见 `upstream.json`。原包未附带许可证，本次为本地适配，尚未核实再发行条款，不上传 Catalog。
 
 迁移状态、设备替换和证据由 [020](../../../.scratch/020-local-runtime-apps/spec.md) 持有。
+
+## 主题与电源声明
+
+普通界面和动态导航绑定引用产品语义颜色，由真实 GUI Runtime 按当前文档主题解析；App 不另存主题偏好。`package.keep_screen_on: true` 请求前台 Running 时免自动息屏；System 仍执行显式 PWR／Home，实例停止后不保留豁免。声明由 Core 严格解析并经原有包信任路径校验。
+
+启动后 Agent 列表、目标与网络状态通过原 Runtime 异步桥读取，Agent 配置和 AppData 配置／Coze 私钥读取也通过该桥提交；业务初始化期间显示加载状态，停止／重启会撤销旧结果。Core 完成 App 启动不代表远端 Agent 已准备完毕。服务绑定与 GUI 操作仍有同步调用，JSON 解析也仍在 App 执行链上，本包不宣称所有 Owner callback 已满足 250ms。
+
+## 异步操作归属
+
+App 内部的 operations module 集中维护 discovery、network、configure、start 与 wake 的 pending 归属。每次恢复结果都核对本次 App 运行、实际依赖 handle、Agent 选择代次和同类操作身份；切换 A→B→A 不会复活旧结果。旧结果的 finally 也不能清掉新请求的 pending。停止或重新开始使所有旧结果失效，真实 Agent 运行状态仍由原事件提供。
+
+失效仅撤销 App 对结果的提交权，不声称取消已提交的 Brookesia 操作；原停止、暂停和重试策略保留。Started/Awake 等实际事件使已完成的操作归属结束。没有请求身份的服务事件仍按原路径消费，本实现不声称可以识别其跨目标迟到归属。

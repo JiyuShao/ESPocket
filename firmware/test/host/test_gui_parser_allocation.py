@@ -46,10 +46,14 @@ void print_metrics(bool oom) {
                 peak_bytes, live_bytes, oom ? "true" : "false");
 }
 int main(int argc, char **argv) {
-    if (argc != 3) return 3;
+    if (argc != 3 && argc != 4) return 3;
     budget_bytes = std::strtoull(argv[2], nullptr, 10);
     try {
         esp_brookesia::gui::Environment environment{.width_px=466, .height_px=466};
+        if (argc == 4) {
+            const auto colors = boost::json::parse(argv[3]).as_object();
+            for (const auto &entry : colors) environment.colors[std::string(entry.key())] = std::string(entry.value().as_string());
+        }
         auto result = esp_brookesia::gui::parse_document_file_with_metadata(argv[1], environment);
         budget_bytes = 0;
         print_metrics(false);
@@ -144,8 +148,11 @@ def fixture():
         leaf, branch, {'type': 'viewScreen', 'id': 'main', 'children': [nested]}]}
 
 
-def exercise(binary, source, budget=0):
-    result = subprocess.run([str(binary), str(source), str(budget)],
+def exercise(binary, source, budget=0, colors=None):
+    args = [str(binary), str(source), str(budget)]
+    if colors is not None:
+        args.append(json.dumps(colors))
+    result = subprocess.run(args,
                             capture_output=True, text=True, timeout=15)
     lines = result.stdout.splitlines()
     if result.returncode not in (0, 1, 2) or not lines:

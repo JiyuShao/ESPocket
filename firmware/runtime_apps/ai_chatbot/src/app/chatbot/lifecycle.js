@@ -1,10 +1,16 @@
 import { createI18nBundle } from "../common/i18n.js";
+import { createChatOperations } from "./operations.js";
 
 var coreHandle = 0;
 var guiHandle = 0;
 var timerHandle = 0;
 var deviceHandle = 0;
 var agentHandle = 0;
+var agentsLoaded = false;
+var operations = createChatOperations(function () {
+    return {alive: navigationAlive, instance: navigationEpoch, agent: agentHandle,
+        storage: coreHandle, device: deviceHandle, target: selectedAgentName};
+});
 var cozeHandle = 0;
 var openaiHandle = 0;
 var xiaozhiHandle = 0;
@@ -58,11 +64,11 @@ var CHROME_NAV_SETTINGS_LABEL_PATH = "/ai_chatbot_chrome/settings/label";
 var SETTINGS_AGENT_VALUE_PATH = "/ai_chatbot_settings/content/agent/value";
 var SETTINGS_STATUS_PATH = "/ai_chatbot_settings/content/status/value";
 
-var NAV_ACTIVE_BG = "#E8362D";
-var NAV_ACTIVE_TEXT = "#fafbfc";
-var NAV_INACTIVE_BG = "#F8F3F2";
-var NAV_INACTIVE_BORDER = "#E4D9D5";
-var NAV_INACTIVE_TEXT = "#7a7a7a";
+var NAV_ACTIVE_BG = "${color.primary.fill}";
+var NAV_ACTIVE_TEXT = "${color.primary.on}";
+var NAV_INACTIVE_BG = "${color.surface.raised}";
+var NAV_INACTIVE_BORDER = "${color.border.default}";
+var NAV_INACTIVE_TEXT = "${color.text.muted}";
 
 var PAGE_CHAT = "Chat";
 var PAGE_SETTINGS = "Settings";
@@ -81,8 +87,6 @@ var networkReady = false;
 var internetReady = false;
 var agentStarted = false;
 var agentSleeping = false;
-var agentWakeSubmitted = false;
-var agentStartSubmitted = false;
 var agentSuspendedByApp = false;
 var agentSuspended = false;
 var agentSpeaking = false;
@@ -399,8 +403,8 @@ function storageUrl(kind, relativePath, volumeId) {
     };
 }
 
-function storageRead(kind, relativePath, volumeId) {
-    return core("StorageRead", {
+function storageRead(handle, kind, relativePath, volumeId) {
+    return callAsync(handle, "StorageRead", {
         Location: storageLocation(kind, relativePath, volumeId)
     }, SERVICE_TIMEOUT_MS);
 }
@@ -556,6 +560,7 @@ function setStatus(key, argument) {
 }
 
 function composeHeaderStatus() {
+    if (operations.pending("discovery")) return tr("status.loading_agents");
     if (!networkReady || !internetReady) {
         return localizedText(networkDetail);
     }
@@ -726,48 +731,57 @@ function subscribeAgentEvents() {
     }
 }
 
-function loadAgentsAndTarget() {
+async function loadAgentsAndTarget() {
+    var handle = agentHandle;
+    var operation = operations.begin("discovery");
+    agentsLoaded = false;
     agentAttributes = [];
     selectedAgentName = "";
-    if (!agentReady) {
-        setStatus("status.agent_manager_unavailable");
-        return false;
+    setStatus("status.loading_agents");
+    function current() {
+        return operations.current(operation);
     }
-
-    var attrsResult = agent("GetAgentAttributes", {Name: ""}, SERVICE_TIMEOUT_MS);
-    if (!attrsResult.success || !attrsResult.data || typeof attrsResult.data.length !== "number") {
-        setStatus("status.get_agent_list_failed", resultError(attrsResult));
-        return false;
-    }
-    agentAttributes = attrsResult.data;
-
-    var targetResult = agent("GetTargetAgent", {}, SERVICE_TIMEOUT_MS);
-    if (targetResult.success && typeof targetResult.data === "string") {
-        selectedAgentName = targetResult.data;
-    } else if (!targetResult.success) {
-        log("GetTargetAgent failed: " + resultError(targetResult));
-    }
-
-    if (!selectedAgentAttributes() && agentAttributes.length > 0) {
-        selectedAgentName = agentName(agentAttributes[0]);
-        var fallback = agent("SetTargetAgent", {Name: selectedAgentName}, SERVICE_TIMEOUT_MS);
-        if (!fallback.success) {
-            setStatus("status.set_fallback_failed", resultError(fallback));
+    try {
+        if (!agentReady) {
+            setStatus("status.agent_manager_unavailable");
             return false;
         }
+        var attrsResult = await callAsync(handle, "GetAgentAttributes", {Name: ""}, SERVICE_TIMEOUT_MS);
+        if (!current()) return false;
+        if (!attrsResult.success || !Array.isArray(attrsResult.data)) {
+            setStatus("status.get_agent_list_failed", resultError(attrsResult));
+            return false;
+        }
+        var nextAttributes = attrsResult.data;
+        var targetResult = await callAsync(handle, "GetTargetAgent", {}, SERVICE_TIMEOUT_MS);
+        if (!current()) return false;
+        var nextName = targetResult.success && typeof targetResult.data === "string" ? targetResult.data : "";
+        if (!targetResult.success) log("GetTargetAgent failed: " + resultError(targetResult));
+        if (!nextAttributes.some(function (item) { return agentName(item) === nextName; }) && nextAttributes.length > 0) {
+            nextName = agentName(nextAttributes[0]);
+            var fallback = await callAsync(handle, "SetTargetAgent", {Name: nextName}, SERVICE_TIMEOUT_MS);
+            if (!current()) return false;
+            if (!fallback.success) {
+                setStatus("status.set_fallback_failed", resultError(fallback));
+                return false;
+            }
+        }
+        // Publish discovery atomically: the picker cannot race a pending fallback.
+        agentAttributes = nextAttributes;
+        selectedAgentName = nextName;
+        agentsLoaded = true;
+        if (nextName.length === 0) {
+            setStatus("status.no_agent_available");
+            setAgentState("state.no_agent");
+        } else {
+            setStatus("status.selected_agent", selectedAgentLabel());
+            setAgentState("state.selected");
+        }
+        if (currentPage === PAGE_AGENT_SELECT) populateAgentOptions();
+        return true;
+    } finally {
+        if (operations.finish(operation)) refreshUi();
     }
-
-    if (selectedAgentName.length === 0) {
-        setStatus("status.no_agent_available");
-        setAgentState("state.no_agent");
-    } else {
-        setStatus("status.selected_agent", selectedAgentLabel());
-        setAgentState("state.selected");
-    }
-    if (currentPage === PAGE_AGENT_SELECT) {
-        populateAgentOptions();
-    }
-    return true;
 }
 
 function clearAgentOptions() {
@@ -830,14 +844,13 @@ function selectAgent(name) {
         refreshUi();
         return false;
     }
-    if (agentStarted || agentStartSubmitted) {
+    if (agentStarted || operations.pending("start")) {
         stopAgent();
     }
+    operations.invalidateAgent();
     selectedAgentName = String(name || "");
     agentStarted = false;
     agentSleeping = false;
-    agentWakeSubmitted = false;
-    agentStartSubmitted = false;
     agentSuspendedByApp = false;
     agentSuspended = false;
     agentSpeaking = false;
@@ -979,7 +992,8 @@ function parseNetworkReady(data) {
     return "network.waiting";
 }
 
-function pollNetworkAndMaybeStart() {
+async function pollNetworkAndMaybeStart() {
+    if (!navigationAlive || !agentsLoaded || operations.pending("network")) return;
     if (internetReady) {
         maybeStartAgent();
         refreshUi();
@@ -990,29 +1004,32 @@ function pollNetworkAndMaybeStart() {
         refreshUi();
         return;
     }
-    var result = device("GetNetworkConnectivityInfo", {}, SERVICE_TIMEOUT_MS);
-    if (!result.success) {
-        setNetworkDetail("network.check_failed", resultError(result));
-        internetReady = false;
-        networkReady = false;
-        refreshUi();
-        return;
+    var handle = deviceHandle;
+    var operation = operations.begin("network");
+    try {
+        var result = await callAsync(handle, "GetNetworkConnectivityInfo", {}, SERVICE_TIMEOUT_MS);
+        if (!operations.current(operation)) return;
+        if (!result.success) {
+            setNetworkDetail("network.check_failed", resultError(result));
+            internetReady = false;
+            networkReady = false;
+            return;
+        }
+        var detail = parseNetworkReady(result.data);
+        setNetworkDetail(detail);
+        internetReady = detail === "network.internet_ready";
+        if (internetReady && networkTimerId !== 0) {
+            stopTimer(networkTimerId);
+            networkTimerId = 0;
+        }
+        if (internetReady) maybeStartAgent();
+    } finally {
+        if (operations.finish(operation)) refreshUi();
     }
-    var detail = parseNetworkReady(result.data);
-    setNetworkDetail(detail);
-    internetReady = detail === "network.internet_ready";
-    if (internetReady && networkTimerId !== 0) {
-        stopTimer(networkTimerId);
-        networkTimerId = 0;
-    }
-    if (internetReady) {
-        maybeStartAgent();
-    }
-    refreshUi();
 }
 
-function readJsonConfig(fileName) {
-    var result = storageRead("AppData", fileName);
+async function readJsonConfig(fileName, handle) {
+    var result = await storageRead(handle, "AppData", fileName);
     if (!result.success) {
         return {success: false, error: "Config file not found: " + fileName + ": " + resultError(result)};
     }
@@ -1054,12 +1071,6 @@ function validateCozeConfig(config) {
     if (!authorization || typeof authorization !== "object") {
         return {success: false, error: "Coze authorization must be an object"};
     }
-    if (isTextBlank(authorization.private_key)) {
-        var privateKey = storageRead("AppData", "coze_private_key.pem");
-        if (privateKey.success && !isTextBlank(privateKey.data)) {
-            authorization.private_key = privateKey.data;
-        }
-    }
     var error = requireNonEmpty(authorization.app_id, "Coze authorization.app_id");
     if (error.length > 0) {
         return {success: false, error: error};
@@ -1084,21 +1095,20 @@ function validateCozeConfig(config) {
     return {success: true, data: config};
 }
 
-function loadSelectedAgentConfig() {
-    var configFile = selectedAgentConfigFile();
-    if (configFile.length === 0) {
-        return {success: false, error: "Selected agent does not require a config file"};
-    }
-    var config = readJsonConfig(configFile);
-    if (!config.success) {
-        return config;
-    }
-    if (selectedAgentName === SERVICE_COZE) {
+async function loadSelectedAgentConfig(configFile, name, handle, current) {
+    var config = await readJsonConfig(configFile, handle);
+    if (!current()) return {success: false, error: "Agent configuration no longer current"};
+    if (!config.success) return config;
+    if (name === SERVICE_COZE) {
+        var authorization = config.data.authorization;
+        if (authorization && typeof authorization === "object" && isTextBlank(authorization.private_key)) {
+            var privateKey = await storageRead(handle, "AppData", "coze_private_key.pem");
+            if (!current()) return {success: false, error: "Agent configuration no longer current"};
+            if (privateKey.success && !isTextBlank(privateKey.data)) authorization.private_key = privateKey.data;
+        }
         return validateCozeConfig(config.data);
     }
-    if (selectedAgentName === SERVICE_OPENAI) {
-        return validateOpenaiConfig(config.data);
-    }
+    if (name === SERVICE_OPENAI) return validateOpenaiConfig(config.data);
     return {success: false, error: "Selected agent does not require a config file"};
 }
 
@@ -1148,7 +1158,13 @@ function hideErrorDialogIfVisible() {
     errorDialogRequestId = 0;
 }
 
-function configureSelectedAgent() {
+async function configureSelectedAgent(operation) {
+    var handle = agentHandle;
+    var storageHandle = coreHandle;
+    var name = selectedAgentName;
+    function current() {
+        return operations.current(operation);
+    }
     if (!agentReady) {
         setStatus("status.agent_manager_unavailable");
         return false;
@@ -1159,7 +1175,8 @@ function configureSelectedAgent() {
     }
     var configFile = selectedAgentConfigFile();
     if (configFile.length > 0) {
-        var config = loadSelectedAgentConfig();
+        var config = await loadSelectedAgentConfig(configFile, name, storageHandle, current);
+        if (!current()) return false;
         if (!config.success) {
             configErrorLatched = true;
             var detail = tr("label.agent") + ": " + selectedAgentLabel() + "\n" +
@@ -1172,10 +1189,11 @@ function configureSelectedAgent() {
         }
         hideErrorDialogIfVisible();
         configErrorLatched = false;
-        var setInfo = agent("SetAgentInfo", {
-            Name: selectedAgentName,
+        var setInfo = await callAsync(handle, "SetAgentInfo", {
+            Name: name,
             Info: config.data
         }, SERVICE_TIMEOUT_MS);
+        if (!current()) return false;
         if (!setInfo.success) {
             setStatus("status.set_agent_info_failed", resultError(setInfo));
             return false;
@@ -1184,7 +1202,8 @@ function configureSelectedAgent() {
         hideErrorDialogIfVisible();
         configErrorLatched = false;
     }
-    var target = agent("SetTargetAgent", {Name: selectedAgentName}, SERVICE_TIMEOUT_MS);
+    var target = await callAsync(handle, "SetTargetAgent", {Name: name}, SERVICE_TIMEOUT_MS);
+    if (!current()) return false;
     if (!target.success) {
         setStatus("status.set_target_failed", resultError(target));
         return false;
@@ -1193,7 +1212,8 @@ function configureSelectedAgent() {
     return true;
 }
 
-function maybeStartAgent() {
+async function maybeStartAgent() {
+    if (!navigationAlive || operations.pending("discovery") || !agentsLoaded || operations.pending("configure")) return false;
     if (currentPage !== PAGE_CHAT) {
         return false;
     }
@@ -1201,21 +1221,24 @@ function maybeStartAgent() {
         setStatus("status.waiting_internet");
         return false;
     }
-    if (configErrorLatched || agentStartSubmitted || agentStarted) {
+    if (configErrorLatched || operations.pending("start") || agentStarted) {
         return false;
     }
-    if (!configureSelectedAgent()) {
-        return false;
+    var operation = operations.begin("configure");
+    try {
+        if (!await configureSelectedAgent(operation)) return false;
+        if (!operations.current(operation) || currentPage !== PAGE_CHAT || !internetReady) return false;
+        startAgent();
+        return true;
+    } finally {
+        operations.finish(operation);
     }
-    startAgent();
-    return true;
 }
 
-function triggerAgentActionAsync(actionName, failedStatusKey) {
+function triggerAgentActionAsync(actionName, failedStatusKey, operation) {
     callAsync(agentHandle, "TriggerGeneralAction", {Action: actionName}, 0).then(function (result) {
-        if (!result.success) {
+        if (!result.success && operations.finish(operation)) {
             setStatus(failedStatusKey, resultError(result));
-            agentStartSubmitted = false;
             refreshUi();
         }
     });
@@ -1230,22 +1253,21 @@ function startAgent() {
         setStatus("status.agent_manager_unavailable");
         return;
     }
-    agentStartSubmitted = true;
+    var operation = operations.begin("start");
     setStatus("status.starting_agent", selectedAgentLabel());
-    triggerAgentActionAsync("Activate", "status.activate_failed");
-    triggerAgentActionAsync("Start", "status.start_failed");
+    triggerAgentActionAsync("Activate", "status.activate_failed", operation);
+    triggerAgentActionAsync("Start", "status.start_failed", operation);
     refreshUi();
 }
 
 function stopAgent() {
+    operations.invalidateAgent();
     if (!agentReady) {
         return;
     }
     callAsync(agentHandle, "TriggerGeneralAction", {Action: "Stop"}, 0);
     agentStarted = false;
     agentSleeping = false;
-    agentWakeSubmitted = false;
-    agentStartSubmitted = false;
     agentSuspendedByApp = false;
     agentSuspended = false;
     agentSpeaking = false;
@@ -1335,7 +1357,7 @@ function handleGeneralActionTriggered(actionName) {
         setCloudState("cloud.connecting");
         setStatus("status.activating_agent", selectedAgentLabel());
     } else if (actionName === "Start") {
-        agentStartSubmitted = true;
+        if (!operations.pending("start")) operations.begin("start");
         agentSuspended = false;
         agentSuspendedByApp = false;
         setStatus("status.starting_agent", selectedAgentLabel());
@@ -1348,7 +1370,7 @@ function handleGeneralActionTriggered(actionName) {
         agentSuspendedByApp = false;
         setStatus("status.agent_waking");
     } else if (actionName === "Stop") {
-        agentStartSubmitted = false;
+        operations.clear("start");
         setStatus("status.stopping_agent", selectedAgentLabel());
     } else {
         setStatus(generalActionToState(actionName));
@@ -1368,23 +1390,23 @@ function handleGeneralEventHappened(eventName, unexpected) {
         setStatus("status.agent_activated");
     } else if (eventName === "Started") {
         agentSleeping = false;
-        agentWakeSubmitted = false;
+        operations.clear("wake");
         setCloudState("cloud.connected");
         agentStarted = true;
-        agentStartSubmitted = false;
+        operations.clear("start");
         agentSuspended = false;
         agentSuspendedByApp = false;
         setStatus(selectedAgentSupportsChat() ? "status.chat_ready" : "status.agent_started");
     } else if (eventName === "Awake") {
         agentSleeping = false;
-        agentWakeSubmitted = false;
+        operations.clear("wake");
         agentStarted = true;
         agentSuspended = false;
         agentSuspendedByApp = false;
         setStatus(selectedAgentSupportsChat() ? "status.chat_awake" : "status.agent_awake");
     } else if (eventName === "Slept") {
         agentSleeping = true;
-        agentWakeSubmitted = false;
+        operations.clear("wake");
         agentSpeaking = false;
         agentListening = false;
         setStatus("status.agent_sleeping");
@@ -1392,8 +1414,8 @@ function handleGeneralEventHappened(eventName, unexpected) {
         setCloudState("cloud.disconnected");
         agentStarted = false;
         agentSleeping = false;
-        agentWakeSubmitted = false;
-        agentStartSubmitted = false;
+        operations.clear("wake");
+        operations.clear("start");
         agentSuspendedByApp = false;
         agentSuspended = false;
         agentSpeaking = false;
@@ -1525,13 +1547,10 @@ function handleServiceEvent(serviceName, eventName, itemsJson) {
 }
 
 function wakeSleepingAgent() {
-    if (!agentReady || !agentStarted || !agentSleeping || agentWakeSubmitted) return;
-    agentWakeSubmitted = true;
-    var epoch = navigationEpoch;
+    if (!agentReady || !agentStarted || !agentSleeping || operations.pending("wake")) return;
+    var operation = operations.begin("wake");
     callAsync(agentHandle, "TriggerGeneralAction", {Action: "WakeUp"}, 0).then(function (result) {
-        if (!navigationAlive || epoch !== navigationEpoch) return;
-        if (!result.success) {
-            agentWakeSubmitted = false;
+        if (!result.success && operations.finish(operation)) {
             setStatus("status.wakeup_failed", resultError(result));
             refreshUi();
         }
@@ -1598,7 +1617,9 @@ function stopSupportServices() {
 }
 
 function resetRuntimeState() {
+    operations.reset();
     appliedBindings = {};
+    agentsLoaded = false;
     currentPage = PAGE_CHAT;
     deviceReady = false;
     agentReady = false;
@@ -1606,8 +1627,6 @@ function resetRuntimeState() {
     internetReady = false;
     agentStarted = false;
     agentSleeping = false;
-    agentWakeSubmitted = false;
-    agentStartSubmitted = false;
     agentSuspendedByApp = false;
     agentSuspended = false;
     agentSpeaking = false;

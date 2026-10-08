@@ -101,6 +101,7 @@ std::expected<void, std::string> System::on_app_started(
     const esp_brookesia::system::core::AppInfo &app
 )
 {
+    if (shell_) shell_->hide_loading(app.app_id, true);
     begin_runtime_render_probe(app.manifest.id);
     if (stopping_.load(std::memory_order_acquire)) {
         return std::unexpected("ESPocket System is stopping");
@@ -140,6 +141,7 @@ std::expected<void, std::string> System::on_app_started(
             ESP_LOGW(TAG, "Card target_unavailable: app=%s card=%s; no target Page committed", pending_card_->app_id.c_str(), pending_card_->card_id.c_str());
         }
     }
+    if (pending_card_ && pending_card_->app_id == app.manifest.id) pending_card_.reset();
     const auto navigator = navigator_for(app.app_id);
     default_back_visible_.store(navigator && navigator->show_default_back(),
                                std::memory_order_release);
@@ -147,7 +149,7 @@ std::expected<void, std::string> System::on_app_started(
                             std::memory_order_release);
     edge_back_reserved_.store(navigator && navigator->framework_owns_back(),
                              std::memory_order_release);
-    lifecycle_restore_pending_ = false;
+    foreground_restoration_.instance_started(app.app_id);
     remember_reset_resume(app);
     return {};
 }
@@ -162,6 +164,7 @@ void System::on_app_start_failed(
     } else if (auto navigator = navigator_for(app.app_id)) {
         navigator->stop();
     }
+    if (pending_card_ && pending_card_->app_id == app.manifest.id) pending_card_.reset();
     ESP_LOGW(
         TAG,
         "App start failed: manifest=%s reason=%.*s",
@@ -175,6 +178,7 @@ void System::on_app_start_failed(
 
 void System::on_app_stopped(const esp_brookesia::system::core::AppInfo &app)
 {
+    if (pending_card_ && pending_card_->app_id == app.manifest.id) pending_card_.reset();
     end_runtime_render_probe();
     if (auto runtime = runtime_adapter_for(app.app_id)) {
         runtime->stop();
@@ -242,6 +246,16 @@ void System::on_hide_app_keyboard(
     }
 }
 
+std::optional<RunningInstanceIdentity> System::current_foreground_instance() const
+{
+    const auto active = get_active_app();
+    const auto generation = foreground_token_->load(std::memory_order_acquire);
+    if (!active || active->app_id == shell_id_ || !active->manifest.visible ||
+            active->state != esp_brookesia::system::core::AppState::Running || generation == 0 ||
+            active->app_id != foreground_app_id_.load(std::memory_order_acquire)) return std::nullopt;
+    return RunningInstanceIdentity{active->app_id, generation};
+}
+
 void System::clear_foreground(
     const esp_brookesia::system::core::AppInfo &app
 )
@@ -278,8 +292,7 @@ void System::restore_home_after_lifecycle(
     if (!shell.has_value() || shell->state != esp_brookesia::system::core::AppState::Running) {
         return;
     }
-    const auto surface = lifecycle_restore_pending_ ? lifecycle_restore_surface_ : ShellSurface::WatchFace;
-    lifecycle_restore_pending_ = false;
+    const auto surface = foreground_restoration_.lifecycle_return(app.app_id);
     restore_surface(surface);
 }
 

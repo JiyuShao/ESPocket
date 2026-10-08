@@ -23,7 +23,7 @@
 
 App 可选地声明多个 Card 类型。每个 Card 使用稳定 `cardId`，并可声明打开完整 App 时的目标 `pageId`；未指定目标时打开 Root。Card ID 以 `appId + cardId` 形成配置身份，同一 ID 在 Home Space 最多出现一次，不同 ID 可以并存。只有声明 Card 的 App 出现在可添加列表。用户决定左右 Card 的添加、移除和排序；Quick Settings、Launcher 的位置固定。卸载 App 或新版不再声明某 Card ID 时，ESPocket 移除该配置并记录原因。
 
-App 级 Back 呈现声明有两种模式：`framework` 为默认；`appOwned` 同时关闭 ESPocket 的可见默认 Back 与 Edge Back。所有 App 选择 `appOwned` 时，自行决定返回 UI 与手势，例如边缘或上下滑动；不要求可见按钮，自定义入口调用 ESPocket 的 `requestBack`。选择默认模式时，页面可放置 ESPocket 标准 Back 控件；系统识别后不再叠加第二个可见 Back，Edge Back 仍可用。Root 在两种模式下均无 Back。
+App 级 Back 呈现声明有两种模式：`framework` 为默认；`appOwned` 同时关闭 ESPocket 的可见默认 Back 与 Edge Back。所有 App 选择 `appOwned` 时，自行决定返回 UI 与手势，例如边缘或上下滑动；不要求可见按钮，自定义入口调用 ESPocket 的 `requestBack`。选择默认模式时，页面可放置 ESPocket 标准 Back 控件；系统识别后不再叠加第二个可见 Back，Edge Back 仍可用。Root 在两种模式下均无 Back。顶部边缘下拉由 Shell 保留为全局 Quick Settings 入口，`appOwned` 也不能关闭该系统入口；内容区域的纵向手势继续归 App。Quick Settings 临时覆盖不触发 App 的停止、重新启动或 Page pop。
 
 第一版 C++ 声明使用 `BackPresentation::Framework` 或 `BackPresentation::AppOwned`。App 自行放置 ESPocket 标准 Back 控件时声明 `uses_standard_back_control=true`，避免 Shell 再叠加控件；`AppOwned` 不要求声明可见控件；`uses_standard_back_control` 是 App 的呈现承诺；完整 App API 与控件注册机制仍待定版。
 
@@ -230,3 +230,17 @@ App 可通过 Brookesia `AppContext::system_service()` 的 `show_message_dialog`
 ```
 
 开发验收应检查两种主题中的页面背景、主次文字、按钮及其状态、图标和边框；App Page 与 App Card 分别检查，不能只验证其中一种形态。确认所有新增引用在两份主题中可解析，并检查局部样式是否覆盖了主题颜色。设备视觉验收按当前实现，在保存主题并重启后进行；使用 token 不代表已创建文档支持即时切换。上述要求是开发规范，既有界面的迁移与真机结果仍由对应工作票记录。
+
+## 前台常亮声明
+
+Native App 的 `AppManifest.keep_screen_on` 与 Runtime 包的 `package.keep_screen_on` 表达同一需求，缺省为 false；Runtime 字段必须为 JSON bool，字符串等错误类型被 Core 拒绝。声明是不可变包内容，沿用既有包准入和 receipt 验证，不新增 unsigned 例外。
+
+System 只在当前前台 App 为 Running 且声明 true 时豁免自动息屏。暂停、停止、失败、回收或 Home 后不再适用；它不阻止实体 PWR、Home 或显式显示操作，不另存跨实例电源状态。App 不需要引用 System／Shell 实现。当前 App 声明不提供任意后台唤醒或屏幕控制权限。
+
+## 产品启动请求与进度
+
+产品的可见 App 启动使用 Core `request_app_start(app_id)`：返回值表示请求接受，不表示已进入 Running。完成由既有 `on_app_started`／`on_app_start_failed` hook 报告。Core 的 `process_timers()` 在 App Owner 上逐次推进一个启动阶段，System 的维护节拍在 PWR 处理后调用；App 本身不管理这些阶段。
+
+GUI 准备期间 Core 仅非阻塞检查真实 GUI task 的 future。原 AppRecord 仍持有请求；重复同一未取消请求幂等，第二个不同请求在清理前拒绝。`stop_app` 标记取消，待 GUI 返回后回滚，取消结果不能晚提交 Running。进行中的 App 不可卸载、替换、同步启动、pause/resume 或接收 GUI action；正常 stop/deinit drain 后才允许释放记录。既有同步 `start_app` 保留，启动循环需使用对应的完成语义。
+
+分阶段不提供强制抢占：包准入、Runtime load/start、Native/Runtime lifecycle callback 和单次 GUI parse 仍须限制自己的同步耗时。250ms PWR 目标与真实 Loading 顶部下拉验收由 [023/04](../../.scratch/023-owner-seam-remediation/issues/04-phased-app-start.md) 持有，不能用 future 不阻塞的主机测试替代。

@@ -96,6 +96,12 @@
     {
       "file": "007-extend-compatible-app-background.patch",
       "sha256": "f96272e7ccb7eb5d1ec9406c76ec48206689cf72634f0f017774beb864afbb50"
+    },
+    {
+      "file": "008-own-image-decoding-policy.patch",
+      "sha256": "2d92940859bd9a7e75790b065651bcec3e4693857276a1233e39485b26d403a0",
+      "issue": ".scratch/023-owner-seam-remediation/issues/02-image-decoding-owner.md",
+      "removed_when": "Remove when locked upstream provides an equivalent verified Owner interface and regressions pass."
     }
   ],
   "issue": ".scratch/005-m5-application-ecosystem/issues/10-reduce-runtime-startup-blocking.md",
@@ -114,13 +120,14 @@
     "Kconfig": "bf866398444ba6bb93368b1084261bda7788049defab011ea9706fe0f15f1548",
     "README.md": "474ce5cf0d4f8c689b0278b0fc31b399118a2d6008071b311f50106d9f662d63",
     "README_CN.md": "f54374fd64315380d4e451f2e4843fb803eb42d16a28fa2559de584a36451cad",
-    "cmake/esp_platform.cmake": "34aa6df68b63f03ae193fe6c6c8319b6f53bf9fc0f9ca952e9360f93884e4e17",
+    "cmake/esp_platform.cmake": "f8b7c72422c2310a465eb9d8417390209446cac99584c846b01e8e26a4a2692f",
     "cmake/image_pack.cmake": "94c807b0077f11a0166b72039d3b75df752a9bbfe73b68080f3444f67a4e6ca9",
     "cmake/pc_platform.cmake": "c223e773b11345131cb7f29e7ef7b33c8bb9c52f050cb8d62e3039f31e42386c",
     "host/main.cpp": "0bf15065857fd225fd3148c59cc67206e260dc65b0aff030e2407dd14d8dd991",
     "idf_component.yml": "5f401a192572eec0e224215795eb1b364d1296fb57ad68235965bd4bbf8fdc72",
     "include/brookesia/gui_lvgl/backend.hpp": "ec6680ff1c16ba86c6c7fb3dd96883bde920fbd3ca9ccde64f67c3a251c7a8c1",
     "include/brookesia/gui_lvgl/display_source.hpp": "d665e62fef5c3f19f5d67cc21f5a77797eb7ec02a18cf45a6b88f416628340da",
+    "include/brookesia/gui_lvgl/image_decoding.hpp": "c77af88124300ea958436fc3e41dbd97657ded87289c9d5b0d951d607b653699",
     "include/brookesia/gui_lvgl/macro_configs.h": "8f78d33cae2a1a5372c3192ba04a7db00b1fb167e12f68a814c4a60753a78910",
     "include/brookesia/gui_lvgl.hpp": "8647e4c74b698009bb3ead025211717075b6644ccd15f2c37eb82134c5738561",
     "license.txt": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
@@ -128,6 +135,7 @@
     "src/backend.cpp": "c7e418f42e2cce85003d94fb93a55240c683e67b2a755ba80d96336cbc95134d",
     "src/event.cpp": "557a5c2b391bc96ce5dc3b41b1c6dc4765b3e0128ab27ff177ec40e3c2900128",
     "src/factory.cpp": "46054e96194153781559befb3ca187c2ef39bc267b49516ccb4cf3936197245b",
+    "src/image_decoding.cpp": "163250edc1e2d8286d0a5a86d1bd3fd3c7e99f461313c04028acb3e9997456ee",
     "src/layout.cpp": "503e8cea539cc14523bce0333581786aaafbaabb5f4873318ff14fb5d65d64e3",
     "src/port/esp/display_source.cpp": "14e67df7e45858691bfaac2840d442a63804c6f6fdfc2e4093a838734884c7d7",
     "src/port/esp/threading.cpp": "2db2736b0dca8e3f5d7de45429fce64a1a4c5f575a2fc5e73c607965cc6b1bcf",

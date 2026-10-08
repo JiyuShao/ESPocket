@@ -4,6 +4,8 @@ import json
 from pathlib import Path
 import sys
 import tempfile
+import subprocess
+from unittest.mock import patch
 import unittest
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -197,6 +199,78 @@ class PatchedFirmwareStageTest(unittest.TestCase):
                       (staged / 'main/idf_component.yml').read_text())
         self.assertEqual(inputs['patches'][-1]['component'], component)
         self.assertEqual(BUILDER.inventory(self.firmware), before)
+
+    def prepare_candidate_fixture(self):
+        firmware = BUILDER.stage(self.root, self.workspace, self.config, 'baseline')
+        build = firmware / 'build'; build.mkdir()
+        images = {'0x0':'bootloader/bootloader.bin', '0x8000':'partition_table/partition-table.bin',
+                  '0x10000':'srmodels/srmodels.bin', '0x60000':'espocket.bin', '0xe60000':'littlefs_data.bin'}
+        for name in images.values():
+            path=build/name;path.parent.mkdir(parents=True, exist_ok=True);path.write_bytes(name.encode())
+        (build/'flasher_args.json').write_text(json.dumps({'flash_files':images}))
+        (build/'flash_args').write_text('\n'.join(f'{offset} {name}' for offset,name in images.items()))
+        (build/'project_description.json').write_text(json.dumps({'project_name':'espocket'}))
+        (build/'espocket.elf').write_bytes(b'elf')
+        return firmware,build,images
+
+    def test_candidate_archives_every_flash_image_and_frozen_inputs(self):
+        firmware,build,images=self.prepare_candidate_fixture()
+        fingerprint=BUILDER.verify_inputs(self.workspace)
+        (self.firmware/'main/idf_component.yml').write_text('checkout changed after staging')
+        candidate=BUILDER.archive_candidate(self.workspace)
+        manifest=json.loads((candidate/'manifest.json').read_text())
+        self.assertEqual(manifest['input_fingerprint'], fingerprint)
+        self.assertEqual(manifest['flash_files'], images)
+        self.assertFalse(manifest['deployed']);self.assertFalse(manifest['physical_validation'])
+        for name,item in manifest['artifacts'].items():
+            self.assertEqual(BUILDER.digest(candidate/name),item['sha256'])
+            self.assertEqual((candidate/name).stat().st_size,item['bytes'])
+        for name in images.values():self.assertEqual((candidate/name).read_bytes(),(build/name).read_bytes())
+        self.assertTrue((candidate/'inputs/sdkconfig.original').exists())
+        self.assertTrue((candidate/'patches'/BUILDER.COMPONENT/BUILDER.VERSION/'001.patch').exists())
+        with self.assertRaises(ValueError):BUILDER.archive_candidate(self.workspace)
+
+    def test_prepare_only_has_no_successful_candidate(self):
+        BUILDER.stage(self.root,self.workspace,self.config,'baseline')
+        self.assertEqual(json.loads((self.workspace/'input-snapshot.json').read_text())['status'],'prepared')
+        self.assertFalse((self.workspace/'candidate').exists())
+        with self.assertRaises(OSError):BUILDER.archive_candidate(self.workspace)
+        self.assertFalse((self.workspace/'candidate').exists())
+
+    def test_candidate_rejects_missing_flash_image(self):
+        _,build,_=self.prepare_candidate_fixture()
+        (build/'srmodels/srmodels.bin').unlink()
+        with self.assertRaisesRegex(ValueError,'Missing'):BUILDER.archive_candidate(self.workspace)
+        self.assertFalse((self.workspace/'candidate').exists())
+
+    def test_candidate_rejects_flash_path_escape(self):
+        _,build,_=self.prepare_candidate_fixture()
+        for name in ('../outside.bin','/tmp/outside.bin'):
+            (build/'flasher_args.json').write_text(json.dumps({'flash_files':{'0x0':name}}))
+            with self.assertRaisesRegex(ValueError,'Unsafe'):BUILDER.archive_candidate(self.workspace)
+        self.assertFalse((self.workspace/'candidate').exists())
+
+    def test_candidate_rejects_staged_product_and_patched_drift(self):
+        firmware,_,_=self.prepare_candidate_fixture()
+        product=firmware/'main/new_source.cpp';product.write_text('drift')
+        with self.assertRaisesRegex(ValueError,'product_files'):BUILDER.archive_candidate(self.workspace)
+        product.unlink()
+        patched=self.workspace/'patched_components'/BUILDER.COMPONENT/'source.txt';patched.write_text('drift')
+        with self.assertRaisesRegex(ValueError,'patched_files'):BUILDER.archive_candidate(self.workspace)
+        self.assertFalse((self.workspace/'candidate').exists())
+
+
+
+    def test_failed_idf_build_does_not_publish_candidate(self):
+        args = ['build', '--workspace', str(self.workspace), '--sdkconfig', str(self.config), '--patch-set', 'baseline']
+        with patch.object(BUILDER, 'ROOT', self.root), patch.object(sys, 'argv', args), \
+             patch.object(BUILDER.subprocess, 'run', side_effect=subprocess.CalledProcessError(1, 'idf.py')):
+            with self.assertRaises(SystemExit) as failed:
+                BUILDER.main()
+        self.assertEqual(failed.exception.code, 1)
+        self.assertTrue((self.workspace/'input-snapshot.json').exists())
+        self.assertFalse((self.workspace/'candidate').exists())
+
 
 class RegistryLockTest(unittest.TestCase):
     def test_pins_transitive_versions_without_extra_public_requirements(self):

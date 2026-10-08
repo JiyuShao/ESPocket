@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[4]
 class ShellStartFailureCleanupTest(unittest.TestCase):
     def test_native_start_failure_releases_its_display_and_state(self):
         text=(ROOT/'firmware/components/shell_circular/src/circular_shell.cpp').read_text()
-        method=text[text.index('std::expected<void, std::string> CircularShell::on_start('):text.index('std::expected<void, std::string> CircularShell::on_stop(')]
+        method=text[text.index('std::expected<void, std::string> CircularShell::on_start('):text.index('std::expected<void, std::string> CircularShell::on_action(')]
         actions=['OPEN_HELLO_NATIVE_ACTION','OPEN_HELLO_RUNTIME_ACTION','OPEN_SETTINGS_ACTION','OPEN_SETTINGS_CARD_ACTION','OPEN_SETTINGS_QUICK_ACTION','OPEN_APP_STORE_ACTION','OPEN_DYNAMIC_APP_ACTION','STEP_BRIGHTNESS_ACTION','STEP_BRIGHTNESS_QUICK_ACTION','TOGGLE_WIFI_ACTION','TOGGLE_DEVELOPER_MODE_ACTION']
         harness=r'''
 #include <atomic>
@@ -50,6 +50,7 @@ std::shared_ptr<LoadingState> loading_state_;std::shared_ptr<KeyboardState> keyb
 std::shared_ptr<BackOverlayState> back_overlay_state_;std::shared_ptr<HomeGestureState> home_gesture_state_;
 std::shared_ptr<CallbackState> callback_state_;
 Connection gesture_connection_,launcher_connection_;Binding display_binding_;
+bool quick_settings_cleanup_pending_=false;
 int last_activity_generation_=0,last_activity_us_=0,home_intent_timer_id_=-1;bool screen_timeout_latched_=false;
 uint64_t launcher_generation_=0;int launcher_refresh_at_us_=0;
 std::mutex launcher_intent_mutex_;std::string launcher_intent_;
@@ -60,7 +61,11 @@ std::expected<void,std::string> on_start(esp_brookesia::system::core::AppContext
 };
 ''' + method + r'''
 }
-int main(){for(int point=1;point<=14;++point){stage=0;fail=point;espocket::CircularShell shell;esp_brookesia::system::core::AppContext context;
+int main(){
+{espocket::CircularShell pending;esp_brookesia::system::core::AppContext context;
+pending.quick_settings_cleanup_pending_=true;
+assert(!pending.on_start(context));assert(!pending.context_ && !pending.display_binding_.valid && !context.t.active);}
+for(int point=1;point<=14;++point){stage=0;fail=point;espocket::CircularShell shell;esp_brookesia::system::core::AppContext context;
 assert(!shell.on_start(context));assert(!shell.display_binding_.valid);assert(!shell.gesture_connection_.active);
 assert(!shell.context_);assert(!shell.loading_state_ && !shell.keyboard_state_ && !shell.message_dialog_state_ && !shell.back_overlay_state_ && !shell.home_gesture_state_);assert(!context.t.active);}
 stage=0;fail=15;espocket::CircularShell partial;esp_brookesia::system::core::AppContext partial_context;
