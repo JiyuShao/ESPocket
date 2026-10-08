@@ -11,7 +11,7 @@ sys.path.insert(0, str(ROOT / 'scripts/firmware'))
 from prepare_patched_component import prepare
 from test_gui_parser_allocation import build, exercise
 
-RESOURCES = ROOT / 'firmware/components/espocket_system/resources'
+RESOURCES = ROOT / 'firmware/runtime_apps'
 
 
 def walk(node, prefix=''):
@@ -33,7 +33,7 @@ class RoundAppDocumentTest(unittest.TestCase):
         cls.binary = build(component, cls.directory / 'parser')
 
     def test_chat_document_parses_and_preserves_controller_targets(self):
-        document = json.loads((RESOURCES / 'chat_round.json').read_text())
+        document = json.loads((RESOURCES / 'ai_chatbot/src/res/root.json').read_text())
         fixtures = {
             'constants/default.json': {'type': 'constant', 'data': {}},
             'i18n/en.json': {'type': 'constant', 'data': {}},
@@ -71,7 +71,7 @@ class RoundAppDocumentTest(unittest.TestCase):
         events.update(event['action'] for asset in document['assets'] if isinstance(asset, dict)
                       for _, node in walk(asset.get('node', asset)) for event in node.get('events', []))
         self.assertTrue({'ai_chatbot.history.clear', 'ai_chatbot.chat.open.chat', 'ai_chatbot.chat.open.settings',
-                         'ai_chatbot.settings.open.agent_select', 'ai_chatbot.select.back', 'ai_chatbot.agent.select'} <= events)
+                         'ai_chatbot.settings.open.agent_select', 'ai_chatbot.agent.select'} <= events)
         for asset in document['assets']:
             if isinstance(asset, dict):
                 for _, node in walk(asset.get('node', asset)):
@@ -89,7 +89,7 @@ class RoundAppDocumentTest(unittest.TestCase):
                 self.assertLessEqual((corner_x - 233)**2 + (corner_y - 233)**2, 233**2)
 
     def test_calculator_all_keys_remain_reachable_with_readable_labels(self):
-        document = json.loads((RESOURCES / 'calculator_round.json').read_text())
+        document = json.loads((RESOURCES / 'calculator/src/res/root.json').read_text())
         screen = next(asset for asset in document['assets'] if isinstance(asset, dict) and asset['type'] == 'viewScreen')
         display, keypad = screen['children'][0]['children']
         self.assert_in_circle(display['placement'])

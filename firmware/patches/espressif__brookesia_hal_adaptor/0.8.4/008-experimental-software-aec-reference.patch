@@ -1,0 +1,191 @@
+--- a/include/brookesia/hal_adaptor/audio/device.hpp
++++ b/include/brookesia/hal_adaptor/audio/device.hpp
+@@ -121,6 +121,9 @@
+  * @brief AFE backend configuration for the ESP audio processor.
+  */
+ struct AudioProcessorAFE_Config {
++    // Experimental 16 kHz stereo software reference: input becomes MR.
++    bool software_aec = false;
++    uint16_t reference_delay_ms = 0;
+     lib_utils::ThreadConfig feeder_task{
+         .core_id = 1,
+         .priority = 5,
+@@ -236,7 +239,7 @@
+ BROOKESIA_DESCRIBE_STRUCT(AudioProcessorAFE_WakeNetConfig, (), (
+                               model_partition_label, mn_language, start_timeout_ms, end_timeout_ms
+                           ));
+-BROOKESIA_DESCRIBE_STRUCT(AudioProcessorAFE_Config, (), (feeder_task, fetcher_task, vad, wakenet));
++BROOKESIA_DESCRIBE_STRUCT(AudioProcessorAFE_Config, (), (feeder_task, fetcher_task, vad, wakenet, software_aec, reference_delay_ms));
+ BROOKESIA_DESCRIBE_STRUCT(AudioProcessorConfig, (), (playback, encoder, decoder, afe));
+ 
+ } // namespace esp_brookesia::hal
+--- a/src/audio/processor_impl.hpp
++++ b/src/audio/processor_impl.hpp
+@@ -12,6 +12,7 @@
+ 
+ #include "pcm_gain.hpp"
+ #include "playback_capture_guard.hpp"
++#include "software_aec_reference.hpp"
+ 
+ #include "brookesia/hal_adaptor/audio/device.hpp"
+ #include "brookesia/hal_interface/interfaces/audio/codec_player.hpp"
+@@ -93,6 +94,7 @@
+     std::mutex decoder_output_mutex_;
+     BoundedPcmGain decoder_output_gain_;
+     PlaybackCaptureGuard playback_capture_guard_;
++    SoftwareAecReference software_aec_reference_;
+     std::string afe_model_partition_label_;
+     std::string afe_mn_language_;
+ };
+--- a/src/audio/processor_impl.cpp
++++ b/src/audio/processor_impl.cpp
+@@ -174,6 +174,18 @@
+ 
+     }
+ 
++#if BROOKESIA_HAL_ADAPTOR_AUDIO_PROCESSOR_AFE_USE_CUSTOM
++    BROOKESIA_CHECK_FALSE_RETURN(!config_.afe.software_aec, false, "Software AEC requires ESP-SR AFE");
++#endif
++    BROOKESIA_CHECK_FALSE_RETURN(
++        !config_.afe.software_aec || (recorder_iface_ && config_.decoder.capture_suppression_ms == 0),
++        false, "Software AEC requires capture and no half-duplex capture suppression"
++    );
++    BROOKESIA_CHECK_FALSE_RETURN(
++        software_aec_reference_.configure(config_.afe.software_aec, player_config.sample_rate,
++            player_config.channels, player_config.bits, config_.afe.reference_delay_ms),
++        false, "Software AEC requires 16 kHz, stereo, 16-bit audio and bounded delay"
++    );
+     BROOKESIA_CHECK_FALSE_RETURN(player_iface_->open(player_config), false, "Failed to open audio DAC");
+     lib_utils::FunctionGuard close_player_guard([this]() {
+         player_iface_->close();
+@@ -200,7 +212,9 @@
+         }
+         // Gate capture before the DAC write and conservatively cover its buffered tail.
+         core->playback_capture_guard_.note_output(data, size, esp_timer_get_time());
++        core->software_aec_reference_.record_output(data, size, esp_timer_get_time());
+         const bool written = core->player_iface_->write_data(data, size);
++        if (!written) core->software_aec_reference_.invalidate();
+         core->playback_capture_guard_.note_output(data, size, esp_timer_get_time());
+         return written ? ESP_OK : ESP_FAIL;
+     };
+@@ -216,6 +230,7 @@
+             if (self->playback_capture_guard_.suppresses_capture(esp_timer_get_time())) {
+                 std::memset(data, 0, static_cast<size_t>(size));
+             }
++            if (!self->software_aec_reference_.inject_reference(data, size, esp_timer_get_time())) return ESP_FAIL;
+             self->on_recorder_input_data(data, size);
+         }
+ 
+@@ -240,7 +255,9 @@
+         .board_bits = static_cast<int>(player_config.bits),
+         .board_channels = static_cast<int>(player_config.channels),
+     };
+-    if (recorder_iface_ && !recorder_iface_->get_info().mic_layout.empty()) {
++    if (config_.afe.software_aec) {
++        std::strcpy(manager_config.mic_layout, "MR");
++    } else if (recorder_iface_ && !recorder_iface_->get_info().mic_layout.empty()) {
+         std::strncpy(
+             manager_config.mic_layout, recorder_iface_->get_info().mic_layout.c_str(), sizeof(manager_config.mic_layout) - 1
+         );
+@@ -604,8 +621,12 @@
+         is_decoder_started_ = false;
+         std::array<uint8_t, 960> tail{};
+         const auto tail_size = decoder_output_gain_.flush(tail.data(), tail.size());
+-        if (tail_size > 0 && !player_iface_->write_data(tail.data(), static_cast<int>(tail_size))) {
+-            BROOKESIA_LOGE("Failed to write decoder tail");
++        if (tail_size > 0) {
++            software_aec_reference_.record_output(tail.data(), static_cast<int>(tail_size), esp_timer_get_time());
++            if (!player_iface_->write_data(tail.data(), static_cast<int>(tail_size))) {
++                software_aec_reference_.invalidate();
++                BROOKESIA_LOGE("Failed to write decoder tail");
++            }
+         }
+         decoder_output_gain_.reset();
+     }
+--- a/src/audio/processor_type_converter.cpp
++++ b/src/audio/processor_type_converter.cpp
+@@ -134,6 +134,9 @@
+     auto &afe_config = result.mode.custom;
+ #endif
+ 
++#if !BROOKESIA_HAL_ADAPTOR_AUDIO_PROCESSOR_AFE_USE_CUSTOM
++    if (config.software_aec) afe_config.algo_mask |= AV_PROCESSOR_AFE_FLAG_AEC_ENABLE;
++#endif
+     if (config.vad.has_value()) {
+ #if !BROOKESIA_HAL_ADAPTOR_AUDIO_PROCESSOR_AFE_USE_CUSTOM
+         afe_config.algo_mask |= AV_PROCESSOR_AFE_FLAG_AEC_ENABLE |
+--- /dev/null
++++ b/src/audio/software_aec_reference.hpp
+@@ -0,0 +1,72 @@
++/* SPDX-License-Identifier: Apache-2.0 */
++#pragma once
++#include <cstdint>
++#include <cstring>
++#include <mutex>
++#include <vector>
++
++namespace esp_brookesia::hal {
++// Diagnostic software reference. Timestamps approximate DAC/ADC sample time;
++// device correlation must calibrate delay before enabling a product default.
++class SoftwareAecReference {
++public:
++    bool configure(bool enabled, uint32_t rate, uint8_t channels, uint8_t bits, uint16_t delay_ms)
++    {
++        enabled_ = false;
++        samples_.clear();
++        if (!enabled) return true;
++        if (rate != 16000 || channels != 2 || bits != 16 || delay_ms > 250) return false;
++        rate_ = rate;
++        delay_samples_ = static_cast<int64_t>(rate) * delay_ms / 1000;
++        try { samples_.resize(rate / 2); } catch (...) { return false; } // Bounded 500 ms history, allocated before callbacks.
++        enabled_ = true;
++        return true;
++    }
++    void record_output(const uint8_t *data, int size, int64_t first_sample_us)
++    {
++        if (!enabled_ || !data || size <= 0 || size % 4) return;
++        std::lock_guard lock(mutex_);
++        const auto first = sample_index(first_sample_us);
++        for (int frame = 0; frame < size / 4; ++frame) {
++            auto index = first + frame;
++            if (index < 0) continue;
++            auto &sample = samples_[static_cast<size_t>(index) % samples_.size()];
++            sample.index = index;
++            // This board's ES8311 uses the left output slot; do not average slots.
++            std::memcpy(&sample.pcm, data + frame * 4, 2);
++        }
++    }
++    void invalidate()
++    {
++        if (!enabled_) return;
++        std::lock_guard lock(mutex_);
++        for (auto &sample : samples_) sample.index = -1;
++    }
++    bool inject_reference(uint8_t *data, int size, int64_t capture_end_us)
++    {
++        if (!enabled_) return true;
++        if (!data || size <= 0 || size % 4) return false;
++        std::lock_guard lock(mutex_);
++        const auto first = sample_index(capture_end_us) - size / 4 - delay_samples_;
++        for (int frame = 0; frame < size / 4; ++frame) {
++            const auto index = first + frame;
++            int16_t reference = 0;
++            if (index >= 0) {
++                const auto &sample = samples_[static_cast<size_t>(index) % samples_.size()];
++                if (sample.index == index) reference = sample.pcm;
++            }
++            // Channel zero remains the microphone; channel one becomes reference.
++            std::memcpy(data + frame * 4 + 2, &reference, 2);
++        }
++        return true;
++    }
++private:
++    struct Sample { int64_t index = -1; int16_t pcm = 0; };
++    int64_t sample_index(int64_t us) const { return us / 1000000 * rate_ + us % 1000000 * rate_ / 1000000; }
++    bool enabled_ = false;
++    uint32_t rate_ = 0;
++    int64_t delay_samples_ = 0;
++    std::mutex mutex_;
++    std::vector<Sample> samples_;
++};
++}

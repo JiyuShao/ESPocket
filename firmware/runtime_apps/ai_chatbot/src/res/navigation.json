@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "appId": "espocket.app.ai_chatbot",
+  "rootPageId": "ai_chatbot_chat",
+  "pageIds": [
+    "ai_chatbot_chat",
+    "ai_chatbot_settings",
+    "ai_chatbot_select"
+  ],
+  "presentation": {
+    "screenFlow": "ai_chatbot",
+    "transitions": [
+      {
+        "from": "ai_chatbot_chat",
+        "to": "ai_chatbot_settings",
+        "action": "ai_chatbot.chat.open.settings"
+      },
+      {
+        "from": "ai_chatbot_settings",
+        "to": "ai_chatbot_chat",
+        "action": "ai_chatbot.settings.open.chat"
+      },
+      {
+        "from": "ai_chatbot_settings",
+        "to": "ai_chatbot_select",
+        "action": "ai_chatbot.settings.open.agent_select"
+      },
+      {
+        "from": "ai_chatbot_select",
+        "to": "ai_chatbot_settings",
+        "action": "ai_chatbot.select.back"
+      },
+      {
+        "from": "ai_chatbot_select",
+        "to": "ai_chatbot_chat",
+        "action": "ai_chatbot.chat.open.chat"
+      }
+    ]
+  },
+  "cards": [],
+  "resumeAfterHardwareReset": true
+}

@@ -57,11 +57,17 @@ python3 scripts/firmware/build_patched_firmware.py \
 
 产品入口使用性能优化编译、32 MiB Flash 和 `partitions_32m.csv`：App 位于 `0x60000`，预算 14 MiB；LittleFS 位于 `0xe60000`，预算 17.625 MiB。新增 NES 与 Agent 依赖的版本/hash 由 `store-app-dependencies.json` 固定，真实服务自动注册；AI 在线功能仍需要对应服务的激活或凭据。加载的 sdkconfig 必须来自完整的板级配置，不能使用关闭 Display/Network/System HAL 的旧缓存配置。产品 DisplaySource 显式使用 24 行双内部缓冲，每块 22,368 bytes，保留启动 Wi-Fi 所需的内部 RAM；32 行配置虽能显示，实际导致 Wi-Fi RX buffer 分配失败。上游／构建候选的默认 40 行值仍保留，实际产品配置以此处的 Owner 装配为准。
 
-产品独立构建同时将准确匹配的生成 SPI display `max_transfer_sz` 配为 29,824 bytes。未声明支持 ESPocket 的 Runtime 使用圆内 329px 安全 viewport 和 480dp 逻辑画布；固定 800×480dp 布局的官方 AI Chatbot 0.2.1 使用 329×197px 居中横向 viewport，使设置和 Agent 选择入口可操作；原始 BPK 不改写。产品主题补齐官方 App 的共享控件样式，启用 Montserrat 10/12/14/16；中文字体按字号使用 96/48/16 字形缓存。这些内存预算与 512 KiB 图片缓存独立。Launcher 使用每页四行的 Release 翻页，减少连续软件重绘。测量结果与启动性能限制由 [存储与圆屏验收记录](../.scratch/005-m5-application-ecosystem/records/2026-10-06-storage-round-runtime.md)和 [小智／Launcher 工作票](../.scratch/005-m5-application-ecosystem/issues/13-xiaozhi-and-launcher-performance.md)持有。
+产品独立构建同时将准确匹配的生成 SPI display `max_transfer_sz` 配为 29,824 bytes。未声明支持 ESPocket 的 Runtime 使用圆内 329px 安全 viewport 和 480dp 逻辑画布；聊天与计算器由 `runtime_apps/ai_chatbot`、`runtime_apps/calculator` 的本地 Runtime App 自带圆屏资源，源码随内置包 staging；平台不按官方 App ID 替换布局。其他 Store 包保持通用安全 viewport，原始 BPK 不改写。产品主题补齐官方 App 的共享控件样式，启用 Montserrat 10/12/14/16；中文字体按字号使用 96/48/16 字形缓存。这些内存预算与 512 KiB 图片缓存独立。Launcher 使用每页四行的 Release 翻页，减少连续软件重绘。测量结果与启动性能限制由 [存储与圆屏验收记录](../.scratch/005-m5-application-ecosystem/records/2026-10-06-storage-round-runtime.md)和 [小智／Launcher 工作票](../.scratch/005-m5-application-ecosystem/issues/13-xiaozhi-and-launcher-performance.md)持有。
 
 已有设备从旧分区迁移前，先完整备份旧 Flash 并保留启动、NVS、App、LittleFS 回滚区域。用具有 littlefs-python 的 Python 执行 `scripts/firmware/migrate_littlefs.py --backup <old-littlefs.bin> --output <new-image.bin> --size 0x11a0000`，核对逐文件摘要后，将迁移镜像写入新 LittleFS 地址；同次部署匹配的 bootloader、partition table 和 App，保留 NVS/model。迁移工具只生成镜像，不烧录；它作废 Core 持久验证记录，使首次启动重新完整验证安装包。部署迁移设备时，不能使用构建生成的全新 `littlefs_data.bin` 覆盖已有文件。挂载失败自动格式化已关闭。
 
 Store 成功提交安装后回收自有下载副本，Core 的安装原包和用户 data/files 保留。下载包缓存目标为 512 KiB，优先清理已安装版本和旧版本，再按修改时间回收；单次最多处理 64 个候选，正在下载、待确认或排队安装的包保留。扫描清理自有中断 `.bpk.part`，手动导入包不参与回收。下载与 Core 安装分别读取实际可用容量，预算包括候选原包、解包、更新保留文件和分配开销；容量未知或不足时提前失败，失败安装保留旧版本。图像缓存与磁盘包缓存的预算独立。
+
+## 本地 Runtime App 包
+
+内置源码清单位于 `runtime_apps/builtin_apps.cmake`，同一清单驱动 LittleFS staging 和 Core 的不可变成员摘要。聊天和计算器使用 `espocket.app.ai_chatbot`、`espocket.app.calculator`，与官方 Store 包身份不同；GUI、Controller、导航声明与种子资源都属于各自 App。AppData／AppFiles／AppCache 不作为不可变代码，既有设备迁移需要保留用户配置及其他 App。
+
+在 Hello 目录执行 `npm ci` 后，从根目录运行 `python3 scripts/firmware/prepare_local_runtime_apps.py` 生成两份本地 BPK；输出位于各 App 的 `dist/`。既有设备使用完整 Flash 备份和 `scripts/firmware/stage_local_runtime_apps.py --backup <backup.bin> --output <new-littlefs.bin>` 生成保留原文件的迁移镜像；工具核对设备分区、逐文件摘要，并将旧版 data/files 复制到新身份，旧安装保持到设备验证后再通过 Core 卸载。工具不烧录、不创建动态安装 receipt。 已有本地内置 App 的产品镜像更新使用 `--filesystem-only --update-builtins` 和当前 LittleFS 备份；它拒绝动态安装身份，保留 data/files/cache 与其他文件，移除旧代码及旧验证记录，启动后由 Core 根据新固件的精确内置成员重新验证。详情见 [聊天 App](runtime_apps/ai_chatbot/README.md)、[计算器 App](runtime_apps/calculator/README.md)和 [020 迁移任务](../.scratch/020-local-runtime-apps/spec.md)。
 
 ## 测试
 
@@ -233,3 +239,24 @@ production 已包含 Store 0.8.2 的图标容量延后重试；`--patch-set stor
 `CONFIG_ESPOCKET_RUNTIME_RENDER_PROFILE` 默认关闭；开启后，每约两秒聚合 Runtime PNG decoder open（实际 cache miss／无缓存解码）、成功次数与耗时、LVGL render 耗时及 adapter 最近一秒完整末次 flush 完成 FPS。统计从 `on_app_started` 开始，不能覆盖此前 `on_start` 的全部启动解码。GUI 线程经单元素有界队列交给独立诊断线程输出，慢串口可能覆盖待输出窗口；截断日志和窗口边界不作为有效样本。Core 的 `CONFIG_BROOKESIA_SYSTEM_CORE_ENABLE_PROFILE_LOG` 另记录 periodic timer 的调度唤醒、Owner 排队、回调和实际 dispatch 周期。
 
 `CONFIG_ESPOCKET_RUNTIME_IMAGE_CACHE_BYTES` 设置共享 LVGL decoded image cache 的字节预算，默认 512 KiB，最多 2 MiB；它不是预分配，也不包含正在绘制的缓冲、decoder 临时工作区和缓存管理开销。decoder allocator 保持上游配置。超预算图像绕过缓存；PNG 解码前若 PSRAM 最大连续块不足以承载 RGBA 缓冲，或总空闲不足以额外保留 64 KiB 临时工作区，则先清掉缓存。`pressure_evictions` 计数清缓存请求，不能保证基础堆自身仍能分配成功。资源替换／释放使用 GUI backend 的 `lv_image_cache_drop`。该 fallback 与诊断开关独立，且共享缓存也影响 Native 图像。预算不能按 App PNG 文件解码总量直接决定；必须比较同机原包的成功解码、完整绘制、timer 和 PSRAM free/largest，出现缺图时 FPS 增加不算性能收益。截图使用逐行无损 RLE／raw 存储，避免要求连续整帧缓冲；捕获期间清空并暂停 decoded image cache，结束后恢复实际预算。早期 1 MiB 试验的连续整帧分配失败仍保留为历史结果；512 KiB 已通过原包性能、70 秒前台压力、五图截图和完整 Apps 联合回归；更大预算仍须独立验收。下载后须立即 `release`，并在性能窗口外截图。当前试验与镜像结果由 [005/10](../.scratch/005-m5-application-ecosystem/issues/10-reduce-runtime-startup-blocking.md) 持有。
+
+### 当前语音交互策略
+
+产品装配使用真实 HAL Owner 的 `WifiDevice::set_low_latency(true)`，须在接口初始化前调用；它在启动 WiFi 前关闭 modem sleep，降低 UDP 音频丢包与突发延迟，代价是联网耗电增加。HAL 默认 false，其他产品保留上游省电策略。Audio 的 `decoder.capture_suppression_ms = 250` 在真实非静音 PCM 输出期间抑制送入 AFE 的麦克风帧，并保持 ADC 读取；它是半双工防回音，不提供 AEC 或播音时打断。实测与未覆盖边界见 [020 语音恢复记录](../.scratch/020-local-runtime-apps/records/2026-10-07-echo-reset-deployment.md)。
+
+
+### 离线软件 AEC 候选
+
+`CONFIG_ESPOCKET_SOFTWARE_AEC_CANDIDATE` 默认关闭。显式开启后，Audio HAL 从增益处理后的真实左 DAC PCM 建立有界参考，把录音第二通道替换为参考，以 MR 布局启动 ESP-SR AEC；第一麦克风通道保持。候选只支持 16 kHz／双声道／16 bit，拒绝与播放 capture suppression 同时启用。`CONFIG_ESPOCKET_SOFTWARE_AEC_REFERENCE_DELAY_MS` 为 0–250 ms，默认 0 是未校准值。引用时间来自 DAC 写入和 ADC 读取的估计，并非硬件同步回采。必须真机确认通道、时序、AEC 初始化与内部 RAM 余量。
+
+在已有的 checkout 外隔离构建副本中准备候选：
+
+```sh
+python3 scripts/firmware/prepare_software_aec_candidate.py \
+  --workspace /private/tmp/espocket-local-runtime-20261007-v4 \
+  --report /private/tmp/new-aec-inputs.json --delay-ms 0
+```
+
+工具核对完整 HAL 补丁清单并复制 System／Chat 源码，记录输入 hash，只准备构建；不访问设备、不刷写。随后在该副本用 IDF 6.0.1 完整构建。若使用本地依赖 override，另保存每个组件目录 inventory、依赖 lock 与主组件 YAML，保留锁定版本与已批准补丁，不用版本替换绕过解析失败。离线构建不能证明声学效果。候选沿用 WakeNet／AgentManager 唤醒词打断路径；普通说话的全双工打断不在此次验收范围。
+
+聊天 0.1.2 对固定 GUI bindings 只提交变化值，失败后重试、实例重建时清空缓存。包位于本地 Chat 的 dist 目录；更新必须重新构建固件中的精确 immutable allowlist，并从最新设备 LittleFS 备份使用 `stage_local_runtime_apps.py --update-builtins` 保留数据。真机步骤与回退要求由 [020/05](../.scratch/020-local-runtime-apps/issues/05-aec-interruption-candidate.md) 持有。

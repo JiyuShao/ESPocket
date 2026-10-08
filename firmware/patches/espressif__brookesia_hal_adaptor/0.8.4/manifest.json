@@ -128,13 +128,29 @@
     },
     {
       "file": "004-bounded-decoder-output-gain.patch",
-      "sha256": "7ef533dbededc014eb4d2f3426971b7784a71721be8f9c1d22fb003ea2a8fa34"
+      "sha256": "4402791aeb1044026d9e5cf9f54e567b6999ff3f22dc6003433b9eadb36a7703"
+    },
+    {
+      "file": "005-release-wake-word-model-reference.patch",
+      "sha256": "23939937bf2c323ea5105ce399a9664ed8d2321459d9fb9a554559d6592abe65"
+    },
+    {
+      "file": "006-suppress-playback-echo-before-afe.patch",
+      "sha256": "0d4961bbaeae68a6ff2632ec94b8cf931844e3637367d5182a7ef89b27a83486"
+    },
+    {
+      "file": "007-opt-in-wifi-low-latency.patch",
+      "sha256": "98b083c2fdae07179f33526dbf1106117611142a96a28b0a6b99ed5b54f49687"
+    },
+    {
+      "file": "008-experimental-software-aec-reference.patch",
+      "sha256": "8809c12f72cb7f23b00aab1e06b24cb2c6a73881316ad1b2284238208716ec6f"
     }
   ],
   "issue": ".scratch/005-m5-application-ecosystem/issues/06-adopt-online-store-stability-fix.md",
   "upstream_report": ".scratch/005-m5-application-ecosystem/records/2026-10-03-http-cancel-patch.md",
   "upstream_submission": "not submitted",
-  "remove_when": "Official HAL cancellation no longer mutates an active client and equivalent open/read/retry/timeout/stop regressions pass. Active playback close must also join final events without sharing the lifecycle lock with callback delivery. Remove decoder output gain when the official Audio processor supplies bounded voice gain at the actual Codec output, preserving volume, mute and playback-only unity.",
+  "remove_when": "Official HAL cancellation no longer mutates an active client and equivalent open/read/retry/timeout/stop regressions pass. Active playback close must also join final events without sharing the lifecycle lock with callback delivery. Remove decoder output gain when the official Audio processor supplies bounded voice gain at the actual Codec output, preserving volume, mute and playback-only unity. Remove capture suppression when upstream provides tested playback-aware capture/AEC with no self-trigger after remote speech stop. Remove WiFi latency policy when upstream offers equivalent default-preserving configuration and measured conversation loss regressions pass. Remove experimental software reference when equivalent tested upstream AEC reference and interruption support exist.",
   "additional_issue": ".scratch/004-m4-device-capabilities/issues/04-adopt-playback-only-audio.md",
   "additional_report": ".scratch/004-m4-device-capabilities/records/2026-10-03-playback-only-patch.md",
   "patched_files": {
@@ -146,7 +162,7 @@
     "README.md": "212293d7aa28f22b86d10a174dac05310e7b7c452b4b54d550442ad0cc629cea",
     "README_CN.md": "6ac66b8d5e9e1d126a18478fab4148ee8d42c7a300dfa797a06361f7b437eba9",
     "idf_component.yml": "f3d70326811700f934dd362223737b5ce5f3d4d1d4dd24abc44a167d0c435256",
-    "include/brookesia/hal_adaptor/audio/device.hpp": "7e5cf009e8d61b722e4042712d7ae5d158735b17a587446832fbf083a8136776",
+    "include/brookesia/hal_adaptor/audio/device.hpp": "6f40bf68a7f70b49a6f5485cbb92c09f9cccd63054c94178e6e7b6e2e3a33c76",
     "include/brookesia/hal_adaptor/bluetooth/ble/device.hpp": "0e3d12a93d73fa8ad17363592574d0760684b6ac56f537c0d26107aa7fd04a71",
     "include/brookesia/hal_adaptor/bluetooth/device.hpp": "c24254588586d7f177c21dc74bd67211babb619a83bb22d11bc7fe34c171432f",
     "include/brookesia/hal_adaptor/display/device.hpp": "6948f3b8e0e1dcdb1f52cb82334d27f6b958b6b02b44ede67095d9b835640f12",
@@ -156,7 +172,7 @@
     "include/brookesia/hal_adaptor/storage/device.hpp": "728dfdd63dc89249409090d10552388d790952281f3ea8ddec77f9326c9f1ede",
     "include/brookesia/hal_adaptor/system/device.hpp": "c3e24e4fec08601561e15bcbbfcdd1f4932bf453ff49794049a487fdd2fdfaa3",
     "include/brookesia/hal_adaptor/video/device.hpp": "f2b2279f56dab72319726fe949bdfac5b1ad77fd0ea205c850db25ec2fe1c82c",
-    "include/brookesia/hal_adaptor/wifi/device.hpp": "5340c78d661dd28cc9697f0a71a33962f2ffc5f77ac3c1bbb38af3ef286cf11c",
+    "include/brookesia/hal_adaptor/wifi/device.hpp": "3c7414b8c17012ee0faa51af9c3719ab11d104d6922b9c71e94ea079058826c0",
     "include/brookesia/hal_adaptor.hpp": "5f11af36b5e7531a6886542ecf28180e0c9b932744d482dad2f77eb411a9a577",
     "license.txt": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
     "src/audio/codec_player_impl.cpp": "44010212dbefd0b7b4f281bde327dad47467053c5c108a2797b2c7d0cace467e",
@@ -164,10 +180,10 @@
     "src/audio/codec_recorder_impl.cpp": "e302476826642f4d947495872fede0219f4b19ba8092655fe3500fca36aca5dc",
     "src/audio/codec_recorder_impl.hpp": "74c4c2857b09309a05ca29b3d5182dfadba385b7d1e7b4d4aafba05771156b0b",
     "src/audio/device.cpp": "800e6be7e6c41975df44b58a115f5b108fefa54b9ce0afa6391ebecf8b3179a5",
-    "src/audio/pcm_gain.hpp": "ac202ca06ec8a47adcde41a895b496cf9693b1e71d53ba9adc3486dd746969e6",
-    "src/audio/processor_impl.cpp": "249ed61e71cdb8d13ebfdbcc2afd7ab31f57600505568e8323961f9234e8df33",
-    "src/audio/processor_impl.hpp": "dc659f7f37684a19053e4cf96e4c09d310fb5c2e1c2acc18b3712a319d21e206",
-    "src/audio/processor_type_converter.cpp": "0618d16bea8b075e1ace7f83b41022d1ce19c225e1c2dd1dceb0f5406ea8d70d",
+    "src/audio/pcm_gain.hpp": "3dc080ce02cc11548ebfa44d83bc8ca5166b6ed7ea47775cc715f606ee0d6700",
+    "src/audio/processor_impl.cpp": "e23e8dc6e26e7d0b087ece2c544b12c096344a4f01db281b1fdf0f4b80532d3f",
+    "src/audio/processor_impl.hpp": "f4ad08c78ad0f44ea167fa3f848f4fbbe209547e0da56023d13cabaefe043b64",
+    "src/audio/processor_type_converter.cpp": "178cc49d8af5fd8cb9c8a2f4c99e03bb4f70cf8141abc4d1ca1ca7d64d3a05e0",
     "src/audio/processor_type_converter.hpp": "2f48bd178f92a1d54ed2a85d9ed41d817d80e7626dbec28b3613fef3a1cb65ac",
     "src/bluetooth/a2dp_sink.cpp": "d98ce743aef08be6f20b0117fa853b3ec927294fbf744deaef99105b5459bd8b",
     "src/bluetooth/a2dp_sink.hpp": "0a8879ef9c1848b4082b701448da070d6b9f96d0e5e2ca8f387d2131aadde747",
@@ -218,9 +234,9 @@
     "src/video/encoder_impl.hpp": "63ca6225586f1df7e544cbe1cea0a7d5a7f0024eec9622ec26bfb87dc6489096",
     "src/video/processor_type_converter.cpp": "b3fee7454908f7ce686890789099967c3a6c822304ec4845e9c4f0c6c9c8ec71",
     "src/video/processor_type_converter.hpp": "17452450913650a16c37ac90af0a5c2e46cf718eb83df6401e8f256ba48ac00b",
-    "src/wifi/backend.cpp": "7829b797a94a3db92e68d789f2fa2a81e4851129aab592dee430ed8e07eabde0",
-    "src/wifi/backend.hpp": "37e454438eb89c11f8c97c2f8efd02c2bd010942c961103e61524afb82bf4860",
-    "src/wifi/device.cpp": "7b78d134d20ef9278bcac5ab8804cc0c0b007e656832ebbc59920d20d7bdde4b",
+    "src/wifi/backend.cpp": "93772d59251a7e1a4d114d6439de85124e0022ca1027077011e3e921e29f8117",
+    "src/wifi/backend.hpp": "b1b647596fcdd2d3de6fd39b3c81f4a75d3d0e1e450ba1cae7f3243b4222b43f",
+    "src/wifi/device.cpp": "a9bc1f5f8a69b97e898d1efce433acfc1a801a10faf8509367dafe6a7aa81e37",
     "src/wifi/softap.cpp": "e3c3e88d0e06c7306d88aa130ed64017d1e2303efd459995ffdc92a4c97bd3d5",
     "src/wifi/softap.hpp": "4cf8030175057d99d4ef8ee6bf0004ffbabc2767f8853e6f1b5583bd38d31668",
     "src/wifi/wifi_provision.html": "21ccf6de67f29e73b69dde74b305656d69433b2da800eb6bb7aa447fa2b0dd02",
@@ -245,9 +261,18 @@
     "test_apps/sdkconfig.defaults.esp32p4": "191e47ca8a6e4259c6b700b50b0f2e512fd886e6a9eef28e68fb1efe41e8b3f5",
     "test_apps/sdkconfig.defaults.esp32s3": "191e47ca8a6e4259c6b700b50b0f2e512fd886e6a9eef28e68fb1efe41e8b3f5",
     "test_apps/sdkconfig.defaults.esp32s31": "191e47ca8a6e4259c6b700b50b0f2e512fd886e6a9eef28e68fb1efe41e8b3f5",
-    "tools/media_lib_sal_esp_tls_idf6.patch": "a1f2e9ae82188bff575f86a8cc0e0a3949f73d53219d1acb67779291b25eef43"
+    "tools/media_lib_sal_esp_tls_idf6.patch": "a1f2e9ae82188bff575f86a8cc0e0a3949f73d53219d1acb67779291b25eef43",
+    "src/audio/playback_capture_guard.hpp": "ed0593dbc2f423bc6c26200d34d0f982f8d7314ed04ef5404658284d33183c21",
+    "src/audio/software_aec_reference.hpp": "17963ca9ec8b6b662396bf52d159552bb5d440d093f8003cc6ef1b799bffd451"
   },
   "decoder_gain_issue": ".scratch/005-m5-application-ecosystem/issues/16-chat-round-display-and-audio-usability.md",
   "active_close_issue": ".scratch/005-m5-application-ecosystem/issues/13-xiaozhi-and-launcher-performance.md",
-  "active_close_reason": "Keep serialized acquire/release lifetime control separate from playback callback storage so active playback close can join its final worker event without waiting on its own lifecycle mutex."
+  "active_close_reason": "Keep serialized acquire/release lifetime control separate from playback callback storage so active playback close can join its final worker event without waiting on its own lifecycle mutex.",
+  "decoder_gain_reason": "Stateful linked-channel lookahead limiting at the actual Codec output avoids callback-boundary gain jumps, uses smooth attack and held slow release, and drains/fades the bounded tail before reset. PCM output serialization is separate from lifecycle/callback locks.",
+  "capture_guard_issue": ".scratch/020-local-runtime-apps/issues/03-conversation-stutter-echo.md",
+  "capture_guard_reason": "Opt-in half-duplex capture suppression follows actual audible DAC writes, including a measured PCM duration and acoustic tail window; ADC input continues draining and silence reaches AFE to prevent speaker self-wake.",
+  "wifi_latency_issue": ".scratch/020-local-runtime-apps/issues/03-conversation-stutter-echo.md",
+  "wifi_latency_reason": "Default-off startup policy keeps modem sleep upstream unless the product opts into measured low-latency audio; apply before WiFi start and reject live reconfiguration.",
+  "software_aec_issue": ".scratch/020-local-runtime-apps/issues/05-aec-interruption-candidate.md",
+  "software_aec_reason": "Default-off bounded timestamped left-DAC reference replaces second capture slot only in an explicit 16 kHz stereo diagnostic candidate; physical delay/channel alignment and echo/double-talk must pass device tests before product enablement."
 }

@@ -20,34 +20,28 @@
                                model_partition_label, mn_language, start_timeout_ms, end_timeout_ms
 --- a/src/audio/processor_impl.cpp
 +++ b/src/audio/processor_impl.cpp
-@@ -20,6 +20,7 @@
- #include "brookesia/lib_utils/function_guard.hpp"
- #include "private/utils.hpp"
- #include "processor_impl.hpp"
-+#include "pcm_gain.hpp"
- #include "processor_type_converter.hpp"
- 
- #if BROOKESIA_HAL_ADAPTOR_AUDIO_ENABLE_PROCESSOR_IMPL
-@@ -185,10 +186,15 @@
+@@ -185,10 +185,17 @@
          if (recorder_iface_) recorder_iface_->close();
      });
  
-+    player_bits_ = player_config.bits;
++    decoder_output_gain_.configure(player_config.sample_rate, player_config.channels, player_config.bits,
++                                   config_.decoder.output_gain_percent, config_.decoder.output_peak_percent);
      auto player_write_cb = +[](uint8_t *data, int size, void *ctx) {
 -        auto player_iface = static_cast<audio::CodecPlayerIface *>(ctx);
 -        BROOKESIA_CHECK_NULL_RETURN(player_iface, ESP_FAIL, "Invalid player context");
 -        return player_iface->write_data(data, size) ? ESP_OK : ESP_FAIL;
 +        auto *core = static_cast<AudioProcessorCore *>(ctx);
 +        BROOKESIA_CHECK_NULL_RETURN(core, ESP_FAIL, "Invalid player context");
-+        if (core->is_decoder_started() && core->player_bits_ == 16 && size > 0) {
-+            apply_bounded_pcm_gain(data, static_cast<size_t>(size), core->config_.decoder.output_gain_percent,
-+                                   core->config_.decoder.output_peak_percent);
++        std::lock_guard output_lock(core->decoder_output_mutex_);
++        if (core->is_decoder_started() && size > 0 &&
++                !core->decoder_output_gain_.process(data, static_cast<size_t>(size))) {
++            return ESP_FAIL;
 +        }
 +        return core->player_iface_->write_data(data, size) ? ESP_OK : ESP_FAIL;
      };
      auto recorder_read_cb = +[](uint8_t *data, int size, void *ctx) {
          auto self = static_cast<AudioProcessorCore *>(ctx);
-@@ -208,7 +214,7 @@
+@@ -208,7 +215,7 @@
              .read_cb = nullptr,
              .read_ctx = nullptr,
              .write_cb = player_write_cb,
@@ -56,49 +50,183 @@
          },
          .rec_io = {
              .read_cb = recorder_iface_ ? recorder_read_cb : nullptr,
+@@ -530,6 +537,16 @@
+         });
+     });
+ 
++    {
++        std::lock_guard output_lock(decoder_output_mutex_);
++        decoder_output_gain_.reset();
++        is_decoder_started_ = true;
++    }
++    lib_utils::FunctionGuard reset_output_guard([this]() {
++        std::lock_guard output_lock(decoder_output_mutex_);
++        is_decoder_started_ = false;
++        decoder_output_gain_.reset();
++    });
+     auto playback_handle = AudioProcessorTypeConverter::to_playback_handle(playback_handle_);
+     BROOKESIA_CHECK_ESP_ERR_RETURN(
+         audio_processor_mixer_open(playback_handle, feeder_handle), false, "Failed to open mixer"
+@@ -545,7 +562,7 @@
+     close_feeder_guard.release();
+     close_mixer_guard.release();
+     release_guard.release();
+-    is_decoder_started_ = true;
++    reset_output_guard.release();
+ 
+     return true;
+ }
+@@ -567,7 +584,16 @@
+     BROOKESIA_CHECK_ESP_ERR_EXECUTE(audio_processor_mixer_close(), {}, {
+         BROOKESIA_LOGE("Failed to close mixer");
+     });
+-    is_decoder_started_ = false;
++    {
++        std::lock_guard output_lock(decoder_output_mutex_);
++        is_decoder_started_ = false;
++        std::array<uint8_t, 960> tail{};
++        const auto tail_size = decoder_output_gain_.flush(tail.data(), tail.size());
++        if (tail_size > 0 && !player_iface_->write_data(tail.data(), static_cast<int>(tail_size))) {
++            BROOKESIA_LOGE("Failed to write decoder tail");
++        }
++        decoder_output_gain_.reset();
++    }
+     release();
+ }
+ 
 --- a/src/audio/processor_impl.hpp
 +++ b/src/audio/processor_impl.hpp
-@@ -87,6 +87,7 @@
+@@ -9,6 +9,8 @@
+ #include <memory>
+ #include <mutex>
+ #include <string>
++
++#include "pcm_gain.hpp"
+ 
+ #include "brookesia/hal_adaptor/audio/device.hpp"
+ #include "brookesia/hal_interface/interfaces/audio/codec_player.hpp"
+@@ -87,6 +89,8 @@
      std::atomic_bool is_encoder_started_ = false;
      std::atomic_bool is_encoder_paused_ = false;
      std::atomic_bool is_decoder_started_ = false;
-+    uint8_t player_bits_ = 16;
++    std::mutex decoder_output_mutex_;
++    BoundedPcmGain decoder_output_gain_;
      std::string afe_model_partition_label_;
      std::string afe_mn_language_;
  };
 --- /dev/null
 +++ b/src/audio/pcm_gain.hpp
-@@ -0,0 +1,33 @@
+@@ -0,0 +1,113 @@
 +#pragma once
 +
++#include <algorithm>
++#include <array>
 +#include <cstddef>
 +#include <cstdint>
++#include <cstdlib>
 +#include <cstring>
 +
 +namespace esp_brookesia::hal {
-+inline void apply_bounded_pcm_gain(uint8_t *data, size_t size, uint16_t gain_percent, uint16_t peak_percent = 100)
-+{
-+    if (!data || size % sizeof(int16_t) != 0 || (gain_percent <= 100 && peak_percent >= 100)) return;
-+    int32_t peak = 0;
-+    for (size_t offset = 0; offset < size; offset += sizeof(int16_t)) {
-+        int16_t sample;
-+        std::memcpy(&sample, data + offset, sizeof(sample));
-+        const auto magnitude = sample < 0 ? -static_cast<int32_t>(sample) : static_cast<int32_t>(sample);
-+        if (magnitude > peak) peak = magnitude;
++class BoundedPcmGain {
++public:
++    void configure(uint32_t sample_rate, uint8_t channels, uint8_t bits,
++                   uint16_t gain_percent, uint16_t peak_percent)
++    {
++        enabled_ = bits == 16 && sample_rate >= 8000 && sample_rate <= 48000 &&
++                   channels >= 1 && channels <= 2 && (gain_percent != 100 || peak_percent < 100);
++        channels_ = channels;
++        delay_frames_ = enabled_ ? sample_rate / 200 : 0;
++        maximum_gain_ = static_cast<int32_t>(static_cast<int64_t>(gain_percent) * 65536 / 100);
++        peak_limit_ = 32767 * static_cast<int32_t>(std::min<uint16_t>(peak_percent, 100)) / 100;
++        attack_step_ = enabled_ ? (maximum_gain_ + delay_frames_ - 1) / delay_frames_ : 0;
++        release_step_ = std::max<int32_t>(1, maximum_gain_ / std::max<uint32_t>(1, sample_rate / 10));
++        hold_frames_ = sample_rate / 20 + delay_frames_;
++        reset();
 +    }
-+    if (peak == 0) return;
-+    int32_t numerator = gain_percent > 100 ? gain_percent : 100;
-+    int32_t denominator = 100;
-+    const auto peak_limit = 32767 * static_cast<int32_t>(peak_percent < 100 ? peak_percent : 100) / 100;
-+    if (peak * numerator > peak_limit * denominator) {
-+        numerator = peak_limit;
-+        denominator = peak;
++
++    void reset()
++    {
++        delayed_.fill(0);
++        cursor_ = 0;
++        gain_ = maximum_gain_;
++        target_gain_ = maximum_gain_;
++        hold_remaining_ = 0;
++        pending_ = false;
 +    }
-+    for (size_t offset = 0; offset < size; offset += sizeof(int16_t)) {
-+        int16_t sample;
-+        std::memcpy(&sample, data + offset, sizeof(sample));
-+        sample = static_cast<int16_t>(static_cast<int32_t>(sample) * numerator / denominator);
-+        std::memcpy(data + offset, &sample, sizeof(sample));
++
++    bool process(uint8_t *data, size_t size)
++    {
++        if (!enabled_) return true;
++        if (!data || size % (channels_ * sizeof(int16_t)) != 0) return false;
++        for (size_t offset = 0; offset < size; offset += channels_ * sizeof(int16_t)) {
++            int32_t peak = 0;
++            std::array<int16_t, 2> incoming{};
++            std::memcpy(incoming.data(), data + offset, channels_ * sizeof(int16_t));
++            for (size_t channel = 0; channel < channels_; ++channel) {
++                peak = std::max(peak, std::abs(static_cast<int32_t>(incoming[channel])));
++            }
++            const auto allowed_gain = peak == 0 ? maximum_gain_ :
++                                      std::min(maximum_gain_, peak_limit_ * 65536 / peak);
++            if (allowed_gain < maximum_gain_) {
++                target_gain_ = std::min(target_gain_, allowed_gain);
++                hold_remaining_ = hold_frames_;
++            } else if (hold_remaining_ > 0) {
++                --hold_remaining_;
++            } else {
++                target_gain_ = std::min(maximum_gain_, target_gain_ + release_step_);
++            }
++            if (gain_ > target_gain_) {
++                gain_ = std::max(target_gain_, gain_ - attack_step_);
++            } else {
++                gain_ = std::min(target_gain_, gain_ + release_step_);
++            }
++            for (size_t channel = 0; channel < channels_; ++channel) {
++                const auto position = cursor_ * channels_ + channel;
++                const auto output = static_cast<int16_t>(static_cast<int64_t>(delayed_[position]) * gain_ / 65536);
++                delayed_[position] = incoming[channel];
++                std::memcpy(data + offset + channel * sizeof(int16_t), &output, sizeof(output));
++            }
++            cursor_ = (cursor_ + 1) % delay_frames_;
++        }
++        pending_ = pending_ || size > 0;
++        return true;
 +    }
-+}
++
++    size_t flush(uint8_t *data, size_t capacity)
++    {
++        const auto bytes = delay_frames_ * channels_ * sizeof(int16_t);
++        if (!pending_ || !data || capacity < bytes) return 0;
++        std::memset(data, 0, bytes);
++        process(data, bytes);
++        for (size_t frame = 0; frame < delay_frames_; ++frame) {
++            for (size_t channel = 0; channel < channels_; ++channel) {
++                const auto offset = (frame * channels_ + channel) * sizeof(int16_t);
++                int16_t sample;
++                std::memcpy(&sample, data + offset, sizeof(sample));
++                sample = static_cast<int16_t>(static_cast<int32_t>(sample) *
++                                              static_cast<int32_t>(delay_frames_ - frame - 1) /
++                                              static_cast<int32_t>(delay_frames_));
++                std::memcpy(data + offset, &sample, sizeof(sample));
++            }
++        }
++        reset();
++        return bytes;
++    }
++
++private:
++    std::array<int16_t, 480> delayed_{};
++    size_t cursor_ = 0;
++    size_t delay_frames_ = 0;
++    uint8_t channels_ = 0;
++    int32_t maximum_gain_ = 65536;
++    int32_t peak_limit_ = 32767;
++    int32_t attack_step_ = 0;
++    int32_t release_step_ = 1;
++    int32_t gain_ = 65536;
++    int32_t target_gain_ = 65536;
++    uint32_t hold_frames_ = 0;
++    uint32_t hold_remaining_ = 0;
++    bool enabled_ = false;
++    bool pending_ = false;
++};
 +}

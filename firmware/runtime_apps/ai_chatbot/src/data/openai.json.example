@@ -1,0 +1,5 @@
+{
+  "model": "gpt-4o-realtime-preview",
+  "api_key": "REPLACE_WITH_OPENAI_API_KEY",
+  "voice": "alloy"
+}

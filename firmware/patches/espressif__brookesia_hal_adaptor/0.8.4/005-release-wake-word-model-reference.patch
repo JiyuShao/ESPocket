@@ -1,0 +1,12 @@
+--- a/src/audio/processor_impl.cpp
++++ b/src/audio/processor_impl.cpp
+@@ -364,6 +364,9 @@
+     auto get_wake_words = [&wake_words_array, partition_label]() {
+         auto models = esp_srmodel_init(partition_label.c_str());
+         BROOKESIA_CHECK_NULL_EXIT(models, "Failed to get models");
++        lib_utils::FunctionGuard release_models([models]() {
++            esp_srmodel_deinit_with_refcount(models);
++        });
+ 
+         for (size_t i = 0; i < models->num; i++) {
+             auto wake_words_str = esp_srmodel_get_wake_words(models, models->model_name[i]);

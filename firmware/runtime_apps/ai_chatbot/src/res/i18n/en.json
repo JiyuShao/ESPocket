@@ -1,0 +1,162 @@
+{
+    "type": "constant",
+    "data": {
+        "aiChatbot": {
+            "i18n": {
+                "strings": {
+                    "app.name": "AI Chatbot",
+                    "button.back": "Back",
+                    "button.clear": "Clear",
+                    "button.ok": "OK",
+                    "label.agent": "Agent",
+                    "label.chat": "Chat",
+                    "label.cloud": "Cloud",
+                    "label.config": "Config",
+                    "label.data_dir": "Data dir",
+                    "label.listening": "Listening",
+                    "label.network": "Network",
+                    "label.reason": "Reason",
+                    "label.select_agent": "Select agent",
+                    "label.settings": "Settings",
+                    "label.speaking": "Speaking",
+                    "label.status": "Status",
+                    "text.current": "Current",
+                    "text.no": "No",
+                    "text.yes": "Yes",
+                    "cloud.connected": "Connected",
+                    "cloud.connecting": "Connecting",
+                    "cloud.disconnected": "Disconnected",
+                    "cloud.insufficient_credits": "Insufficient credits",
+                    "dialog.coze_credits.detail": "Insufficient credits balance. Please top up the Coze account and restart the agent.",
+                    "dialog.coze_credits.title": "Coze insufficient credits",
+                    "dialog.config_error.title": "AI Chatbot configuration error",
+                    "network.check_failed": "Network check failed: {0}",
+                    "network.checking": "Checking network",
+                    "network.device_unavailable": "Device service unavailable",
+                    "network.info_parse_failed": "Network info parse failed",
+                    "network.internet_ready": "Internet ready",
+                    "network.local_ready": "Local network ready",
+                    "network.waiting": "Waiting for network",
+                    "state.activated": "Activated",
+                    "state.activating": "Activating",
+                    "state.awake": "Awake",
+                    "state.no_agent": "No agent",
+                    "state.ready": "Ready",
+                    "state.selected": "Selected",
+                    "state.sleeping": "Sleeping",
+                    "state.started": "Started",
+                    "state.starting": "Starting",
+                    "state.stopped": "Stopped",
+                    "state.stopping": "Stopping",
+                    "state.suspended": "Suspended",
+                    "state.time_syncing": "Time syncing",
+                    "state.unavailable": "Unavailable",
+                    "state.waking": "Waking",
+                    "status.activate_failed": "Activate failed: {0}",
+                    "status.activating_agent": "Activating {0}",
+                    "status.activation_code_received": "Activation code received",
+                    "status.activation_code_received_with_code": "Activation code: {0}",
+                    "status.agent_activated": "Agent activated",
+                    "status.agent_awake": "Agent awake",
+                    "status.agent_manager_unavailable": "Agent manager unavailable",
+                    "status.agent_sleeping": "Agent sleeping",
+                    "status.agent_speaking": "Agent speaking",
+                    "status.agent_started": "Agent started",
+                    "status.agent_suspended": "Agent suspended",
+                    "status.agent_waking": "Agent waking",
+                    "status.chat_awake": "Chat awake",
+                    "status.chat_ready": "Chat ready",
+                    "status.coze_insufficient_credits": "Coze insufficient credits",
+                    "status.config_error": "Config error: {0}",
+                    "status.configured_agent": "Configured {0}",
+                    "status.device_service_unavailable": "Device service unavailable",
+                    "status.empty_chat": "Waiting for the agent to start",
+                    "status.get_agent_list_failed": "Get agent list failed: {0}",
+                    "status.listening": "Listening",
+                    "status.listening_while_speaking": "Listening while speaking",
+                    "status.no_agent_available": "No AI Chatbot available",
+                    "status.no_agent_selected": "No AI Chatbot selected",
+                    "status.parse_agent_list_failed": "Agent list parse failed",
+                    "status.selected_agent": "Selected {0}",
+                    "status.select_agent_hint": "Choose the active AI service",
+                    "status.set_agent_info_failed": "Set agent info failed: {0}",
+                    "status.set_fallback_failed": "Set fallback agent failed: {0}",
+                    "status.set_target_failed": "Set target agent failed: {0}",
+                    "status.wakeup_failed": "Wake failed: {0}",
+                    "status.start_failed": "Start failed: {0}",
+                    "status.starting": "Starting",
+                    "status.starting_agent": "Starting {0}",
+                    "status.stopped": "Stopped",
+                    "status.stopping_agent": "Stopping {0}",
+                    "status.submit_activate_failed": "Submit activate failed",
+                    "status.submit_start_failed": "Submit start failed",
+                    "status.time_synced": "Time synced",
+                    "status.unexpected_event": "Unexpected agent event: {0}",
+                    "status.waiting_internet": "Waiting for internet before connecting agent"
+                },
+                "updates": [
+                    {
+                        "path": "/ai_chatbot_chrome/title",
+                        "key": "labelProps.text",
+                        "value": "AI Chatbot"
+                    },
+                    {
+                        "path": "/ai_chatbot_chrome/clear/label",
+                        "key": "labelProps.text",
+                        "value": "Clear"
+                    },
+                    {
+                        "path": "/ai_chatbot_chat/content/empty_state/message",
+                        "key": "labelProps.text",
+                        "value": "Waiting for the agent to start"
+                    },
+                    {
+                        "path": "/ai_chatbot_chrome/chat/label",
+                        "key": "labelProps.text",
+                        "value": "Chat"
+                    },
+                    {
+                        "path": "/ai_chatbot_chrome/settings/label",
+                        "key": "labelProps.text",
+                        "value": "Settings"
+                    },
+                    {
+                        "path": "/ai_chatbot_settings/content/caption",
+                        "key": "labelProps.text",
+                        "value": "Settings"
+                    },
+                    {
+                        "path": "/ai_chatbot_settings/content/agent/title",
+                        "key": "labelProps.text",
+                        "value": "Agent"
+                    },
+                    {
+                        "path": "/ai_chatbot_settings/content/agent/value",
+                        "key": "labelProps.text",
+                        "value": "AI Chatbot"
+                    },
+                    {
+                        "path": "/ai_chatbot_select/back/label",
+                        "key": "labelProps.text",
+                        "value": "Back"
+                    },
+                    {
+                        "path": "/ai_chatbot_select/title",
+                        "key": "labelProps.text",
+                        "value": "Select agent"
+                    },
+                    {
+                        "path": "/ai_chatbot_select/subtitle",
+                        "key": "labelProps.text",
+                        "value": "Choose the active AI service"
+                    },
+                    {
+                        "path": "/ai_chatbot_select/list_card/empty_state/message",
+                        "key": "labelProps.text",
+                        "value": "Agent manager unavailable"
+                    }
+                ]
+            }
+        }
+    }
+}

@@ -13,6 +13,7 @@ std::expected<void, std::string> System::on_app_uninstalled(
     const esp_brookesia::system::core::AppInfo &app
 )
 {
+    reset_resume_apps_.erase(app.app_id);
     launcher_admissions_.erase(app.app_id);
     launcher_generation_.fetch_add(1, std::memory_order_release);
     if (cards_ && cards_->uninstall_app(app.manifest.id) && !card_samples_active_) {
@@ -147,6 +148,7 @@ std::expected<void, std::string> System::on_app_started(
     edge_back_reserved_.store(navigator && navigator->framework_owns_back(),
                              std::memory_order_release);
     lifecycle_restore_pending_ = false;
+    remember_reset_resume(app);
     return {};
 }
 
@@ -253,6 +255,7 @@ void System::clear_foreground(
         return;
     }
     foreground_token_->store(0, std::memory_order_release);
+    clear_reset_resume();
 }
 
 void System::restore_home_after_lifecycle(

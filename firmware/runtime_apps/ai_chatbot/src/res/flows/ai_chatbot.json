@@ -1,0 +1,75 @@
+{
+    "type": "screenFlow",
+    "id": "ai_chatbot",
+    "initial": "ai_chatbot_chat",
+    "screens": [
+        "ai_chatbot_chat",
+        "ai_chatbot_settings",
+        "ai_chatbot_select"
+    ],
+    "transitions": [
+        {
+            "from": [
+                "ai_chatbot_chat",
+                "ai_chatbot_settings",
+                "ai_chatbot_select"
+            ],
+            "action": "ai_chatbot.chat.open.chat",
+            "to": "ai_chatbot_chat"
+        },
+        {
+            "from": [
+                "ai_chatbot_chat",
+                "ai_chatbot_settings",
+                "ai_chatbot_select"
+            ],
+            "action": "ai_chatbot.chat.open.settings",
+            "to": "ai_chatbot_settings"
+        },
+        {
+            "from": [
+                "ai_chatbot_chat",
+                "ai_chatbot_settings",
+                "ai_chatbot_select"
+            ],
+            "action": "ai_chatbot.settings.open.chat",
+            "to": "ai_chatbot_chat"
+        },
+        {
+            "from": [
+                "ai_chatbot_chat",
+                "ai_chatbot_settings",
+                "ai_chatbot_select"
+            ],
+            "action": "ai_chatbot.settings.open.settings",
+            "to": "ai_chatbot_settings"
+        },
+        {
+            "from": [
+                "ai_chatbot_chat",
+                "ai_chatbot_settings",
+                "ai_chatbot_select"
+            ],
+            "action": "ai_chatbot.select.back",
+            "to": "ai_chatbot_settings"
+        },
+        {
+            "from": [
+                "ai_chatbot_chat",
+                "ai_chatbot_settings",
+                "ai_chatbot_select"
+            ],
+            "action": "ai_chatbot.select.back.settings",
+            "to": "ai_chatbot_settings"
+        },
+        {
+            "from": [
+                "ai_chatbot_chat",
+                "ai_chatbot_settings",
+                "ai_chatbot_select"
+            ],
+            "action": "ai_chatbot.settings.open.agent_select",
+            "to": "ai_chatbot_select"
+        }
+    ]
+}

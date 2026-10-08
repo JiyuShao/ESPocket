@@ -1,0 +1,162 @@
+{
+    "type": "constant",
+    "data": {
+        "aiChatbot": {
+            "i18n": {
+                "strings": {
+                    "app.name": "AI 聊天机器人",
+                    "button.back": "返回",
+                    "button.clear": "清空",
+                    "button.ok": "确定",
+                    "label.agent": "智能体",
+                    "label.chat": "聊天",
+                    "label.cloud": "云端",
+                    "label.config": "配置",
+                    "label.data_dir": "数据目录",
+                    "label.listening": "监听",
+                    "label.network": "网络",
+                    "label.reason": "原因",
+                    "label.select_agent": "选择智能体",
+                    "label.settings": "设置",
+                    "label.speaking": "说话",
+                    "label.status": "状态",
+                    "text.current": "当前",
+                    "text.no": "否",
+                    "text.yes": "是",
+                    "cloud.connected": "已连接",
+                    "cloud.connecting": "连接中",
+                    "cloud.disconnected": "未连接",
+                    "cloud.insufficient_credits": "余额不足",
+                    "dialog.coze_credits.detail": "Coze 余额不足，请充值后重新启动智能体。",
+                    "dialog.coze_credits.title": "Coze 余额不足",
+                    "dialog.config_error.title": "AI 聊天机器人配置错误",
+                    "network.check_failed": "网络检查失败：{0}",
+                    "network.checking": "检查网络",
+                    "network.device_unavailable": "Device 服务不可用",
+                    "network.info_parse_failed": "网络信息解析失败",
+                    "network.internet_ready": "互联网可用",
+                    "network.local_ready": "本地网络可用",
+                    "network.waiting": "等待网络",
+                    "state.activated": "已激活",
+                    "state.activating": "激活中",
+                    "state.awake": "已唤醒",
+                    "state.no_agent": "无智能体",
+                    "state.ready": "就绪",
+                    "state.selected": "已选择",
+                    "state.sleeping": "睡眠中",
+                    "state.started": "已启动",
+                    "state.starting": "启动中",
+                    "state.stopped": "已停止",
+                    "state.stopping": "停止中",
+                    "state.suspended": "已挂起",
+                    "state.time_syncing": "同步时间",
+                    "state.unavailable": "不可用",
+                    "state.waking": "唤醒中",
+                    "status.activate_failed": "激活失败：{0}",
+                    "status.activating_agent": "正在激活 {0}",
+                    "status.activation_code_received": "已收到激活码",
+                    "status.activation_code_received_with_code": "激活码：{0}",
+                    "status.agent_activated": "智能体已激活",
+                    "status.agent_awake": "智能体已唤醒",
+                    "status.agent_manager_unavailable": "Agent Manager 不可用",
+                    "status.agent_sleeping": "智能体睡眠中",
+                    "status.agent_speaking": "智能体正在说话",
+                    "status.agent_started": "智能体已启动",
+                    "status.agent_suspended": "智能体已挂起",
+                    "status.agent_waking": "智能体唤醒中",
+                    "status.chat_awake": "聊天已唤醒",
+                    "status.chat_ready": "聊天就绪",
+                    "status.coze_insufficient_credits": "Coze 余额不足",
+                    "status.config_error": "配置错误：{0}",
+                    "status.configured_agent": "已配置 {0}",
+                    "status.device_service_unavailable": "Device 服务不可用",
+                    "status.empty_chat": "等待智能体启动",
+                    "status.get_agent_list_failed": "获取智能体列表失败：{0}",
+                    "status.listening": "正在监听",
+                    "status.listening_while_speaking": "边说话边监听",
+                    "status.no_agent_available": "没有可用智能体",
+                    "status.no_agent_selected": "未选择智能体",
+                    "status.parse_agent_list_failed": "智能体列表解析失败",
+                    "status.selected_agent": "已选择 {0}",
+                    "status.select_agent_hint": "选择当前使用的智能体服务",
+                    "status.set_agent_info_failed": "设置智能体信息失败：{0}",
+                    "status.set_fallback_failed": "设置默认智能体失败：{0}",
+                    "status.set_target_failed": "设置目标智能体失败：{0}",
+                    "status.wakeup_failed": "唤醒失败：{0}",
+                    "status.start_failed": "启动失败：{0}",
+                    "status.starting": "启动中",
+                    "status.starting_agent": "正在启动 {0}",
+                    "status.stopped": "已停止",
+                    "status.stopping_agent": "正在停止 {0}",
+                    "status.submit_activate_failed": "提交激活失败",
+                    "status.submit_start_failed": "提交启动失败",
+                    "status.time_synced": "时间已同步",
+                    "status.unexpected_event": "异常智能体事件：{0}",
+                    "status.waiting_internet": "等待互联网后连接智能体"
+                },
+                "updates": [
+                    {
+                        "path": "/ai_chatbot_chrome/title",
+                        "key": "labelProps.text",
+                        "value": "AI 聊天机器人"
+                    },
+                    {
+                        "path": "/ai_chatbot_chrome/clear/label",
+                        "key": "labelProps.text",
+                        "value": "清空"
+                    },
+                    {
+                        "path": "/ai_chatbot_chat/content/empty_state/message",
+                        "key": "labelProps.text",
+                        "value": "等待智能体启动"
+                    },
+                    {
+                        "path": "/ai_chatbot_chrome/chat/label",
+                        "key": "labelProps.text",
+                        "value": "聊天"
+                    },
+                    {
+                        "path": "/ai_chatbot_chrome/settings/label",
+                        "key": "labelProps.text",
+                        "value": "设置"
+                    },
+                    {
+                        "path": "/ai_chatbot_settings/content/caption",
+                        "key": "labelProps.text",
+                        "value": "设置"
+                    },
+                    {
+                        "path": "/ai_chatbot_settings/content/agent/title",
+                        "key": "labelProps.text",
+                        "value": "智能体"
+                    },
+                    {
+                        "path": "/ai_chatbot_settings/content/agent/value",
+                        "key": "labelProps.text",
+                        "value": "AI 聊天机器人"
+                    },
+                    {
+                        "path": "/ai_chatbot_select/back/label",
+                        "key": "labelProps.text",
+                        "value": "返回"
+                    },
+                    {
+                        "path": "/ai_chatbot_select/title",
+                        "key": "labelProps.text",
+                        "value": "选择智能体"
+                    },
+                    {
+                        "path": "/ai_chatbot_select/subtitle",
+                        "key": "labelProps.text",
+                        "value": "选择当前使用的智能体服务"
+                    },
+                    {
+                        "path": "/ai_chatbot_select/list_card/empty_state/message",
+                        "key": "labelProps.text",
+                        "value": "Agent Manager 不可用"
+                    }
+                ]
+            }
+        }
+    }
+}

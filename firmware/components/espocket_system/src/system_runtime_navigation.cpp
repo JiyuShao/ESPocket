@@ -109,6 +109,7 @@ std::expected<void, std::string> System::on_app_installed(
     if (!definition) return std::unexpected(definition.error());
     if (definition->declaration.app_id != app.manifest.id) return std::unexpected("identity_mismatch");
     const auto flow = definition->screen_flow;
+    const bool resume_after_reset = definition->resume_after_hardware_reset;
     const auto card_declaration = definition->declaration;
     CardModelFactory card_factory;
     if (!card_declaration.cards.empty()) {
@@ -142,6 +143,8 @@ std::expected<void, std::string> System::on_app_installed(
         return std::unexpected("card_declaration_update_failed");
     }
     if (card_factory) card_factories_.emplace(app.app_id, std::move(card_factory));
+    if (resume_after_reset) reset_resume_apps_.insert(app.app_id);
+    else reset_resume_apps_.erase(app.app_id);
     register_navigator(app.app_id, (*adapter)->navigator());
     { std::lock_guard lock(page_navigators_mutex_); runtime_pages_.emplace(app.app_id, RuntimePages{*adapter, flow}); }
     return {};

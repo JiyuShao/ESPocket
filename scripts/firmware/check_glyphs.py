@@ -88,7 +88,7 @@ def check(root=ROOT, config=None):
     fonts = BuiltinFonts(config if config is not None else (root / 'firmware/sdkconfig.defaults').read_text(), root)
     files = [root / 'firmware/components/shell_circular/resources/gui.json']
     files += sorted((root / 'firmware/native_apps/hello/resources').glob('*.json'))
-    files += sorted((root / 'firmware/runtime_apps/hello/src/res').rglob('*.json'))
+    files += sorted((root / 'firmware/runtime_apps').glob('*/src/res/**/*.json'))
     failures = []
     for mode in ('light', 'dark'):
         styles = json.loads((root / f'firmware/components/espocket_system/resources/{mode}_theme.json').read_text())['styles']

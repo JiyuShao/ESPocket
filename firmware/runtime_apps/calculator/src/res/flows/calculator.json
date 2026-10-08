@@ -1,0 +1,8 @@
+{
+    "type": "screenFlow",
+    "id": "calculator",
+    "screens": [
+        "calculator"
+    ],
+    "initial": "calculator"
+}

@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "appId": "espocket.app.calculator",
+  "rootPageId": "calculator",
+  "pageIds": [
+    "calculator"
+  ],
+  "presentation": {
+    "screenFlow": "calculator",
+    "transitions": []
+  },
+  "cards": []
+}

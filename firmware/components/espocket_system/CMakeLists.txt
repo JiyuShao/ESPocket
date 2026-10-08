@@ -1,16 +1,14 @@
 configure_file("${CMAKE_CURRENT_LIST_DIR}/resources/dark_theme.json" "${CMAKE_CURRENT_BINARY_DIR}/espocket_dark_theme.json" COPYONLY)
 configure_file("${CMAKE_CURRENT_LIST_DIR}/resources/light_theme.json" "${CMAKE_CURRENT_BINARY_DIR}/espocket_light_theme.json" COPYONLY)
 configure_file("${CMAKE_CURRENT_LIST_DIR}/resources/fonts/espocket_cjk.otf" "${CMAKE_CURRENT_BINARY_DIR}/espocket_cjk.otf" COPYONLY)
-configure_file("${CMAKE_CURRENT_LIST_DIR}/resources/chat_round.json" "${CMAKE_CURRENT_BINARY_DIR}/espocket_chat_round.json" COPYONLY)
-configure_file("${CMAKE_CURRENT_LIST_DIR}/resources/calculator_round.json" "${CMAKE_CURRENT_BINARY_DIR}/espocket_calculator_round.json" COPYONLY)
 
 idf_component_register(
-    SRCS "src/system.cpp" "src/system_lifecycle.cpp" "src/system_navigation.cpp" "src/product_fonts.cpp"
+    SRCS "src/system.cpp" "src/system_lifecycle.cpp" "src/system_reset_resume.cpp" "src/system_navigation.cpp" "src/product_fonts.cpp"
         "src/system_display.cpp" "src/system_message_dialog.cpp" "src/system_timeout.cpp" "src/system_power.cpp" "src/power_key_monitor.cpp" "src/settings_navigation_adapter.cpp"
         "src/native_page_installation.cpp" "src/system_test_input.cpp"
         "src/system_runtime_navigation.cpp" "src/runtime_navigation_provider.cpp"
-        "src/system_cards.cpp" "src/card_document.cpp" "src/system_package_acceptance.cpp" "src/runtime_render_probe.cpp" "src/round_resources.cpp"
-    EMBED_TXTFILES "${CMAKE_CURRENT_BINARY_DIR}/espocket_dark_theme.json" "${CMAKE_CURRENT_BINARY_DIR}/espocket_light_theme.json" "${CMAKE_CURRENT_BINARY_DIR}/espocket_chat_round.json" "${CMAKE_CURRENT_BINARY_DIR}/espocket_calculator_round.json"
+        "src/system_cards.cpp" "src/card_document.cpp" "src/system_package_acceptance.cpp" "src/runtime_render_probe.cpp"
+    EMBED_TXTFILES "${CMAKE_CURRENT_BINARY_DIR}/espocket_dark_theme.json" "${CMAKE_CURRENT_BINARY_DIR}/espocket_light_theme.json"
     EMBED_FILES "${CMAKE_CURRENT_BINARY_DIR}/espocket_cjk.otf"
     INCLUDE_DIRS "include"
     REQUIRES brookesia_system_core brookesia_service_manager espocket_navigation espocket_semantics freertos
@@ -46,17 +44,26 @@ if(NOT settings_compatibility_result EQUAL 0)
 endif()
 
 # Explicit build allowlist: exact maintained Runtime bytes, never a directory-name exemption.
-set(espocket_builtin_root "${PROJECT_DIR}/runtime_apps/hello/src")
-file(GLOB_RECURSE espocket_builtin_files CONFIGURE_DEPENDS "${espocket_builtin_root}/*")
+include("${PROJECT_DIR}/runtime_apps/builtin_apps.cmake")
 set(espocket_builtin_header "${CMAKE_CURRENT_BINARY_DIR}/espocket_builtin_packages.hpp")
 file(WRITE "${espocket_builtin_header}" "#pragma once\ninline void configure_builtin_packages(esp_brookesia::system::core::RuntimePackagePolicy &policy) {\n")
-foreach(espocket_builtin_file IN LISTS espocket_builtin_files)
-    if(NOT IS_DIRECTORY "${espocket_builtin_file}")
-        file(RELATIVE_PATH espocket_builtin_member "${espocket_builtin_root}" "${espocket_builtin_file}")
-        file(SHA256 "${espocket_builtin_file}" espocket_builtin_digest)
-        set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${espocket_builtin_file}")
-        file(APPEND "${espocket_builtin_header}" "policy.built_in_members[\"espocket.app.hello_runtime\"][\"${espocket_builtin_member}\"] = \"${espocket_builtin_digest}\";\n")
-    endif()
+foreach(espocket_builtin_app IN LISTS espocket_builtin_apps)
+    set(espocket_builtin_root "${PROJECT_DIR}/runtime_apps/${espocket_builtin_app}/src")
+    file(READ "${espocket_builtin_root}/manifest.json" espocket_builtin_manifest)
+    string(JSON espocket_builtin_id GET "${espocket_builtin_manifest}" package id)
+    file(GLOB_RECURSE espocket_builtin_files CONFIGURE_DEPENDS "${espocket_builtin_root}/*")
+    foreach(espocket_builtin_file IN LISTS espocket_builtin_files)
+        if(NOT IS_DIRECTORY "${espocket_builtin_file}")
+            file(RELATIVE_PATH espocket_builtin_member "${espocket_builtin_root}" "${espocket_builtin_file}")
+            # Core excludes mutable AppData/AppFiles from installed code verification.
+            if(espocket_builtin_member MATCHES "^(data|files|cache)(/|$)")
+                continue()
+            endif()
+            file(SHA256 "${espocket_builtin_file}" espocket_builtin_digest)
+            set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${espocket_builtin_file}")
+            file(APPEND "${espocket_builtin_header}" "policy.built_in_members[\"${espocket_builtin_id}\"][\"${espocket_builtin_member}\"] = \"${espocket_builtin_digest}\";\n")
+        endif()
+    endforeach()
 endforeach()
 file(APPEND "${espocket_builtin_header}" "}\n")
 target_include_directories(${COMPONENT_LIB} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")

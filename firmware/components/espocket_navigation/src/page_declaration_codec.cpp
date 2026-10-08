@@ -49,10 +49,14 @@ std::expected<RuntimePageDefinition, std::string> decode_runtime_pages(std::stri
         return std::unexpected("unsupported_version");
     }
     if (!fields(object, {"version", "appId", "rootPageId", "pageIds", "cards",
-                         "backPresentation", "usesStandardBackControl", "presentation"})) {
+                         "backPresentation", "usesStandardBackControl", "presentation", "resumeAfterHardwareReset"})) {
         return std::unexpected("invalid_declaration");
     }
     RuntimePageDefinition result;
+    if (const auto *resume = object.if_contains("resumeAfterHardwareReset")) {
+        if (!resume->is_bool()) return std::unexpected("invalid_declaration");
+        result.resume_after_hardware_reset = resume->as_bool();
+    }
     auto &declaration = result.declaration;
     declaration.app_id = text(object, "appId");
     declaration.root_page_id = text(object, "rootPageId");

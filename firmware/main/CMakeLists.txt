@@ -12,12 +12,20 @@ idf_component_get_property(
 )
 include("${brookesia_system_core_dir}/cmake/runtime_app_stage.cmake")
 brookesia_system_core_get_esp_runtime_app_stage_root(runtime_app_stage_root)
-brookesia_stage_runtime_app_package(
-    PACKAGE_ID "espocket.app.hello_runtime"
-    SOURCE_DIR "${PROJECT_DIR}/runtime_apps/hello/src"
-    STAGE_ROOT "${runtime_app_stage_root}"
-    NO_INDEX
-)
+include("${PROJECT_DIR}/runtime_apps/builtin_apps.cmake")
+set(espocket_runtime_resource_arguments)
+foreach(espocket_builtin_app IN LISTS espocket_builtin_apps)
+    set(espocket_builtin_source "${PROJECT_DIR}/runtime_apps/${espocket_builtin_app}/src")
+    file(READ "${espocket_builtin_source}/manifest.json" espocket_builtin_manifest)
+    string(JSON espocket_builtin_id GET "${espocket_builtin_manifest}" package id)
+    brookesia_stage_runtime_app_package(
+        PACKAGE_ID "${espocket_builtin_id}"
+        SOURCE_DIR "${espocket_builtin_source}"
+        STAGE_ROOT "${runtime_app_stage_root}"
+        NO_INDEX
+    )
+    list(APPEND espocket_runtime_resource_arguments --runtime "${espocket_builtin_source}")
+endforeach()
 
 get_property(runtime_app_stage_targets GLOBAL PROPERTY BROOKESIA_RUNTIME_APP_STAGE_TARGETS)
 list(REMOVE_DUPLICATES runtime_app_stage_targets)
@@ -26,7 +34,7 @@ idf_component_get_property(espocket_settings_dir espressif__brookesia_app_settin
 idf_component_get_property(espocket_store_dir espressif__brookesia_app_store COMPONENT_DIR)
 set(espocket_resource_check
     "${PYTHON}" "${CMAKE_CURRENT_LIST_DIR}/check_resources.py"
-    --runtime "${PROJECT_DIR}/runtime_apps/hello/src"
+    ${espocket_runtime_resource_arguments}
     --settings "${espocket_settings_dir}/package"
     --store "${espocket_store_dir}/package"
 )

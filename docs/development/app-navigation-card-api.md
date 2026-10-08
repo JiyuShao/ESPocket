@@ -49,6 +49,8 @@ Native 产品装配使用 `System::install_navigated_app(app, declaration, prese
 
 可见 Runtime App 在资源目录提供 `navigation.json`，格式见 [版本化 schema](schemas/runtime-pages-v1.schema.json)，完整样例见 [Hello Runtime 声明](../../firmware/runtime_apps/hello/src/res/navigation.json)。`version` 当前只能为整数 1；未知字段、类型错误和未声明目标被拒绝，Root 必须属于 pageIds，Card ID 与转移的 from/to 配对不能重复。App ID 必须与 package manifest 相同。缺少声明或校验失败使真实 Core 安装失败；不会回报一个假 Root。
 
+可选布尔字段 `resumeAfterHardwareReset` 默认 false。声明为 true 的可见 App 在前台时，System 保存其稳定安装身份；硬件复位后通过正常 Core 启动路径重新打开 App Root，不恢复旧 Running Instance、页面栈或未完成请求。Home、非恢复 App 前台及卸载清除目标。检查点在启动前一次性消费，存储失败不恢复；软件重启、崩溃和看门狗重启不恢复。当前板的 EN Reset 与冷上电不能区分，因此冷上电也遵循该选项。此声明不添加界面 Reset 控件。
+
 `presentation.screenFlow` 指向 App 的实际 Brookesia Screen Flow；v1 Page ID 与该 Flow 的 Screen ID 一致。`transitions` 为每个需要的 from/to 配对声明一个实际 action。启动核对 Flow 初始状态与 Root；转移前后核对实际 GUI 状态。Flow 不可读取或与 Navigator 不一致时，快照报 `invalid_state`，关闭该次系统 Back，不从 GUI 另建第二份栈。App 的页面动作调用 Navigator，不直接调用 TriggerScreenFlow 绕过它。
 
 JS 入口是 `espocketNavigation.dispatch(JSON.stringify(request))`，返回 Promise，成功值是 UTF-8 JSON 字符串，失败为下面的错误编码。对象与数组通过 JSON 字符串跨越官方 NativeValue 边界；不传 App ID，由官方 Runtime 调用上下文确定真实调用者。App 可包装为 `JSON.parse(await ...)`。当前 Native 与 Runtime 导航仅接受稳定 Page ID；业务参数保留在 App 数据中，Runtime 传入额外 parameters 返回 bad_request，不能静默丢弃。目标参数交付能力仍待扩展。

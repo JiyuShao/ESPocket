@@ -100,3 +100,20 @@ menu "ESPocket"
             render duration and adapter completed-frame FPS. Leave off normally.
 
 endmenu
+
+menu "ESPocket experimental audio"
+    config ESPOCKET_SOFTWARE_AEC_CANDIDATE
+        bool "Experimental software AEC reference and wake interruption"
+        default n
+        help
+            Device-validation candidate only. Replaces the second 16 kHz
+            capture slot with timestamped left DAC output and enables AEC.
+            Disables playback capture suppression so WakeNet can interrupt.
+            Delay, channel identity and double-talk require physical testing.
+
+    config ESPOCKET_SOFTWARE_AEC_REFERENCE_DELAY_MS
+        int "Candidate playback to capture delay (milliseconds)"
+        depends on ESPOCKET_SOFTWARE_AEC_CANDIDATE
+        range 0 250
+        default 0
+endmenu

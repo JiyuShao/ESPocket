@@ -1,0 +1,8 @@
+{
+  "upstreamId": "brookesia.general.calculator",
+  "upstreamVersion": "0.3.0",
+  "artifactSha256": "bde8ce05d6682d103bdf88b48c0665761892867a80192c3ded726587330396ab",
+  "source": "https://brookesia-app-store.espressif.com/api/v1",
+  "origin": "Readable JavaScript and GUI resources extracted from the official BPK; not an upstream Git checkout.",
+  "license": "No LICENSE file was included in the BPK; upstream redistribution terms have not been established. Local adaptation only."
+}

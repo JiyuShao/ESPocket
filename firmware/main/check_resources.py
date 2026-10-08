@@ -35,8 +35,13 @@ def check_package(source, staged=None, runtime=False):
         require(source, manifest['runtime']['entry'])
         if manifest['runtime']['resource_dir'] != 'res':
             raise ValueError('Built-in Runtime resource directory no longer matches product staging')
-        for member in ('profile.json', 'navigation.json', 'cards.json'):
+        for member in ('profile.json', 'navigation.json'):
             json.loads(require(resource, member).read_text())
+        navigation = json.loads((resource / 'navigation.json').read_text())
+        if navigation['appId'] != manifest['package']['id']:
+            raise ValueError('Runtime navigation identity differs from manifest')
+        if navigation.get('cards'):
+            json.loads(require(resource, 'cards.json').read_text())
     if staged is not None:
         inputs = {p.relative_to(source): p.read_bytes() for p in source.rglob('*') if p.is_file()}
         outputs = {p.relative_to(staged): p.read_bytes() for p in staged.rglob('*') if p.is_file()}
@@ -46,16 +51,18 @@ def check_package(source, staged=None, runtime=False):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--runtime', type=Path, required=True)
+    parser.add_argument('--runtime', type=Path, action='append', required=True)
     parser.add_argument('--settings', type=Path, required=True)
     parser.add_argument('--store', type=Path, required=True)
     parser.add_argument('--stage-root', type=Path)
     args = parser.parse_args()
-    for name, source, runtime in (
-        ('espocket.app.hello_runtime', args.runtime, True),
+    packages = [(json.loads((source / 'manifest.json').read_text())['package']['id'], source, True)
+                for source in args.runtime]
+    packages += [
         ('brookesia.general.settings', args.settings, False),
         ('brookesia.general.app_store', args.store, False),
-    ):
+    ]
+    for name, source, runtime in packages:
         check_package(source, args.stage_root / name if args.stage_root else None, runtime)
     print('Built-in package resource integrity passed.')
 

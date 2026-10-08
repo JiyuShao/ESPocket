@@ -1,0 +1,62 @@
+{
+    "type": "constant",
+    "data": {
+        "aiChatbot": {
+            "layout": {
+                "pageX": "0dp",
+                "pageY": "0dp",
+                "pageWidth": "${env.widthDp}",
+                "pageHeight": "${env.heightDp}",
+                "contentInset": "8dp",
+                "pageGap": "10dp",
+                "cardPadding": "12dp",
+                "chromeHeaderHeight": "66dp",
+                "chromeNavHeight": "76dp",
+                "chromePadding": "8dp",
+                "chromeMarkWidth": "38dp",
+                "chromeTitleWidth": "170dp",
+                "chromeStatusHeight": "24dp",
+                "chromeHeaderGap": "8dp",
+                "chromeButtonWidth": "92dp",
+                "chromeButtonHeight": "34dp",
+                "selectHeaderHeight": "72dp",
+                "selectBackButtonWidth": "64dp",
+                "selectBackButtonHeight": "34dp",
+                "selectHeaderGap": "8dp",
+                "selectTitleHeight": "34dp",
+                "selectSubtitleHeight": "18dp",
+                "selectTitleGap": "2dp",
+                "headerHeight": "112dp",
+                "headerMarkWidth": "38dp",
+                "headerTitleHeight": "38dp",
+                "headerButtonWidth": "92dp",
+                "headerButtonHeight": "34dp",
+                "headerStatusHeight": "22dp",
+                "statusHeight": "44dp",
+                "navRailHeight": "76dp",
+                "bottomSafeGap": "18dp",
+                "navPillWidth": "128dp",
+                "navPillHeight": "54dp",
+                "navIconSize": "22dp",
+                "navLabelHeight": "20dp",
+                "navHeight": "64dp",
+                "buttonHeight": "42dp",
+                "rowHeight": "58dp",
+                "chatGap": "10dp",
+                "bubbleWidth": "66%",
+                "bubblePadding": "14dp",
+                "agentValueColumn": "180dp",
+                "navIconColumn": "44dp",
+                "chevronWidth": "22dp",
+                "listIconSize": "36dp"
+            },
+            "font": {
+                "title": "28sp",
+                "body": "17sp",
+                "caption": "14sp",
+                "chipLabel": "13sp",
+                "status": "12sp"
+            }
+        }
+    }
+}

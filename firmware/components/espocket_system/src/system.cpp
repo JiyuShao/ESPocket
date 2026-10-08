@@ -1,9 +1,11 @@
 #include "system_internal.hpp"
 #include "brookesia/hal_adaptor/audio/device.hpp"
+#include "brookesia/hal_adaptor/wifi/device.hpp"
 #include "runtime_render_probe.hpp"
 #include "espocket_builtin_packages.hpp"
 #include "product_fonts.hpp"
 #include "round_presentation.hpp"
+#include "espocket/reset_resume_checkpoint.hpp"
 #include "brookesia/lib_utils/function_guard.hpp"
 
 extern const char dark_theme_start[] asm("_binary_espocket_dark_theme_json_start");
@@ -52,8 +54,19 @@ std::expected<void, std::string> System::init()
     if (product_initialized_) {
         return {};
     }
+    if (!esp_brookesia::hal::WifiDevice::get_instance().set_low_latency(true)) {
+        return std::unexpected("Failed to configure low-latency WiFi");
+    }
     esp_brookesia::hal::AudioProcessorConfig audio_config;
     audio_config.decoder.output_gain_percent = 350;
+    audio_config.decoder.capture_suppression_ms = 250;
+#if CONFIG_ESPOCKET_SOFTWARE_AEC_CANDIDATE
+    audio_config.decoder.capture_suppression_ms = 0;
+    audio_config.afe.software_aec = true;
+    audio_config.afe.reference_delay_ms = CONFIG_ESPOCKET_SOFTWARE_AEC_REFERENCE_DELAY_MS;
+#endif
+    audio_config.afe.wakenet = esp_brookesia::hal::AudioProcessorAFE_WakeNetConfig{};
+    audio_config.afe.fetcher_task.priority = 11;
     audio_config.decoder.output_peak_percent = 85;
     if (!esp_brookesia::hal::AudioDevice::get_instance().set_processor_config(audio_config)) {
         return std::unexpected("Failed to configure voice output gain");
@@ -175,6 +188,7 @@ std::expected<void, std::string> System::on_init()
                  restored.error().c_str());
     }
     init_cards();
+    init_reset_resume();
     test_power_input_ = std::make_unique<TestInputQueue>();
     test_touch_input_ = std::make_unique<TouchInputSequence>(*test_power_input_,
         [this](const TouchInputStep &step, bool first) -> std::expected<void, std::string> {
@@ -435,6 +449,7 @@ std::expected<void, std::string> System::on_start()
             ESP_LOGW(TAG, "USB Test Adapter unavailable: %s", started.error().c_str());
         }
     }
+    restore_after_hardware_reset();
     return {};
 }
 

@@ -31,7 +31,8 @@ void System::handle_screen_timeout()
     }
     const auto active = get_active_app();
     if (active && active->manifest.kind == esp_brookesia::system::core::AppKind::Runtime &&
-            active->manifest.id == "brookesia.general.ai_chatbot") {
+            (active->manifest.id == "espocket.app.ai_chatbot" ||
+             active->manifest.id == "brookesia.general.ai_chatbot")) {
         return;
     }
     auto result = set_display_on(false);

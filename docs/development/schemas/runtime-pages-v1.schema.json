@@ -100,6 +100,11 @@
           }
         }
       }
+    },
+    "resumeAfterHardwareReset": {
+      "type": "boolean",
+      "default": false,
+      "description": "Opt in to reopening the App Root after hardware Reset while this App was foreground. Home clears the checkpoint; crash/software reboot does not restore it."
     }
   }
 }

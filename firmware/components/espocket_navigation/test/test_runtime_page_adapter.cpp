@@ -28,6 +28,12 @@ int main()
     queue.enqueue(1, 8, 0, "request", receive); assert(reply == "system_unavailable");
     auto parsed = decode_runtime_pages(declaration);
     assert(parsed && parsed->declaration.app_id == "app");
+    assert(!parsed->resume_after_hardware_reset);
+    auto recovery = boost::json::parse(declaration).as_object();
+    recovery["resumeAfterHardwareReset"] = true;
+    assert(decode_runtime_pages(boost::json::serialize(recovery))->resume_after_hardware_reset);
+    recovery["resumeAfterHardwareReset"] = "true";
+    assert(!decode_runtime_pages(boost::json::serialize(recovery)));
     bool peer_presentation = true;
     auto native = PageNavigator::create(parsed->declaration, [&](auto from, auto) { return from.empty() || peer_presentation; });
     auto runtime = RuntimePageAdapter::create(*parsed, [&](auto, auto, auto, auto) { return peer_presentation; });

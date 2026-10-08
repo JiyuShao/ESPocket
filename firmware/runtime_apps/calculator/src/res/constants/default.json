@@ -1,0 +1,23 @@
+{
+    "type": "constant",
+    "data": {
+        "calculator": {
+            "layout": {
+                "pagePadding": "18dp",
+                "pageGap": "12dp",
+                "displayHeight": "150dp",
+                "displayPadding": "14dp",
+                "displayGap": "6dp",
+                "keypadGap": "10dp",
+                "keyHeight": "56dp",
+                "keyRadius": "18dp"
+            },
+            "font": {
+                "history": "16sp",
+                "formula": "34sp",
+                "result": "24sp",
+                "key": "23sp"
+            }
+        }
+    }
+}

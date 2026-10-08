@@ -1,0 +1,8 @@
+{
+  "name": "espocket.app.ai_chatbot",
+  "version": "0.1.2",
+  "private": true,
+  "scripts": {
+    "build": "python3 ../../../../scripts/firmware/prepare_local_runtime_apps.py --app ai_chatbot"
+  }
+}

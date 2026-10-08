@@ -1,0 +1,8 @@
+{
+  "upstreamId": "brookesia.general.ai_chatbot",
+  "upstreamVersion": "0.2.1",
+  "artifactSha256": "8ca0e8af8b0752e2af8e364ff9ff19f81d845bdc19a1e8fd1481fdbd1b0aa45a",
+  "source": "https://brookesia-app-store.espressif.com/api/v1",
+  "origin": "Readable JavaScript and GUI resources extracted from the official BPK; not an upstream Git checkout.",
+  "license": "No LICENSE file was included in the BPK; upstream redistribution terms have not been established. Local adaptation only."
+}

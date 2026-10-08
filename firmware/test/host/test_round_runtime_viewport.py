@@ -154,10 +154,6 @@ void apply_placement(BackendImpl&,Record&record,int,PlacementApplyMask,bool){rec
 void refresh_frame_view(BackendImpl&,Record&,int){}
 ''' + methods + r'''
 #include "PRODUCT_PRESENTATION"
-namespace espocket {
-std::string_view chat_round_document(){return "round-chat-document";}
-std::string_view calculator_round_document(){return "round-calculator-document";}
-}
 int main(){
  BackendImpl backend;BackendHandle handle(1);MountTarget native;
  using namespace esp_brookesia;
@@ -170,19 +166,15 @@ int main(){
  auto presentation=espocket::round_app_presentation(manifest,environment);
  assert(presentation.viewport && presentation.viewport->width==329);
  assert(std::abs(presentation.environment.width_px/presentation.environment.density-480)<0.001);
- manifest.id="brookesia.general.ai_chatbot";
- manifest.version="0.2.1";
- auto landscape=espocket::round_app_presentation(manifest,environment);
- assert(!landscape.viewport && !landscape.root_document.empty());
- assert(landscape.environment.width_px==466 && landscape.environment.height_px==466);
- assert(std::abs(landscape.environment.density-1)<0.001);
- manifest.id="brookesia.general.calculator";manifest.version="0.3.0";
- auto calculator=espocket::round_app_presentation(manifest,environment);
- assert(!calculator.viewport && !calculator.root_document.empty());
- assert(calculator.environment.width_px==466 && calculator.environment.density==1);
- manifest.id="brookesia.general.ai_chatbot";
- manifest.version="0.3.0";
- assert(espocket::round_app_presentation(manifest,environment).viewport->height==329);
+ // Official Store identities no longer receive product-owned replacement documents.
+ for(const auto& id:{"brookesia.general.ai_chatbot","brookesia.general.calculator"}) {
+  manifest.id=id;manifest.version="0.2.1";
+  assert(espocket::round_app_presentation(manifest,environment).viewport->width==329);
+ }
+ // Local App resources receive the physical environment without an override.
+ manifest.id="espocket.app.ai_chatbot";manifest.supported_systems={"espocket"};
+ auto local=espocket::round_app_presentation(manifest,environment);
+ assert(!local.viewport && local.environment.width_px==466 && local.environment.density==1);
  manifest.id="";
  for(auto x:{presentation.viewport->x,presentation.viewport->x+presentation.viewport->width-1})
   for(auto y:{presentation.viewport->y,presentation.viewport->y+presentation.viewport->height-1})
@@ -215,7 +207,7 @@ namespace gui {using GuiViewport=::GuiViewport;struct Environment{int width_px,h
 namespace system::core {
 enum class AppKind {Native,Runtime};
 struct AppManifest{AppKind kind;std::vector<std::string>supported_systems;std::string id,version;};
-struct System{struct Config{struct AppPresentation{gui::Environment environment;std::optional<gui::GuiViewport>viewport;std::string_view root_document;};};};
+struct System{struct Config{struct AppPresentation{gui::Environment environment;std::optional<gui::GuiViewport>viewport;};};};
 }
 }
 ''')

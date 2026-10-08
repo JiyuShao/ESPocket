@@ -1,0 +1,19 @@
+{
+  "authorization": {
+    "session_name": "brookesia",
+    "device_id": "",
+    "custom_consumer": "",
+    "app_id": "REPLACE_WITH_COZE_APP_ID",
+    "user_id": "",
+    "public_key": "REPLACE_WITH_COZE_PUBLIC_KEY",
+    "private_key": ""
+  },
+  "robots": [
+    {
+      "name": "default",
+      "bot_id": "REPLACE_WITH_COZE_BOT_ID",
+      "voice_id": "REPLACE_WITH_COZE_VOICE_ID",
+      "description": "Default Coze robot"
+    }
+  ]
+}

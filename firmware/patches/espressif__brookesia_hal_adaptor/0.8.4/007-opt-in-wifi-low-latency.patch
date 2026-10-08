@@ -1,0 +1,79 @@
+--- a/include/brookesia/hal_adaptor/wifi/device.hpp
++++ b/include/brookesia/hal_adaptor/wifi/device.hpp
+@@ -31,6 +31,10 @@
+         return instance;
+     }
+ 
++    // Startup policy only; false retains upstream modem power saving.
++    // Low latency disables modem sleep and increases connected power use.
++    bool set_low_latency(bool enabled);
++
+ private:
+     WifiDevice()
+         : Device(std::string(DEVICE_NAME))
+@@ -43,6 +47,7 @@
+     bool on_init() override;
+     void on_deinit() override;
+ 
++    bool low_latency_ = false;
+     std::shared_ptr<WifiEspBackend> backend_;
+ };
+ 
+--- a/src/wifi/device.cpp
++++ b/src/wifi/device.cpp
+@@ -251,12 +251,21 @@
+     };
+ }
+ 
++bool WifiDevice::set_low_latency(bool enabled)
++{
++    BROOKESIA_CHECK_FALSE_RETURN(
++        !is_iface_initialized(BASIC_IFACE_NAME), false, "Configure WiFi latency before initialization"
++    );
++    low_latency_ = enabled;
++    return true;
++}
++
+ bool WifiDevice::on_init()
+ {
+     BROOKESIA_LOG_TRACE_GUARD_WITH_THIS();
+ 
+     BROOKESIA_CHECK_EXCEPTION_RETURN(
+-        backend_ = std::make_shared<WifiEspBackend>(), false, "Failed to create Wi-Fi ESP backend"
++        backend_ = std::make_shared<WifiEspBackend>(low_latency_), false, "Failed to create Wi-Fi ESP backend"
+     );
+ 
+     interfaces_.emplace(BASIC_IFACE_NAME, std::make_shared<WifiBasicAdaptorIface>(backend_));
+--- a/src/wifi/backend.hpp
++++ b/src/wifi/backend.hpp
+@@ -48,7 +48,7 @@
+ public:
+     friend class SoftAp;
+ 
+-    WifiEspBackend() = default;
++    explicit WifiEspBackend(bool low_latency = false) : low_latency_(low_latency) {}
+     ~WifiEspBackend();
+ 
+     bool configure(wifi::BasicIface::RuntimeContext runtime, wifi::BasicIface::Callbacks callbacks);
+@@ -117,6 +117,7 @@
+     network::NetworkStatus get_network_status() const;
+ 
+ private:
++    const bool low_latency_;
+     bool is_initialized()
+     {
+         return is_initialized_;
+--- a/src/wifi/backend.cpp
++++ b/src/wifi/backend.cpp
+@@ -794,6 +794,11 @@
+     BROOKESIA_LOG_TRACE_GUARD_WITH_THIS();
+ 
+     BROOKESIA_CHECK_ESP_ERR_RETURN(esp_wifi_set_mode(WIFI_MODE_STA), false, "Set WiFi mode failed");
++    if (low_latency_) {
++        // Configure before start so policy failure cannot leave an active partial start.
++        BROOKESIA_CHECK_ESP_ERR_RETURN(esp_wifi_set_ps(WIFI_PS_NONE), false, "Disable WiFi modem sleep failed");
++        BROOKESIA_LOGI("WiFi low latency enabled; modem sleep disabled");
++    }
+     BROOKESIA_CHECK_ESP_ERR_RETURN(esp_wifi_start(), false, "Failed to start WiFi");
+ 
+     return true;

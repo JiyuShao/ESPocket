@@ -1,0 +1,9 @@
+{
+    "type": "screenFlow",
+    "id": "ai_chatbot_chrome",
+    "screens": [
+        "ai_chatbot_chrome"
+    ],
+    "initial": "ai_chatbot_chrome",
+    "transitions": []
+}

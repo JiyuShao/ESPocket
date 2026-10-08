@@ -1,0 +1,42 @@
+{
+  "package": {
+    "id": "espocket.app.ai_chatbot",
+    "name": {
+      "en": "AI Chatbot",
+      "zh_CN": "AI \u804a\u5929\u673a\u5668\u4eba"
+    },
+    "version": "0.1.2",
+    "visible": true,
+    "systems": [
+      "espocket"
+    ]
+  },
+  "runtime": {
+    "type": "JavaScript",
+    "entry": "app/app.js",
+    "resource_dir": "res",
+    "arguments": []
+  },
+  "services": [
+    {
+      "name": "Device",
+      "version": "0.8.1"
+    },
+    {
+      "name": "AgentManager",
+      "version": "0.8.1"
+    },
+    {
+      "name": "AudioPlayback",
+      "version": "0.8.1"
+    },
+    {
+      "name": "XiaoZhi",
+      "version": "0.8.1"
+    },
+    {
+      "name": "Coze",
+      "version": "0.8.1"
+    }
+  ]
+}

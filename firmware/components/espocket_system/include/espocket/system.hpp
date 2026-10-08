@@ -8,6 +8,7 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #include "brookesia/service_manager/service/manager.hpp"
@@ -34,6 +35,7 @@ class SettingsNavigationAdapter;
 class RuntimePageAdapter;
 class NavigationRequestQueue;
 class CardConfigurationStore;
+class ResetResumeCheckpoint;
 class CardSession;
 struct TestSnapshot;
 struct LauncherApp;
@@ -165,6 +167,10 @@ private:
     std::expected<void, std::string> set_display_on(bool on);
     void show_watch_face();
     void restore_surface(ShellSurface surface);
+    void init_reset_resume();
+    void remember_reset_resume(const esp_brookesia::system::core::AppInfo &app);
+    void clear_reset_resume();
+    void restore_after_hardware_reset();
     void clear_foreground(const esp_brookesia::system::core::AppInfo &app);
     void restore_home_after_lifecycle(const esp_brookesia::system::core::AppInfo &app);
     std::shared_ptr<PageNavigator> navigator_for(esp_brookesia::system::core::AppId app_id) const;
@@ -186,6 +192,8 @@ private:
     std::shared_ptr<NavigationRequestQueue> runtime_requests_;
     std::unique_ptr<CardRegistry> cards_;
     std::unique_ptr<CardConfigurationStore> card_store_;
+    std::unique_ptr<ResetResumeCheckpoint> reset_resume_;
+    std::unordered_set<esp_brookesia::system::core::AppId> reset_resume_apps_;
     bool card_samples_active_ = false;
     std::unique_ptr<CardSession> card_session_;
     std::shared_ptr<NavigationRequestQueue> card_actions_;

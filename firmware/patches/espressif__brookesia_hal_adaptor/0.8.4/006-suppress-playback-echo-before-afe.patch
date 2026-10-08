@@ -1,0 +1,139 @@
+--- a/include/brookesia/hal_adaptor/audio/device.hpp
++++ b/include/brookesia/hal_adaptor/audio/device.hpp
+@@ -81,6 +81,8 @@
+  * @brief Decoder backend configuration for the ESP audio processor.
+  */
+ struct AudioProcessorDecoderConfig {
++    // Opt-in half-duplex acoustic guard, measured from actual PCM output.
++    uint16_t capture_suppression_ms = 0;
+     uint16_t output_gain_percent = 100;
+     uint16_t output_peak_percent = 100;
+     lib_utils::ThreadConfig feeder_task{
+@@ -229,7 +231,7 @@
+ BROOKESIA_DESCRIBE_STRUCT(AudioProcessorMixerGainConfig, (), (initial_gain, target_gain, transition_time));
+ BROOKESIA_DESCRIBE_STRUCT(AudioProcessorPlaybackConfig, (), (player, player_task, mixer_gain));
+ BROOKESIA_DESCRIBE_STRUCT(AudioProcessorEncoderConfig, (), (recorder_task, fetcher_task));
+-BROOKESIA_DESCRIBE_STRUCT(AudioProcessorDecoderConfig, (), (feeder_task, mixer_gain, output_gain_percent, output_peak_percent));
++BROOKESIA_DESCRIBE_STRUCT(AudioProcessorDecoderConfig, (), (feeder_task, mixer_gain, output_gain_percent, output_peak_percent, capture_suppression_ms));
+ BROOKESIA_DESCRIBE_STRUCT(AudioProcessorAFE_VAD_Config, (), (mode, min_speech_ms, min_noise_ms));
+ BROOKESIA_DESCRIBE_STRUCT(AudioProcessorAFE_WakeNetConfig, (), (
+                               model_partition_label, mn_language, start_timeout_ms, end_timeout_ms
+--- a/src/audio/processor_impl.hpp
++++ b/src/audio/processor_impl.hpp
+@@ -11,6 +11,7 @@
+ #include <string>
+ 
+ #include "pcm_gain.hpp"
++#include "playback_capture_guard.hpp"
+ 
+ #include "brookesia/hal_adaptor/audio/device.hpp"
+ #include "brookesia/hal_interface/interfaces/audio/codec_player.hpp"
+@@ -91,6 +92,7 @@
+     std::atomic_bool is_decoder_started_ = false;
+     std::mutex decoder_output_mutex_;
+     BoundedPcmGain decoder_output_gain_;
++    PlaybackCaptureGuard playback_capture_guard_;
+     std::string afe_model_partition_label_;
+     std::string afe_mn_language_;
+ };
+--- a/src/audio/processor_impl.cpp
++++ b/src/audio/processor_impl.cpp
+@@ -16,6 +16,7 @@
+ 
+ #include "boost/thread.hpp"
+ #include "esp_gmf_afe.h"
++#include "esp_timer.h"
+ #include "model_path.h"
+ #include "brookesia/lib_utils/function_guard.hpp"
+ #include "private/utils.hpp"
+@@ -185,6 +186,8 @@
+         if (recorder_iface_) recorder_iface_->close();
+     });
+ 
++    playback_capture_guard_.configure(player_config.sample_rate, player_config.channels, player_config.bits,
++                                       config_.decoder.capture_suppression_ms);
+     decoder_output_gain_.configure(player_config.sample_rate, player_config.channels, player_config.bits,
+                                    config_.decoder.output_gain_percent, config_.decoder.output_peak_percent);
+     auto player_write_cb = +[](uint8_t *data, int size, void *ctx) {
+@@ -195,7 +198,11 @@
+                 !core->decoder_output_gain_.process(data, static_cast<size_t>(size))) {
+             return ESP_FAIL;
+         }
+-        return core->player_iface_->write_data(data, size) ? ESP_OK : ESP_FAIL;
++        // Gate capture before the DAC write and conservatively cover its buffered tail.
++        core->playback_capture_guard_.note_output(data, size, esp_timer_get_time());
++        const bool written = core->player_iface_->write_data(data, size);
++        core->playback_capture_guard_.note_output(data, size, esp_timer_get_time());
++        return written ? ESP_OK : ESP_FAIL;
+     };
+     auto recorder_read_cb = +[](uint8_t *data, int size, void *ctx) {
+         auto self = static_cast<AudioProcessorCore *>(ctx);
+@@ -204,6 +211,11 @@
+ 
+         auto result = self->recorder_iface_->read_data(data, size);
+         if (result) {
++            // Continue draining ADC input; feed silence to AFE instead of retaining echo
++            // in recorder/encoder queues or allowing speaker output to trigger WakeNet.
++            if (self->playback_capture_guard_.suppresses_capture(esp_timer_get_time())) {
++                std::memset(data, 0, static_cast<size_t>(size));
++            }
+             self->on_recorder_input_data(data, size);
+         }
+ 
+--- /dev/null
++++ b/src/audio/playback_capture_guard.hpp
+@@ -0,0 +1,54 @@
++/* SPDX-License-Identifier: Apache-2.0 */
++#pragma once
++
++#include <atomic>
++#include <cstddef>
++#include <cstdint>
++#include <cstring>
++
++namespace esp_brookesia::hal {
++
++// An opt-in acoustic half-duplex gate. Cloud and decoder queue completion are
++// independent of PCM reaching the DAC. Silence from an idle mixer never extends
++// this gate, so local WakeNet remains available after playback ends.
++class PlaybackCaptureGuard {
++public:
++    void configure(uint32_t rate, uint8_t channels, uint8_t bits, uint16_t tail_ms)
++    {
++        bytes_per_second_ = bits == 16 ? static_cast<uint64_t>(rate) * channels * 2 : 0;
++        tail_us_ = static_cast<int64_t>(tail_ms) * 1000;
++        until_us_.store(0, std::memory_order_release);
++    }
++
++    void note_output(const uint8_t *data, int size, int64_t now_us)
++    {
++        if (!data || size <= 0 || bytes_per_second_ == 0 || tail_us_ == 0) return;
++        bool audible = false;
++        for (int offset = 0; offset + 1 < size; offset += 2) {
++            int16_t sample;
++            std::memcpy(&sample, data + offset, sizeof(sample));
++            // Ignore digital idle/dither below -60 dBFS, which cannot form speech.
++            if (sample >= 32 || sample <= -32) { audible = true; break; }
++        }
++        if (!audible) return;
++        const auto duration_us = static_cast<int64_t>((static_cast<uint64_t>(size) * 1000000 +
++                                                        bytes_per_second_ - 1) / bytes_per_second_);
++        const auto deadline = now_us + duration_us + tail_us_;
++        auto previous = until_us_.load(std::memory_order_acquire);
++        while (previous < deadline && !until_us_.compare_exchange_weak(
++                   previous, deadline, std::memory_order_release, std::memory_order_acquire)) {}
++    }
++
++    bool suppresses_capture(int64_t now_us) const
++    {
++        return now_us < until_us_.load(std::memory_order_acquire);
++    }
++
++private:
++    // Configuration is immutable while the audio manager callbacks are active.
++    uint64_t bytes_per_second_ = 0;
++    int64_t tail_us_ = 0;
++    std::atomic<int64_t> until_us_{0};
++};
++
++} // namespace esp_brookesia::hal

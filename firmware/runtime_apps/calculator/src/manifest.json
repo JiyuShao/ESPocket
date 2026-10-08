@@ -1,0 +1,21 @@
+{
+  "package": {
+    "id": "espocket.app.calculator",
+    "name": {
+      "en": "Calculator",
+      "zh_CN": "\u8ba1\u7b97\u5668"
+    },
+    "version": "0.1.0",
+    "visible": true,
+    "systems": [
+      "espocket"
+    ]
+  },
+  "runtime": {
+    "type": "JavaScript",
+    "entry": "app/app.js",
+    "resource_dir": "res",
+    "arguments": []
+  },
+  "services": []
+}

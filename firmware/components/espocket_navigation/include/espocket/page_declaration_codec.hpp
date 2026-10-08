@@ -14,6 +14,7 @@ struct RuntimePageDefinition {
     PageDeclaration declaration;
     std::string screen_flow;
     std::vector<PageTransition> transitions;
+    bool resume_after_hardware_reset = false;
 };
 
 // UTF-8 JSON, schema version 1. Semantic validation is shared with Native installation.

@@ -44,6 +44,7 @@ __PCM_GAIN__
 #define BROOKESIA_CHECK_ESP_ERR_RETURN(value,result,...) if ((value)!=0) return result
 #define BROOKESIA_CHECK_ESP_ERR_EXECUTE(value,unused,...) (void)(value)
 #define BROOKESIA_CHECK_NULL_EXIT(value,...) if (!(value)) return
+int64_t esp_timer_get_time(){return 1000000;}
 constexpr int ESP_OK=0,ESP_FAIL=-1;
 using audio_play_state_t=int;
 using audio_playback_handle_t=void*;
@@ -65,7 +66,7 @@ struct CodecPlayerIface { Format opened; bool open(Format c){opened=c;return tru
     bool write_data(uint8_t*,int){return true;}
 };
 struct CodecRecorderIface { struct Info {int bits=16,channels=1,sample_rate=16000;std::string mic_layout;};
-    Info get_info(){return {};} bool open(){++recorder_opens;return true;} void close(){}
+    Info info; Info get_info(){return info;} bool open(){++recorder_opens;return true;} void close(){}
     bool read_data(uint8_t*,int){return true;}
 };
 struct PlaybackIface {using EventCallback=std::function<void(int)>;};
@@ -75,8 +76,9 @@ struct AudioProcessorCore {
     std::mutex playback_callback_mutex_;
     std::shared_ptr<audio::CodecPlayerIface> player_iface_=std::make_shared<audio::CodecPlayerIface>();
     std::shared_ptr<audio::CodecRecorderIface> recorder_iface_;
-    struct {struct {Format player;} playback;struct {uint16_t output_gain_percent=100, output_peak_percent=100;} decoder;} config_;
-    uint8_t player_bits_=16;
+    struct {struct {Format player;} playback;struct {uint16_t output_gain_percent=100, output_peak_percent=100, capture_suppression_ms=0;} decoder;struct {bool software_aec=false;uint16_t reference_delay_ms=0;} afe;} config_;
+    std::mutex decoder_output_mutex_;
+    __GAIN_MEMBER__
     bool is_decoder_started()const{return false;}
     void* playback_handle_=nullptr;audio::PlaybackIface::EventCallback playback_callback_;bool is_opened_=false;
     void on_recorder_input_data(uint8_t*,int){} void on_playback_event(uint8_t){}
@@ -92,9 +94,28 @@ int main(){AudioProcessorCore core;
     // Existing duplex mode retains recorder normalization and initialization.
     AudioProcessorCore duplex;duplex.recorder_iface_=std::make_shared<audio::CodecRecorderIface>();
     if(!duplex.open_common({}) || recorder_opens!=1 || !observed_manager.rec_io.read_cb)return 4;
+    AudioProcessorCore candidate;
+    candidate.config_.afe.software_aec=true;
+    if(candidate.open_common({}))return 5; // No microphone cannot supply AEC input.
+    candidate.recorder_iface_=std::make_shared<audio::CodecRecorderIface>();
+    if(candidate.open_common({}))return 6; // Mono input must fail, not pretend it has reference.
+    candidate.recorder_iface_->info.channels=2;
+    candidate.config_.decoder.capture_suppression_ms=250;
+    if(candidate.open_common({}))return 7; // AEC and capture muting are mutually exclusive.
+    candidate.config_.decoder.capture_suppression_ms=0;
+    if(!candidate.open_common({}) || std::string(observed_manager.mic_layout)!="MR")return 8;
 }
 '''
         gain = hal / 'src/audio/pcm_gain.hpp'
+        harness = harness.replace('__GAIN_MEMBER__', 'esp_brookesia::hal::BoundedPcmGain decoder_output_gain_;' if gain.exists() else '')
+        guard = hal / 'src/audio/playback_capture_guard.hpp'
+        if guard.exists():
+            harness = guard.read_text() + '\n' + harness.replace('    __GAIN_MEMBER__', '    __GAIN_MEMBER__')
+            harness = harness.replace('    bool is_decoder_started()const', '    esp_brookesia::hal::PlaybackCaptureGuard playback_capture_guard_;\n    bool is_decoder_started()const')
+        reference = hal / 'src/audio/software_aec_reference.hpp'
+        if reference.exists():
+            harness = reference.read_text() + '\n' + harness
+            harness = harness.replace('    bool is_decoder_started()const', '    esp_brookesia::hal::SoftwareAecReference software_aec_reference_;\n    bool is_decoder_started()const')
         harness = harness.replace('__PCM_GAIN__', gain.read_text() + '\nusing namespace esp_brookesia::hal;' if gain.exists() else '')
         with tempfile.TemporaryDirectory(prefix='espocket-audio-only-') as directory:
             source=Path(directory)/'test.cpp';source.write_text(harness)
