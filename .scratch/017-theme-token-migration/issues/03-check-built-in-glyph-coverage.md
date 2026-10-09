@@ -2,9 +2,9 @@
 
 **What to build:** 修复 Launcher 箭头方框，并在维护资源和有效固件配置上静态校验字体字形覆盖。
 
-**Blocked by:** 完整构建及单次像素确认。
+**Blocked by:** 单次箭头像素确认；完整构建已有记录。
 
-**Status:** ready-for-agent
+**Status:** ready-for-human
 
 - [x] 用实际字体选择规则和 cmap 重现 16sp 箭头缺失，修复为已启用的 18sp。
 - [x] 静态检查维护 JSON literal label、styleRefs 与继承字号，报告文件、节点、码点和实际字体。
@@ -18,3 +18,6 @@
 构建、刷写与有效配置证据见[字形记录](../records/2026-10-04-glyph-coverage.md)；实际像素确认仍待用户。
 
 2026-10-04 隔离核查：已有构建/刷写和软件截图证据与剩余条件见[剩余证据核查](../records/2026-10-04-remaining-evidence-audit.md)。最终像素门槛保持未完成，本线未访问设备。
+
+
+2026-10-09：静态检查、修复与完整构建不重复执行为新实现；最终像素仍待设备，见[统一收尾核对](../../027-reliability-closeout/records/2026-10-09-reliability-audit.md)。

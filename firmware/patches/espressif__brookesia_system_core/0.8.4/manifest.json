@@ -180,6 +180,12 @@
       "sha256": "548b0cd8d1ee2949401004f85940778ab55ab0b4f2796676cb53bbde74cd1118",
       "issue": ".scratch/023-owner-seam-remediation/issues/04-phased-app-start.md",
       "removed_when": "Remove when upstream provides equivalent cancellable phased startup on the real Core with validated rollback."
+    },
+    {
+      "file": "026-revoke-input-requests-on-system-stop.patch",
+      "sha256": "a492050cd3be19df532d11d70ecc85edfeb4ce3046231d04c4a0034d9d1eef93",
+      "issue": ".scratch/019-system-shell-remediation/issues/02-complete-stop-and-normal-restart.md",
+      "removed_when": "Remove when upstream normal stop revokes active/queued input requests and handlers on the App Owner; late validity and repeated-run regressions must pass."
     }
   ],
   "issue": ".scratch/005-m5-application-ecosystem/issues/07-isolate-runtime-keyboard-results.md",
@@ -239,7 +245,7 @@
     "include/brookesia/system_core.hpp": "66ba704eeebb40d4682689da1b9278238a6aa41b67cc3d202e512cc48fc6dcb3",
     "license.txt": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
     "src/app/app.cpp": "076da0b957576b2d6f22e651f28d54b317031a4f3aa721c520a068eb3c3d1b94",
-    "src/app/manager.cpp": "c832e66a353c1c8b5219333544c2c084034b864b36e3d6d0765a2213671769cc",
+    "src/app/manager.cpp": "cf05fdc118dd82e9302af9f18c77942b4a09ef50dd2b1bc16adbb21d55fdc049",
     "src/app/package.cpp": "23aa58815c84b94e9a176417d42758861f7e6baa3e6360792513630a7bb8128b",
     "src/app/package_scan.cpp": "f25a5f1dc59878e2763a5e32c6608a5187fd7d978afd6c722a3c96e96d3e9c74",
     "src/app/package_validation.cpp": "fef1b04ec024c5799ee2006557514be86a27c163930f754bccec745c1330ba7f",
@@ -257,7 +263,7 @@
     "src/private/service/static_schema.cpp": "34ca3ca4ad9cb8c28d075052014144f3498b17d747cd6d805d2069b5b4e04e04",
     "src/private/service/static_schema.hpp": "e89861292222172646f03ff7e756adf43cdd0b83cc9793c4f428c4ad4c39e1e3",
     "src/private/service/utils.hpp": "53257540a5b2161c5efd76112148903dcb444bfc2b46d207b8966699b3d6b3b3",
-    "src/private/system/impl.hpp": "e1a29599348db8b4c206fb8c2662a1af443de651c7105430a6eaeb6eefcba4c5",
+    "src/private/system/impl.hpp": "782123f19146c00fe1bbf7e396200adb72d28be5b8e23094c462dfaddbabab96",
     "src/private/utils.hpp": "cd13e446fb0aaa67564087eec7e38e21e97a9a32cf6f7069582b9a20bff005b9",
     "src/runtime/host_bridge.cpp": "be70a3f9dfd0889dbe3ca3cde16a05111f6dfa21170a41194511d2b5a270a156",
     "src/runtime/runtime.cpp": "5bd56b61b62ef7d1b0f583d0f1824b52ffe9053a22c9a08d0f7c675246809a2a",
@@ -269,7 +275,7 @@
     "src/system/gui.cpp": "3c7b840c50bd1e9342dc1dae0f01705b2b0f3e6af91a8aea25691775713704d7",
     "src/system/gui_access.cpp": "cffe7aa6bc55c18cbf82381f01b66ec746324bd9dd1a7068b79d1cf9b2c60407",
     "src/system/gui_preferences.cpp": "9279442fb20aebdca56765e24da218420f0564ae08c6df9a06e2a4cd1579587c",
-    "src/system/lifecycle.cpp": "fcabc852b7d9629de944c8192bdf336f8d59b8ad530b76cb3af6021273e7d528",
+    "src/system/lifecycle.cpp": "5d07aa61af5c0042a6cb2e0a969c731e792685c543c7778815ca444c1c55e433",
     "src/system/overlay.cpp": "cb05bfdc1362db2e910c850f84e6b672235563648ba1a64e30df49f679f40e26",
     "src/system/resources.cpp": "b062841e12697b4d17e5037ee3ed8dfaf8cd93f0f915765c63c672d7a1e32bd8",
     "src/system/storage.cpp": "15b3514e368d826043f8034eaaf0921c5996e74abd53a857c173072eb985ec51",

@@ -6,10 +6,10 @@
 
 **Status:** ready-for-agent
 
-- [ ] 核对补丁后的实际控制流，覆盖 source.start 后角色选择失败、Core partial init 和 Native Shell start 失败，不直接把原 managed source 当生产行为。
+- [x] 核对补丁后的实际控制流，覆盖 source.start 后角色选择失败、Core partial init 和 Native Shell start 失败，不直接把原 managed source 当生产行为。
 - [ ] 逐失败点验证已有资源被回收，不双重释放；仍可用显示提供错误信息，不能显示时保留诊断；恢复方式为显式重启。
 - [ ] 验证 callback 停止、GUI 锁/调度失败与清理结果；不能仅因业务 on_stop 成功就宣称全部回收。
-- [ ] 框架修复遵守 ADR-0016，独立副本、精确版本/hash、补丁回归和移除条件完整。
+- [x] 框架修复遵守 ADR-0016，独立副本、精确版本/hash、补丁回归和移除条件完整。
 - [ ] 统一检查、独立完整构建和关键失败后的真机诊断/显式重启路径分别记录；资源结果由真实 Owner 的可观察证据支持。
 
 ## Execution Notes
@@ -22,3 +22,6 @@
 
 
 2026-10-05：隔离交付已三方整合入当前 checkout；新增 Core 补丁按当前组合重新准确应用，整合中两处空 Overlay 重试回归已修复。联合 host checks、构建和设备结果见[联合整合记录](../records/2026-10-05-joint-integration.md)。此前隔离阶段记录保留；本票未满足的条件继续开放。
+
+
+2026-10-09 当前核对：已整合实现、离线证据及缺代码／物理条件见[统一收尾核对](../../027-reliability-closeout/records/2026-10-09-reliability-audit.md)。历史“原 checkout 未整合”只描述当时快照，不代表当前源码。

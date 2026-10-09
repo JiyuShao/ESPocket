@@ -76,3 +76,6 @@ Blocked by: [006/03 Home 与显示真机验收](../006-m6-home-display/issues/03
 - [2026-10-02 Settings Adapter](records/2026-10-02-settings-adapter.md)
 
 - 2026-10-02：01–02 的共同核心、Native 安装/卸载和 Back 组件条件完成；记录见 [Native 安装收尾](records/2026-10-02-native-installation.md)。03 Card 与 04 语言绑定成为可执行 frontier，硬件 gates 保留。
+
+
+2026-10-09：03 的 replacement 源码条件已由当前 Core 事务和 System 回滚接口补齐，本票实现门槛关闭；真实安装、持久化／掉电证据仍由 005/03 持有。见[统一核对](../027-reliability-closeout/records/2026-10-09-reliability-audit.md)。

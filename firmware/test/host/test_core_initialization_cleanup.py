@@ -80,6 +80,7 @@ struct Impl {
 #ifdef PATCHED_FIELDS
 bool initializing_=false,product_init_entered_=false,system_service_added_=false,gui_service_added_=false,timer_service_added_=false;
 #endif
+bool stop_cleanup_failed_=false;
 bool initialized_=false,started_=false,runtime_initialized_=false,gui_preferences_restoring_=false,gui_preferences_restored_=false;
 PackagePolicy package_policy_;std::string system_type_;gui::Environment environment_;Config config_;
 std::shared_ptr<lib_utils::TaskScheduler> task_scheduler_;
@@ -128,7 +129,7 @@ System s;auto result=s.init(System::Config{});assert(!result);s.deinit();
 assert(schedulers==0 && guis==0 && runtimes==0);assert(service::ServiceManager::get_instance().names.empty());assert(product_inits==product_deinits);assert(!s.impl_->initialized_);}
 reject_gui=false;fail=0;stage=0;service::ServiceManager::get_instance()={};System repeated;
 for(int round=0;round<3;++round){assert(repeated.init(System::Config{}));assert(repeated.start());repeated.stop();assert(!repeated.impl_->started_ && repeated.impl_->initialized_);assert(repeated.start());repeated.deinit();assert(schedulers==0 && guis==0 && runtimes==0);assert(!repeated.impl_->initialized_);}
-for(bool reject:{false,true}){reject_gui=reject;fail=0;stage=0;service::ServiceManager::get_instance()={};System s;assert(s.init(System::Config{}));s.deinit();assert(schedulers==0 && guis==0 && runtimes==0);s.deinit();}
+for(bool reject:{false,true}){reject_gui=reject;fail=0;stage=0;service::ServiceManager::get_instance()={};System s;assert(s.init(System::Config{}));s.impl_->stop_cleanup_failed_=true;s.deinit();assert(!s.impl_->stop_cleanup_failed_);assert(schedulers==0 && guis==0 && runtimes==0);s.deinit();}
 }
 '''
         with tempfile.TemporaryDirectory(prefix='core-init-seam-') as directory:

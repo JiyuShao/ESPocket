@@ -84,3 +84,6 @@ Core 的[诊断输出降优先级](espressif__brookesia_system_core/0.8.4/017-lo
 Decoder 的[二值 alpha PNG 原生绘制](espressif__esp_lv_decoder/0.4.3/002-copy-binary-alpha-png-as-rgb565a8.patch)只在 RGB565 display、alpha 全为 0/255 且 LVGL 支持 RGB565A8 时转换，alpha 平面保持半个 RGB stride；半透明、未启用目标格式和分配失败均保留 ARGB8888。原包无需改变，格式、padding、像素与 fallback 回归通过后仍须真机计时和截图验收。
 
 Core 的[有界异步 source 队列](espressif__brookesia_system_core/0.8.4/018-bound-asynchronous-image-source-queue.patch)取代 011 的同步等待，恢复上游 SetViewSrc 的异步提交契约：返回值表示接受，实际 GUI source 失败仍由 GUI Owner 报告。每个 App/document 待处理批次最多 8 项、32 KiB，保留所有已接受 source 的 FIFO 顺序，不合并或静默丢弃换帧；最多一个批次执行、一个后继 GUI task 排队。队列满或调度失败立即拒绝；停止／卸载／重启（包括保留同一 DOM）撤销旧 buffer。旧实例不能把已排队内容应用到新实例。回归同时验证非阻塞、容量、顺序、失败和撤销，仍须原包计时与长期压力验收。
+
+
+Core `026-revoke-input-requests-on-system-stop.patch` 在正常 stop 的 App Owner drain 中撤销剩余系统输入请求、队列和 Dialog handler，不交付已停止 Owner 的旧结果，不重置请求身份。调度失败保留错误诊断并阻止直接 start，旧输入结果失效；显式 deinit 清理后才允许重新初始化。同步 host 回归不替代实际 callback/GUI 竞争。缺陷复现、验证和移除条件由 [019/02](../../.scratch/019-system-shell-remediation/issues/02-complete-stop-and-normal-restart.md)及[本轮核对](../../.scratch/027-reliability-closeout/records/2026-10-09-reliability-audit.md)持有。

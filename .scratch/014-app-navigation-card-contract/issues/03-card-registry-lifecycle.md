@@ -2,14 +2,14 @@
 
 **What to build:** ESPocket 管理 App Card 的注册、Home Space 配置、可见生命周期和目标 Page 打开；App 提供内容、轻量操作及数据来源。
 
-**Blocked by:** [01 Page Navigator](01-page-declaration-navigator.md)（已完成）；[02 Back 分发](02-back-dispatch.md)（已完成）；[005/03 统一 package update seam](../../005-m5-application-ecosystem/issues/03-enforce-core-package-trust.md)，需带 replacement 身份/原因的实际事务入口以保留未删除 Card。
+**Blocked by:** None. replacement 事务入口已由 005/03 的 Core 实现提供；实际安装／掉电验收仍由该票持有。
 
-**Status:** needs-info
+**Status:** resolved
 
 - [x] 同一 `appId + cardId` 最多配置一次，不同 Card ID 可并存，用户可添加、移除和排序左右 Card。
 - [x] Home Space 拥有横滑，Card 拥有纵向交互和轻量操作；多级流程进入完整 App。
 - [x] Card 离屏可暂停或销毁，重新可见请求新数据；打开完整 App 时 Card 暂停。
-- [ ] 卸载或更新移除 Card ID 时删除对应配置并记录原因；Quick Settings 与 Launcher 保持固定。
+- [x] 卸载或更新移除 Card ID 时删除对应配置并记录原因；Quick Settings 与 Launcher 保持固定。
 
 ## Comments
 
@@ -19,3 +19,10 @@
 - 2026-10-02（用户恢复后）：Core/NVS/Shell/Native 提供者、Owner 动作队列与文档释放已接通，前三项源码条件完成。普通卸载和 Native 更新已实现，Runtime package replacement 的配置保留及更新原因尚缺真实事务 seam，最后一项保持未勾选；整票保持开放。见 [Owner 与呈现证据](../records/2026-10-02-card-owner-presentation.md)。
 
 - 2026-10-02：余下 package replacement 需要真实事务身份，状态据此为 needs-info；已实现的普通卸载、Native 声明更新与前三项源码条件保持。上游核对与限制见 [当前快照](../records/2026-10-02-upstream-status.md)。
+
+
+2026-10-09 当前核对：Core replacement prepare/commit/rollback hooks 已接入 System，Registry 保留同 ID Card 并清理删除 ID，更新／卸载分别记录 RemovedByUpdate / AppUninstalled；持久化在提交边界执行，失败回滚恢复旧声明与配置。原缺接口 blocker 已过时。见[源码与测试核对](../../027-reliability-closeout/records/2026-10-09-reliability-audit.md)。
+
+## Resolution
+
+本票四项源码条件已满足，真实 Registry／Store 和生产 System 方法已有 host 回归与 026 完整构建。本票关闭实现条件；[005/03](../../005-m5-application-ecosystem/issues/03-enforce-core-package-trust.md)继续持有安装、存储、掉电与发布门槛，不将其写成真机通过。

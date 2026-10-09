@@ -2,8 +2,8 @@
 
 Sequence: 017
 
-Status: active
-Blocked by: None.
+Status: blocked
+Blocked by: 017/02–03 最终配色、按钮与箭头像素确认需设备返回。
 
 ## Problem Statement
 
@@ -45,3 +45,6 @@ Shell 用旧色值命名主题样式，浅色模式丢失 Card 的颜色语义�
 2026-10-04：新增 02，设备部署后发现普通态样式格式缺陷；修复与系统配色的最终设备门槛由 02 持有。
 
 - [2026-10-04 主题部署与普通态修复](records/2026-10-04-theme-deployment.md)
+
+
+2026-10-09：[旧票核对](../027-reliability-closeout/records/2026-10-09-reliability-audit.md)确认实现与构建已存在，02–03 转为 ready-for-human；不重做迁移，不把历史软件截图等同最终面板确认。

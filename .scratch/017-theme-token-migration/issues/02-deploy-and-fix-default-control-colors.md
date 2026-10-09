@@ -4,7 +4,7 @@
 
 **Blocked by:** 最终配色与按钮像素确认。
 
-**Status:** ready-for-agent
+**Status:** ready-for-human
 
 - [x] 核对旧设备固件与 017 源码迁移未部署的差异，备份 LittleFS，仅更新 Runtime 的完整页面资源。
 - [x] 复现 Theme 普通态嵌套 style 被 GUI parser 忽略；移除错误包装，保留正确 stateStyles/partStyles。
@@ -19,3 +19,6 @@
 2026-10-04 深色反馈：亮度卡按钮改为黄色语义，Quick Settings 改双列，Launcher 改紧凑行。自动回归定位并修复下拉松手后排队点击误开 Settings；普通 24acc698e 完整构建、host checks、刷写校验及对应设备回放通过。新版布局最终视觉确认待用户一次反馈。
 
 2026-10-04 隔离核查：已有构建/刷写和软件截图证据与剩余条件见[剩余证据核查](../records/2026-10-04-remaining-evidence-audit.md)。最终像素门槛保持未完成，本线未访问设备。
+
+
+2026-10-09：静态检查、修复与完整构建不重复执行为新实现；最终像素仍待设备，见[统一收尾核对](../../027-reliability-closeout/records/2026-10-09-reliability-audit.md)。

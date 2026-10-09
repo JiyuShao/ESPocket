@@ -178,6 +178,7 @@ struct System {
         RuntimePackagePolicy package_policy_;
         Config config_;
         bool initialized_ = false, started_ = false, runtime_initialized_ = false;
+        bool stop_cleanup_failed_ = false;
         bool initializing_ = false, product_init_entered_ = false;
         bool system_service_added_ = false, gui_service_added_ = false, timer_service_added_ = false;
         bool gui_preferences_restoring_ = false, gui_preferences_restored_ = false;

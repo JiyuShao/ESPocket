@@ -38,6 +38,7 @@ struct Impl {
     struct Request {AppId app_id;};
     std::map<uint64_t,Request> keyboard_requests_,message_dialog_requests_;
     std::optional<uint64_t> active_message_dialog_request_id_;
+    bool stop_cleanup_failed_=false;
     bool schedule=false,post_fail=false;int posts=0;
     bool should_schedule_app_task(){return schedule;}
     template<class T,class F>T run_task_sync(int group,F callback,T fallback){
@@ -66,6 +67,9 @@ int main(){
     // A synchronous Runtime Service strand cannot repost to its blocked App task.
     blocking=true;assert(s.has_app_keyboard_request(2,10));assert(impl.posts==3);
     blocking=false;impl.schedule=false;
+    impl.stop_cleanup_failed_=true;
+    assert(!s.has_app_keyboard_request(2,10));assert(!s.has_message_dialog_request(0,20));
+    impl.stop_cleanup_failed_=false;
     // Deferred/failed GUI hide does not keep a revoked request valid.
     impl.keyboard_requests_.erase(10);impl.message_dialog_requests_.erase(20);
     assert(!s.has_app_keyboard_request(2,10));assert(!s.has_message_dialog_request(0,20));

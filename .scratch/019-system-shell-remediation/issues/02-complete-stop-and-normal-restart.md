@@ -22,3 +22,6 @@
 
 
 2026-10-05：隔离交付已三方整合入当前 checkout；新增 Core 补丁按当前组合重新准确应用，整合中两处空 Overlay 重试回归已修复。联合 host checks、构建和设备结果见[联合整合记录](../records/2026-10-05-joint-integration.md)。此前隔离阶段记录保留；本票未满足的条件继续开放。
+
+
+2026-10-09 当前核对：已整合实现、离线证据及缺代码／物理条件见[统一收尾核对](../../027-reliability-closeout/records/2026-10-09-reliability-audit.md)。历史“原 checkout 未整合”只描述当时快照，不代表当前源码。

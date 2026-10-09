@@ -1,0 +1,110 @@
+--- a/src/system/lifecycle.cpp
++++ b/src/system/lifecycle.cpp
+@@ -380,6 +380,9 @@
+     if (!impl_->initialized_) {
+         return std::unexpected("System is not initialized");
+     }
++    if (impl_->stop_cleanup_failed_) {
++        return std::unexpected("System stop cleanup failed; deinitialize before restarting");
++    }
+     if (impl_->started_) {
+         return {};
+     }
+@@ -403,10 +406,21 @@
+         return;
+     }
+     on_stop();
+-    (void)impl_->run_task_sync<std::expected<void, std::string>>(
++    auto drain_result = impl_->run_task_sync<std::expected<void, std::string>>(
+         SYSTEM_APP_TASK_GROUP, [this]() -> std::expected<void, std::string> {
+-            impl_->advance_app_starts(true); return {};
++            impl_->advance_app_starts(true);
++            // Product stop has revoked input. Drop requests without notifying
++            // stopped owners or resetting the monotonic request identities.
++            impl_->keyboard_requests_.clear();
++            impl_->message_dialog_requests_.clear();
++            impl_->queued_message_dialog_requests_.clear();
++            impl_->active_message_dialog_request_id_.reset();
++            return {};
+         }, std::unexpected("Failed to drain app startup"));
++    impl_->stop_cleanup_failed_ = !drain_result;
++    if (!drain_result) {
++        BROOKESIA_LOGE("System stop request cleanup failed: %1%", drain_result.error());
++    }
+     impl_->started_ = false;
+     BROOKESIA_LOGI("System core stopped");
+ }
+@@ -550,6 +564,7 @@
+         on_deinit();
+         impl_->product_init_entered_ = false;
+     }
++    impl_->stop_cleanup_failed_ = false;
+     impl_->initialized_ = false;
+     impl_->initializing_ = false;
+     BROOKESIA_LOGI("System core deinitialized");
+--- a/src/private/system/impl.hpp
++++ b/src/private/system/impl.hpp
+@@ -5,6 +5,7 @@
+  */
+ #pragma once
+ 
++#include <atomic>
+ #include <cstddef>
+ #include <expected>
+ #include <chrono>
+@@ -377,6 +378,7 @@
+     bool timer_service_added_ = false;
+     bool initialized_ = false;
+     bool started_ = false;
++    std::atomic_bool stop_cleanup_failed_{false};
+     bool runtime_initialized_ = false;
+     bool gui_preferences_restoring_ = false;
+     bool gui_preferences_restored_ = false;
+--- a/src/app/manager.cpp
++++ b/src/app/manager.cpp
+@@ -1221,6 +1221,7 @@
+         return impl_->run_task_sync<bool>(SYSTEM_APP_TASK_GROUP,
+             [this, app_id, request_id]() { return has_app_keyboard_request(app_id, request_id); }, false);
+     }
++    if (impl_->stop_cleanup_failed_) return false;
+     const auto it = impl_->keyboard_requests_.find(request_id);
+     return it != impl_->keyboard_requests_.end() && it->second.app_id == app_id;
+ }
+@@ -1231,6 +1232,7 @@
+         return impl_->run_task_sync<bool>(SYSTEM_APP_TASK_GROUP,
+             [this, app_id, request_id]() { return has_message_dialog_request(app_id, request_id); }, false);
+     }
++    if (impl_->stop_cleanup_failed_) return false;
+     const auto it = impl_->message_dialog_requests_.find(request_id);
+     return it != impl_->message_dialog_requests_.end() && it->second.app_id == app_id &&
+            impl_->active_message_dialog_request_id_ == request_id;
+@@ -1309,6 +1311,9 @@
+                );
+     }
+ 
++    if (impl_->stop_cleanup_failed_) {
++        return std::unexpected("System stop cleanup failed; keyboard results are revoked");
++    }
+     auto it = impl_->keyboard_requests_.find(request_id);
+     if (it == impl_->keyboard_requests_.end()) {
+         return std::unexpected("Keyboard request not found");
+@@ -1352,6 +1357,9 @@
+                );
+     }
+ 
++    if (impl_->stop_cleanup_failed_) {
++        return std::unexpected("System stop cleanup failed; keyboard results are revoked");
++    }
+     auto it = impl_->keyboard_requests_.find(request_id);
+     if (it == impl_->keyboard_requests_.end()) {
+         return std::unexpected("Keyboard request not found");
+@@ -1614,6 +1622,9 @@
+     bool notify_shell
+ )
+ {
++    if (impl_->stop_cleanup_failed_) {
++        return std::unexpected("System stop cleanup failed; dialog results are revoked");
++    }
+     auto it = impl_->message_dialog_requests_.find(request_id);
+     if (it == impl_->message_dialog_requests_.end()) {
+         return std::unexpected("Message dialog request not found");
