@@ -87,3 +87,7 @@ Core 的[有界异步 source 队列](espressif__brookesia_system_core/0.8.4/018-
 
 
 Core `026-revoke-input-requests-on-system-stop.patch` 在正常 stop 的 App Owner drain 中撤销剩余系统输入请求、队列和 Dialog handler，不交付已停止 Owner 的旧结果，不重置请求身份。调度失败保留错误诊断并阻止直接 start，旧输入结果失效；显式 deinit 清理后才允许重新初始化。同步 host 回归不替代实际 callback/GUI 竞争。缺陷复现、验证和移除条件由 [019/02](../../.scratch/019-system-shell-remediation/issues/02-complete-stop-and-normal-restart.md)及[本轮核对](../../.scratch/027-reliability-closeout/records/2026-10-09-reliability-audit.md)持有。
+
+## Native App 自绘与多点输入
+
+GUI Interface、GUI LVGL 和 Core 的 App 所属自绘补丁沿既有节点生命周期管理挂载，Core 选择调用 App 的 document，LVGL 负责 thread guard、失败清理和销毁前撤销。输入复用 MultiTouchPointerManager 的缓存，产品 Shell 提供覆盖、息屏和系统手势的取消代次；不新增输入采样器或 GUI Manager。Core 的新公共类型要求所有构建组合共同选择 GUI Interface 补丁；scheduler-candidate manifest 与 canonical manifest 保持一致。API 与限制见 [开发契约](../../docs/development/native-content-api.md)，源码/构建证据由 [028/10](../../.scratch/028-badge-native-app-migration/issues/10-native-content-and-pointer-seam.md)持有；上游提供等价公开能力并通过同组回归后移除补丁。

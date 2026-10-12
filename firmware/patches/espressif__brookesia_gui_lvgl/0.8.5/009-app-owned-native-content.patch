@@ -1,0 +1,362 @@
+--- a/include/brookesia/gui_lvgl/backend.hpp
++++ b/include/brookesia/gui_lvgl/backend.hpp
+@@ -76,6 +76,16 @@
+         std::string_view scope_root_absolute_path
+     ) override;
+     void destroy_node(BackendHandle handle) override;
++    std::expected<uint64_t, std::string> mount_native_content(
++        BackendHandle handle, std::shared_ptr<gui::NativeContent> content) override;
++    std::expected<void, std::string> invoke_native_content(
++        BackendHandle handle, uint64_t mount_id, const NativeContentCallback &callback) override;
++    bool unmount_native_content(BackendHandle handle, uint64_t mount_id) override;
++    void clear_native_content(BackendHandle handle) override;
++    std::expected<NativePointerFrame, std::string> read_native_pointer_frame(
++        BackendHandle handle, uint64_t mount_id, std::optional<uint64_t> access_epoch) override;
++
++
+     void apply_props(
+         BackendHandle handle, const Node &node, PropsApplyMask mask = PropsApplyMask::All
+     ) override;
+--- a/include/brookesia/gui_lvgl/display_source.hpp
++++ b/include/brookesia/gui_lvgl/display_source.hpp
+@@ -6,6 +6,7 @@
+ #pragma once
+ 
+ #include <cstdint>
++#include "brookesia/gui_interface/native_pointer.hpp"
+ #include <memory>
+ #include <string>
+ #include <string_view>
+@@ -67,6 +68,7 @@
+     bool is_started() const;
+     lv_display_t *display() const;
+     lv_indev_t *input() const;
++    NativePointerFrame cached_pointer_frame() const;
+     std::string output_name() const;
+     uint32_t source_id() const;
+     uint32_t width() const;
+--- /dev/null
++++ b/include/brookesia/gui_lvgl/native_content.hpp
+@@ -0,0 +1,24 @@
++/* SPDX-License-Identifier: Apache-2.0 */
++#pragma once
++#include <expected>
++#include <string>
++#include "brookesia/gui_interface/native_content.hpp"
++typedef struct _lv_obj_t lv_obj_t;
++namespace esp_brookesia::gui::lvgl {
++/** LVGL-specific native extension. The backend owns and clips the supplied root.
++ * Do not delete/reparent the root or retain it beyond detach. Create children
++ * only below it; never take over a display or a global layer.
++ * detach must be noexcept, idempotent, and safe after a failed attach.
++ */
++class NativeContent : public gui::NativeContent {
++public:
++    static constexpr std::string_view KEY = "brookesia.lvgl.native-content.v1";
++    std::string_view backend_key() const noexcept final { return KEY; }
++    virtual std::expected<void, std::string> attach(lv_obj_t *root) = 0;
++    virtual void detach() noexcept = 0;
++private:
++    friend class BackendImpl;
++    bool mounted_ = false;
++
++};
++} // namespace esp_brookesia::gui::lvgl
+--- a/src/backend.cpp
++++ b/src/backend.cpp
+@@ -4,6 +4,7 @@
+  * SPDX-License-Identifier: Apache-2.0
+  */
+ #include "private/types.hpp"
++#include "brookesia/gui_lvgl/display_source.hpp"
+ #include "port/private/threading.hpp"
+ #include "brookesia/gui_lvgl/macro_configs.h"
+ #if !BROOKESIA_GUI_LVGL_BACKEND_ENABLE_DEBUG_LOG
+@@ -350,6 +351,7 @@
+     for (auto handle_value : subtree_handles) {
+         auto record_it = records.find(handle_value);
+         if (record_it != records.end()) {
++            revoke_native_content(record_it->second);
+             detach_keyboard_globals(record_it->second);
+         }
+     }
+@@ -393,6 +395,100 @@
+     }
+ }
+ 
++void BackendImpl::revoke_native_content(Record &record)
++{
++    // Remove identity BEFORE user cleanup, while the parent still exists.
++    auto mount = std::move(record.native_mount);
++    if (!mount) { return; }
++    mount->content->detach();
++    mount->content->mounted_ = false;
++    if (mount->root && lv_obj_is_valid(mount->root)) { lv_obj_delete(mount->root); }
++}
++std::expected<uint64_t, std::string> BackendImpl::mount_native_content(
++    BackendHandle handle, std::shared_ptr<gui::NativeContent> content)
++{
++    ThreadLockGuard lock;
++    auto *record = find_record(handle);
++    if (!record || record->type != NodeType::Container || !record->object ||
++        !lv_obj_is_valid(record->object) || !content || content->backend_key() != NativeContent::KEY) {
++        return std::unexpected("Invalid LVGL native content container or backend");
++    }
++    if (record->native_mount) { return std::unexpected("Container already has native content"); }
++    if (next_native_mount_id_ == 0) { return std::unexpected("Native mount identity exhausted"); }
++    auto mount = std::make_unique<Record::NativeMount>();
++    mount->id = next_native_mount_id_++;
++    // Backend key is the trusted Native extension ABI; LVGL implementations derive
++    // from lvgl::NativeContent. This does not require RTTI on embedded targets.
++    mount->content = std::static_pointer_cast<lvgl::NativeContent>(std::move(content));
++    if (mount->content->mounted_) { return std::unexpected("Native content is already mounted"); }
++    mount->root = lv_obj_create(record->object);
++    if (!mount->root) { return std::unexpected("Native content root allocation failed"); }
++    lv_obj_remove_style_all(mount->root);
++    lv_obj_set_size(mount->root, LV_PCT(100), LV_PCT(100));
++    lv_obj_remove_flag(mount->root, LV_OBJ_FLAG_SCROLLABLE);
++    lv_obj_remove_flag(mount->root, LV_OBJ_FLAG_OVERFLOW_VISIBLE);
++    mount->content->mounted_ = true;
++    record->native_mount = std::move(mount);
++    try {
++        auto attached = record->native_mount->content->attach(record->native_mount->root);
++        if (!attached) {
++            auto error = std::move(attached.error());
++            revoke_native_content(*record);
++            return std::unexpected(std::move(error));
++        }
++    } catch (...) {
++        // Revoke before allocating an error string, including on bad_alloc.
++        revoke_native_content(*record);
++        return std::unexpected("Native attach failed");
++    }
++    return record->native_mount->id;
++}
++std::expected<void, std::string> BackendImpl::invoke_native_content(
++    BackendHandle handle, uint64_t mount_id, const NativeContentCallback &callback)
++{
++    ThreadLockGuard lock;
++    auto *record = find_record(handle);
++    if (!record || !record->native_mount || record->native_mount->id != mount_id || !callback) {
++        return std::unexpected("Native content token is stale or callback is empty");
++    }
++    try { callback(*record->native_mount->content); }
++    catch (const std::exception &error) { return std::unexpected(error.what()); }
++    catch (...) { return std::unexpected("Native content callback threw"); }
++    return {};
++}
++bool BackendImpl::unmount_native_content(BackendHandle handle, uint64_t mount_id)
++{
++    ThreadLockGuard lock;
++    auto *record = find_record(handle);
++    if (!record || !record->native_mount || record->native_mount->id != mount_id) { return false; }
++    revoke_native_content(*record);
++    return true;
++}
++
++std::expected<NativePointerFrame, std::string> BackendImpl::read_native_pointer_frame(
++    BackendHandle handle, uint64_t mount_id, std::optional<uint64_t> access_epoch)
++{
++    ThreadLockGuard lock;
++    auto *record = find_record(handle);
++    if (!record || !record->native_mount || record->native_mount->id != mount_id) {
++        return std::unexpected("Native content token is stale");
++    }
++    auto frame = DisplaySource::get_instance().cached_pointer_frame();
++    // A hidden/reparented native root cannot acquire input merely by holding a token.
++    if (!lv_obj_is_visible(record->native_mount->root) ||
++        lv_obj_get_display(record->native_mount->root) != DisplaySource::get_instance().display()) {
++        access_epoch.reset();
++    }
++    frame = record->native_mount->pointer_delivery.filter(std::move(frame), access_epoch);
++    lv_area_t area;
++    lv_obj_get_coords(record->native_mount->root, &area);
++    std::erase_if(frame.points, [&](const auto &point) {
++        return point.x < area.x1 || point.x > area.x2 || point.y < area.y1 || point.y > area.y2;
++    });
++    for (auto &point : frame.points) { point.x -= area.x1; point.y -= area.y1; }
++    return frame;
++}
++
+ void BackendImpl::apply_props(BackendHandle handle, const Node &node, PropsApplyMask mask)
+ {
+     BROOKESIA_LOG_TRACE_GUARD_WITH_THIS();
+@@ -1605,6 +1701,25 @@
+     impl_->destroy_node(handle);
+ }
+ 
++std::expected<uint64_t, std::string> Backend::mount_native_content(
++    BackendHandle handle, std::shared_ptr<gui::NativeContent> content)
++{ return impl_->mount_native_content(handle, std::move(content)); }
++std::expected<void, std::string> Backend::invoke_native_content(
++    BackendHandle handle, uint64_t mount_id, const NativeContentCallback &callback)
++{ return impl_->invoke_native_content(handle, mount_id, callback); }
++bool Backend::unmount_native_content(BackendHandle handle, uint64_t mount_id)
++{ return impl_->unmount_native_content(handle, mount_id); }
++
++void Backend::clear_native_content(BackendHandle handle)
++{
++    ThreadLockGuard lock;
++    if (auto *record = impl_->find_record(handle)) { impl_->revoke_native_content(*record); }
++}
++
++std::expected<NativePointerFrame, std::string> Backend::read_native_pointer_frame(
++    BackendHandle handle, uint64_t mount_id, std::optional<uint64_t> access_epoch)
++{ return impl_->read_native_pointer_frame(handle, mount_id, access_epoch); }
++
+ void Backend::apply_props(BackendHandle handle, const Node &node, PropsApplyMask mask)
+ {
+     BROOKESIA_LOG_TRACE_GUARD_WITH_THIS();
+--- a/src/port/esp/display_source.cpp
++++ b/src/port/esp/display_source.cpp
+@@ -95,6 +95,8 @@
+         return display_;
+     }
+ 
++    NativePointerFrame cached_pointer_frame() const { return pointer_inputs_.cached_pointer_frame(); }
++
+     lv_indev_t *input() const
+     {
+         return pointer_inputs_.primary_input();
+@@ -187,6 +189,13 @@
+ lv_display_t *DisplaySource::display() const
+ {
+     return impl_->display();
++}
++
++NativePointerFrame DisplaySource::cached_pointer_frame() const
++{
++    lock_thread();
++    lib_utils::FunctionGuard unlock_guard(unlock_thread);
++    return impl_->cached_pointer_frame();
+ }
+ 
+ lv_indev_t *DisplaySource::input() const
+--- a/src/port/private/multi_touch_pointer.hpp
++++ b/src/port/private/multi_touch_pointer.hpp
+@@ -16,6 +16,7 @@
+ #include <vector>
+ 
+ #include "brookesia/service_display.hpp"
++#include "brookesia/gui_interface/native_pointer.hpp"
+ 
+ #if __has_include("lvgl/lvgl.h")
+ #   include "lvgl/lvgl.h"
+@@ -78,12 +79,29 @@
+         output_name_.clear();
+         last_snapshot_sequence_ = 0;
+         has_snapshot_sequence_ = false;
++        sample_valid_ = false;
++        snapshot_ = {};
+         next_synthetic_track_id_ = 1;
+     }
+ 
+     lv_indev_t *primary_input() const
+     {
+         return inputs_[0];
++    }
++
++    NativePointerFrame cached_pointer_frame() const
++    {
++        NativePointerFrame frame;
++        frame.sequence = snapshot_.sequence;
++        frame.updated_at_ms = snapshot_.updated_at_ms;
++        frame.valid = sample_valid_ && snapshot_.valid && has_snapshot_sequence_;
++        if (frame.valid) {
++            for (size_t index = 0; index < input_count_; ++index) {
++                const auto &slot = slots_[index];
++                if (slot.active) { frame.points.push_back({slot.point.x, slot.point.y, slot.track_id}); }
++            }
++        }
++        return frame;
+     }
+ 
+     static size_t resolve_input_count(std::string_view output_name)
+@@ -170,10 +188,12 @@
+     {
+         auto snapshot_result = service::Display::get_instance().get_touch_snapshot(output_name_);
+         if (!snapshot_result.has_value()) {
++            sample_valid_ = false;
+             release_all_slots();
+             return nullptr;
+         }
+ 
++        sample_valid_ = true;
+         snapshot_ = std::move(snapshot_result.value());
+         if (has_snapshot_sequence_ && snapshot_.sequence == last_snapshot_sequence_) {
+             return &snapshot_;
+@@ -352,6 +372,7 @@
+     service::Display::TouchSnapshot snapshot_;
+     uint32_t last_snapshot_sequence_ = 0;
+     bool has_snapshot_sequence_ = false;
++    bool sample_valid_ = false;
+     uint8_t next_synthetic_track_id_ = 1;
+ };
+ 
+--- a/src/port/sdl/display_source.cpp
++++ b/src/port/sdl/display_source.cpp
+@@ -89,6 +89,8 @@
+     {
+         return display_;
+     }
++
++    NativePointerFrame cached_pointer_frame() const { return pointer_inputs_.cached_pointer_frame(); }
+ 
+     lv_indev_t *input() const
+     {
+@@ -186,6 +188,13 @@
+ lv_display_t *DisplaySource::display() const
+ {
+     return impl_->display();
++}
++
++NativePointerFrame DisplaySource::cached_pointer_frame() const
++{
++    lock_thread();
++    lib_utils::FunctionGuard unlock_guard(unlock_thread);
++    return impl_->cached_pointer_frame();
+ }
+ 
+ lv_indev_t *DisplaySource::input() const
+--- a/src/private/types.hpp
++++ b/src/private/types.hpp
+@@ -6,6 +6,7 @@
+ #pragma once
+ 
+ #include <array>
++#include "brookesia/gui_lvgl/native_content.hpp"
+ #include <cstdint>
+ #include <cstddef>
+ #include <expected>
+@@ -104,6 +105,14 @@
+     std::string node_id;
+     NodeType type = NodeType::Container;
+     lv_obj_t *object = nullptr;
++    struct NativeMount {
++        uint64_t id = 0;
++        std::shared_ptr<lvgl::NativeContent> content;
++        lv_obj_t *root = nullptr;
++        NativePointerDelivery pointer_delivery;
++    };
++    std::unique_ptr<NativeMount> native_mount;
++
+     // Borrowed from BackendImpl::font_cache while this Record contributes one ref_count.
+     FontCacheEntry *font_cache_entry = nullptr;
+     uint32_t depth = 0;
+@@ -324,6 +333,16 @@
+         std::string_view scope_root_absolute_path
+     );
+     void destroy_node(BackendHandle handle);
++    std::expected<uint64_t, std::string> mount_native_content(
++        BackendHandle handle, std::shared_ptr<gui::NativeContent> content);
++    std::expected<void, std::string> invoke_native_content(
++        BackendHandle handle, uint64_t mount_id, const NativeContentCallback &callback);
++    bool unmount_native_content(BackendHandle handle, uint64_t mount_id);
++    std::expected<NativePointerFrame, std::string> read_native_pointer_frame(
++        BackendHandle handle, uint64_t mount_id, std::optional<uint64_t> access_epoch);
++    void revoke_native_content(Record &record);
++    uint64_t next_native_mount_id_ = 1;
++
+     void apply_props(BackendHandle handle, const Node &node, PropsApplyMask mask = PropsApplyMask::All);
+     void apply_layout(BackendHandle handle, const Layout &layout, LayoutApplyMask mask = LayoutApplyMask::All);
+     void apply_placement(

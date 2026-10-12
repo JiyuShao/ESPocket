@@ -33,6 +33,7 @@
 | 025 | [前台恢复投影与隔离构建候选流程](025-restoration-candidate-flow/spec.md) | 用户批准 Running Instance 前台恢复投影与隔离构建候选流程 |
 | 026 | [聊天 App 异步操作归属](026-chat-operation-ownership/spec.md) | 用户选择架构候选01并确认范围及旧结果失效语义 |
 | 027 | [旧票核对、离线可靠性与统一验收候选](027-reliability-closeout/spec.md) | 用户要求核对 017、019/01–05、08，验证离线可靠性并准备统一真机候选 |
+| 028 | [The-Badge Native App 迁移](028-badge-native-app-migration/spec.md) | 2026-10-09 用户指定迁移应用，grill-with-docs 第一轮已确认 |
 
 ## 当前工作入口
 

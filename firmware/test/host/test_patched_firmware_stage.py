@@ -41,6 +41,9 @@ class PatchedFirmwareStageTest(unittest.TestCase):
 
     def test_scheduler_candidate_selects_only_explicit_core_manifest(self):
         self.assertEqual(BUILDER.PATCH_SETS['scheduler-candidate'], BUILDER.PATCH_SETS['gui-candidate'])
+        core_patches = ROOT / 'firmware/patches/espressif__brookesia_system_core/0.8.4'
+        self.assertEqual(json.loads((core_patches / 'scheduler-candidate.json').read_text()),
+                         json.loads((core_patches / 'manifest.json').read_text()))
         for patch_set in ('production', 'gui-candidate', 'scheduler-candidate'):
             for component, version in BUILDER.PATCH_SETS[patch_set]:
                 expected = 'scheduler-candidate.json' if patch_set == 'scheduler-candidate' and component == 'espressif__brookesia_system_core' else 'manifest.json'
@@ -60,7 +63,6 @@ class PatchedFirmwareStageTest(unittest.TestCase):
                          ('espressif__brookesia_lib_utils', '0.8.2'),
                          ('espressif__brookesia_service_storage', '0.8.3'),
                          ('espressif__brookesia_gui_lvgl', '0.8.5'),
-                         ('espressif__brookesia_gui_interface', '0.8.2'),
                          ('espressif__esp_lv_decoder', '0.4.3'),
                      ('espressif__esp-boost', '0.6.0'),
                      ('espressif__mcp-c-sdk', '2.0.1'),
@@ -92,22 +94,22 @@ class PatchedFirmwareStageTest(unittest.TestCase):
             'source_files': BUILDER.inventory(self.registry),
             'patches': [{'file': patch.name, 'sha256': BUILDER.digest(patch)}],
         }))
-        core_component, core_version = BUILDER.PATCHES[1]
-        core = self.firmware / 'managed_components' / core_component
-        core.mkdir()
-        (core / 'source.txt').write_text('old\n')
-        core_patches = self.firmware / 'patches' / core_component / core_version
-        core_patches.mkdir(parents=True)
-        core_patch = core_patches / '001.patch'
-        core_patch.write_text(patch.read_text())
-        (core_patches / 'manifest.json').write_text(json.dumps({
-            'schema_version': 1, 'component': core_component, 'upstream_version': core_version,
-            'source_files': BUILDER.inventory(core),
-            'patches': [{'file': core_patch.name, 'sha256': BUILDER.digest(core_patch)}],
-        }))
+        for component, version in BUILDER.PATCHES[1:]:
+            registry = self.firmware / 'managed_components' / component
+            registry.mkdir()
+            (registry / 'source.txt').write_text('old\n')
+            patches = self.firmware / 'patches' / component / version
+            patches.mkdir(parents=True)
+            component_patch = patches / '001.patch'
+            component_patch.write_text(patch.read_text())
+            (patches / 'manifest.json').write_text(json.dumps({
+                'schema_version': 1, 'component': component, 'upstream_version': version,
+                'source_files': BUILDER.inventory(registry),
+                'patches': [{'file': component_patch.name, 'sha256': BUILDER.digest(component_patch)}],
+            }))
         (self.firmware / 'main').mkdir()
         (self.firmware / 'main/idf_component.yml').write_text(
-            'dependencies:\n  espressif/brookesia_runtime_js: "0.8.3"\n  espressif/brookesia_system_core: "0.8.4"\n')
+            'dependencies:\n  espressif/brookesia_runtime_js: "0.8.3"\n  espressif/brookesia_system_core: "0.8.4"\n  espressif/brookesia_gui_interface: "0.8.2"\n')
         (self.firmware / 'dependencies.lock').write_text('registry lock\n')
         self.config = self.base / 'sdkconfig'
         self.config.write_text('CONFIG_EXISTING=y\nCONFIG_BROOKESIA_RUNTIME_JS_ASYNC_STACK_SIZE=8192\n')
@@ -119,8 +121,8 @@ class PatchedFirmwareStageTest(unittest.TestCase):
         self.assertEqual(BUILDER.inventory(self.firmware), before)
 
         self.assertTrue((staged / 'managed_components/vendor/littlefs/lfs.h').exists())
-        self.assertEqual((staged / 'main/idf_component.yml').read_text().count('override_path:'), 2)
-        self.assertEqual(len(json.loads((self.workspace / 'patch-inputs.json').read_text())['patches']), 2)
+        self.assertEqual((staged / 'main/idf_component.yml').read_text().count('override_path:'), len(BUILDER.PATCHES))
+        self.assertEqual(len(json.loads((self.workspace / 'patch-inputs.json').read_text())['patches']), len(BUILDER.PATCHES))
         self.assertEqual((self.workspace / 'patched_components' / BUILDER.PATCHES[1][0] / 'source.txt').read_text(), 'new\n')
         self.assertIn('STACK_SIZE=16384', (staged / 'sdkconfig').read_text())
         self.assertIn('STACK_SIZE=8192', self.config.read_text())
@@ -128,6 +130,17 @@ class PatchedFirmwareStageTest(unittest.TestCase):
         (staged / 'dependencies.lock').write_text('changed lock')
         (staged / 'managed_components' / BUILDER.COMPONENT / 'source.txt').unlink()
         self.assertEqual(BUILDER.inventory(self.firmware), before)
+
+    def test_reliability_probe_rejects_conflicting_automatic_fixtures_before_copying(self):
+        self.config.write_text('CONFIG_ESPOCKET_M2_LIFECYCLE_STRESS=y\n')
+        with self.assertRaisesRegex(ValueError, 'conflicts'):
+            BUILDER.stage(self.root, self.workspace, self.config, 'production',
+                          reliability_fixture='lifecycle')
+        self.assertFalse(self.workspace.exists())
+        with self.assertRaisesRegex(ValueError, 'production patch set'):
+            BUILDER.stage(self.root, self.workspace, self.config, 'baseline',
+                          reliability_fixture='lifecycle')
+        self.assertFalse(self.workspace.exists())
 
     def test_explicit_display_trial_changes_only_copied_configuration(self):
         self.config.write_text(self.config.read_text() + 'CONFIG_BROOKESIA_GUI_LVGL_DISPLAY_SOURCE_REQUIRE_DOUBLE_BUFFER=y\n')
@@ -192,7 +205,7 @@ class PatchedFirmwareStageTest(unittest.TestCase):
         main.write_text(main.read_text() + '  espressif/brookesia_hal_adaptor:\n    version: "0.8.4"\n    require: no\n')
         before = BUILDER.inventory(self.firmware)
         staged = BUILDER.stage(self.root, self.workspace, self.config, 'hal-candidate')
-        self.assertEqual((staged / 'main/idf_component.yml').read_text().count('override_path:'), 3)
+        self.assertEqual((staged / 'main/idf_component.yml').read_text().count('override_path:'), len(BUILDER.PATCHES) + 1)
         inputs = json.loads((self.workspace / 'patch-inputs.json').read_text())
         self.assertEqual(inputs['patch_set'], 'hal-candidate')
         self.assertIn('override_path: "../../patched_components/espressif__brookesia_hal_adaptor"\n    require: no',

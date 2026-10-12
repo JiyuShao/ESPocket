@@ -1,0 +1,163 @@
+--- a/include/brookesia/system_core/app/gui_runtime.hpp
++++ b/include/brookesia/system_core/app/gui_runtime.hpp
+@@ -50,6 +50,15 @@
+         std::string_view instance_id
+     ) const;
+     bool destroy_view(std::string_view absolute_path) const;
++    std::expected<gui::NativeContentToken, std::string> mount_native_content(
++        std::string_view absolute_path, std::shared_ptr<gui::NativeContent> content) const;
++    std::expected<void, std::string> invoke_native_content(
++        const gui::NativeContentToken &token, const gui::NativeContentCallback &callback) const;
++    bool unmount_native_content(const gui::NativeContentToken &token) const;
++    std::expected<gui::NativePointerFrame, std::string> read_native_pointer_frame(
++        const gui::NativeContentToken &token) const;
++
++
+     std::expected<void, std::string> subscribe_action(std::string_view action) const;
+     std::expected<void, std::string> subscribe_actions(const std::vector<std::string> &actions) const;
+     gui::ScopedConnection subscribe_action(
+--- a/include/brookesia/system_core/system/system.hpp
++++ b/include/brookesia/system_core/system/system.hpp
+@@ -99,6 +99,12 @@
+             std::optional<gui::GuiViewport> viewport;
+         };
+         std::function<AppPresentation(const AppManifest &, const gui::Environment &)> app_presentation;
++        /** Product input arbitration; nullopt denies delivery. Change the epoch
++         * whenever an overlay/power/gesture revokes input, even if App did not poll.
++         * Missing callback denies native pointer access by default.
++         */
++        std::function<std::optional<uint64_t>(AppId)> native_pointer_access;
++
+         /** Storage roots and install target policy. */
+         StorageConfig storage = {};
+         /** Optional startup overlay configuration. */
+@@ -328,6 +334,14 @@
+         AppId app_id,
+         std::string_view path
+     ) const;
++    std::expected<gui::NativeContentToken, std::string> gui_mount_native_content(
++        AppId app_id, std::string_view absolute_path, std::shared_ptr<gui::NativeContent> content);
++    std::expected<void, std::string> gui_invoke_native_content(
++        AppId app_id, const gui::NativeContentToken &token, const gui::NativeContentCallback &callback);
++    bool gui_unmount_native_content(AppId app_id, const gui::NativeContentToken &token);
++    std::expected<gui::NativePointerFrame, std::string> gui_read_native_pointer_frame(
++        AppId app_id, const gui::NativeContentToken &token);
++
+     std::expected<void, std::string> gui_set_text(AppId app_id, std::string_view absolute_path, std::string_view text);
+     std::expected<void, std::string> gui_set_value(AppId app_id, std::string_view absolute_path, int32_t value);
+     std::expected<void, std::string> gui_set_checked(AppId app_id, std::string_view absolute_path, bool checked);
+--- a/src/app/app.cpp
++++ b/src/app/app.cpp
+@@ -386,6 +386,28 @@
+         return std::unexpected("System is not available");
+     }
+     return system_->gui_set_text(app_id_, absolute_path, text);
++}
++
++std::expected<gui::NativeContentToken, std::string> AppGuiRuntime::mount_native_content(
++    std::string_view absolute_path, std::shared_ptr<gui::NativeContent> content) const
++{
++    if (!system_) { return std::unexpected("App GUI runtime is not initialized"); }
++    return system_->gui_mount_native_content(app_id_, absolute_path, std::move(content));
++}
++std::expected<void, std::string> AppGuiRuntime::invoke_native_content(
++    const gui::NativeContentToken &token, const gui::NativeContentCallback &callback) const
++{
++    if (!system_) { return std::unexpected("App GUI runtime is not initialized"); }
++    return system_->gui_invoke_native_content(app_id_, token, callback);
++}
++bool AppGuiRuntime::unmount_native_content(const gui::NativeContentToken &token) const
++{ return system_ && system_->gui_unmount_native_content(app_id_, token); }
++
++std::expected<gui::NativePointerFrame, std::string> AppGuiRuntime::read_native_pointer_frame(
++    const gui::NativeContentToken &token) const
++{
++    if (!system_) { return std::unexpected("App GUI runtime is not initialized"); }
++    return system_->gui_read_native_pointer_frame(app_id_, token);
+ }
+ 
+ std::expected<void, std::string> AppGuiRuntime::set_value(std::string_view absolute_path, int32_t value) const
+--- a/src/system/gui.cpp
++++ b/src/system/gui.cpp
+@@ -626,6 +626,9 @@
+ {
+     clear_pending_gui_bindings(record.info.app_id);
+     clear_pending_gui_image_sources(record.info.app_id);
++    if (gui_runtime_ && record.document_id) {
++        gui_runtime_->clear_native_content(*record.document_id);
++    }
+     if (record.preload_dom) {
+         release_app_gui_presentation(record);
+         return;
+@@ -746,6 +749,71 @@
+     },
+     std::unexpected("Failed to post GUI text task")
+            );
++}
++
++std::expected<gui::NativeContentToken, std::string> System::gui_mount_native_content(AppId app_id, std::string_view absolute_path, std::shared_ptr<gui::NativeContent> content)
++{
++    return impl_->run_task_sync<std::expected<gui::NativeContentToken, std::string>>(SYSTEM_GUI_TASK_GROUP,
++        [this, app_id, absolute_path = std::string(absolute_path), content = std::move(content)]() mutable -> std::expected<gui::NativeContentToken, std::string> {
++            auto record_result = impl_->get_record(app_id);
++            if (!record_result || !impl_->gui_runtime_ || !record_result.value()->document_id.has_value() ||
++                record_result.value()->info.manifest.kind != AppKind::Native ||
++                record_result.value()->info.state == AppState::Installed ||
++                record_result.value()->info.state == AppState::Stopped ||
++                record_result.value()->info.state == AppState::Error) {
++                return std::unexpected("Native App GUI document is not loaded");
++            }
++            impl_->flush_pending_gui_bindings(app_id);
++            return impl_->gui_runtime_->mount_native_content(*record_result.value()->document_id, absolute_path, std::move(content));
++        }, std::unexpected("Native App GUI document is not loaded"));
++}
++std::expected<void, std::string> System::gui_invoke_native_content(AppId app_id, const gui::NativeContentToken &token, const gui::NativeContentCallback &callback)
++{
++    return impl_->run_task_sync<std::expected<void, std::string>>(SYSTEM_GUI_TASK_GROUP,
++        [this, app_id, token, callback]() mutable -> std::expected<void, std::string> {
++            auto record_result = impl_->get_record(app_id);
++            if (!record_result || !impl_->gui_runtime_ || !record_result.value()->document_id.has_value() ||
++                record_result.value()->info.manifest.kind != AppKind::Native ||
++                record_result.value()->info.state == AppState::Installed ||
++                record_result.value()->info.state == AppState::Stopped ||
++                record_result.value()->info.state == AppState::Error) {
++                return std::unexpected("Native App GUI document is not loaded");
++            }
++            impl_->flush_pending_gui_bindings(app_id);
++            return impl_->gui_runtime_->invoke_native_content(*record_result.value()->document_id, token, callback);
++        }, std::unexpected("Native App GUI document is not loaded"));
++}
++bool System::gui_unmount_native_content(AppId app_id, const gui::NativeContentToken &token)
++{
++    return impl_->run_task_sync<bool>(SYSTEM_GUI_TASK_GROUP,
++        [this, app_id, token]() mutable -> bool {
++            auto record_result = impl_->get_record(app_id);
++            if (!record_result || !impl_->gui_runtime_ || !record_result.value()->document_id.has_value() ||
++                record_result.value()->info.manifest.kind != AppKind::Native) {
++                return false;
++            }
++            impl_->flush_pending_gui_bindings(app_id);
++            return impl_->gui_runtime_->unmount_native_content(*record_result.value()->document_id, token);
++        }, false);
++}
++
++std::expected<gui::NativePointerFrame, std::string> System::gui_read_native_pointer_frame(
++    AppId app_id, const gui::NativeContentToken &token)
++{
++    return impl_->run_task_sync<std::expected<gui::NativePointerFrame, std::string>>(SYSTEM_GUI_TASK_GROUP,
++        [this, app_id, token]() -> std::expected<gui::NativePointerFrame, std::string> {
++            auto record_result = impl_->get_record(app_id);
++            if (!record_result || !impl_->gui_runtime_ || !record_result.value()->document_id ||
++                record_result.value()->info.manifest.kind != AppKind::Native) {
++                return std::unexpected("Native App GUI document is not loaded");
++            }
++            std::optional<uint64_t> epoch;
++            if (record_result.value()->info.state == AppState::Running && impl_->active_app_id_ == app_id &&
++                impl_->config_.native_pointer_access) {
++                epoch = impl_->config_.native_pointer_access(app_id);
++            }
++            return impl_->gui_runtime_->read_native_pointer_frame(*record_result.value()->document_id, token, epoch);
++        }, std::unexpected("Failed to query native pointer frame"));
+ }
+ 
+ std::expected<void, std::string> System::gui_set_value(AppId app_id, std::string_view absolute_path, int32_t value)

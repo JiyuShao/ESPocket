@@ -6,8 +6,20 @@
 
 namespace espocket {
 
+std::optional<uint64_t> native_pointer_access_epoch(
+    const ShellGestureState &state, bool display_on, bool app_visible)
+{
+    if (!display_on || !app_visible || state.surface.load(std::memory_order_acquire) == ShellSurface::QuickSettings ||
+        state.modal_active.load(std::memory_order_acquire) || state.keyboard_active.load(std::memory_order_acquire) ||
+        state.consumed.load(std::memory_order_acquire) || state.pointer_cancel_pending.load(std::memory_order_acquire)) {
+        return std::nullopt;
+    }
+    return state.input_epoch.load(std::memory_order_acquire);
+}
+
 void reset_shell_gesture(ShellGestureState &state, bool discard_pending)
 {
+    state.input_epoch.fetch_add(1, std::memory_order_acq_rel);
     state.consumed.store(true, std::memory_order_release);
     state.click_suppressed.store(true, std::memory_order_release);
     state.pointer_cancel_pending.store(false, std::memory_order_release);
@@ -90,6 +102,7 @@ void process_shell_gesture(ShellGestureState &state, const ShellGestureEvent &ev
         const auto distance = state.launcher_return_threshold.load(std::memory_order_acquire);
         if ((top_pull || (quick_open && event.direction == ShellGestureDirection::Up)) &&
                 event.distance_px >= distance) {
+            state.input_epoch.fetch_add(1, std::memory_order_acq_rel);
             state.pointer_cancel_pending.store(true, std::memory_order_release);
             if (event.phase == ShellGesturePhase::Release &&
                     !state.consumed.exchange(true, std::memory_order_acq_rel)) {
@@ -123,6 +136,7 @@ void process_shell_gesture(ShellGestureState &state, const ShellGestureEvent &ev
         const bool edge_back = (event.left_edge && event.direction == ShellGestureDirection::Right) ||
                                (event.right_edge && event.direction == ShellGestureDirection::Left);
         if (event.distance_px >= exit_distance_px && edge_back) {
+            state.input_epoch.fetch_add(1, std::memory_order_acq_rel);
             state.pointer_cancel_pending.store(true, std::memory_order_release);
             if (event.phase == ShellGesturePhase::Release &&
                     !state.consumed.exchange(true, std::memory_order_acq_rel)) {
@@ -140,6 +154,7 @@ void process_shell_gesture(ShellGestureState &state, const ShellGestureEvent &ev
                 std::max<int32_t>(0, event.stop_y - event.start_y), std::memory_order_release
             );
             if (state.launcher_pull_distance.load(std::memory_order_acquire) >= exit_distance_px) {
+                state.input_epoch.fetch_add(1, std::memory_order_acq_rel);
                 state.pointer_cancel_pending.store(true, std::memory_order_release);
             }
             return;
@@ -225,6 +240,7 @@ void process_shell_gesture(ShellGestureState &state, const ShellGestureEvent &ev
     if (intent == GestureIntent::None) {
         return;
     }
+    state.input_epoch.fetch_add(1, std::memory_order_acq_rel);
     state.pointer_cancel_pending.store(true, std::memory_order_release);
     if (event.phase == ShellGesturePhase::Pressing) {
         return;

@@ -108,6 +108,11 @@ std::expected<void, std::string> System::init()
     };
     config.system_type = "espocket";
     config.app_presentation = round_app_presentation;
+    config.native_pointer_access = [this](esp_brookesia::system::core::AppId app_id) -> std::optional<uint64_t> {
+        if (stopping_.load(std::memory_order_acquire) || !shell_ ||
+            foreground_app_id_.load(std::memory_order_acquire) != app_id) return std::nullopt;
+        return shell_->native_pointer_access();
+    };
     config.start_service_manager = true;
     config.install_registered_apps = false;
     config.install_package_apps = true;

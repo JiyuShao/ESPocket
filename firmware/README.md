@@ -283,3 +283,7 @@ GUI LVGL 的 ImageDecodePolicy 持有 decoder/cache 内部实现；System 通过
 Shell Overlay 的呈现仲裁、清理重试与结果交付集中在 CircularShell 私有 `shell_overlay.cpp` implementation；Keyboard 与 Dialog 保留各自绘制。Core 保留请求身份和最终结果裁决，Dialog 自动关闭的呈现计时仍由 Shell 持有。[024](../.scratch/024-shell-overlay-presentation/spec.md) 跟踪真实 interface 回归与真机条件；[host adapter 说明](components/shell_circular/test/support/overlay/README.md)记录替换范围与验证限制。
 
 启动响应治理候选使用 Chat 0.1.5 的异步 Agent discovery、网络探测、Agent 配置与 AppData 配置／Coze 私钥读取。锁定 Core 的 `CONFIG_BROOKESIA_SYSTEM_CORE_ENABLE_PROFILE_LOG` 可记录 `App start phase` 的 `owner_ms`，以及原有 GUI prepare 分步骤耗时；诊断开关仅在隔离候选中开启，不以日志代替真实 PWR／顶部下拉测量。剩余同步阶段与 250ms 验收由 [023/04](../.scratch/023-owner-seam-remediation/issues/04-phased-app-start.md) 持有。
+
+### 离线可靠性测试入口
+
+独立构建可显式传入 `--reliability-fixture <mode>`，在冻结输入前注入生命周期协调或选定故障；普通构建不注入。模式、操作边界和仍需物理证据的限制见 [Reliability fixture](test/device/fixtures/reliability/README.md)。测试候选不得当作普通固件部署，不改设备 NVS 来制造主题故障，也不使用 fresh LittleFS 覆盖用户数据。

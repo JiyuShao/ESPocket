@@ -1,0 +1,135 @@
+{
+  "repository": "https://github.com/curisama/The-Badge.git",
+  "commit": "76172dfaf0fa0ffedee91a61da3261afdde56ce3",
+  "role": "immutable reference inputs; not compiled or installed",
+  "files": {
+    "LICENSE": {
+      "sha256": "e2d1519dea397e0ba309431fc956ee8c70317839f1c86371288b12e8e5bb7e78",
+      "bytes": 1065
+    },
+    "NOTICE": {
+      "sha256": "57589957e5ef344a83fbe52ce9a779ebe4dc09ab84252cbff81c82dd91bd5125",
+      "bytes": 2967
+    },
+    "main/app.h": {
+      "sha256": "16a22e1c8cbcbf38a1b582432017c7929925a032379603d6816ba3ea82adbc3a",
+      "bytes": 5485
+    },
+    "main/port.h": {
+      "sha256": "00015b798a2fddfc2fc288f4567362182ea125ddc5171158fa1da1662d11a043",
+      "bytes": 15619
+    },
+    "main/port_esp.c": {
+      "sha256": "735c65a84cdfcab043789fcea7f32045e665c1c53d7f838ebb43bb9d7a21c267",
+      "bytes": 110389
+    },
+    "main/idf_component.yml": {
+      "sha256": "89fef2b16dd265244e98d577c0564746e7a8c83bf93cdde1d2dfdcd01718dd70",
+      "bytes": 612
+    },
+    "main/apps/app_games.c": {
+      "sha256": "f2be8c6d83a011b59af42daef8effc1bb3b2758ef23b6d85db57c4ce57ea7188",
+      "bytes": 71092
+    },
+    "main/apps/app_water.c": {
+      "sha256": "b5dd4c0a4790ea904da94a86f0066a6b261b13ee1b04b13064f04c80ddc938a1",
+      "bytes": 80467
+    },
+    "main/apps/water.h": {
+      "sha256": "bf4f99ed963ebfc868a560b0e18d130bee7d4c12961ab76c453cfbbfbc94717f",
+      "bytes": 371
+    },
+    "main/apps/orb.c": {
+      "sha256": "3791ae9e8da2cfcf580f1659efdc5609e05c71836c530d6f7e72e9212f443c9f",
+      "bytes": 46446
+    },
+    "main/apps/orb.h": {
+      "sha256": "0177843a097e89d0213e575cc03619c9fc46cd17ded89a0906423e17edad977b",
+      "bytes": 651
+    },
+    "main/apps/app_mouse.c": {
+      "sha256": "cb80a046d17295ef3a56118cb4e523346734e311e54c9e63ef1c086302efa14d",
+      "bytes": 56710
+    },
+    "main/apps/host_pick.c": {
+      "sha256": "7a47fd77ee14b795051e2c7e24e808692b5b5398c261447fa84d97f04390aab9",
+      "bytes": 8699
+    },
+    "main/ble/hid_mouse.c": {
+      "sha256": "cbb782b1319c31de5ff82b3ba4c1f8d36e820e784f739a2dfe1a172b8922f69e",
+      "bytes": 19743
+    },
+    "main/ble/esp_hid_gap.c": {
+      "sha256": "199d5585e536eef0b638e5cffae566486aba9c17c142ee50360c06af4d3a5650",
+      "bytes": 44294
+    },
+    "main/ble/esp_hid_gap.h": {
+      "sha256": "26383d4fd288c8b21dfd40451623ed696e85edebfea04dbce8bbe994a9862b97",
+      "bytes": 2145
+    },
+    "main/apps/keypad.c": {
+      "sha256": "826bf4987e2bb3d3d98b86d1d12b031f190b6cdf3bdb94f012f7a13e95960eac",
+      "bytes": 9620
+    },
+    "tools/mkassets.py": {
+      "sha256": "15647a8e817d7cd7c335467bd067787d4a0b376b1f68ff66fc695922365345a6",
+      "bytes": 14296
+    },
+    "tools/make-orb-texture.py": {
+      "sha256": "859023f5ef16c1f081b1a747e8751c4ac99cc3053c3cf6505f4b2053795288cc",
+      "bytes": 4756
+    },
+    "main/assets/assets.h": {
+      "sha256": "59888eaa1c613bb9f0e257e7a1d437c3e9c565b97402a1b002a76852e23e7e9f",
+      "bytes": 635
+    },
+    "main/assets/app_icon_games.c": {
+      "sha256": "a34bf2626e21c41948911d10b010f5877ee8f1c45379f01723184b543c1a3260",
+      "bytes": 229951
+    },
+    "main/assets/app_icon_water.c": {
+      "sha256": "902afbed4b52c22eaf43de8db94e202903135d99293e0930967843de2b9616a0",
+      "bytes": 229951
+    },
+    "main/assets/app_icon_moon.c": {
+      "sha256": "cea5118aa03de016956d10e29390bd16b4485286b180385e86fd3f9ef9471c08",
+      "bytes": 229947
+    },
+    "main/assets/app_icon_mouse.c": {
+      "sha256": "bde170386b86632a27b2a6cbfab45c17087445773a5f50cba8c86303cc2698b3",
+      "bytes": 229951
+    },
+    "main/assets/orb_tex_moon.h": {
+      "sha256": "233e3805e2baa8424a5148b4187cb4e01fb0c8187fcfd8304510ba2de194178a",
+      "bytes": 972424
+    },
+    "main/assets/orb_tex_earth.h": {
+      "sha256": "788554d2fe2a04c982811c83817997fa915c1257dbaa064cca5d09f5103223c9",
+      "bytes": 972424
+    },
+    "main/assets/orb_tex_sun.h": {
+      "sha256": "53acb85bc9943783fc397173e765d865ab1df7b9a8a9b335645bb2fd19895d44",
+      "bytes": 972431
+    },
+    "main/assets/orb_tex_jupiter.h": {
+      "sha256": "816538510ab530cdb714a50250055be3ff16335b7c2f36c68fb8ba51ce573bda",
+      "bytes": 972428
+    }
+  },
+  "driver_reference": {
+    "component": "waveshare/qmi8658",
+    "version": "2.0.0",
+    "repository": "https://github.com/waveshareteam/Waveshare-ESP32-components.git",
+    "commit": "9daffb7168b3c093a330da700988a22092294eef",
+    "subdirectory": "sensor/qmi8658",
+    "license": "Apache-2.0",
+    "files": {
+      "qmi8658.c": "74f022dda11d2aff0519e9a77a72e17c5a3bbd9050e0d9d7e935369698ae1ee0",
+      "include/qmi8658.h": "8df80e3666a5cd1112c093e9e86bb0599f8b8cfdd7ec997971f9c36e718adf89",
+      "license.txt": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "idf_component.yml": "e1034f1891c57e775baca4a790da50b398346bdaa0648993c511146e3d3241f0",
+      "CMakeLists.txt": "5364d648780a61c71d74fee770d984974c2ce08393bcee190ad3146714350312"
+    },
+    "role": "audited external driver reference; not added to production dependency lock"
+  }
+}

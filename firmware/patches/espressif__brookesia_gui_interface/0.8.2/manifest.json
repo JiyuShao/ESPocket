@@ -135,14 +135,19 @@
     {
       "file": "004-support-mount-viewports.patch",
       "sha256": "3bd82daf5adce79b8924c1f7c8cea24af2855a1b6454b8fd113ff05743138857"
+    },
+    {
+      "file": "005-app-owned-native-content.patch",
+      "sha256": "4e0434ccadce3d86bd9a8ec977c4610502e20eeee37a7c251d9d59c09abd1025"
     }
   ],
   "issue": ".scratch/005-m5-application-ecosystem/issues/10-reduce-runtime-startup-blocking.md",
   "reason": "Declared preloads are owned by the document; switching animation frames must not release them and invalidate decoded cache entries. Transient sources and document unload keep their existing release semantics. GUI root parsing allocation failures return an expected error to Core so startup can roll back instead of leaving its synchronous owner waiting. Parser children reserve their known count and nodes without interaction references avoid copying recursive JSON subtrees, reducing measured Weather allocation pressure without changing parsed output or validation.",
-  "remove_when": "Locked upstream preserves declared preloads across source updates and passes the same resource lifecycle and original-package device regression. Upstream also returns GUI root allocation failures without an escaping exception and passes the same failure/retry regression, and avoids parser allocation amplification with matching output and error behavior.",
+  "remove_when": "Locked upstream preserves declared preloads across source updates and passes the same resource lifecycle and original-package device regression. Upstream also returns GUI root allocation failures without an escaping exception and passes the same failure/retry regression, and avoids parser allocation amplification with matching output and error behavior.; remove the native-content extension after equivalent upstream App-scoped native mounts and cancellable pointer delivery pass the same regression tests",
   "related_issues": [
     ".scratch/005-m5-application-ecosystem/issues/11-runtime-store-gesture-regressions.md",
-    ".scratch/005-m5-application-ecosystem/issues/12-storage-round-display-and-runtime-usability.md"
+    ".scratch/005-m5-application-ecosystem/issues/12-storage-round-display-and-runtime-usability.md",
+    ".scratch/028-badge-native-app-migration/issues/10-native-content-and-pointer-seam.md"
   ],
   "patched_files": {
     ".component_hash": "c50db3bfbf648b9b2c14b413b463091a645939988647399171dcecf2f672c68e",
@@ -155,7 +160,7 @@
     "cmake/esp_platform.cmake": "2a9e402b49e7c038089060c3a0066693541d7c6122d944169dbc355d00f2e5e6",
     "cmake/pc_platform.cmake": "f086b8fd3cb91ce9bcfe6692d956bf102dfbde6f5a1b19fd9309ad2fc4ee95ab",
     "idf_component.yml": "dbdef55630447ca13f0fee32e471e8d39b931172eee2d88f885c0293ecff9db4",
-    "include/brookesia/gui_interface/backend.hpp": "bf3dea94a2bc59d3260af0e036e6765971b9f1582aeba575a76e7aba071bf450",
+    "include/brookesia/gui_interface/backend.hpp": "01caf7310814207c47e748c1b2ac92b3c9a6eb36ecd35e73dadc3f782af178ba",
     "include/brookesia/gui_interface/data_store.hpp": "eb12ba9f0e0eea4bd1781dbbcb79bf46d6b1dc62e30643f9fcefd3a072fc070b",
     "include/brookesia/gui_interface/document.hpp": "534fe90ed44f01170256aa9d3a0a272892649ba6365d28384ff7ea587b156256",
     "include/brookesia/gui_interface/enums.hpp": "939bf700b975092fa86ea216b4abb78c91d9a73a762762bc02f4ddfca8d7d93a",
@@ -164,8 +169,10 @@
     "include/brookesia/gui_interface/examples/runner.hpp": "aa883862d26e9162339de8b26f941c1c8b0cb875a16c0d7873de25c35f5ec2c2",
     "include/brookesia/gui_interface/handles.hpp": "2634c2ddbd32fbce782b3bff8a93b015a1410bbe7e608d9e835e05c11796ed55",
     "include/brookesia/gui_interface/macro_configs.h": "e9bc6c69fe1522b6341621af24283822ff8dbd96c7fd605d6204b1622307cc4c",
+    "include/brookesia/gui_interface/native_content.hpp": "2522b52e3114a4c7a5869913944fd3329a7d7286566ae77fd3dbb09289540280",
+    "include/brookesia/gui_interface/native_pointer.hpp": "491ec9621babbe8987ea30d539d7347eba6964b29a2d4751918154d83f746385",
     "include/brookesia/gui_interface/parser.hpp": "c541c169dbf29dbfd7a0f039efa409fe9b65ed36cbe05b977f1de0332048b6e7",
-    "include/brookesia/gui_interface/runtime.hpp": "2bc91a29e7528bea13d775aafadedb091ec099140227c78848ff11497e35653a",
+    "include/brookesia/gui_interface/runtime.hpp": "b5c65a4d43df9568c5fd46c66ec649aa261e3b1d7b34e31deca6ad24263efedf",
     "include/brookesia/gui_interface/scoped_connection.hpp": "137fada64d465c101a5e2435d305f7d13d66e5532bffbcfa2d79b3199a714365",
     "include/brookesia/gui_interface/validator.hpp": "7c1a6682ca8f8e54faa9e8f0437e4cb7ddf1f0271747d082edafc9106ff01d83",
     "include/brookesia/gui_interface/widget.hpp": "a57f2aba3180a0f48a2d665a879fdf6a8ccd9632c15cb77041253410592a299b",
@@ -226,9 +233,9 @@
     "src/private/binding.hpp": "f31de6a63b883b8be11232b3a0118586f387156f695545d826dc5d71fc7b01ec",
     "src/private/json.hpp": "ccf1183b8af58ff245bbf4a363ed5dbf9dc73af7e654c5dccea9d07ae516b467",
     "src/private/parser_impl.hpp": "ba54b83dd278fff8e9fbf0b5dec241abbba3221facf50dff4840277841040d6f",
-    "src/private/runtime_impl.hpp": "48e2d56408d6db6c0882ffbf79b08430d7ab475f9adc2770b3cedb9c474ba40c",
+    "src/private/runtime_impl.hpp": "7c1f1c20baaee1716412831c0181a1324d773b8df8afa5cfe96a27d6b1188de3",
     "src/private/utils.hpp": "4c0e611c064e1986eed886cbf450b0f9e5236f1be328e9bbc121a8e73f07727d",
-    "src/runtime.cpp": "cf815c8be38ad1f1db2ce58529632dcb79bd431eede950b2f5ac883d146257a6",
+    "src/runtime.cpp": "aa7ec8cbc88cb3f633724502b3cd0f0d23b1a2e23f6ae198bb7fae00ab767b20",
     "src/runtime_binding.cpp": "c1a6746ddc1138422950a274a97f534928a14f451ae479096c1afe167bbca717",
     "src/runtime_document.cpp": "181ca5cf07a292a55d0dd91db7a7d59db9780291f4da953afbc1aa80fa990cd1",
     "src/runtime_resources.cpp": "b65f8c5bfb08740ab5749c78e1a76a51a1b7d7303071371574622e796241cb5c",

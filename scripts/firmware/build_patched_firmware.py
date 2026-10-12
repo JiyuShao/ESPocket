@@ -13,14 +13,16 @@ import sys
 
 from prepare_patched_component import digest, inventory, prepare, relative_path
 from check_glyphs import check as check_glyphs
+from prepare_reliability_fixture import MODES as RELIABILITY_MODES, inject as inject_reliability_fixture
 
 ROOT = Path(__file__).resolve().parents[2]
 COMPONENT = 'espressif__brookesia_runtime_js'
 VERSION = '0.8.3'
-PATCHES = ((COMPONENT, VERSION), ('espressif__brookesia_system_core', '0.8.4'))
+PATCHES = ((COMPONENT, VERSION), ('espressif__brookesia_system_core', '0.8.4'),
+           ('espressif__brookesia_gui_interface', '0.8.2'))
 PATCH_SETS = {
     'baseline': PATCHES,
-    'production': PATCHES + (('espressif__brookesia_hal_adaptor', '0.8.4'), ('espressif__brookesia_app_settings', '0.8.3'), ('espressif__brookesia_service_display', '0.8.2'), ('espressif__esp_board_manager', '0.5.15'), ('espressif__brookesia_app_store', '0.8.2'), ('espressif__brookesia_lib_utils', '0.8.2'), ('espressif__brookesia_service_storage', '0.8.3'), ('espressif__brookesia_gui_lvgl', '0.8.5'), ('espressif__brookesia_gui_interface', '0.8.2'), ('espressif__esp_lv_decoder', '0.4.3'), ('espressif__esp-boost', '0.6.0')),
+    'production': PATCHES + (('espressif__brookesia_hal_adaptor', '0.8.4'), ('espressif__brookesia_app_settings', '0.8.3'), ('espressif__brookesia_service_display', '0.8.2'), ('espressif__esp_board_manager', '0.5.15'), ('espressif__brookesia_app_store', '0.8.2'), ('espressif__brookesia_lib_utils', '0.8.2'), ('espressif__brookesia_service_storage', '0.8.3'), ('espressif__brookesia_gui_lvgl', '0.8.5'), ('espressif__esp_lv_decoder', '0.4.3'), ('espressif__esp-boost', '0.6.0')),
     'hal-candidate': PATCHES + (('espressif__brookesia_hal_adaptor', '0.8.4'),),
     'audio-candidate': PATCHES + (('espressif__brookesia_hal_adaptor', '0.8.4'), ('espressif__brookesia_app_settings', '0.8.3')),
     'display-candidate': PATCHES + (('espressif__brookesia_hal_adaptor', '0.8.4'), ('espressif__brookesia_app_settings', '0.8.3'), ('espressif__brookesia_service_display', '0.8.2')),
@@ -270,7 +272,16 @@ def patch_manifest(root, component, version, patch_set):
     return root / 'firmware/patches' / component / version / filename
 
 
-def stage(root, workspace, sdkconfig, patch_set='production', *, display_buffer_height=40, display_single_buffer=False):
+def stage(root, workspace, sdkconfig, patch_set='production', *, display_buffer_height=40, display_single_buffer=False, reliability_fixture=None):
+    if reliability_fixture:
+        if patch_set != 'production' or reliability_fixture not in RELIABILITY_MODES:
+            raise ValueError('Reliability fixture requires the production patch set and a known mode')
+        conflicting = ('ESPOCKET_PACKAGE_ACCEPTANCE_TEST', 'ESPOCKET_M2_LIFECYCLE_STRESS',
+                       'ESPOCKET_M6_RECLAIM_ON_TIMEOUT_TEST', 'ESPOCKET_M8_CARD_SAMPLE_TEST',
+                       'ESPOCKET_M8_RECLAIM_NATIVE_TEST', 'ESPOCKET_M8_RECLAIM_RUNTIME_TEST')
+        enabled = set(sdkconfig.read_text().splitlines())
+        if any('CONFIG_' + flag + '=y' in enabled for flag in conflicting):
+            raise ValueError('Reliability fixture conflicts with another automatic test fixture')
     source_spelling = str(root / 'firmware')
     root = root.resolve()
     source = root / 'firmware'
@@ -299,6 +310,7 @@ def stage(root, workspace, sdkconfig, patch_set='production', *, display_buffer_
         return set(names) & ignored
 
     shutil.copytree(source, firmware, ignore=ignore_generated)
+    fixture = inject_reliability_fixture(root, firmware, reliability_fixture) if reliability_fixture else None
     # Board Manager emits absolute component paths. Keep the copied board input
     # inside this workspace, rather than selecting a component from the checkout.
     generated_board = firmware / 'components/gen_bmgr_codes'
@@ -367,6 +379,7 @@ def stage(root, workspace, sdkconfig, patch_set='production', *, display_buffer_
     config.write_text('\n'.join(lines) + '\nCONFIG_BROOKESIA_RUNTIME_JS_ASYNC_STACK_SIZE=16384\n')
     (workspace / 'patch-inputs.json').write_text(json.dumps({
         'patch_set': patch_set,
+        'reliability_fixture': fixture,
         'voice_enabled': patch_set in VOICE_PATCH_SETS,
         'product_display_transfer_bytes': DISPLAY_TRANSFER_BYTES if patch_set == 'production' else None,
         'audio_candidate_dependencies': audio_extra,
@@ -489,6 +502,7 @@ def archive_candidate(workspace):
     for name in inventory(firmware / 'patches'):
         add(firmware / 'patches' / name, 'patches/' + name)
     manifest = {'schema_version': 1, 'status': 'built_candidate',
+                'reliability_fixture': json.loads((workspace / 'patch-inputs.json').read_text()).get('reliability_fixture'),
                 'deployed': False, 'physical_validation': False,
                 'filesystem_role': 'fresh filesystem; not a device migration image',
                 'input_fingerprint': fingerprint, 'flash_files': images,
@@ -517,13 +531,15 @@ def main():
     parser.add_argument('--sdkconfig', required=True, type=Path,
                         help='existing board-configured sdkconfig; copied with documented patch-set settings')
     parser.add_argument('--prepare-only', action='store_true')
+    parser.add_argument('--reliability-fixture', choices=RELIABILITY_MODES,
+                        help='test only: inject a selected probe before freezing isolated inputs; never deploy as ordinary firmware')
     parser.add_argument('--patch-set', choices=PATCH_SETS, default='production',
                         help='production includes accepted display/audio fixes; baseline preserves the prior minimal patch set; candidates are explicit subsets')
     parser.add_argument('--display-buffer-height', type=int, choices=(40, 80), default=40, help='explicit display buffer trial; product default is 40')
     parser.add_argument('--display-single-buffer', action='store_true', help='explicit single-buffer trial; otherwise preserve board buffering')
     args = parser.parse_args()
     try:
-        firmware = stage(ROOT, args.workspace, args.sdkconfig.resolve(), args.patch_set, display_buffer_height=args.display_buffer_height, display_single_buffer=args.display_single_buffer)
+        firmware = stage(ROOT, args.workspace, args.sdkconfig.resolve(), args.patch_set, display_buffer_height=args.display_buffer_height, display_single_buffer=args.display_single_buffer, reliability_fixture=args.reliability_fixture)
         print(f'Prepared firmware: {firmware}', flush=True)
         if not args.prepare_only:
             subprocess.run(['idf.py', '-C', str(firmware), 'reconfigure'], check=True)

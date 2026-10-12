@@ -1,0 +1,215 @@
+--- a/include/brookesia/gui_interface/backend.hpp
++++ b/include/brookesia/gui_interface/backend.hpp
+@@ -16,6 +16,7 @@
+ #include "brookesia/gui_interface/document.hpp"
+ #include "brookesia/gui_interface/event.hpp"
+ #include "brookesia/gui_interface/handles.hpp"
++#include "brookesia/gui_interface/native_content.hpp"
+ #include "brookesia/gui_interface/macro_configs.h"
+ #include "brookesia/gui_interface/scoped_connection.hpp"
+ #include "brookesia/lib_utils/describe_helpers.hpp"
+@@ -188,6 +189,19 @@
+         std::string_view scope_root_absolute_path
+     ) = 0;
+     virtual void destroy_node(BackendHandle handle) = 0;
++    virtual std::expected<uint64_t, std::string> mount_native_content(
++        BackendHandle, std::shared_ptr<NativeContent>)
++    { return std::unexpected("Native content is unsupported by this backend"); }
++    virtual std::expected<void, std::string> invoke_native_content(
++        BackendHandle, uint64_t, const NativeContentCallback &)
++    { return std::unexpected("Native content is unsupported by this backend"); }
++    virtual bool unmount_native_content(BackendHandle, uint64_t) { return false; }
++    virtual void clear_native_content(BackendHandle) {}
++    virtual std::expected<NativePointerFrame, std::string> read_native_pointer_frame(
++        BackendHandle, uint64_t, std::optional<uint64_t>)
++    { return std::unexpected("Native pointer frames are unsupported by this backend"); }
++
++
+     /**
+      * Apply only the property domains selected by `mask` from a call-scoped snapshot.
+      *
+--- /dev/null
++++ b/include/brookesia/gui_interface/native_content.hpp
+@@ -0,0 +1,32 @@
++/* SPDX-License-Identifier: Apache-2.0 */
++#pragma once
++#include <functional>
++#include <memory>
++#include <string_view>
++#include "brookesia/gui_interface/native_pointer.hpp"
++#include "brookesia/gui_interface/handles.hpp"
++
++namespace esp_brookesia::gui {
++/** Trusted native extension. All callbacks run under the backend thread guard.
++ * Callbacks must not reenter document/node/mount lifecycle operations. Resources
++ * outside the owned subtree (timers, event connections, workers) must be stopped
++ * synchronously by detach, including after a partially failed attach.
++ */
++class NativeContent {
++public:
++    virtual ~NativeContent() = default;
++    virtual std::string_view backend_key() const noexcept = 0;
++};
++using NativeContentCallback = std::function<void(NativeContent &)>;
++/** Opaque identity for one mount; copying it does not extend the mount lifetime. */
++class NativeContentToken {
++public:
++    NativeContentToken() = default;
++private:
++    friend class Runtime;
++    std::weak_ptr<const uint8_t> runtime_identity_;
++    DocumentId document_id_;
++    BackendHandle handle_;
++    uint64_t mount_id_ = 0;
++};
++} // namespace esp_brookesia::gui
+--- /dev/null
++++ b/include/brookesia/gui_interface/native_pointer.hpp
+@@ -0,0 +1,39 @@
++/* SPDX-License-Identifier: Apache-2.0 */
++#pragma once
++#include <cstdint>
++#include <optional>
++#include <vector>
++namespace esp_brookesia::gui {
++struct NativePointerPoint { int32_t x = 0, y = 0; uint8_t track_id = 0; };
++struct NativePointerFrame {
++    std::vector<NativePointerPoint> points;
++    uint32_t sequence = 0;
++    uint64_t updated_at_ms = 0;
++    bool valid = false;
++    bool cancelled = true;
++};
++/** Per-mount delivery state, not a hardware sampler or input manager.
++ * After any revocation, require a NEW all-released sample before delivering
++ * points again. This also covers pauses during which the App did not poll.
++ */
++class NativePointerDelivery {
++public:
++    NativePointerFrame filter(NativePointerFrame frame, std::optional<uint64_t> epoch) {
++        if (!epoch || !frame.valid || epoch_ != epoch) {
++            blocked_ = true;
++            barrier_ = frame.sequence;
++        }
++        epoch_ = epoch;
++        if (epoch && frame.valid && blocked_ && frame.sequence != barrier_ && frame.points.empty()) {
++            blocked_ = false;
++        }
++        frame.cancelled = !epoch || !frame.valid || blocked_;
++        if (frame.cancelled) { frame.points.clear(); }
++        return frame;
++    }
++private:
++    std::optional<uint64_t> epoch_;
++    uint32_t barrier_ = 0;
++    bool blocked_ = true;
++};
++} // namespace esp_brookesia::gui
+--- a/include/brookesia/gui_interface/runtime.hpp
++++ b/include/brookesia/gui_interface/runtime.hpp
+@@ -159,6 +159,18 @@
+         std::string_view instance_id
+     );
+     bool destroy_view(DocumentId id, std::string_view absolute_path);
++    std::expected<NativeContentToken, std::string> mount_native_content(
++        DocumentId id, std::string_view absolute_path, std::shared_ptr<NativeContent> content);
++    std::expected<void, std::string> invoke_native_content(
++        DocumentId id, const NativeContentToken &token, const NativeContentCallback &callback);
++    bool unmount_native_content(DocumentId id, const NativeContentToken &token);
++    /** Revoke native extensions while retaining the parsed/preloaded document. */
++    void clear_native_content(DocumentId id);
++
++    std::expected<NativePointerFrame, std::string> read_native_pointer_frame(
++        DocumentId id, const NativeContentToken &token, std::optional<uint64_t> access_epoch);
++
++
+     std::expected<void, std::string> update(DocumentId id, std::string_view file_path, const Environment &environment);
+     std::expected<void, std::string> reapply_styles(DocumentId id);
+     std::expected<boost::json::value, std::string> get_constant_value(
+--- a/src/private/runtime_impl.hpp
++++ b/src/private/runtime_impl.hpp
+@@ -1985,6 +1985,7 @@
+     ;
+ 
+     std::unique_ptr<IBackend> backend;
++    std::shared_ptr<const uint8_t> native_identity_ = std::make_shared<const uint8_t>(0);
+     std::shared_ptr<MemoryDataStore> store;
+     RuntimeTaskConfig task_config;
+     std::shared_ptr<ActionRegistry> action_registry_ = std::make_shared<ActionRegistry>();
+--- a/src/runtime.cpp
++++ b/src/runtime.cpp
+@@ -386,6 +386,74 @@
+     return impl_->destroy_view(id, absolute_path);
+ }
+ 
++std::expected<NativeContentToken, std::string> Runtime::mount_native_content(
++    DocumentId id, std::string_view absolute_path, std::shared_ptr<NativeContent> content)
++try {
++    // Refresh first: a live-preview replacement must revoke the previous backend mount.
++    auto refreshed = impl_->refresh_document_if_dirty(this, id);
++    if (!refreshed) { return std::unexpected(refreshed.error()); }
++    auto *tree = impl_->resolve_tree(id);
++    if (!tree || !content) { return std::unexpected("Native content or document is missing"); }
++    auto uid = impl_->resolve_any_uid(*tree, normalize_absolute_path(absolute_path));
++    auto *node = uid ? impl_->find_node_record(*tree, *uid) : nullptr;
++    if (!node || node->node().type != NodeType::Container) {
++        return std::unexpected("Native content requires an existing container");
++    }
++    auto mounted = impl_->backend->mount_native_content(node->handle, std::move(content));
++    if (!mounted) { return std::unexpected(mounted.error()); }
++    NativeContentToken token;
++    token.runtime_identity_ = impl_->native_identity_;
++    token.document_id_ = id;
++    token.handle_ = node->handle;
++    token.mount_id_ = *mounted;
++    return token;
++}
++catch (const std::bad_alloc &) { return std::unexpected("GUI out of memory"); }
++
++std::expected<void, std::string> Runtime::invoke_native_content(
++    DocumentId id, const NativeContentToken &token, const NativeContentCallback &callback)
++{
++    auto refreshed = impl_->refresh_document_if_dirty(this, id);
++    if (!refreshed) { return std::unexpected(refreshed.error()); }
++    auto *tree = impl_->resolve_tree(id);
++    if (token.runtime_identity_.lock() != impl_->native_identity_ || token.document_id_ != id ||
++        !tree || !tree->handle_to_uid.contains(token.handle_.value())) {
++        return std::unexpected("Native content token is stale or belongs to another document");
++    }
++    return impl_->backend->invoke_native_content(token.handle_, token.mount_id_, callback);
++}
++bool Runtime::unmount_native_content(DocumentId id, const NativeContentToken &token)
++{
++    auto *tree = impl_->resolve_tree(id);
++    if (token.runtime_identity_.lock() != impl_->native_identity_ || token.document_id_ != id ||
++        !tree || !tree->handle_to_uid.contains(token.handle_.value())) { return false; }
++    return impl_->backend->unmount_native_content(token.handle_, token.mount_id_);
++}
++
++void Runtime::clear_native_content(DocumentId id)
++{
++    auto *tree = impl_->resolve_tree(id);
++    if (!tree) { return; }
++    for (const auto &[unused_uid, node] : tree->nodes) {
++        (void)unused_uid;
++        impl_->backend->clear_native_content(node.handle);
++    }
++}
++
++std::expected<NativePointerFrame, std::string> Runtime::read_native_pointer_frame(
++    DocumentId id, const NativeContentToken &token, std::optional<uint64_t> access_epoch)
++try {
++    auto refreshed = impl_->refresh_document_if_dirty(this, id);
++    if (!refreshed) { return std::unexpected(refreshed.error()); }
++    auto *tree = impl_->resolve_tree(id);
++    if (token.runtime_identity_.lock() != impl_->native_identity_ || token.document_id_ != id ||
++        !tree || !tree->handle_to_uid.contains(token.handle_.value())) {
++        return std::unexpected("Native content token is stale or belongs to another document");
++    }
++    return impl_->backend->read_native_pointer_frame(token.handle_, token.mount_id_, access_epoch);
++}
++catch (const std::bad_alloc &) { return std::unexpected("GUI out of memory"); }
++
+ std::expected<void, std::string> Runtime::update(DocumentId id, std::string_view file_path, const Environment &environment)
+ {
+     return impl_->update(this, id, file_path, environment);

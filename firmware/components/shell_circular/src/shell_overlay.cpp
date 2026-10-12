@@ -29,6 +29,7 @@ std::expected<void, std::string> CircularShell::show_surface(ShellSurface surfac
             return opened;
         }
         quick_settings_return_surface_ = current_surface();
+        home_gesture_state_->input_epoch.fetch_add(1, std::memory_order_acq_rel);
         home_gesture_state_->surface.store(ShellSurface::QuickSettings, std::memory_order_release);
         home_gesture_state_->activity_generation.fetch_add(1, std::memory_order_acq_rel);
         refresh_overlay_input();
@@ -96,12 +97,20 @@ std::expected<void, std::string> CircularShell::dismiss_quick_settings(bool rest
     return {};
 }
 
+std::optional<uint64_t> CircularShell::native_pointer_access() const
+{
+    if (!home_gesture_state_) return std::nullopt;
+    return native_pointer_access_epoch(*home_gesture_state_,
+        !host_.display_on || host_.display_on(), host_.app_visible && host_.app_visible());
+}
+
 std::expected<void, std::string> CircularShell::set_display_on(bool on)
 {
     LvglLock lock;
     if (!lock) {
         return std::unexpected("Failed to lock LVGL while changing display input state");
     }
+    if (home_gesture_state_) home_gesture_state_->input_epoch.fetch_add(1, std::memory_order_acq_rel);
     for (auto *input = lv_indev_get_next(nullptr); input != nullptr; input = lv_indev_get_next(input)) {
         if (lv_indev_get_type(input) == LV_INDEV_TYPE_POINTER) {
             lv_indev_enable(input, on);
@@ -269,8 +278,11 @@ bool CircularShell::refresh_overlay_input()
         }
     }
     if (home_gesture_state_) {
-        home_gesture_state_->modal_active.store(dialog_present, std::memory_order_release);
-        home_gesture_state_->keyboard_active.store(keyboard_present, std::memory_order_release);
+        const bool old_dialog = home_gesture_state_->modal_active.exchange(dialog_present, std::memory_order_acq_rel);
+        const bool old_keyboard = home_gesture_state_->keyboard_active.exchange(keyboard_present, std::memory_order_acq_rel);
+        if (old_dialog != dialog_present || old_keyboard != keyboard_present) {
+            home_gesture_state_->input_epoch.fetch_add(1, std::memory_order_acq_rel);
+        }
     }
     return true;
 }

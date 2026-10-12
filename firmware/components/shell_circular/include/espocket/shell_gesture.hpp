@@ -3,6 +3,7 @@
 #include <atomic>
 #include <cstdint>
 #include <mutex>
+#include <optional>
 
 namespace espocket {
 
@@ -61,6 +62,7 @@ struct ShellGestureState {
     std::atomic<ShellSurface> surface = ShellSurface::WatchFace;
     std::atomic<uint8_t> pending_gesture = 0;
     std::atomic<uint32_t> activity_generation = 0;
+    std::atomic<uint64_t> input_epoch = 1;
     std::atomic_bool modal_active = false;
     std::atomic_bool keyboard_active = false;
     std::atomic<int32_t> quick_settings_top_edge = 37;
@@ -90,6 +92,9 @@ private:
     int32_t start_y_ = 0;
     ShellGestureDirection direction_ = ShellGestureDirection::None;
 };
+
+std::optional<uint64_t> native_pointer_access_epoch(
+    const ShellGestureState &state, bool display_on, bool app_visible);
 
 void reset_shell_gesture(ShellGestureState &state, bool discard_pending);
 void process_shell_gesture(ShellGestureState &state, const ShellGestureEvent &event,

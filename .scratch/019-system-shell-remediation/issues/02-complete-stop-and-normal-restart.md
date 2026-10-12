@@ -25,3 +25,7 @@
 
 
 2026-10-09 当前核对：已整合实现、离线证据及缺代码／物理条件见[统一收尾核对](../../027-reliability-closeout/records/2026-10-09-reliability-audit.md)。历史“原 checkout 未整合”只描述当时快照，不代表当前源码。
+
+2026-10-12：新增隔离构建专用的[可靠性测试入口](../../../firmware/test/device/fixtures/reliability/README.md)，注入先于输入冻结。产品初始化关键资源边界、三轮外部生命周期协调及主题回退故障已有执行入口；不修改 NVS 偏好。未访问设备，完整 Core 分配点/GUI 锁/真实 callback 竞争矩阵仍开放，不据入口存在勾选真机条件。
+
+新增入口的完整构建、九模式目标编译与未验边界见 [2026-10-12 离线证据](../records/2026-10-12-offline-reliability-fixtures.md)。
