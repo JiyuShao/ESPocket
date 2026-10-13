@@ -276,6 +276,12 @@ std::expected<void, std::string> System::on_init()
             auto app = weak.lock(); return app && app->present_page(from, to);
         });
     if (!pinball_result) return std::unexpected("Failed to install Pinball: " + pinball_result.error());
+    auto water = std::make_shared<WaterApp>();
+    auto water_result = install_navigated_app(water, water->get_page_declaration(),
+        [weak = std::weak_ptr<WaterApp>(water)](std::string_view from, std::string_view to) {
+            auto app = weak.lock(); return app && app->present_page(from, to);
+        });
+    if (!water_result) return std::unexpected("Failed to install Water: " + water_result.error());
 
     settings_adapter_ = std::make_shared<SettingsNavigationAdapter>(
         std::make_shared<esp_brookesia::app::settings::SettingsApp>()

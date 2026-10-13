@@ -69,7 +69,7 @@ Store 成功提交安装后回收自有下载副本，Core 的安装原包和用
 
 ## Badge Native App
 
-[泡泡纸](native_apps/bubble_wrap/README.md) 是独立可见 Native App，画面、玩法和短音效适配保存在 App 包内，复用 Core 暂停/恢复、自绘及受控输入。它与 [Badge 锁定来源](native_apps/badge/README.md) 分开；其余迁移 App 的完成情况由 [028](../.scratch/028-badge-native-app-migration/spec.md) 持有。
+[泡泡纸](native_apps/bubble_wrap/README.md)、[打砖块](native_apps/brick_breaker/README.md)、[弹球](native_apps/pinball/README.md)和[水池](native_apps/water/README.md) 是独立可见 Native App，玩法、绘制、资源及工作线程保存在各自 App 包内，复用 Core 暂停/恢复、自绘与受控输入。来源字节独立保存在 [Badge 锁定来源](native_apps/badge/README.md)；具体完成情况、IMU 依赖及设备门槛由 [028](../.scratch/028-badge-native-app-migration/spec.md) 持有。
 
 ## 本地 Runtime App 包
 

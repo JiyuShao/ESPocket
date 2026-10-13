@@ -19,7 +19,8 @@ std::expected<void, std::string> PinballContent::attach(lv_obj_t *root)
     lv_obj_set_style_bg_color(board, lv_color_hex(0x101014), 0);
     auto *ring = lv_arc_create(board); if (!ring) return std::unexpected("Wall allocation failed");
     lv_obj_remove_style_all(ring); lv_obj_remove_flag(ring, LV_OBJ_FLAG_CLICKABLE);
-    lv_obj_set_size(ring, 424, 424); lv_obj_center(ring); lv_arc_set_value(ring, 0); lv_arc_set_bg_angles(ring, 102, 78);
+    constexpr int ring_diameter = static_cast<int>(2 * (206 + 6.5f + 6));
+    lv_obj_set_size(ring, ring_diameter, ring_diameter); lv_obj_center(ring); lv_arc_set_value(ring, 0); lv_arc_set_bg_angles(ring, 102, 78);
     lv_obj_set_style_arc_width(ring, 6, LV_PART_MAIN); lv_obj_set_style_arc_color(ring, lv_color_hex(0x3A3A46), LV_PART_MAIN);
     constexpr uint32_t colors[pinball::bumper_count] = {0xE0B33A, 0x5BD48A, 0x7FB0FF, 0xE06FA0, 0x9A7BE0};
     for (int i = 0; i < pinball::bumper_count; ++i) {
@@ -51,9 +52,9 @@ void PinballContent::paint(const pinball::Model &model)
     for (int i = 0; i < 2; ++i) {
         if (reset_board || !painted_ || painted_->flippers[i].angle != s.flippers[i].angle) {
             const float a = s.flippers[i].angle * 0.0174533f;
-            points_[0] = {static_cast<lv_value_precise_t>(s.flippers[i].px), static_cast<lv_value_precise_t>(s.flippers[i].py)};
-            points_[1] = {static_cast<lv_value_precise_t>(s.flippers[i].px + std::cos(a) * 104), static_cast<lv_value_precise_t>(s.flippers[i].py + std::sin(a) * 104)};
-            lv_line_set_points(flippers_[i], points_.data(), 2);
+            points_[i][0] = {static_cast<lv_value_precise_t>(s.flippers[i].px), static_cast<lv_value_precise_t>(s.flippers[i].py)};
+            points_[i][1] = {static_cast<lv_value_precise_t>(s.flippers[i].px + std::cos(a) * 104), static_cast<lv_value_precise_t>(s.flippers[i].py + std::sin(a) * 104)};
+            lv_line_set_points(flippers_[i], points_[i].data(), 2);
         }
     }
     if (!painted_ || painted_->points != s.points || painted_->balls != s.balls) { lv_label_set_text_fmt(score_, "%d  球%d", s.points, s.balls); lv_obj_align(score_, LV_ALIGN_CENTER, 0, 116); }

@@ -38,7 +38,11 @@ bool Model::input(bool valid, bool cancelled, uint32_t sequence, const std::vect
     if (wait_release_) { if (points.empty()) wait_release_ = false; return false; }
     if (points.empty()) { state_.flippers[0].on = state_.flippers[1].on = false; consume_touch_ = false; return false; }
     if (state_.phase != Phase::Playing) {
-        if (state_.phase == Phase::GameOver) reset();
+        if (state_.phase == Phase::GameOver) {
+            reset();
+            // This new start already followed the required release.
+            wait_release_ = false; have_sequence_ = true; last_sequence_ = sequence;
+        }
         state_.phase = Phase::Playing; consume_touch_ = true; return true;
     }
     if (consume_touch_) return false; // release the start frame before flipper input
@@ -91,14 +95,15 @@ bool Model::substep(std::vector<Tone> &tones, const std::array<float, 2> &omega,
         const float cx = f.px + ex * t, cy = f.py + ey * t;
         const float dx = state_.x - cx, dy = state_.y - cy, d2 = dx * dx + dy * dy;
         const float hit = ball_radius + flipper_width * 0.5f;
-        if (d2 >= hit * hit || d2 < 0.01f || kicked[i]) continue;
-        const float d = std::sqrt(d2), nx = dx / d, ny = dy / d;
+        if (d2 >= hit * hit) continue;
+        const float d = std::sqrt(d2);
+        const float nx = d < 0.01f ? 0 : dx / d, ny = d < 0.01f ? -1 : dy / d;
         state_.x = cx + nx * hit; state_.y = cy + ny * hit;
         const float dot = state_.vx * nx + state_.vy * ny;
         if (dot < 0) { state_.vx -= 1.75f * dot * nx; state_.vy -= 1.75f * dot * ny; }
-        const float w = omega[i] * radians;
+        const float w = (kicked[i] ? 0 : omega[i]) * radians;
         state_.vx += -ey * w * t; state_.vy += ex * w * t;
-        kicked[i] = true; tones.push_back({420, 24});
+        kicked[i] = true; tones.push_back({420, 24}); break;
     }
     const float dx = state_.x - center, dy = state_.y - center, r = distance(dx, dy);
     if (r > wall) {
@@ -112,13 +117,17 @@ bool Model::substep(std::vector<Tone> &tones, const std::array<float, 2> &omega,
 bool Model::step(std::vector<Tone> &tones)
 {
     state_.vy += gravity; state_.vx *= damping; state_.vy *= damping;
+    const float speed = distance(state_.vx, state_.vy);
+    if (speed > 14) { state_.vx *= 14 / speed; state_.vy *= 14 / speed; }
     std::array<float, 2> omega{}; std::array<bool, 2> kicked{};
     for (int i = 0; i < 2; ++i) {
         const float want = state_.flippers[i].on ? state_.flippers[i].up : state_.flippers[i].rest;
         omega[i] = std::clamp(want - state_.flippers[i].angle, -flipper_step, flipper_step);
     }
-    for (int i = 0; i < 2; ++i) state_.flippers[i].angle += omega[i] / substeps;
-    for (int i = 0; i < substeps; ++i) if (!substep(tones, omega, kicked)) return false;
+    for (int k = 0; k < substeps; ++k) {
+        for (int i = 0; i < 2; ++i) state_.flippers[i].angle += omega[i] / substeps;
+        if (!substep(tones, omega, kicked)) return false;
+    }
     return true;
 }
 std::vector<Tone> Model::advance(uint32_t elapsed, bool valid, bool cancelled, uint32_t sequence, const std::vector<Point> &points)
