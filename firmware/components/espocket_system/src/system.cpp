@@ -270,6 +270,13 @@ std::expected<void, std::string> System::on_init()
         });
     if (!bricks_result) return std::unexpected("Failed to install Brick Breaker: " + bricks_result.error());
 
+    auto pinball = std::make_shared<PinballApp>();
+    auto pinball_result = install_navigated_app(pinball, pinball->get_page_declaration(),
+        [weak = std::weak_ptr<PinballApp>(pinball)](std::string_view from, std::string_view to) {
+            auto app = weak.lock(); return app && app->present_page(from, to);
+        });
+    if (!pinball_result) return std::unexpected("Failed to install Pinball: " + pinball_result.error());
+
     settings_adapter_ = std::make_shared<SettingsNavigationAdapter>(
         std::make_shared<esp_brookesia::app::settings::SettingsApp>()
     );

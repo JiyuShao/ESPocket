@@ -1,5 +1,6 @@
 #include "espocket/bubble_wrap_app.hpp"
 #include "espocket/brick_breaker_app.hpp"
+#include "espocket/pinball_app.hpp"
 #pragma once
 
 #include "espocket/system.hpp"
