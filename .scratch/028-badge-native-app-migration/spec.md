@@ -69,3 +69,7 @@ Excel 快捷键、录音机、原项目计算器/时钟/Settings/Launcher/锁屏
 2026-10-12：用户要求无真机时先完成离线可靠性再继续 028，沿此前已接受方案实施，不再重复索取总体许可。[来源锁定与边界核查](records/2026-10-12-source-and-boundaries.md)记录当前输入、官方驱动和真实缺口；历史“待最后确认”保留为当时阶段描述。
 
 2026-10-13：用户授权完整实现下一批 [03](issues/03-system-lifecycle-and-activity.md) 与首个泡泡纸 App 流程。实现、离线验证与候选见 [本批记录](records/2026-10-13-suspension-and-bubble-wrap.md)；泡泡纸使用说明见 [App README](../../firmware/native_apps/bubble_wrap/README.md)。六个游戏的总体票仍未关闭，IMU、BLE HID 和真机验收继续保持独立门槛。
+
+2026-10-13：[App 接口与 IMU 提案审查](records/2026-10-13-app-interface-review.md)复现暂停原因回调重入后的恢复错误，[03](issues/03-system-lifecycle-and-activity.md)已重开，优先修复并补回归。现有命名优化与 IMU 契约缺口分别记录，尚未实施；v5 是初版候选，不能代表该错误已修复。
+
+2026-10-13：用户授权的 [生命周期接口优化](records/2026-10-13-lifecycle-callback-contract.md)完成，统一原因回调命名/快照、保留旧入口兼容，修复原因回调重入恢复并通过生产回归与新的完整隔离构建；[03](issues/03-system-lifecycle-and-activity.md)再次 resolved。活动凭据、执行快照/策略参数和 IMU 的其他审查建议未由本批实施，04/06/07/08/09 的剩余条件保持。

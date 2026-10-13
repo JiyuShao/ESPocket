@@ -1,0 +1,184 @@
+--- a/include/brookesia/system_core/app/iapp.hpp
++++ b/include/brookesia/system_core/app/iapp.hpp
+@@ -58,7 +58,7 @@
+     virtual void on_uninstall(AppContext &context);
+ 
+     /**
+-     * @brief Called when the application is started.
++     * @brief Perform App startup work; success completes this hook, failure aborts startup.
+      *
+      * @param context Runtime context for GUI, timers, storage, and services.
+      * @return Empty result on success, or an error string that aborts startup.
+@@ -66,7 +66,7 @@
+     virtual std::expected<void, std::string> on_start(AppContext &context);
+ 
+     /**
+-     * @brief Called when the application should suspend active work.
++     * @brief Perform App pause work after Core has revoked Running/input eligibility.
+      *
+      * @param context Runtime context for the running application.
+      * @return Empty result on success, or an error string.
+@@ -74,19 +74,34 @@
+     virtual std::expected<void, std::string> on_pause(AppContext &context);
+ 
+     /**
+-     * @brief Called when the application should resume after a pause.
++     * @brief Perform App resume work after all pause causes have cleared.
+      *
++     * Core commits Running only after success and a fresh eligibility check.
++     * On failure, clean up partially restarted work; no later pause callback is guaranteed.
+      * @param context Runtime context for the running application.
+      * @return Empty result on success, or an error string.
+      */
+     virtual std::expected<void, std::string> on_resume(AppContext &context);
+ 
+-    // Called for every product reason change, including while already paused.
+-    // Read SystemApi::execution_state(); callbacks must not synchronously wait on peers.
++    /**
++     * @brief React to changed pause reasons, including while already paused.
++     *
++     * @param context Runtime context for this App.
++     * @param reasons Owner snapshot captured at callback delivery; it does not grant work eligibility.
++     * @return Empty on success; failure prevents automatic resume until stop/reopen.
++     *
++     * Called after on_pause for the first cause and before on_resume for the last removal.
++     * Do not wait synchronously on peers. A reentrant change can supersede this snapshot.
++     * The default implementation delegates to the legacy on_suspension_changed hook.
++     */
++    virtual std::expected<void, std::string> on_pause_reasons_changed(
++        AppContext &context, const AppPauseReasons &reasons);
++
++    /** @deprecated Override on_pause_reasons_changed instead. Kept for existing Native Apps. */
+     virtual std::expected<void, std::string> on_suspension_changed(AppContext &context);
+ 
+     /**
+-     * @brief Called when the application is stopped.
++     * @brief Perform App cleanup as part of stopping; this is not a post-stop notification.
+      *
+      * @param context Runtime context for releasing app resources.
+      * @return Empty result on success, or an error string.
+--- a/include/brookesia/system_core/app/types.hpp
++++ b/include/brookesia/system_core/app/types.hpp
+@@ -289,6 +289,13 @@
+     return manifest.id;
+ }
+ 
++/** Product pause facts; independent causes can overlap on one App instance. */
++struct AppPauseReasons {
++    bool covered = false;
++    bool screen_off = false;
++    bool manual_pause = false;
++};
++
+ // Identity belongs to one start attempt, never to an installation/AppContext.
+ struct AppExecutionState {
+     uint64_t instance = 0;
+--- a/src/app/app.cpp
++++ b/src/app/app.cpp
+@@ -1610,6 +1610,12 @@
+     return {};
+ }
+ 
++std::expected<void, std::string> IApp::on_pause_reasons_changed(
++    AppContext &context, const AppPauseReasons &)
++{
++    return on_suspension_changed(context);
++}
++
+ std::expected<void, std::string> IApp::on_suspension_changed(AppContext &)
+ {
+     return {};
+--- a/src/app/manager.cpp
++++ b/src/app/manager.cpp
+@@ -1239,14 +1239,17 @@
+             impl_->active_app_id_ != app_id) return std::unexpected("app_instance_revoked");
+         auto &live = **current;
+         std::expected<void, std::string> result;
++        if (live.execution.lifecycle_failed) return std::unexpected(live.info.last_error);
++        const AppPauseReasons reasons{live.execution.covered, live.execution.screen_off,
++                                      live.execution.manual_pause};
+         try {
+-        if (live.info.manifest.kind == AppKind::Native && live.native_app && live.context) {
+-            if (method == "on_pause") result = live.native_app->on_pause(*live.context);
+-            else if (method == "on_resume") result = live.native_app->on_resume(*live.context);
+-            else result = live.native_app->on_suspension_changed(*live.context);
+-        } else if (method == "on_suspension_changed") {
+-            result = impl_->call_runtime_lifecycle(live, method, {covered, screen_off, manual});
+-        } else result = impl_->call_runtime_lifecycle(live, method);
++            if (live.info.manifest.kind == AppKind::Native && live.native_app && live.context) {
++                if (method == "on_pause") result = live.native_app->on_pause(*live.context);
++                else if (method == "on_resume") result = live.native_app->on_resume(*live.context);
++                else result = live.native_app->on_pause_reasons_changed(*live.context, reasons);
++            } else if (method == "on_pause_reasons_changed") {
++                result = impl_->call_runtime_pause_reasons_changed(live, reasons);
++            } else result = impl_->call_runtime_lifecycle(live, method);
+         } catch (const std::exception &error) { result = std::unexpected(error.what()); }
+           catch (...) { result = std::unexpected("App suspension callback exception"); }
+         current = impl_->get_record(app_id);
+@@ -1261,10 +1264,15 @@
+         return result;
+     };
+     if (first_pause) { if (auto result = call("on_pause"); !result) return result; }
+-    if (changed) { if (auto result = call("on_suspension_changed"); !result) return result; }
++    if (changed) { if (auto result = call("on_pause_reasons_changed"); !result) return result; }
+     found = impl_->get_record(app_id);
+-    if (!found || (**found).execution.instance != instance) return std::unexpected("app_instance_revoked");
+-    if (!pause && (**found).info.state == AppState::Paused) {
++    // Reason callbacks can reenter and replace the cause/foreground facts. Recheck
++    // BEFORE any resume side effects, not only after the App has restarted work.
++    if (!found || (**found).execution.instance != instance || impl_->active_app_id_ != app_id ||
++        ((**found).info.state != AppState::Running && (**found).info.state != AppState::Paused))
++        return std::unexpected("app_instance_revoked");
++    if ((**found).execution.lifecycle_failed) return std::unexpected((**found).info.last_error);
++    if (!(**found).execution.suspended() && (**found).info.state == AppState::Paused) {
+         if (auto result = call("on_resume"); !result) return result;
+         found = impl_->get_record(app_id);
+         // A callback may add a new pause reason; never override that decision.
+--- a/src/private/system/impl.hpp
++++ b/src/private/system/impl.hpp
+@@ -264,6 +264,8 @@
+         std::string_view function_name,
+         const runtime::NativeArgs &args = {}
+     );
++    std::expected<void, std::string> call_runtime_pause_reasons_changed(
++        AppRecord &record, const AppPauseReasons &reasons);
+     std::expected<void, std::string> ensure_runtime_loaded(AppRecord &record);
+     void unload_runtime(AppRecord &record);
+     std::expected<void, std::string> dispatch_action(
+--- a/src/runtime/runtime.cpp
++++ b/src/runtime/runtime.cpp
+@@ -85,6 +85,34 @@
+ }
+ 
+ 
++std::expected<void, std::string> System::Impl::call_runtime_pause_reasons_changed(
++    AppRecord &record, const AppPauseReasons &reasons)
++{
++    if (!runtime_ || !record.runtime_app_id.has_value()) return {};
++    // The locked NativeValue bridge supports scalars; serialize the same named snapshot.
++    const std::string snapshot = boost::json::serialize(boost::json::object{
++        {"covered", reasons.covered}, {"screen_off", reasons.screen_off},
++        {"manual_pause", reasons.manual_pause}});
++    auto result = runtime_->call_function(*record.runtime_app_id, APP_MODULE_NAME,
++                                         "on_pause_reasons_changed", {snapshot});
++    auto missing = [](std::string_view error) {
++        // Exact locked JavaScript backend errors; never swallow a callback exception
++        // merely because its message contains "not found".
++        return error == "JavaScript function not found" || error == "JavaScript host function not found";
++    };
++    if (!result && missing(result.error())) {
++        result = runtime_->call_function(*record.runtime_app_id, APP_MODULE_NAME,
++            "on_suspension_changed", {reasons.covered, reasons.screen_off, reasons.manual_pause});
++    }
++    if (!result) {
++        if (missing(result.error())) return {}; // Neither optional hook is exported.
++        return std::unexpected(result.error());
++    }
++    if (const auto *value = std::get_if<bool>(&*result); value && !*value)
++        return std::unexpected("Runtime pause reasons callback returned false");
++    return {};
++}
++
+ std::expected<void, std::string> System::Impl::ensure_runtime_loaded(AppRecord &record)
+ {
+     if (record.info.manifest.kind != AppKind::Runtime) {

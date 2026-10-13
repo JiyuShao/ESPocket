@@ -20,7 +20,7 @@ class AppSuspensionTest(unittest.TestCase):
             start = source.index('std::optional<AppExecutionState> System::app_execution_state(')
             methods = source[start:source.index('std::expected<void, std::string> System::request_close_app(', start)]
             types = (core / 'include/brookesia/system_core/app/types.hpp').read_text()
-            state = types[types.index('struct AppExecutionState {'):types.index('struct AppInfo {')]
+            state = types[types.index('struct AppPauseReasons {'):types.index('struct AppInfo {')]
             cpp = work / 'test.cpp'
             cpp.write_text(r'''
 #include <cassert>
@@ -39,10 +39,10 @@ enum class AppKind{Native,Runtime};enum class AppState{Installed,Starting,Runnin
 ''' + state + r'''
 struct Context{};
 struct Native {
- std::vector<std::string> calls;std::string fail;std::function<void(std::string_view)> callback;
+ std::vector<std::string> calls;std::vector<AppPauseReasons> reasons;std::string fail;std::function<void(std::string_view)> callback;
  std::expected<void,std::string> call(std::string name){calls.push_back(name);if(callback)callback(name);if(fail==name)return std::unexpected(name+" failed");return {};}
  auto on_pause(Context&){return call("pause");}auto on_resume(Context&){return call("resume");}
- auto on_suspension_changed(Context&){return call("change");}
+ auto on_pause_reasons_changed(Context&,const AppPauseReasons&r){reasons.push_back(r);return call("change");}
 };
 struct Record{
  struct Info{struct Manifest{AppKind kind=AppKind::Native;}manifest;AppState state=AppState::Running;std::string last_error;}info;
@@ -58,6 +58,7 @@ struct Impl{
  std::expected<void,std::string>call_runtime_lifecycle(Record&r,std::string_view method,std::initializer_list<std::variant<bool>> = {}){
   return r.native_app->call(method=="on_pause"?"pause":method=="on_resume"?"resume":"change");
  }
+ auto call_runtime_pause_reasons_changed(Record&r,const AppPauseReasons&reasons){return r.native_app->on_pause_reasons_changed(*r.context,reasons);}
 };
 struct System{
  Impl backing;Impl*impl_=&backing;
@@ -78,6 +79,7 @@ int main(){
   assert(app->calls==std::vector<std::string>({"pause","change"}));assert(!s.app_execution_state(7)->activity_epoch);
   assert(s.set_app_suspension(7,11,true,false));assert(app->calls.size()==2);
   assert(s.set_app_suspension(7,11,true,true));assert(app->calls.back()=="change");assert(app->calls.size()==3);
+  assert(app->reasons.back().covered && app->reasons.back().screen_off && !app->reasons.back().manual_pause);
   assert(s.set_app_suspension(7,11,true,false));assert(app->calls.size()==4); // wake while covered
   assert(!s.report_app_user_activity(7,11,5));
   assert(s.set_app_suspension(7,11,false,false));assert(app->calls.back()=="resume" && app->calls.size()==6);
@@ -102,6 +104,31 @@ int main(){
   assert(r.info.state==AppState::Paused && r.execution.lifecycle_failed && !r.info.last_error.empty());
   auto calls=app->calls.size();assert(!s.set_app_suspension(7,11,false,false));assert(app->calls.size()==calls);
  }
+ // Reason callbacks may reenter and add a new cause BEFORE resume.
+ for(auto kind:{AppKind::Native,AppKind::Runtime}){
+  System reason_nested;auto&r=reason_nested.backing.record;r.info.manifest.kind=kind;
+  assert(reason_nested.set_app_suspension(7,11,true,false));
+  bool recursed=false;r.native_app->callback=[&](std::string_view method){
+   if(method=="change"&&!recursed){recursed=true;assert(reason_nested.set_app_suspension(7,11,true,false));}
+  };
+  assert(reason_nested.set_app_suspension(7,11,false,false));
+  assert(r.info.state==AppState::Paused && r.execution.covered);
+  assert(r.native_app->calls==std::vector<std::string>({"pause","change","change","change"}));
+ }
+ // Snapshot reflects delivery-time facts after a reentrant pause callback.
+ System snapshot;bool added=false;auto&snap=snapshot.backing.record;
+ snap.native_app->callback=[&](std::string_view method){
+  if(method=="pause"&&!added){added=true;assert(snapshot.set_app_suspension(7,11,true,true));}
+ };
+ assert(snapshot.set_app_suspension(7,11,true,false));
+ assert(snap.native_app->reasons.back().covered && snap.native_app->reasons.back().screen_off);
+ // Foreground revocation within the reason callback prevents resume side effects.
+ System switched;assert(switched.set_app_suspension(7,11,true,false));
+ switched.backing.record.native_app->callback=[&](std::string_view method){
+  if(method=="change")switched.backing.active_app_id_=8;
+ };
+ assert(!switched.set_app_suspension(7,11,false,false));
+ assert(switched.backing.record.native_app->calls.back()=="change");
  // Exceptions and a nested new cover during resume remain fail-closed.
  System thrown;thrown.backing.record.native_app->callback=[](std::string_view){throw std::runtime_error("failure");};
  assert(!thrown.set_app_suspension(7,11,true,false));assert(thrown.backing.record.execution.lifecycle_failed);

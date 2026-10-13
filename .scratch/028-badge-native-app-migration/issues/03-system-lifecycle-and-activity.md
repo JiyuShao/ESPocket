@@ -18,8 +18,12 @@
 
 2026-10-09：用户接受复用 pause/resume。Core timer 仅向 Running App 分发，原作 LVGL timer 仍需 App 自行处理；不能只接通通知就认定所有工作已暂停。
 
+2026-10-13：[接口审查](../records/2026-10-13-app-interface-review.md)用生产方法复现 reason callback 重入新增暂停原因后，外层仍调用 on_resume。重开本票，修复恢复前的最新事实核验并补这一条回归；此前 Resolution 保留为初版验证历史，当前状态以本票为准。本次尚未修改实现或生成修复候选。
+
 ## Resolution
 
 2026-10-13：在真实 Core AppRecord 实现实例身份、覆盖/息屏/手动重叠原因、首次暂停与末次恢复、错误/异常保持 Paused；System 接通显示/Quick Settings 事实，前台恢复投影保留有效 Paused 实例。公开 Native 执行快照与 Runtime 可选 reason callback 区分覆盖和息屏；有效活动经实例/前台/input epoch 准入后写入 Shell 原 idle 路径，迟到活动不唤醒屏幕。
 
 one-shot 在暂停到期后恢复分发一次，periodic 不补发；Runtime completion pump 显式保留，既有 Owner event、键盘/Dialog 身份和停止撤销保持。实际生产方法 host 回归、统一 firmware/Markdown 检查均通过，具体证据见 [本批记录](../records/2026-10-13-suspension-and-bubble-wrap.md)与 [开发契约](../../../docs/development/app-suspension-and-activity.md)。物理时序、无线/音效/触摸效果仍归 [09](09-device-acceptance.md)，本票不将离线结果认定为真机通过。
+
+2026-10-13：重开后的恢复重入漏洞已修复；在任何 resume 副作用前核验最新事实，并新增先失败后通过的生产回归。原因通知统一为 `on_pause_reasons_changed`，Native 命名结构/Runtime JSON 快照保持同字段，旧入口兼容回退且不重复调用。统一 host 检查、新旧 callback/失败契约与新的完整隔离候选均通过；证据见 [生命周期接口优化](../records/2026-10-13-lifecycle-callback-contract.md)。本票再次 resolved，09 的设备门槛继续保持。

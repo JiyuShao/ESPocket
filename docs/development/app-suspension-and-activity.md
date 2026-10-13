@@ -4,9 +4,33 @@
 
 ## App 接口
 
+生命周期命名按职责区分，Native 和 Runtime 保持同一产品语义：
+
+| 职责 | 命名 | 含义 |
+|---|---|---|
+| 请求 Core 执行操作 | `start_app`、`stop_app`、`pause_app`、`resume_app` | Core 决定状态转移与调用顺序 |
+| App 执行生命周期工作 | `on_start`、`on_stop`、`on_pause`、`on_resume` | 初始化、清理、停止或恢复本 App 工作；可以返回失败 |
+| 已发生事实的系统通知 | `on_app_started`、`on_app_stopped` | 既有 System hooks；不替代 App 初始化和清理 |
+| 暂停原因变化通知 | `on_pause_reasons_changed` | 交付命名字段快照；已经暂停时仍可通知 |
+
+`on_start` 成功只表示这一启动 hook 完成，Core 仍负责完整启动结果。`on_stop` 是停止过程中的清理 hook，不能理解为资源已经释放后的通知。Core 在调用 `on_pause` 前撤销 Running/输入资格；`on_resume` 前重新核验实例、前台、失败状态及最新原因，成功后再次核验才提交 Running。回调内重入改变原因或实例时，外层不能使用旧快照继续恢复。恢复回调失败时，App 应清理部分恢复的工作，不能依靠未来的一次 on_pause。
+
 Native App 通过 `AppContext::system_service().execution_state()` 读取本 App 的公开事实：本次启动 `instance`、`covered`、`screen_off`、`manual_pause`、`lifecycle_failed` 和可选 `activity_epoch`。安装身份与持久 AppContext 不代表运行身份。新启动分配新 instance；停止/失败状态返回空，Starting 可读取身份但无活动资格。
 
-第一次进入暂停时，Core 先撤销 Running/输入资格，再调用 `on_pause`。每个事实变化另调用 `on_suspension_changed`，包含已因覆盖暂停后又息屏的情况；Native 在回调内读取上述快照。Runtime 可选导出 `on_suspension_changed(covered, screenOff, manualPause)`，三个参数均为 boolean；缺少这个函数的旧包仍可运行。Native/Runtime 的已有 `on_pause`、`on_resume` 参数保持兼容。
+第一次进入暂停时，Core 先撤销 Running/输入资格，再调用 `on_pause`。每个原因变化另调用 `on_pause_reasons_changed`，包含已因覆盖暂停后又息屏的情况。Native 接口为 `on_pause_reasons_changed(AppContext &, const AppPauseReasons &)`；快照的 `covered`、`screen_off`、`manual_pause` 均为 boolean，在交付时从真实 AppRecord 读取。它描述原因，不授予运行资格；回调内重入可能使它过时，不应保存作为未来采样或活动的授权。
+
+Runtime 接口为 `on_pause_reasons_changed(snapshot_json)`。锁定的 NativeValue 桥只支持基本值，Core 使用一个 JSON 字符串传同样三个命名字段，App 使用 `JSON.parse`；本次未扩大 Runtime 桥或增加另一份状态缓存：
+
+```js
+brookesia_app.on_pause_reasons_changed = function (snapshot_json) {
+    const reasons = JSON.parse(snapshot_json);
+    // 即使已因覆盖暂停，随后息屏也会交付 screen_off=true。
+    // 这里按原因执行 App 的资源策略；不能同步等待主机或采样线程。
+    return true;
+};
+```
+
+旧 `on_suspension_changed` 保留为兼容入口：Native 的新 hook 默认转发旧 hook；覆盖新 hook 的 App 不再由 Core 重复调用旧 hook。Runtime 优先新 hook，只有 backend 明确报告该函数不存在时，才回退旧 `on_suspension_changed(covered, screenOff, manualPause)` 三个 boolean；两者均缺少仍可运行。新 hook 返回 false 或报告错误不会回退并掩盖失败。已有四个生命周期 hook 名称与参数不变。
 
 所有原因解除、同一实例仍有效且仍占前台，才调用 `on_resume`。重复事实不重复 callback。公开手动 pause/resume 只改变 manual_pause，不解除系统原因、不重启停止的实例，也不把后台 App 提为前台。停止、重启、替换或 System stop 后的旧请求不能恢复任何 App。
 
