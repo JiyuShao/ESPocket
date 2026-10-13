@@ -30,7 +30,7 @@ std::shared_ptr<std::atomic<int>> foreground_token_=std::make_shared<std::atomic
 std::shared_ptr<Entry> test_snapshots_=std::make_shared<Entry>(),card_actions_=std::make_shared<Entry>(),test_adapter_=std::make_shared<Entry>(),power_key_monitor_=std::make_shared<Entry>(),test_touch_input_=std::make_shared<Entry>(),test_power_input_=std::make_shared<Entry>();
 std::optional<int> pending_card_=77;
 ForegroundRestorationProjection foreground_restoration_{ShellSurface::WatchFace};
-bool navigation_closed=false,card_paused=false;int shell_id_=1;
+bool quick_settings_cover_=true;bool navigation_closed=false,card_paused=false;int shell_id_=1;
 std::vector<int> stopped;
 void stop_runtime_navigation(){navigation_closed=true;}void pause_card(){card_paused=true;}
 auto list_apps(){using namespace esp_brookesia::system::core;return std::vector<AppInfo>{{1,AppState::Running,{"shell"}},{2,AppState::Running,{"native"}},{3,AppState::Paused,{"background"}},{4,AppState::Running,{"runtime"}},{5,AppState::Installed,{"installed"}},{6,AppState::Stopped,{"stopped"}},{7,AppState::Error,{"failed"}}};}
@@ -39,7 +39,7 @@ void on_stop();
 };
 ''' + body + r'''
 }
-int main(){espocket::System s;s.on_stop();assert((s.stopped==std::vector<int>{2,3,4,7,1}));assert(s.foreground_app_id_==0 && !s.foreground_restoration_.sleeping_instance() && !s.pending_card_);}
+int main(){espocket::System s;s.on_stop();assert((s.stopped==std::vector<int>{2,3,4,7,1}));assert(!s.quick_settings_cover_);assert(s.foreground_app_id_==0 && !s.foreground_restoration_.sleeping_instance() && !s.pending_card_);}
 '''
         with tempfile.TemporaryDirectory(prefix='system-stop-scope-') as directory:
             cpp=Path(directory)/'test.cpp';binary=Path(directory)/'test';cpp.write_text(harness)

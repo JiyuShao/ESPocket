@@ -96,8 +96,8 @@ void show_app_admission_error_dialog(System&,const AppInfo&,std::string_view e){
 void show_lifecycle_error_dialog(System&,const AppInfo&,const char*,const char*,const std::string&e){dialog_kind="lifecycle";dialog_detail=e;}
 struct System::Impl {
 ''' + pending + r'''
- struct AppRecord {AppInfo info;std::shared_ptr<PendingAppStart> pending_start;std::shared_ptr<Native> native_app=std::make_shared<Native>();std::shared_ptr<Context> context=std::make_shared<Context>();std::optional<int> runtime_app_id;bool runtime_started=false,gui_loaded=false,resources=false;};
- System& owner_;std::map<int,AppRecord> apps_;Scheduler* task_scheduler_;Runtime* runtime_;Policy package_policy_;int active_app_id_=0;
+ struct AppRecord {struct{uint64_t instance=0;}execution;AppInfo info;std::shared_ptr<PendingAppStart> pending_start;std::shared_ptr<Native> native_app=std::make_shared<Native>();std::shared_ptr<Context> context=std::make_shared<Context>();std::optional<int> runtime_app_id;bool runtime_started=false,gui_loaded=false,resources=false;};
+ System& owner_;std::map<int,AppRecord> apps_;Scheduler* task_scheduler_;Runtime* runtime_;Policy package_policy_;int active_app_id_=0;uint64_t next_instance_=1;
  bool should_schedule_app_task(){return false;}
  template<class R,class F>R run_task_sync(int,F fn,R){return fn();}
  auto get_record(int id)->std::expected<AppRecord*,std::string>{auto it=apps_.find(id);if(it==apps_.end())return std::unexpected("missing");return &it->second;}
@@ -160,15 +160,15 @@ int main(){
   assert(synchronous.impl.apps_[1].info.state==asynchronous.impl.apps_[1].info.state);
   assert(synchronous.impl.active_app_id_==asynchronous.impl.active_app_id_);
  }
- Fixture f;assert(f.s.request_app_start(1));auto identity=f.impl.apps_[1].pending_start;
- assert(f.s.request_app_start(1));assert(f.impl.apps_[1].pending_start==identity);
+ Fixture f;assert(f.s.request_app_start(1));auto identity=f.impl.apps_[1].pending_start;auto instance=f.impl.apps_[1].execution.instance;assert(instance!=0);
+ assert(f.s.request_app_start(1));assert(f.impl.apps_[1].pending_start==identity && f.impl.apps_[1].execution.instance==instance);
  assert(!f.s.request_app_start(2));f.tick();f.tick();assert(f.q.queued.size()==1);
  // The real progress method polls, never waits for an unfinished GUI future.
  const auto before=std::chrono::steady_clock::now();for(int i=0;i<20;++i)f.tick();
  assert(std::chrono::steady_clock::now()-before<std::chrono::milliseconds(50));assert(f.s.started==0);
  assert(f.s.stop_app(1));assert(!f.s.request_app_start(1));f.tick();assert(f.impl.apps_[1].pending_start);
  f.settle();assert(f.s.started==0 && f.s.stopped==1 && !f.impl.apps_[1].gui_loaded && !f.impl.apps_[1].resources);
- assert(f.s.request_app_start(1));assert(f.impl.apps_[1].pending_start!=identity);f.settle();assert(f.s.started==1 && f.impl.apps_[1].info.state==AppState::Running);
+ assert(f.s.request_app_start(1));assert(f.impl.apps_[1].pending_start!=identity && f.impl.apps_[1].execution.instance!=instance);f.settle();assert(f.s.started==1 && f.impl.apps_[1].info.state==AppState::Running);
  for(auto stage:{"admission","services","gui","runtime_load","runtime_start","lifecycle","commit"}){
   failure=stage;Fixture failed;assert(failed.s.request_app_start(1));failed.settle();
   assert(failed.s.failed==1 && failed.impl.apps_[1].info.state==AppState::Error);

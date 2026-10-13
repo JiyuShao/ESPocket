@@ -55,6 +55,7 @@ std::expected<void, std::string> System::set_display_on(bool on)
             ESP_LOGW(TAG, "Card wake presentation failed: %s", resumed.error().c_str());
         }
     }
+    sync_foreground_suspension();
     ESP_LOGI(TAG, "M6 display state: %s", on ? "On" : "Off");
     return {};
 }
@@ -77,9 +78,14 @@ std::expected<void, std::string> System::set_quick_settings_display(bool visible
         if (!selected) return selected;
         foreground_restoration_.quick_settings_opened(
             {previous->id, gui_id, previous->name}, current_foreground_instance());
+        quick_settings_cover_ = true;
+        sync_foreground_suspension();
         return {};
     }
     const auto saved = foreground_restoration_.quick_settings_closed(current_foreground_instance(), restore);
+    quick_settings_cover_ = false;
+    // Home/teardown closes without restoring; never briefly resume the exiting App.
+    if (restore) sync_foreground_suspension();
     if (!saved) return {};
     const auto active = display.get_active_source(output);
     // Never override a newer Owner's routing or restore a re-registered same-name source.
@@ -91,6 +97,18 @@ std::expected<void, std::string> System::set_quick_settings_display(bool visible
     if (original == sources.end()) return {};
     return display.set_active_source(output, original->name,
         esp_brookesia::service::Display::SourceSelectionGuard{saved->gui_source_id, original->id});
+}
+
+void System::sync_foreground_suspension()
+{
+    if (stopping_.load(std::memory_order_acquire)) return;
+    const auto foreground = current_foreground_instance();
+    if (!foreground) return;
+    const auto state = app_execution_state(foreground->app_id);
+    if (!state) return;
+    auto result = set_app_suspension(foreground->app_id, state->instance,
+        quick_settings_cover_, !display_on_.load(std::memory_order_acquire));
+    if (!result) ESP_LOGW(TAG, "App suspension failed; input stays revoked: %s", result.error().c_str());
 }
 
 void System::report_startup_failure(std::string_view reason)

@@ -11,7 +11,7 @@ Blocked by: 无额外人工许可；按 tickets 完成公共接口核查与离�
 
 ## Solution
 
-以七个独立可见 Native App 交付：泡泡纸、打砖块、弹球、水池、太阳系、重力迷宫、蓝牙遥控。蓝牙遥控包含触控板和空中鼠标两种模式。应用使用现有 System Core、导航和 GUI 生命周期，硬件能力保持真实 Service/HAL Owner；产品行为已确认，现已开始来源锁定与离线接入核查；尚未交付可运行 App。
+以七个独立可见 Native App 交付：泡泡纸、打砖块、弹球、水池、太阳系、重力迷宫、蓝牙遥控。蓝牙遥控包含触控板和空中鼠标两种模式。应用使用现有 System Core、导航和 GUI 生命周期，硬件能力保持真实 Service/HAL Owner；产品行为已确认，已完成来源锁定、自绘/受控输入接口与暂停/活动接入，泡泡纸已实现为首个独立 Native App；离线构建和设备证据分开记录。其余五个游戏与蓝牙遥控尚未交付。
 
 ## User Stories
 
@@ -67,3 +67,5 @@ Excel 快捷键、录音机、原项目计算器/时钟/Settings/Launcher/锁屏
 - [第一轮决定与接口初查](records/2026-10-09-scope-and-capability-frontier.md)。
 
 2026-10-12：用户要求无真机时先完成离线可靠性再继续 028，沿此前已接受方案实施，不再重复索取总体许可。[来源锁定与边界核查](records/2026-10-12-source-and-boundaries.md)记录当前输入、官方驱动和真实缺口；历史“待最后确认”保留为当时阶段描述。
+
+2026-10-13：用户授权完整实现下一批 [03](issues/03-system-lifecycle-and-activity.md) 与首个泡泡纸 App 流程。实现、离线验证与候选见 [本批记录](records/2026-10-13-suspension-and-bubble-wrap.md)；泡泡纸使用说明见 [App README](../../firmware/native_apps/bubble_wrap/README.md)。六个游戏的总体票仍未关闭，IMU、BLE HID 和真机验收继续保持独立门槛。

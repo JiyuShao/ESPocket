@@ -3,6 +3,7 @@
 本目录面向 Native App、Runtime App 和设备测试工具开发者，规定 ESPocket 产品框架额外提供的声明与协议语义。这里描述目标 API；实现完成情况和可执行工作以 [本地工作项](../../.scratch/README.md) 为准。
 
 - [App Page、Card 与 Back 开发 API](app-navigation-card-api.md)：App 声明、导航、Back、Card 生命周期及错误处理；包含[主题开发规范](app-navigation-card-api.md#主题开发规范)，界面优先使用主题样式与颜色变量。
+- [App 暂停与用户活动](app-suspension-and-activity.md)：同次实例、重叠暂停原因、异步完成及有效活动准入。
 - [Native App 自绘与多点输入](native-content-api.md)：App 容器挂载、token 失效、资源清理与受控多点帧。
 - [Runtime 包发行输入](runtime-release.md)：签名包、metadata 和真实发布门槛。
 - [交互自动化测试协议](interaction-test-protocol.md)：开发者模式、USB 命令、快照和证据边界。

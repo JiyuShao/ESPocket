@@ -97,6 +97,11 @@ std::expected<void, std::string> CircularShell::dismiss_quick_settings(bool rest
     return {};
 }
 
+void CircularShell::report_user_activity()
+{
+    if (home_gesture_state_) home_gesture_state_->activity_generation.fetch_add(1, std::memory_order_acq_rel);
+}
+
 std::optional<uint64_t> CircularShell::native_pointer_access() const
 {
     if (!home_gesture_state_) return std::nullopt;

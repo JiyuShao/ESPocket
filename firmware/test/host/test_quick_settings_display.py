@@ -41,6 +41,7 @@ class QuickSettingsDisplayTest(unittest.TestCase):
 #include <utility>
 #include <vector>
 #define BROOKESIA_LOG_TRACE_GUARD_WITH_THIS()
+#define ESP_LOGW(...) ((void)0)
 namespace esp_brookesia::service {
 constexpr uint32_t INVALID_SOURCE_ID=0;
 struct AsyncFrame {uint32_t source_id;};
@@ -70,6 +71,12 @@ struct DisplaySource {static DisplaySource& get_instance(){static DisplaySource 
  std::string output_name(){return "panel";}uint32_t source_id(){return 1;}};
 enum class ShellSurface : uint8_t {WatchFace};
 struct System {
+ std::atomic_bool stopping_=false;bool quick_settings_cover_=false,fail_pause=false;
+ struct Execution {uint64_t instance;};
+ std::vector<std::pair<bool,bool>> reasons;
+ auto app_execution_state(uint32_t)->std::optional<Execution>{return Execution{foreground_token_->load()};}
+ std::expected<void,std::string>set_app_suspension(uint32_t,uint64_t,bool cover,bool off){reasons.push_back({cover,off});if(fail_pause)return std::unexpected("failed");return {};}
+ void sync_foreground_suspension();
  std::atomic_bool display_on_=true;std::shared_ptr<std::atomic<uint64_t>> foreground_token_=std::make_shared<std::atomic<uint64_t>>(7);
  ForegroundRestorationProjection foreground_restoration_{ShellSurface::WatchFace};
  std::optional<RunningInstanceIdentity> current_foreground_instance(){return RunningInstanceIdentity{2,foreground_token_->load()};}
@@ -86,7 +93,14 @@ int main(){using namespace esp_brookesia::service;auto& d=Display::get_instance(
  assert(d.sources_[1].requested_outputs.empty());
  assert(system.set_quick_settings_display(true,false));
  assert(d.outputs_[1].active_source_id==1 && d.completed==1);
+ assert((system.reasons.back()==std::pair{true,false}));
+ system.display_on_=false;system.sync_foreground_suspension();assert((system.reasons.back()==std::pair{true,true}));
+ system.display_on_=true;system.sync_foreground_suspension();assert((system.reasons.back()==std::pair{true,false}));
  assert(system.set_quick_settings_display(false,true));assert(d.outputs_[1].active_source_id==2);
+ assert((system.reasons.back()==std::pair{false,false}));
+ // Lifecycle failure does not trap Quick Settings or source routing.
+ system.fail_pause=true;assert(system.set_quick_settings_display(true,false));
+ assert(system.set_quick_settings_display(false,true));system.fail_pause=false;
  assert(system.set_quick_settings_display(true,false));++*system.foreground_token_;
  assert(system.set_quick_settings_display(false,true));assert(d.outputs_[1].active_source_id==1);
  d.outputs_[1].active_source_id=2;assert(system.set_quick_settings_display(true,false));

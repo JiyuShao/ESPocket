@@ -1,0 +1,33 @@
+--- a/include/brookesia/service_audio/service_audio.hpp
++++ b/include/brookesia/service_audio/service_audio.hpp
+@@ -373,7 +373,8 @@
+     std::expected<void, std::string> request_output(std::string_view source_name, std::string_view output_name);
+     std::expected<void, std::string> release_output(uint32_t source_id, std::string_view output_name);
+     std::expected<void, std::string> release_output(std::string_view source_name, std::string_view output_name);
+-    std::expected<void, std::string> set_active_source(std::string_view output_name, std::string_view source_name);
++    std::expected<void, std::string> set_active_source(std::string_view output_name, std::string_view source_name,
++                                                       bool only_if_idle = false);
+     std::expected<std::string, std::string> get_active_source(std::string_view output_name) const;
+     std::expected<void, std::string> open_stream(
+         uint32_t source_id, std::string_view output_name, const AudioStreamConfig &config
+--- a/src/audio_decoder.cpp
++++ b/src/audio_decoder.cpp
+@@ -243,7 +243,7 @@
+ 
+ 
+ std::expected<void, std::string> AudioDecoder::set_active_source(
+-    std::string_view output_name, std::string_view source_name
++    std::string_view output_name, std::string_view source_name, bool only_if_idle
+ )
+ {
+     BROOKESIA_LOG_TRACE_GUARD_WITH_THIS();
+@@ -264,6 +264,9 @@
+         return {};
+     }
+ 
++    // The idle check and selection share the real Audio Owner mutex.
++    // A short optional effect cannot preempt a concurrently selected source.
++    if (only_if_idle && output->active_source_id != 0) return std::unexpected("audio_output_busy");
+     if (output->active_source_id != 0) {
+         auto *old_source = find_source_by_id_locked(output->active_source_id);
+         if (old_source != nullptr) {

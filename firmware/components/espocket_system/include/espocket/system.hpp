@@ -167,6 +167,7 @@ private:
     std::expected<void, std::string> launch_app(std::string_view manifest_id, ShellSurface source);
     std::expected<void, std::string> set_display_on(bool on);
     std::expected<void, std::string> set_quick_settings_display(bool visible, bool restore);
+    void sync_foreground_suspension();
     void show_watch_face();
     void restore_surface(ShellSurface surface);
     void init_reset_resume();
@@ -249,6 +250,7 @@ private:
     uint64_t package_policy_retry_at_ms_ = 0;
     uint32_t package_policy_retry_delay_ms_ = 1000;
     std::atomic_bool display_on_ = true;
+    bool quick_settings_cover_ = false; // Product reason; Core owns lifecycle transitions.
     ForegroundRestorationProjection foreground_restoration_;
     bool startup_failed_ = false;
     std::atomic_bool stopping_ = false;

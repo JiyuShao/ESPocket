@@ -102,6 +102,7 @@ public:
     ShellSurface underlying_surface() const;
     bool quick_settings_open() const;
     std::optional<uint64_t> native_pointer_access() const;
+    void report_user_activity();
     std::expected<void, std::string> dismiss_quick_settings(bool restore_display = true);
     std::expected<void, std::string> handle_gesture(const ShellGestureEvent &event);
     std::expected<void, std::string> inject_synthetic_touch(int32_t x, int32_t y, bool pressed, bool first);

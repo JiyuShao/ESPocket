@@ -67,6 +67,7 @@ class PatchedFirmwareStageTest(unittest.TestCase):
                      ('espressif__esp-boost', '0.6.0'),
                      ('espressif__mcp-c-sdk', '2.0.1'),
                      ('espressif__brookesia_agent_manager', '0.8.2'),
+                     ('espressif__brookesia_service_audio', '0.8.2'),
                      ('espressif__esp_xiaozhi', '0.1.2'),
                      ('espressif__esp-sr', '2.4.4')))
         self.assertEqual(BUILDER.PATCH_SETS['store-candidate'], BUILDER.PATCH_SETS['production'])

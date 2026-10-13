@@ -35,7 +35,7 @@ def exercise(source, directory):
 using AppId=int;using TimerId=int;constexpr TimerId INVALID_TIMER_ID=0;
 constexpr char SYSTEM_APP_TASK_GROUP[]="app",SYSTEM_TIMER_TASK_GROUP[]="timer",LIFECYCLE_ON_TIMER[]="on_timer";
 namespace lib_utils { struct FunctionGuard {std::function<void()> f;FunctionGuard(std::function<void()> f):f(f){}~FunctionGuard(){f();}}; }
-enum class AppState {Running,Stopped};enum class AppKind {Native,Runtime};
+enum class AppState {Running,Paused,Stopped};enum class AppKind {Native,Runtime};
 struct Context {};
 struct Native {std::function<std::expected<void,std::string>()> callback;auto on_timer(Context&,int,std::string){return callback();}};
 struct Scheduler {std::function<bool()> fire;int next=1;
@@ -44,14 +44,17 @@ struct Scheduler {std::function<bool()> fire;int next=1;
 struct System {
  struct Impl {
   struct PendingTimer {int app_id,timer_id;std::string name;};
-  struct AppRecord {struct TimerRecord{std::string name;bool periodic;};
+  struct AppRecord {struct TimerRecord{std::string name;bool periodic;bool completion=false;bool deferred=false;};
    struct {int app_id=1;AppState state=AppState::Running;struct{AppKind kind=AppKind::Native;}manifest;}info;
-   std::map<int,TimerRecord> timers;std::shared_ptr<Native>native_app=std::make_shared<Native>();std::shared_ptr<Context>context=std::make_shared<Context>();
-  }record;
+   struct{bool lifecycle_failed=false;}execution;std::map<int,TimerRecord> timers;std::shared_ptr<Native>native_app=std::make_shared<Native>();std::shared_ptr<Context>context=std::make_shared<Context>();
+  };
+  std::map<int,AppRecord>apps_{{1,AppRecord{}}};AppRecord&record=apps_.at(1);
+  struct Execution{bool lifecycle_failed=false;};
   std::shared_ptr<Scheduler>task_scheduler_=std::make_shared<Scheduler>();std::mutex timer_mutex_;std::recursive_mutex timer_map_mutex_;
   std::vector<PendingTimer>pending_timers_;std::deque<std::function<void()>>queued;bool fail_post=false;
   std::expected<AppRecord*,std::string>get_record(AppId){return &record;}
   std::expected<void,std::string>post_task(const char*,std::function<void()>f){if(fail_post)return std::unexpected("post");queued.push_back(f);return {};}
+  void drain_deferred_timers();
   std::expected<void,std::string>dispatch_timer(AppId,TimerId,std::string);
   std::expected<void,std::string>call_runtime_lifecycle(AppRecord&r,const char*,std::initializer_list<std::variant<double,std::string>>){return r.native_app->callback();}
  };
@@ -80,6 +83,24 @@ int main(){
  assert(!s.task_scheduler_->fire());assert(s.pending_timers_.empty());
 }
 '''
+    if 'bool completion' in methods:
+        code = code.replace('timer_start_periodic(AppId,std::string_view,int);',
+                            'timer_start_periodic(AppId,std::string_view,int,bool completion=false);')
+        code = code.replace('assert(!s.task_scheduler_->fire());assert(s.pending_timers_.empty());', r'''assert(!s.task_scheduler_->fire());assert(s.pending_timers_.empty());
+ s.fail_post=false;s.record.info.state=AppState::Paused;
+ assert(s.task_scheduler_->fire());run();assert(callbacks==3); // periodic gameplay suppressed
+ auto&timer=s.record.timers.at(*replacement);timer.completion=true;
+ assert(s.task_scheduler_->fire());run();assert(callbacks==4); // Owner completion remains live
+ timer.completion=false;timer.periodic=false;
+ assert(s.dispatch_timer(1,*replacement,"one-shot"));assert(timer.deferred && callbacks==4);
+ s.drain_deferred_timers();assert(callbacks==4); // still paused
+ s.record.info.state=AppState::Running;s.drain_deferred_timers();assert(callbacks==5);
+ assert(!s.record.timers.contains(*replacement));s.drain_deferred_timers();assert(callbacks==5);
+ const auto stopped=system.timer_start_periodic(1,"cancel",33);assert(stopped);
+ auto&t=s.record.timers.at(*stopped);t.periodic=false;s.record.info.state=AppState::Paused;
+ assert(s.dispatch_timer(1,*stopped,"cancel"));assert(t.deferred);s.record.timers.clear();
+ s.record.info.state=AppState::Running;s.drain_deferred_timers();assert(callbacks==5);
+''')
     directory = Path(directory)
     cpp, binary = directory / 'timer.cpp', directory / 'timer'
     cpp.write_text(code)

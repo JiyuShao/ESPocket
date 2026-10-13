@@ -1,0 +1,456 @@
+--- a/include/brookesia/system_core/app/iapp.hpp
++++ b/include/brookesia/system_core/app/iapp.hpp
+@@ -81,6 +81,10 @@
+      */
+     virtual std::expected<void, std::string> on_resume(AppContext &context);
+ 
++    // Called for every product reason change, including while already paused.
++    // Read SystemApi::execution_state(); callbacks must not synchronously wait on peers.
++    virtual std::expected<void, std::string> on_suspension_changed(AppContext &context);
++
+     /**
+      * @brief Called when the application is stopped.
+      *
+--- a/include/brookesia/system_core/app/system_api.hpp
++++ b/include/brookesia/system_core/app/system_api.hpp
+@@ -51,6 +51,9 @@
+         const StorageFileLocation &from,
+         const StorageFileLocation &to
+     ) const;
++    std::optional<AppExecutionState> execution_state() const;
++    // Capture instance and activity_epoch when admitting the user input, not later.
++    bool report_user_activity(uint64_t instance, uint64_t epoch) const;
+     std::optional<AppInfo> get_active_app() const;
+     std::vector<AppInfo> list_apps() const;
+     std::expected<void, std::string> request_close_app(AppId app_id) const;
+--- a/include/brookesia/system_core/app/types.hpp
++++ b/include/brookesia/system_core/app/types.hpp
+@@ -5,6 +5,7 @@
+  */
+ #pragma once
+ 
++#include <optional>
+ #include <cstdint>
+ #include <functional>
+ #include <map>
+@@ -288,6 +289,17 @@
+     return manifest.id;
+ }
+ 
++// Identity belongs to one start attempt, never to an installation/AppContext.
++struct AppExecutionState {
++    uint64_t instance = 0;
++    bool covered = false;
++    bool screen_off = false;
++    bool manual_pause = false;
++    bool lifecycle_failed = false;
++    std::optional<uint64_t> activity_epoch;
++    bool suspended() const { return covered || screen_off || manual_pause || lifecycle_failed; }
++};
++
+ struct AppInfo {
+     AppId app_id = INVALID_APP_ID;
+     AppManifest manifest;
+--- a/include/brookesia/system_core/system/system.hpp
++++ b/include/brookesia/system_core/system/system.hpp
+@@ -104,6 +104,7 @@
+          * Missing callback denies native pointer access by default.
+          */
+         std::function<std::optional<uint64_t>(AppId)> native_pointer_access;
++        std::function<void(AppId)> user_activity;
+ 
+         /** Storage roots and install target policy. */
+         StorageConfig storage = {};
+@@ -213,6 +214,9 @@
+     std::expected<void, std::string> stop_app(AppId app_id);
+     std::expected<void, std::string> pause_app(AppId app_id);
+     std::expected<void, std::string> resume_app(AppId app_id);
++    std::optional<AppExecutionState> app_execution_state(AppId app_id);
++    std::expected<void, std::string> set_app_suspension(AppId app_id, uint64_t instance, bool covered, bool screen_off);
++    bool report_app_user_activity(AppId app_id, uint64_t instance, uint64_t epoch);
+     std::expected<void, std::string> request_close_app(AppId app_id);
+     // Read request validity from the actual Owner before restoring presentation.
+     // Call without a GUI lock; scheduling failure is fail-closed.
+@@ -416,7 +420,8 @@
+     std::expected<TimerId, std::string> timer_start_periodic(
+         AppId app_id,
+         std::string_view name,
+-        int interval_ms
++        int interval_ms,
++        bool completion = false
+     );
+     std::expected<TimerId, std::string> timer_start_delayed(
+         AppId app_id,
+@@ -427,6 +432,9 @@
+ 
+     std::expected<AppId, std::string> get_current_runtime_app_owner() const;
+ 
++private:
++    std::expected<void, std::string> apply_app_suspension(AppId app_id, uint64_t instance,
++                                                       bool covered, bool screen_off, bool manual);
+ protected:
+     virtual SystemInfo on_get_system_info() const;
+     virtual std::expected<void, std::string> on_prepare_startup_overlay();
+--- a/src/app/app.cpp
++++ b/src/app/app.cpp
+@@ -1610,6 +1610,21 @@
+     return {};
+ }
+ 
++std::expected<void, std::string> IApp::on_suspension_changed(AppContext &)
++{
++    return {};
++}
++
++std::optional<AppExecutionState> SystemApi::execution_state() const
++{
++    return system_ ? system_->app_execution_state(app_id_) : std::nullopt;
++}
++
++bool SystemApi::report_user_activity(uint64_t instance, uint64_t epoch) const
++{
++    return system_ && system_->report_app_user_activity(app_id_, instance, epoch);
++}
++
+ std::expected<void, std::string> IApp::on_stop(AppContext &)
+ {
+     return {};
+--- a/src/app/manager.cpp
++++ b/src/app/manager.cpp
+@@ -254,6 +254,7 @@
+     }
+     auto &record = *record_result.value();
+     if (record.pending_start) return std::unexpected("app_start_in_progress");
++    if (record.info.state != AppState::Running || record.execution.suspended()) return {};
+     if (record.info.manifest.kind == AppKind::Native) {
+         if (!record.native_app || !record.context) {
+             return std::unexpected("Native app is not available");
+@@ -830,6 +831,10 @@
+     };
+     auto heap_before_start = heap_trace::capture();
+     heap_trace::log("system.start", "before start", record.info.manifest.id, heap_before_start);
++    if (record.info.state == AppState::Paused || record.info.state == AppState::Stopping)
++        return std::unexpected("app_state_not_startable");
++    record.execution = {};
++    do { record.execution.instance = impl_->next_instance_++; } while (record.execution.instance == 0);
+     record.info.state = AppState::Starting;
+     record.info.last_error.clear();
+ 
+@@ -1141,72 +1146,132 @@
+     return {};
+ }
+ 
++std::optional<AppExecutionState> System::app_execution_state(AppId app_id)
++{
++    if (impl_->should_schedule_app_task()) {
++        return impl_->run_task_sync<std::optional<AppExecutionState>>(SYSTEM_APP_TASK_GROUP,
++            [this, app_id] { return app_execution_state(app_id); }, std::nullopt);
++    }
++    auto found = impl_->get_record(app_id);
++    if (!found) return std::nullopt;
++    const auto &record = **found;
++    if (record.info.state != AppState::Starting && record.info.state != AppState::Running &&
++        record.info.state != AppState::Paused) return std::nullopt;
++    auto state = record.execution;
++    if (record.info.state == AppState::Running && !state.suspended() &&
++        impl_->active_app_id_ == app_id && impl_->config_.native_pointer_access)
++        state.activity_epoch = impl_->config_.native_pointer_access(app_id);
++    return state;
++}
++
++bool System::report_app_user_activity(AppId app_id, uint64_t instance, uint64_t epoch)
++{
++    if (impl_->should_schedule_app_task()) {
++        return impl_->run_task_sync<bool>(SYSTEM_APP_TASK_GROUP,
++            [this, app_id, instance, epoch] { return report_app_user_activity(app_id, instance, epoch); }, false);
++    }
++    const auto state = app_execution_state(app_id);
++    if (!state || instance == 0 || state->instance != instance || !state->activity_epoch ||
++        *state->activity_epoch != epoch || !impl_->config_.user_activity) return false;
++    impl_->config_.user_activity(app_id);
++    return true;
++}
++
++std::expected<void, std::string> System::set_app_suspension(
++    AppId app_id, uint64_t instance, bool covered, bool screen_off)
++{
++    if (impl_->should_schedule_app_task()) {
++        return impl_->run_task_sync<std::expected<void, std::string>>(SYSTEM_APP_TASK_GROUP,
++            [this, app_id, instance, covered, screen_off] {
++                return set_app_suspension(app_id, instance, covered, screen_off);
++            }, std::unexpected("Failed to post app suspension"));
++    }
++    auto state = app_execution_state(app_id);
++    if (!state) return std::unexpected("app_instance_unavailable");
++    return apply_app_suspension(app_id, instance, covered, screen_off, state->manual_pause);
++}
++
+ std::expected<void, std::string> System::pause_app(AppId app_id)
+ {
+     if (impl_->should_schedule_app_task()) {
+-        return impl_->run_task_sync<std::expected<void, std::string>>(
+-                   SYSTEM_APP_TASK_GROUP,
+-        [this, app_id]() {
+-            return pause_app(app_id);
+-        },
+-        std::unexpected("Failed to post app pause task")
+-               );
+-    }
+-    auto record_result = impl_->get_record(app_id);
+-    if (!record_result) {
+-        return std::unexpected(record_result.error());
+-    }
+-    auto &record = *record_result.value();
+-    if (record.pending_start) return std::unexpected("app_start_in_progress");
+-    if (record.info.manifest.kind == AppKind::Native && record.native_app && record.context) {
+-        auto result = record.native_app->on_pause(*record.context);
++        return impl_->run_task_sync<std::expected<void, std::string>>(SYSTEM_APP_TASK_GROUP,
++            [this, app_id] { return pause_app(app_id); }, std::unexpected("Failed to post app pause"));
++    }
++    auto state = app_execution_state(app_id);
++    if (!state) return std::unexpected("app_instance_unavailable");
++    return apply_app_suspension(app_id, state->instance, state->covered, state->screen_off, true);
++}
++
++std::expected<void, std::string> System::resume_app(AppId app_id)
++{
++    if (impl_->should_schedule_app_task()) {
++        return impl_->run_task_sync<std::expected<void, std::string>>(SYSTEM_APP_TASK_GROUP,
++            [this, app_id] { return resume_app(app_id); }, std::unexpected("Failed to post app resume"));
++    }
++    auto state = app_execution_state(app_id);
++    if (!state) return std::unexpected("app_instance_unavailable");
++    return apply_app_suspension(app_id, state->instance, state->covered, state->screen_off, false);
++}
++
++std::expected<void, std::string> System::apply_app_suspension(
++    AppId app_id, uint64_t instance, bool covered, bool screen_off, bool manual)
++{
++    auto found = impl_->get_record(app_id);
++    if (!found) return std::unexpected(found.error());
++    auto &record = **found;
++    if (instance == 0 || instance != record.execution.instance || impl_->active_app_id_ != app_id ||
++        (record.info.state != AppState::Running && record.info.state != AppState::Paused))
++        return std::unexpected("app_instance_not_foreground");
++    const bool changed = record.execution.covered != covered || record.execution.screen_off != screen_off ||
++                         record.execution.manual_pause != manual;
++    record.execution.covered = covered;
++    record.execution.screen_off = screen_off;
++    record.execution.manual_pause = manual;
++    if (record.execution.lifecycle_failed) return std::unexpected(record.info.last_error);
++    const bool pause = record.execution.suspended();
++    const bool first_pause = pause && record.info.state == AppState::Running;
++    // Revoke work before notifying an App; failure keeps it paused until stop/reopen.
++    if (first_pause) record.info.state = AppState::Paused;
++    auto call = [&](std::string_view method) -> std::expected<void, std::string> {
++        auto current = impl_->get_record(app_id);
++        if (!current || (**current).execution.instance != instance ||
++            ((**current).info.state != AppState::Paused && (**current).info.state != AppState::Running) ||
++            impl_->active_app_id_ != app_id) return std::unexpected("app_instance_revoked");
++        auto &live = **current;
++        std::expected<void, std::string> result;
++        try {
++        if (live.info.manifest.kind == AppKind::Native && live.native_app && live.context) {
++            if (method == "on_pause") result = live.native_app->on_pause(*live.context);
++            else if (method == "on_resume") result = live.native_app->on_resume(*live.context);
++            else result = live.native_app->on_suspension_changed(*live.context);
++        } else if (method == "on_suspension_changed") {
++            result = impl_->call_runtime_lifecycle(live, method, {covered, screen_off, manual});
++        } else result = impl_->call_runtime_lifecycle(live, method);
++        } catch (const std::exception &error) { result = std::unexpected(error.what()); }
++          catch (...) { result = std::unexpected("App suspension callback exception"); }
++        current = impl_->get_record(app_id);
++        if (!current || (**current).execution.instance != instance ||
++            ((**current).info.state != AppState::Paused && (**current).info.state != AppState::Running) ||
++            impl_->active_app_id_ != app_id) return std::unexpected("app_instance_revoked");
+         if (!result) {
+-            show_lifecycle_error_dialog(*this, record.info, "pause", LIFECYCLE_ON_PAUSE, result.error());
+-            return result;
+-        }
+-    } else if (record.info.manifest.kind == AppKind::Runtime) {
+-        auto result = impl_->call_runtime_lifecycle(record, LIFECYCLE_ON_PAUSE);
+-        if (!result) {
+-            show_lifecycle_error_dialog(*this, record.info, "pause", LIFECYCLE_ON_PAUSE, result.error());
+-            return result;
+-        }
+-    }
+-    record.info.state = AppState::Paused;
+-    return {};
+-}
+-
+-std::expected<void, std::string> System::resume_app(AppId app_id)
+-{
+-    if (impl_->should_schedule_app_task()) {
+-        return impl_->run_task_sync<std::expected<void, std::string>>(
+-                   SYSTEM_APP_TASK_GROUP,
+-        [this, app_id]() {
+-            return resume_app(app_id);
+-        },
+-        std::unexpected("Failed to post app resume task")
+-               );
+-    }
+-    auto record_result = impl_->get_record(app_id);
+-    if (!record_result) {
+-        return std::unexpected(record_result.error());
+-    }
+-    auto &record = *record_result.value();
+-    if (record.pending_start) return std::unexpected("app_start_in_progress");
+-    if (record.info.manifest.kind == AppKind::Native && record.native_app && record.context) {
+-        auto result = record.native_app->on_resume(*record.context);
+-        if (!result) {
+-            show_lifecycle_error_dialog(*this, record.info, "resume", LIFECYCLE_ON_RESUME, result.error());
+-            return result;
+-        }
+-    } else if (record.info.manifest.kind == AppKind::Runtime) {
+-        auto result = impl_->call_runtime_lifecycle(record, LIFECYCLE_ON_RESUME);
+-        if (!result) {
+-            show_lifecycle_error_dialog(*this, record.info, "resume", LIFECYCLE_ON_RESUME, result.error());
+-            return result;
+-        }
+-    }
+-    record.info.state = AppState::Running;
+-    impl_->active_app_id_ = app_id;
++            (**current).execution.lifecycle_failed = true;
++            (**current).info.state = AppState::Paused;
++            (**current).info.last_error = result.error();
++        }
++        return result;
++    };
++    if (first_pause) { if (auto result = call("on_pause"); !result) return result; }
++    if (changed) { if (auto result = call("on_suspension_changed"); !result) return result; }
++    found = impl_->get_record(app_id);
++    if (!found || (**found).execution.instance != instance) return std::unexpected("app_instance_revoked");
++    if (!pause && (**found).info.state == AppState::Paused) {
++        if (auto result = call("on_resume"); !result) return result;
++        found = impl_->get_record(app_id);
++        // A callback may add a new pause reason; never override that decision.
++        if (!found || (**found).execution.instance != instance || (**found).execution.suspended())
++            return std::unexpected("app_resume_revoked");
++        (**found).info.state = AppState::Running;
++    }
+     return {};
+ }
+ 
+--- a/src/app/start_progress.cpp
++++ b/src/app/start_progress.cpp
+@@ -26,6 +26,8 @@
+     if (!impl_->task_scheduler_ || !impl_->task_scheduler_->is_running())
+         return std::unexpected("app_scheduler_unavailable");
+     record.pending_start = std::make_shared<Impl::PendingAppStart>();
++    record.execution = {};
++    do { record.execution.instance = impl_->next_instance_++; } while (record.execution.instance == 0);
+     record.info.state = AppState::Starting;
+     record.info.last_error.clear();
+     return {};
+--- a/src/private/system/impl.hpp
++++ b/src/private/system/impl.hpp
+@@ -68,6 +68,7 @@
+     };
+     struct AppRecord {
+         AppInfo info;
++        AppExecutionState execution;
+         AppGuiDescriptor gui_descriptor;
+         std::shared_ptr<IApp> native_app;
+         std::unique_ptr<AppContext> context;
+@@ -82,6 +83,8 @@
+         struct TimerRecord {
+             std::string name;
+             bool periodic = false;
++            bool completion = false;
++            bool deferred = false;
+         };
+         std::map<TimerId, TimerRecord> timers;
+         bool runtime_loaded = false;
+@@ -255,6 +258,7 @@
+     std::string resolve_app_resource_dir(const AppManifest &manifest) const;
+     std::string resolve_app_resource_path(const AppManifest &manifest, std::string_view path) const;
+     void cancel_app_timers(AppRecord &record);
++    void drain_deferred_timers();
+     std::expected<void, std::string> call_runtime_lifecycle(
+         AppRecord &record,
+         std::string_view function_name,
+@@ -365,6 +369,7 @@
+     };
+     std::optional<std::string> stored_theme_id_;
+     std::optional<std::string> stored_language_;
++    uint64_t next_instance_ = 1;
+     AppId next_app_id_ = 1;
+     KeyboardRequestId next_keyboard_request_id_ = 1;
+     MessageDialogRequestId next_message_dialog_request_id_ = 1;
+--- a/src/system/lifecycle.cpp
++++ b/src/system/lifecycle.cpp
+@@ -576,11 +576,12 @@
+     if (impl_->should_schedule_app_task()) {
+         (void)impl_->run_task_sync<std::expected<void, std::string>>(
+             SYSTEM_APP_TASK_GROUP, [this]() -> std::expected<void, std::string> {
+-                impl_->advance_app_starts(); return {};
++                impl_->advance_app_starts(); impl_->drain_deferred_timers(); return {};
+             }, std::unexpected("Failed to post lifecycle progress"));
+         return;
+     }
+     impl_->advance_app_starts();
++    impl_->drain_deferred_timers();
+ }
+ 
+ namespace {
+--- a/src/system/timer.cpp
++++ b/src/system/timer.cpp
+@@ -126,7 +126,16 @@
+             return {};
+         }
+     }
+-    if (record.info.state != AppState::Running) {
++    if (record.info.state == AppState::Paused) {
++        std::lock_guard<std::recursive_mutex> map_lock(timer_map_mutex_);
++        auto it = record.timers.find(timer_id);
++        if (it == record.timers.end()) return {};
++        if (!it->second.completion || record.execution.lifecycle_failed) {
++            // Keep one due one-shot until resume; periodic work never catches up.
++            if (!it->second.periodic) it->second.deferred = true;
++            return {};
++        }
++    } else if (record.info.state != AppState::Running) {
+         return {};
+     }
+     if (record.info.manifest.kind == AppKind::Native) {
+@@ -160,10 +169,31 @@
+ }
+ 
+ 
++void System::Impl::drain_deferred_timers()
++{
++    std::vector<PendingTimer> due;
++    {
++        std::lock_guard<std::recursive_mutex> lock(timer_map_mutex_);
++        for (auto &[id, record] : apps_) {
++            if (record.info.state != AppState::Running) continue;
++            for (auto &[timer_id, timer] : record.timers) {
++                if (!timer.deferred) continue;
++                timer.deferred = false;
++                due.push_back({id, timer_id, timer.name});
++            }
++        }
++    }
++    for (auto &timer : due) {
++        auto result = dispatch_timer(timer.app_id, timer.timer_id, std::move(timer.name));
++        if (!result) BROOKESIA_LOGW("Deferred timer failed: %1%", result.error());
++    }
++}
++
+ std::expected<TimerId, std::string> System::timer_start_periodic(
+     AppId app_id,
+     std::string_view name,
+-    int interval_ms
++    int interval_ms,
++    bool completion
+ )
+ {
+     auto record_result = impl_->get_record(app_id);
+@@ -276,6 +306,7 @@
+     record.timers.emplace(timer_id, Impl::AppRecord::TimerRecord{
+         .name = std::string(name),
+         .periodic = true,
++        .completion = completion,
+     });
+     return timer_id;
+ }

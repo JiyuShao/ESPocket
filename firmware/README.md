@@ -67,6 +67,10 @@ stage 时保存实际副本的产品源码、补丁 inventory 和原始配置/lo
 
 Store 成功提交安装后回收自有下载副本，Core 的安装原包和用户 data/files 保留。下载包缓存目标为 512 KiB，优先清理已安装版本和旧版本，再按修改时间回收；单次最多处理 64 个候选，正在下载、待确认或排队安装的包保留。扫描清理自有中断 `.bpk.part`，手动导入包不参与回收。下载与 Core 安装分别读取实际可用容量，预算包括候选原包、解包、更新保留文件和分配开销；容量未知或不足时提前失败，失败安装保留旧版本。图像缓存与磁盘包缓存的预算独立。
 
+## Badge Native App
+
+[泡泡纸](native_apps/bubble_wrap/README.md) 是独立可见 Native App，画面、玩法和短音效适配保存在 App 包内，复用 Core 暂停/恢复、自绘及受控输入。它与 [Badge 锁定来源](native_apps/badge/README.md) 分开；其余迁移 App 的完成情况由 [028](../.scratch/028-badge-native-app-migration/spec.md) 持有。
+
 ## 本地 Runtime App 包
 
 内置源码清单位于 `runtime_apps/builtin_apps.cmake`，同一清单驱动 LittleFS staging 和 Core 的不可变成员摘要。聊天和计算器使用 `espocket.app.ai_chatbot`、`espocket.app.calculator`，与官方 Store 包身份不同；GUI、Controller、导航声明与种子资源都属于各自 App。AppData／AppFiles／AppCache 不作为不可变代码，既有设备迁移需要保留用户配置及其他 App。

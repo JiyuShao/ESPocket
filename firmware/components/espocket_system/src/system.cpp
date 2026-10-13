@@ -113,6 +113,9 @@ std::expected<void, std::string> System::init()
             foreground_app_id_.load(std::memory_order_acquire) != app_id) return std::nullopt;
         return shell_->native_pointer_access();
     };
+    config.user_activity = [this](esp_brookesia::system::core::AppId) {
+        if (shell_) shell_->report_user_activity();
+    };
     config.start_service_manager = true;
     config.install_registered_apps = false;
     config.install_package_apps = true;
@@ -252,6 +255,13 @@ std::expected<void, std::string> System::on_init()
     });
     hello->set_navigator(hello_result->navigator);
     ESP_LOGI(TAG, "Hello Native installed");
+
+    auto bubble = std::make_shared<BubbleWrapApp>();
+    auto bubble_result = install_navigated_app(bubble, bubble->get_page_declaration(),
+        [weak = std::weak_ptr<BubbleWrapApp>(bubble)](std::string_view from, std::string_view to) {
+            auto app = weak.lock(); return app && app->present_page(from, to);
+        });
+    if (!bubble_result) return std::unexpected("Failed to install Bubble Wrap: " + bubble_result.error());
 
     settings_adapter_ = std::make_shared<SettingsNavigationAdapter>(
         std::make_shared<esp_brookesia::app::settings::SettingsApp>()
@@ -450,6 +460,7 @@ std::expected<void, std::string> System::on_start()
     }
     display_on_.store(true, std::memory_order_release);
     foreground_restoration_.reset();
+    quick_settings_cover_ = false;
     if (test_adapter_) {
         auto started = test_adapter_->start();
         if (!started) {
@@ -490,6 +501,7 @@ void System::on_stop()
     }
     foreground_app_id_.store(INVALID_APP_ID, std::memory_order_release);
     foreground_restoration_.reset();
+    quick_settings_cover_ = false;
     pending_card_.reset();
 }
 
@@ -535,6 +547,7 @@ void System::on_deinit()
     stopping_.store(false, std::memory_order_release);
     display_on_.store(true, std::memory_order_release);
     foreground_restoration_.reset();
+    quick_settings_cover_ = false;
 
     product_initialized_ = false;
     product_fonts_.reset();

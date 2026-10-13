@@ -190,6 +190,12 @@
     {
       "file": "027-app-owned-native-content.patch",
       "sha256": "40e0f171d4e94f32f2a5fbbdf4f3bc9652eae8dec612868e488b49ea4cc2e930"
+    },
+    {
+      "file": "028-app-suspension-and-activity.patch",
+      "sha256": "6d6dc76ffb8edbfca1f7f1df5c9984e9a1b5d27002c13acb6841fc821f0f4dd9",
+      "issue": ".scratch/028-badge-native-app-migration/issues/03-system-lifecycle-and-activity.md",
+      "removed_when": "Equivalent upstream instance-scoped overlapping suspension, activity admission and deferred timer regressions pass."
     }
   ],
   "issue": ".scratch/005-m5-application-ecosystem/issues/07-isolate-runtime-keyboard-results.md",
@@ -209,7 +215,8 @@
     ".scratch/005-m5-application-ecosystem/issues/11-runtime-store-gesture-regressions.md",
     ".scratch/005-m5-application-ecosystem/issues/12-storage-round-display-and-runtime-usability.md",
     ".scratch/005-m5-application-ecosystem/issues/16-chat-round-display-and-audio-usability.md",
-    ".scratch/028-badge-native-app-migration/issues/10-native-content-and-pointer-seam.md"
+    ".scratch/028-badge-native-app-migration/issues/10-native-content-and-pointer-seam.md",
+    ".scratch/028-badge-native-app-migration/issues/03-system-lifecycle-and-activity.md"
   ],
   "patched_files": {
     ".component_hash": "63f95854db7ae1a1fad3cd229aa6bd55772e696aaaf55db5a3cd559e9daf8d67",
@@ -230,11 +237,11 @@
     "idf_component.yml": "1016f1b5369601fe468dbf0a1667f25c2f7d037cdb601c2ea8619edc75400537",
     "include/brookesia/system_core/app/context.hpp": "4ea41cd1cb63971c63f38671b5bca084f3835dc42fde24cb9d0dab01badde864",
     "include/brookesia/system_core/app/gui_runtime.hpp": "ad352d5359e9138af2f55a42b539e0992f3397c9350650351ae1be760e99cc69",
-    "include/brookesia/system_core/app/iapp.hpp": "c4da540769b0560126ba81e5a35c25685fd1ec97f80276e3fa826a4f3c3ef574",
+    "include/brookesia/system_core/app/iapp.hpp": "a10154a0fe77feda74b341b2361b4aa3c180e4a1850f55dd2d30598bebf63026",
     "include/brookesia/system_core/app/package.hpp": "783d7eeb6ce02fcf5ea5062660ba4aa283687369fad8c6c28c6129ceba5d1cfd",
-    "include/brookesia/system_core/app/system_api.hpp": "8e8cd38e7dc8384cfc094c4e8153c0989dc8d40502f055747469f857ab706c54",
+    "include/brookesia/system_core/app/system_api.hpp": "32d18d841c8172d48fed02eb64adb79d4a97d2b5f2356a56fb0f7bb5b9def431",
     "include/brookesia/system_core/app/timer_runtime.hpp": "2a985119b10e5dda0aed70aeaca05bcaa1558d9d15035652b611f2bd358920fe",
-    "include/brookesia/system_core/app/types.hpp": "052d51f000c144eb754ebe509a72f3c3b8246bc451b76f88556b331607661bdf",
+    "include/brookesia/system_core/app/types.hpp": "140b150a22f27f0035d8285ca3e760e9bf18906fcd495c5e0688410e5b0f8e92",
     "include/brookesia/system_core/app.hpp": "44fc3b87c4a48f32a47c87b81c85dc83bc6406026574abfccd46b56b6cb009ee",
     "include/brookesia/system_core/macro_configs.h": "f580190715d44916b361e4fc8b1f6ebaac1adb9743ca8ba9e12951464b89cd3d",
     "include/brookesia/system_core/package.hpp": "3f00108da8a62a30188846e799a55d4637d6bd477c8c48af53ffc3d6c16b610b",
@@ -245,17 +252,17 @@
     "include/brookesia/system_core/system/batch.hpp": "26f202415915be8bb4c093ba1187ebfdafe7ba774f5e9c526f641c579ad5c573",
     "include/brookesia/system_core/system/gui_access.hpp": "1c2bec4a34329d05343c560c3a945a366937ab3516f7763f063c6305ad3f611e",
     "include/brookesia/system_core/system/storage.hpp": "80140583b0651b7ab2bef6b65bcf571597c0bdef76aa25821d694e2eb0baaab0",
-    "include/brookesia/system_core/system/system.hpp": "039e207d01c57182e970293ce9ccf46a0a726e4dcb1517b7f0e9d41124cdf91e",
+    "include/brookesia/system_core/system/system.hpp": "1abc447b761112600980b2e8e682f3d80e584d25b9ee9f14b41bc020cd5846da",
     "include/brookesia/system_core/system.hpp": "39a296b75da84cd916273734c432e0c2dfb68643444386dce9821cdffb54b1c9",
     "include/brookesia/system_core.hpp": "66ba704eeebb40d4682689da1b9278238a6aa41b67cc3d202e512cc48fc6dcb3",
     "license.txt": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
-    "src/app/app.cpp": "e22cb59071550da966c1dac12cb9742c3a77d12e9beda2ead7921ff8b9bf9055",
-    "src/app/manager.cpp": "cf05fdc118dd82e9302af9f18c77942b4a09ef50dd2b1bc16adbb21d55fdc049",
+    "src/app/app.cpp": "3f71fd7961766587984943ffc2a7ee8a19c61959fecd882938bf2822be5e9019",
+    "src/app/manager.cpp": "e70baf557b9192fbaa9b3ed05b866a3502c302861f32aec52dea7077a5eda006",
     "src/app/package.cpp": "23aa58815c84b94e9a176417d42758861f7e6baa3e6360792513630a7bb8128b",
     "src/app/package_scan.cpp": "f25a5f1dc59878e2763a5e32c6608a5187fd7d978afd6c722a3c96e96d3e9c74",
     "src/app/package_validation.cpp": "fef1b04ec024c5799ee2006557514be86a27c163930f754bccec745c1330ba7f",
     "src/app/service_requirement.cpp": "9a5bb4fbdadcac147d05f8c362010b94f7f2283811bcdee512e24c13b9441dc3",
-    "src/app/start_progress.cpp": "5688f90f48ae5a4e3573d4bb950eb0420f5e65a06caa382a07360a9b9ae3d060",
+    "src/app/start_progress.cpp": "3a09924b402c74b34f588cfd3596af213eef7937fb18a265368206713899cd9e",
     "src/package_release_verify.cpp": "c64e061ae32557f35bc382c4402bc3808bf948900ae809afc51d804a41f3433b",
     "src/private/app/package_validation.hpp": "1e63d5e149c69d3c0ec298c9685659aa1e14493b1868ea8cd2663c22071e6611",
     "src/private/app/service_requirement.hpp": "e31d68cf700ce5befec3d1d1fdcc035d08d75752c0bd1364548b880c12e05dce",
@@ -268,7 +275,7 @@
     "src/private/service/static_schema.cpp": "34ca3ca4ad9cb8c28d075052014144f3498b17d747cd6d805d2069b5b4e04e04",
     "src/private/service/static_schema.hpp": "e89861292222172646f03ff7e756adf43cdd0b83cc9793c4f428c4ad4c39e1e3",
     "src/private/service/utils.hpp": "53257540a5b2161c5efd76112148903dcb444bfc2b46d207b8966699b3d6b3b3",
-    "src/private/system/impl.hpp": "782123f19146c00fe1bbf7e396200adb72d28be5b8e23094c462dfaddbabab96",
+    "src/private/system/impl.hpp": "bb0f6b00d5dd41201742ebdd15a589be45cc02745e0c6609ca1b3a20e17699ad",
     "src/private/utils.hpp": "cd13e446fb0aaa67564087eec7e38e21e97a9a32cf6f7069582b9a20bff005b9",
     "src/runtime/host_bridge.cpp": "be70a3f9dfd0889dbe3ca3cde16a05111f6dfa21170a41194511d2b5a270a156",
     "src/runtime/runtime.cpp": "5bd56b61b62ef7d1b0f583d0f1824b52ffe9053a22c9a08d0f7c675246809a2a",
@@ -280,11 +287,11 @@
     "src/system/gui.cpp": "c1c809142ac84b3307ddcae01a14a0e2f72b78a285ffbfa7b1ba66ad21ec2f23",
     "src/system/gui_access.cpp": "cffe7aa6bc55c18cbf82381f01b66ec746324bd9dd1a7068b79d1cf9b2c60407",
     "src/system/gui_preferences.cpp": "9279442fb20aebdca56765e24da218420f0564ae08c6df9a06e2a4cd1579587c",
-    "src/system/lifecycle.cpp": "5d07aa61af5c0042a6cb2e0a969c731e792685c543c7778815ca444c1c55e433",
+    "src/system/lifecycle.cpp": "7a886fda5748881f679e80a0791a495bbd7615ff477dce99ae6930c65f19056b",
     "src/system/overlay.cpp": "cb05bfdc1362db2e910c850f84e6b672235563648ba1a64e30df49f679f40e26",
     "src/system/resources.cpp": "b062841e12697b4d17e5037ee3ed8dfaf8cd93f0f915765c63c672d7a1e32bd8",
     "src/system/storage.cpp": "15b3514e368d826043f8034eaaf0921c5996e74abd53a857c173072eb985ec51",
     "src/system/task.cpp": "3b0a11bac920d90d1d4d7195cae304e0742760f0d29e01525b2114d17766f9e0",
-    "src/system/timer.cpp": "01df0329e2c7c830bb340d96acceeaf871f982ff093e1d8940c5dabb7d01130c"
+    "src/system/timer.cpp": "9a6ee8818053baea6e717759d853b7ccac6719453d1913246bf141734b91bb0f"
   }
 }

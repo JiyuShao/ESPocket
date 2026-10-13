@@ -16,7 +16,7 @@ class ForegroundRestorationTest(unittest.TestCase):
 #include <atomic>
 #include <cassert>
 #include <memory>
-namespace esp_brookesia::system::core {enum class AppState {Starting,Running,Stopped,Error};}
+namespace esp_brookesia::system::core {enum class AppState {Starting,Running,Paused,Stopped,Error};}
 namespace espocket {
 enum class ShellSurface : uint8_t {Home,Launcher};
 using AppState = esp_brookesia::system::core::AppState;
@@ -31,6 +31,8 @@ struct System {
 }
 int main(){using namespace espocket;System s;ForegroundRestorationProjection p(ShellSurface::Home);
  auto first=s.current_foreground_instance();assert(first && first->generation==10);
+ s.active->state=AppState::Paused;assert(s.current_foreground_instance()==first);
+ s.active->state=AppState::Running;
  p.quick_settings_opened({8,1,"canvas"},first);
  assert(p.quick_settings_closed(first,true)->source_id==8);
  assert(!p.quick_settings_closed(first,true));

@@ -123,7 +123,7 @@ std::expected<void, std::string> System::on_app_started(
         if (runtime) {
             // The locked JS backend drains Promise completions on a subsequent callback.
             // Provide that callback even when the App has no timer or input activity.
-            const auto pump = timer_start_periodic(app.app_id, "espocket.navigation.completion", 50);
+            const auto pump = timer_start_periodic(app.app_id, "espocket.navigation.completion", 50, true);
             if (!pump) return std::unexpected("Failed to start Runtime completion pump: " + pump.error());
         }
     }
@@ -151,6 +151,7 @@ std::expected<void, std::string> System::on_app_started(
                              std::memory_order_release);
     foreground_restoration_.instance_started(app.app_id);
     remember_reset_resume(app);
+    sync_foreground_suspension();
     return {};
 }
 
@@ -251,7 +252,8 @@ std::optional<RunningInstanceIdentity> System::current_foreground_instance() con
     const auto active = get_active_app();
     const auto generation = foreground_token_->load(std::memory_order_acquire);
     if (!active || active->app_id == shell_id_ || !active->manifest.visible ||
-            active->state != esp_brookesia::system::core::AppState::Running || generation == 0 ||
+            (active->state != esp_brookesia::system::core::AppState::Running &&
+             active->state != esp_brookesia::system::core::AppState::Paused) || generation == 0 ||
             active->app_id != foreground_app_id_.load(std::memory_order_acquire)) return std::nullopt;
     return RunningInstanceIdentity{active->app_id, generation};
 }

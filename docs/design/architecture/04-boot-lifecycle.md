@@ -61,3 +61,9 @@ System 向 Core 请求可见 App 启动；Core 在原 AppRecord 持有 Starting�
 启动阶段内的同步 callback 与 GUI parse 不提供强制抢占；分阶段只释放阶段之间与 GUI future 等待时的 App Owner。输入响应时延还取决于每个阶段的耗时与 GUI 锁占用。
 
 Core 的公开同步启动与分阶段启动共用私有准入、Runtime 启动、生命周期调用、Running 提交和资源清理操作；两种入口仅保留各自调度及兼容语义。准入与生命周期失败由同一分类报告，不再各自维护错误提示。
+
+## 暂停原因与活动准入
+
+Core 在原 AppRecord 保存单次启动身份和覆盖/息屏/手动暂停原因；System 仅传入产品事实，不镜像 App 状态或管理另一套生命周期。首次暂停与末次恢复都由 Core 判定，失败保持暂停，旧身份或丢失前台资格拒绝恢复。前台恢复投影将同次 Paused 实例视为仍有效，不因此创建新实例。
+
+普通 periodic timer 在 Paused 时跳过；一次性 due 在原 timer record 暂存，恢复后由既有维护节拍分发；停止清空。Owner completion pump 可显式保留暂停分发，服务事件与请求完成遵守原身份撤销。用户活动经 Core 实例与 Shell input epoch 重新准入后，写入 Shell 既有闲置代次，不能唤醒已息屏页面。公开接口与失败处理见 [App 暂停与活动](../../development/app-suspension-and-activity.md)。

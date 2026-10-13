@@ -21,7 +21,7 @@ GUI Runtime 验证当前 document、节点与 Runtime 身份，LVGL backend 持�
 
 attach、invoke、detach 不得重入 document、节点或挂载的结构生命周期操作。detach 必须同步、幂等且不抛异常，能处理部分 attach；App 在此断开自己的事件、取消 timer，停止使用 root 的工作。需要 GUI 锁的 worker 应在 App 生命周期中先停止，不能在持有 GUI 锁的 detach 中等待它获取同一把锁。资源无法安全停止时，App 必须报告生命周期失败，不能先释放 worker 仍在使用的缓冲。
 
-App 负责在已有 on_pause/on_resume 中暂停和恢复动画、物理工作及输入。自绘挂载不自动冻结线程；Quick Settings/息屏的生命周期接通由 [028/03](../../.scratch/028-badge-native-app-migration/issues/03-system-lifecycle-and-activity.md)持有。
+App 负责在已有 on_pause/on_resume 中暂停和恢复动画、物理工作及输入。自绘挂载不自动冻结线程；Quick Settings/息屏的生命周期与活动接口见 [App 暂停与活动](app-suspension-and-activity.md)；实现票为 [028/03](../../.scratch/028-badge-native-app-migration/issues/03-system-lifecycle-and-activity.md)。
 
 ## 输入语义
 
