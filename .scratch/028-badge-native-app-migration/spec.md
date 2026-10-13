@@ -11,7 +11,7 @@ Blocked by: 无额外人工许可；按 tickets 完成公共接口核查与离�
 
 ## Solution
 
-以七个独立可见 Native App 交付：泡泡纸、打砖块、弹球、水池、太阳系、重力迷宫、蓝牙遥控。蓝牙遥控包含触控板和空中鼠标两种模式。应用使用现有 System Core、导航和 GUI 生命周期，硬件能力保持真实 Service/HAL Owner；产品行为已确认，已完成来源锁定、自绘/受控输入接口与暂停/活动接入，泡泡纸已实现为首个独立 Native App；离线构建和设备证据分开记录。其余五个游戏与蓝牙遥控尚未交付。
+以七个独立可见 Native App 交付：泡泡纸、打砖块、弹球、水池、太阳系、重力迷宫、蓝牙遥控。蓝牙遥控包含触控板和空中鼠标两种模式。应用使用现有 System Core、导航和 GUI 生命周期，硬件能力保持真实 Service/HAL Owner；产品行为已确认，已完成来源锁定、自绘/受控输入接口与暂停/活动接入，泡泡纸已实现为首个独立 Native App；离线构建和设备证据分开记录。打砖块触摸版随后已实现；其余四个游戏与蓝牙遥控尚未交付，打砖块倾斜控制待 IMU 能力。
 
 ## User Stories
 
@@ -73,3 +73,5 @@ Excel 快捷键、录音机、原项目计算器/时钟/Settings/Launcher/锁屏
 2026-10-13：[App 接口与 IMU 提案审查](records/2026-10-13-app-interface-review.md)复现暂停原因回调重入后的恢复错误，[03](issues/03-system-lifecycle-and-activity.md)已重开，优先修复并补回归。现有命名优化与 IMU 契约缺口分别记录，尚未实施；v5 是初版候选，不能代表该错误已修复。
 
 2026-10-13：用户授权的 [生命周期接口优化](records/2026-10-13-lifecycle-callback-contract.md)完成，统一原因回调命名/快照、保留旧入口兼容，修复原因回调重入恢复并通过生产回归与新的完整隔离构建；[03](issues/03-system-lifecycle-and-activity.md)再次 resolved。活动凭据、执行快照/策略参数和 IMU 的其他审查建议未由本批实施，04/06/07/08/09 的剩余条件保持。
+
+2026-10-13：继续实施 [06](issues/06-native-games-and-toys.md) 的独立打砖块触摸版，复用既有 App 接口及共享短音效适配，本批未修改 Core；[打砖块使用说明](../../firmware/native_apps/brick_breaker/README.md)记录触摸交互与边界；[实现与候选记录](records/2026-10-13-brick-breaker-touch.md)区分离线完成、倾斜控制待接入与真机待验。六游戏总票保持未关闭。

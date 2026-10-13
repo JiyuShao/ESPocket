@@ -263,6 +263,13 @@ std::expected<void, std::string> System::on_init()
         });
     if (!bubble_result) return std::unexpected("Failed to install Bubble Wrap: " + bubble_result.error());
 
+    auto bricks = std::make_shared<BrickBreakerApp>();
+    auto bricks_result = install_navigated_app(bricks, bricks->get_page_declaration(),
+        [weak = std::weak_ptr<BrickBreakerApp>(bricks)](std::string_view from, std::string_view to) {
+            auto app = weak.lock(); return app && app->present_page(from, to);
+        });
+    if (!bricks_result) return std::unexpected("Failed to install Brick Breaker: " + bricks_result.error());
+
     settings_adapter_ = std::make_shared<SettingsNavigationAdapter>(
         std::make_shared<esp_brookesia::app::settings::SettingsApp>()
     );

@@ -1,4 +1,4 @@
-#include "bubble_sound.hpp"
+#include "espocket/short_effect.hpp"
 #include "brookesia/service_helper/media/audio.hpp"
 #include <algorithm>
 #include "esp_timer.h"
@@ -8,7 +8,7 @@ namespace {
 using Decoder = esp_brookesia::service::AudioDecoder;
 using Playback = esp_brookesia::service::helper::AudioPlayback;
 }
-void BubbleSound::play(unsigned hz, unsigned ms)
+void ShortEffect::play(unsigned hz, unsigned ms)
 {
     poll();
     try {
@@ -23,13 +23,13 @@ void BubbleSound::play(unsigned hz, unsigned ms)
     auto found = std::find_if(outputs.begin(), outputs.end(), [](const auto &out) { return out.role == "speaker"; });
     if (found == outputs.end()) { close(); return; }
     output_ = found->name;
-    auto registered = decoder->register_source({.name = "espocket.app.bubble_wrap.effect", .role = "effect",
+    auto registered = decoder->register_source({.name = source_name_, .role = "effect",
         .preferred_outputs = {output_}, .priority = -100});
     if (!registered) { close(); return; }
     source_ = *registered;
     if (!decoder->request_output(*source_, output_)) { close(); return; }
     // Public native Owner seam checks/selects atomically. No check-then-steal race.
-    if (!decoder->set_active_source(output_, "espocket.app.bubble_wrap.effect", true)) { close(); return; }
+    if (!decoder->set_active_source(output_, source_name_, true)) { close(); return; }
     esp_brookesia::service::AudioStreamConfig config;
     config.general = {.channels = 2, .sample_bits = 16, .sample_rate = 16000, .frame_duration = 20};
     config.queue_size_bytes = 12 * 1024;
@@ -53,7 +53,7 @@ void BubbleSound::play(unsigned hz, unsigned ms)
         close();
     }
 }
-void BubbleSound::poll()
+void ShortEffect::poll()
 {
     if (!source_) return;
     auto *decoder = Decoder::get_instance(0);
@@ -63,7 +63,7 @@ void BubbleSound::poll()
     if (!decoder || !binding_.is_valid() || released < 0 ||
         (released > 0 && esp_timer_get_time() - released >= duration_us_)) close();
 }
-void BubbleSound::close()
+void ShortEffect::close()
 {
     auto *decoder = Decoder::get_instance(0);
     if (source_ && binding_.is_valid() && decoder) {

@@ -65,7 +65,7 @@ int main(){
 int64_t now=1000000;int64_t esp_timer_get_time(){return now;}
 namespace espocket {
 struct BubbleContent{int paints=0;void paint(const bubble::Model&){++paints;}};
-struct BubbleSound{int plays=0,closes=0;void close(){++closes;}void poll(){}void play(unsigned,unsigned){++plays;}};
+struct ShortEffect{int plays=0,closes=0;void close(){++closes;}void poll(){}void play(unsigned,unsigned){++plays;}};
 namespace core {
 using TimerId=int;
 struct State{uint64_t instance=1;bool paused=false;std::optional<uint64_t>activity_epoch=5;bool suspended()const{return paused;}};
@@ -82,7 +82,7 @@ struct Timer{bool fail=false;int next=1,stops=0;std::expected<int,std::string>st
 struct AppContext{System s;Gui g;Timer t;auto&system_service(){return s;}auto&gui(){return g;}auto&timer(){return t;}};
 }
 struct BubbleWrapApp{
- bubble::Model model_;std::shared_ptr<BubbleContent>content_;std::unique_ptr<BubbleSound>sound_=std::make_unique<BubbleSound>();
+ bubble::Model model_;std::shared_ptr<BubbleContent>content_;std::unique_ptr<ShortEffect>sound_=std::make_unique<ShortEffect>();
  int mount_=0,timer_=0;uint64_t instance_=0;int64_t last_tick_us_=0;bool running_=false,has_frame_=false;uint32_t last_sequence_=0;
  std::expected<void,std::string>on_start(core::AppContext&);std::expected<void,std::string>on_pause(core::AppContext&);
  std::expected<void,std::string>on_resume(core::AppContext&);std::expected<void,std::string>on_stop(core::AppContext&);

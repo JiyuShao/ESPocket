@@ -4,13 +4,15 @@
 #include "brookesia/service_manager/service/manager.hpp"
 namespace espocket {
 // One short PCM stream through the existing Audio Owner. Busy output is skipped.
-class BubbleSound {
+class ShortEffect {
 public:
-    ~BubbleSound() { close(); }
+    explicit ShortEffect(std::string source_name) : source_name_(std::move(source_name)) {}
+    ~ShortEffect() { close(); }
     void play(unsigned hz, unsigned ms);
     void poll();
     void close();
 private:
+    std::string source_name_;
     esp_brookesia::service::ServiceBinding binding_;
     std::optional<uint32_t> source_;
     std::string output_;

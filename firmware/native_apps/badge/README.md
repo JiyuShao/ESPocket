@@ -1,6 +1,6 @@
 # The-Badge migration inputs
 
-[028](../../../.scratch/028-badge-native-app-migration/spec.md) 的七个 Native App 迁移工作区。当前只保存精确上游参考源码、素材和来源锁，不编译、不安装、不注册应用，尚未交付可运行游戏或遥控。
+[028](../../../.scratch/028-badge-native-app-migration/spec.md) 的七个 Native App 迁移工作区。本目录只保存精确上游参考源码、素材和来源锁，不编译、不安装、不注册应用。迁移实现位于独立的 [泡泡纸](../bubble_wrap/README.md) 与 [打砖块](../brick_breaker/README.md) App 目录；其余进度由 028 持有。
 
 `upstream.lock.json` 固定仓库、完整 commit、所选文件大小及 SHA-256；`upstream/` 保持原字节，后续适配代码另写，禁止把未修改来源和适配版本混记。上游完整仓库包含其他产品入口，本目录只保存审计/迁移需要的输入。
 

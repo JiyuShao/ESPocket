@@ -7,11 +7,11 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 
 
-class BubbleSoundTest(unittest.TestCase):
+class ShortEffectTest(unittest.TestCase):
     def test_busy_muted_release_lifetime_and_pause_cleanup(self):
-        header = (ROOT / 'src/bubble_sound.hpp').read_text()
+        header = (ROOT / 'include/espocket/short_effect.hpp').read_text()
         body = header[header.index('namespace espocket {'):]
-        methods = (ROOT / 'src/bubble_sound.cpp').read_text()
+        methods = (ROOT / 'src/short_effect.cpp').read_text()
         methods = methods[methods.index('namespace espocket {'):]
         code = r'''
 #include <algorithm>
@@ -33,14 +33,14 @@ struct AudioStreamConfig{struct General{int channels,sample_bits,sample_rate,fra
 struct ServiceBinding{bool valid=false;bool is_valid(){return valid;}void release(){valid=false;}};
 struct ServiceManager{static ServiceManager&get_instance(){static ServiceManager manager;return manager;}ServiceBinding bind(std::string_view){return {true};}};
 struct AudioDecoder{
- bool busy=false,fail_open=false,fail_write=false,throw_write=false;int registrations=0,unregisters=0,closes=0,releases=0;
+ bool busy=false,fail_open=false,fail_write=false,throw_write=false;int registrations=0,unregisters=0,closes=0,releases=0;std::string source_name;
  RawBuffer borrowed{nullptr,0};std::function<void(AudioWriteResult)>completion;
  static AudioDecoder*get_instance(int){static AudioDecoder decoder;return &decoder;}
  struct Output{std::string name="speaker",role="speaker";};std::vector<Output>get_outputs(){return {{}};}
  struct Source{std::string name,role;std::vector<std::string>preferred_outputs;int priority;};
- std::expected<uint32_t,std::string>register_source(Source s){assert(s.priority<0);++registrations;return registrations;}
+ std::expected<uint32_t,std::string>register_source(Source s){assert(s.priority<0);source_name=s.name;++registrations;return registrations;}
  std::expected<void,std::string>request_output(uint32_t,std::string_view){return {};}
- std::expected<void,std::string>set_active_source(std::string_view,std::string_view,bool idle){assert(idle);if(busy)return std::unexpected("busy");return {};}
+ std::expected<void,std::string>set_active_source(std::string_view,std::string_view name,bool idle){assert(idle && name==source_name);if(busy)return std::unexpected("busy");return {};}
  std::expected<void,std::string>open_stream(uint32_t,std::string_view,const AudioStreamConfig&config){assert(config.queue_size_bytes==12288);if(fail_open)return std::unexpected("open");return {};}
  AudioWriteResult write_stream_borrowed(uint32_t,std::string_view,RawBuffer data,std::function<void(AudioWriteResult)>callback,int timeout){assert(timeout==0);if(throw_write)throw std::bad_alloc{};borrowed=data;completion=callback;if(fail_write){completion(AudioWriteResult::Error);return AudioWriteResult::Error;}return AudioWriteResult::Written;}
  std::expected<void,std::string>close_stream(uint32_t,std::string_view){++closes;if(completion){auto callback=std::move(completion);callback(AudioWriteResult::Error);}return {};}
@@ -58,7 +58,7 @@ struct AudioPlayback{enum class FunctionId{GetMute};static inline bool available
 int main(){
  using namespace espocket;using namespace esp_brookesia::service;auto*d=AudioDecoder::get_instance(0);
  using P=helper::AudioPlayback;
- BubbleSound sound;
+ ShortEffect sound("app.one.effect");
  P::muted=true;sound.play(1000,22);assert(d->registrations==0);
  P::muted.reset();sound.play(1000,22);assert(d->registrations==0);
  P::muted=false;d->busy=true;sound.play(1000,22);assert(d->registrations==1 && d->unregisters==1 && !d->completion);
@@ -77,6 +77,7 @@ int main(){
  sound.close();d->fail_write=true;sound.play(1000,22);assert(d->registrations==d->unregisters);
  d->fail_write=false;d->throw_write=true;sound.play(1000,22);
  assert(d->registrations==d->unregisters); // partial lease is cleaned on allocation exception
+ d->throw_write=false;ShortEffect second("app.two.effect");second.play(900,40);assert(d->source_name=="app.two.effect");second.close();
 }
 '''
         with tempfile.TemporaryDirectory(prefix='bubble-sound-') as d:

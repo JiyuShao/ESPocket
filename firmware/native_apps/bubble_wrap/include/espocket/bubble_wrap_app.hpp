@@ -4,7 +4,7 @@
 #include "espocket/bubble_model.hpp"
 namespace espocket {
 class BubbleContent;
-class BubbleSound;
+class ShortEffect;
 class BubbleWrapApp final : public esp_brookesia::system::core::IApp {
 public:
     BubbleWrapApp();
@@ -22,7 +22,7 @@ public:
 private:
     bubble::Model model_;
     std::shared_ptr<BubbleContent> content_;
-    std::unique_ptr<BubbleSound> sound_;
+    std::unique_ptr<ShortEffect> sound_;
     esp_brookesia::gui::NativeContentToken mount_;
     esp_brookesia::system::core::TimerId timer_ = 0;
     uint64_t instance_ = 0;

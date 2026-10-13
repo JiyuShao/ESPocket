@@ -1,4 +1,5 @@
 #include "espocket/bubble_wrap_app.hpp"
+#include "espocket/brick_breaker_app.hpp"
 #pragma once
 
 #include "espocket/system.hpp"

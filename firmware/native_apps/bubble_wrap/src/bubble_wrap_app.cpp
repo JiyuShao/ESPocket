@@ -1,11 +1,11 @@
 #include "espocket/bubble_wrap_app.hpp"
 #include "bubble_content.hpp"
-#include "bubble_sound.hpp"
+#include "espocket/short_effect.hpp"
 #include "esp_timer.h"
 namespace espocket {
 namespace core = esp_brookesia::system::core;
 extern const char bubble_wrap_gui_json_start[] asm("_binary_bubble_wrap_gui_json_start");
-BubbleWrapApp::BubbleWrapApp() : sound_(std::make_unique<BubbleSound>()) {}
+BubbleWrapApp::BubbleWrapApp() : sound_(std::make_unique<ShortEffect>("espocket.app.bubble_wrap.effect")) {}
 BubbleWrapApp::~BubbleWrapApp() = default;
 PageDeclaration BubbleWrapApp::get_page_declaration() const
 {

@@ -9,7 +9,7 @@
 - `src/bubble_model.cpp` 保留 466 px 画布、78 px 泡泡、82×70 六角布局、半径 178、22 ms 爆破音及 520 Hz 补充音；模型属于 App，不是平台布局特例。
 - `src/bubble_content.cpp` 在本 App Container 下绘制原配色，只更新发生变化的泡泡与剩余数量；没有全局 screen 或事件直读硬件。
 - `src/bubble_wrap_app.cpp` 使用 Core timer、App 所属自绘 token 和受控多点帧。暂停停止实际 model 更新、丢弃触摸、关闭短音效；恢复重置计时基准，同次泡泡状态保留，Home 后重新打开重置。
-- `src/bubble_sound.cpp` 使用既有 AudioDecoder 的 Source/RequestOutput/OpenStream。仅在 Audio Owner 原子确认空闲时选择来源；一次最多一段 130 ms、16 kHz stereo PCM，12 KiB 有界队列和零入队等待。静音或忙时跳过，不改变系统音量。缓冲由 release callback 保留，回调只写独立原子完成时间，不访问 App；完成后异步保留一段音效时长供 HAL 消费尾部；停止立即关闭 stream 并释放 Source/binding。
+- 共享的 `espocket::ShortEffect`（见 [短音效适配](../../components/espocket_app_effects/README.md)）使用既有 AudioDecoder 的 Source/RequestOutput/OpenStream。仅在 Audio Owner 原子确认空闲时选择来源；一次最多一段 130 ms、16 kHz stereo PCM，12 KiB 有界队列和零入队等待。静音或忙时跳过，不改变系统音量。缓冲由 release callback 保留，回调只写独立原子完成时间，不访问 App；完成后异步保留一段音效时长供 HAL 消费尾部；停止立即关闭 stream 并释放 Source/binding。
 
 受控帧取消时清除全部按压。相同 track_id 的移动不会变成第二次按下；新触点可爆破新泡泡。原 LVGL 事件回调改为 Core 20 ms 轮询，自动补充采用累计有效运行时间，不补算暂停时长。系统手势优先，首次挂载和恢复必须经过受控帧的全松开门槛。
 
