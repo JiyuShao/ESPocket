@@ -2,6 +2,7 @@
 #include "espocket/brick_breaker_app.hpp"
 #include "espocket/pinball_app.hpp"
 #include "espocket/water_app.hpp"
+#include "espocket/solar_system_app.hpp"
 #pragma once
 
 #include "espocket/system.hpp"

@@ -283,6 +283,14 @@ std::expected<void, std::string> System::on_init()
         });
     if (!water_result) return std::unexpected("Failed to install Water: " + water_result.error());
 
+    auto solar = std::make_shared<SolarSystemApp>();
+    auto solar_result = install_navigated_app(solar, solar->get_page_declaration(),
+        [weak = std::weak_ptr<SolarSystemApp>(solar)](std::string_view from, std::string_view to) {
+            auto app = weak.lock(); return app && app->present_page(from, to);
+        });
+    if (!solar_result) return std::unexpected("Failed to install Orbit: " + solar_result.error());
+    solar->set_navigator(solar_result->navigator);
+
     settings_adapter_ = std::make_shared<SettingsNavigationAdapter>(
         std::make_shared<esp_brookesia::app::settings::SettingsApp>()
     );

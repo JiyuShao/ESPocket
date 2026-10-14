@@ -8,4 +8,4 @@
 
 选取的 `port_esp.c`、`app.h`、BLE 和 keypad 文件用于核查真实依赖，不直接编入 ESPocket：原作自行管理 BSP、全局 screen、音频、无线和 NVS，不能绕过既有 Owner。游戏/玩具源码仍有静态全局、LVGL timer、模拟触摸回退与直接活动报告，迁移需要逐项适配。详细结论见 [来源和边界核查](../../../.scratch/028-badge-native-app-migration/records/2026-10-12-source-and-boundaries.md)。
 
-原作 planet map 的 NASA 来源/作者在 NOTICE 中逐项保留；素材尚未作为 ESPocket 可见资源发布。QMI8658 的 `^2.0.0` 只是上游依赖范围，上游没有提交 dependencies.lock，本地生产依赖未因此升级。真机传感器、无线连接和玩法不以源码存在判定通过。
+原作 planet map 的 NASA 来源/作者在 NOTICE 中逐项保留；四份材质已由独立 [太阳系 App](../solar_system/README.md) 按锁定原字节发布，参考目录本身仍不编译。QMI8658 的 `^2.0.0` 只是上游依赖范围，上游没有提交 dependencies.lock，本地生产依赖未因此升级。真机传感器、无线连接和玩法不以源码存在判定通过。
