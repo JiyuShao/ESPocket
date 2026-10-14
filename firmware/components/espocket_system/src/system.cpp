@@ -291,6 +291,13 @@ std::expected<void, std::string> System::on_init()
     if (!solar_result) return std::unexpected("Failed to install Orbit: " + solar_result.error());
     solar->set_navigator(solar_result->navigator);
 
+    auto maze = std::make_shared<GravityMazeApp>();
+    auto maze_result = install_navigated_app(maze, maze->get_page_declaration(),
+        [weak = std::weak_ptr<GravityMazeApp>(maze)](std::string_view from, std::string_view to) {
+            auto app = weak.lock(); return app && app->present_page(from, to);
+        });
+    if (!maze_result) return std::unexpected("Failed to install Gravity Maze: " + maze_result.error());
+
     settings_adapter_ = std::make_shared<SettingsNavigationAdapter>(
         std::make_shared<esp_brookesia::app::settings::SettingsApp>()
     );

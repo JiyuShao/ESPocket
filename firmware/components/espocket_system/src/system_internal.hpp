@@ -3,6 +3,7 @@
 #include "espocket/pinball_app.hpp"
 #include "espocket/water_app.hpp"
 #include "espocket/solar_system_app.hpp"
+#include "espocket/gravity_maze_app.hpp"
 #pragma once
 
 #include "espocket/system.hpp"
