@@ -20,3 +20,5 @@
 2026-10-09：原作 LVGL timers 不由 Core Paused 自动冻结，需显式适配。重连不是强制电脑接入，配对与 HID 报告需独立硬件证据。
 
 2026-10-12：自绘与经过系统仲裁的多点接入由 [10](10-native-content-and-pointer-seam.md) 持有，属于本票实施前置。不得直接编入原作全局 LVGL/driver_data 路径来绕过该依赖。
+
+2026-10-15：已交付离线 Native App、触控板/空中鼠标状态机和受控输入清理；标准 HID endpoint 尚不可用，因此不会发送伪造 GATT 数据。实现边界见 [蓝牙遥控 README](../../../firmware/native_apps/ble_remote/README.md)，实际连接与主机验收仍归 [09](09-device-acceptance.md)。

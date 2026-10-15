@@ -298,6 +298,13 @@ std::expected<void, std::string> System::on_init()
         });
     if (!maze_result) return std::unexpected("Failed to install Gravity Maze: " + maze_result.error());
 
+    auto remote = std::make_shared<BleRemoteApp>();
+    auto remote_result = install_navigated_app(remote, remote->get_page_declaration(),
+        [weak = std::weak_ptr<BleRemoteApp>(remote)](std::string_view from, std::string_view to) {
+            auto app = weak.lock(); return app && app->present_page(from, to);
+        });
+    if (!remote_result) return std::unexpected("Failed to install BLE Remote: " + remote_result.error());
+
     settings_adapter_ = std::make_shared<SettingsNavigationAdapter>(
         std::make_shared<esp_brookesia::app::settings::SettingsApp>()
     );

@@ -18,3 +18,7 @@
 ## Comments
 
 2026-10-09：现有 BLE characteristic 只表达 write/write_without_response/notify，完整 HID 能力尚未实现；源码初查不能关闭本票。
+
+2026-10-15：已核实当前 `PeripheralIface`/NimBLE backend 只生成通用 GATT characteristic，未公开 HID Report Map、Report Reference、HID Control Point 或标准 HID Owner。新增 `espocket_hid` 只承载报告编码和 Endpoint 生命周期契约；生产 factory 明确返回 `unavailable`，没有把 GATT notification 冒充鼠标 HID。真实标准 HID Owner 仍待平台能力补齐，见 [BLE 遥控 README](../../../firmware/native_apps/ble_remote/README.md)。
+
+实现记录：[2026-10-15 BLE 遥控能力与 Native App](../records/2026-10-15-ble-remote-contract.md)。
