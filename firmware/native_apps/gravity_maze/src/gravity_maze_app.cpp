@@ -50,8 +50,11 @@ std::expected<void, std::string> GravityMazeApp::on_resume(core::AppContext &)
 }
 std::expected<void, std::string> GravityMazeApp::on_stop(core::AppContext &context)
 {
-    running_ = false; instance_ = 0; model_.cancel_input(); if (timer_) context.timer().stop(timer_); timer_ = 0;
-    if (imu_started_ && imu_) imu_->stop(); imu_started_ = false;
+    running_ = false; instance_ = 0; model_.cancel_input();
+    if (timer_) context.timer().stop(timer_);
+    timer_ = 0;
+    if (imu_started_ && imu_) imu_->stop();
+    imu_started_ = false;
     context.gui().unmount_native_content(mount_); content_.reset(); return {};
 }
 std::expected<void, std::string> GravityMazeApp::on_timer(core::AppContext &context, core::TimerId id, std::string_view)

@@ -22,3 +22,5 @@
 2026-10-12：自绘与经过系统仲裁的多点接入由 [10](10-native-content-and-pointer-seam.md) 持有，属于本票实施前置。不得直接编入原作全局 LVGL/driver_data 路径来绕过该依赖。
 
 2026-10-15：已交付离线 Native App、触控板/空中鼠标状态机和受控输入清理；标准 HID endpoint 尚不可用，因此不会发送伪造 GATT 数据。实现边界见 [蓝牙遥控 README](../../../firmware/native_apps/ble_remote/README.md)，实际连接与主机验收仍归 [09](09-device-acceptance.md)。
+
+2026-10-15：核对当前实现，拖动持键、主机切换/持久灵敏度、配对管理/重试 UI 和按不同暂停原因处理连接尚未完成，不能归类为仅差真机。后端接入边界及 Endpoint 需要补充的 readiness/释放结果见 [Owner 核查](../records/2026-10-15-hid-owner-integration.md)。当前 host 中命名含 drag 的测试只覆盖移动，不是按住拖动证据。

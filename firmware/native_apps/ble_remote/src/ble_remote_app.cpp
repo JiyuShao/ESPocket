@@ -43,7 +43,9 @@ void BleRemoteApp::try_start()
 std::expected<void, std::string> BleRemoteApp::on_pause(core::AppContext &)
 {
     running_ = false; model_.cancel_input(); if (endpoint_) endpoint_->clear_buttons();
-    if (endpoint_started_ && endpoint_) endpoint_->pause(); if (imu_started_ && imu_) imu_->pause(); return {};
+    if (endpoint_started_ && endpoint_) endpoint_->pause();
+    if (imu_started_ && imu_) imu_->pause();
+    return {};
 }
 std::expected<void, std::string> BleRemoteApp::on_resume(core::AppContext &)
 {
@@ -55,7 +57,10 @@ std::expected<void, std::string> BleRemoteApp::on_resume(core::AppContext &)
 std::expected<void, std::string> BleRemoteApp::on_stop(core::AppContext &context)
 {
     running_ = false; instance_ = 0; model_.cancel_input(); if (endpoint_) endpoint_->clear_buttons();
-    if (timer_) context.timer().stop(timer_); timer_ = 0; if (endpoint_started_ && endpoint_) endpoint_->stop(); if (imu_started_ && imu_) imu_->stop();
+    if (timer_) context.timer().stop(timer_);
+    timer_ = 0;
+    if (endpoint_started_ && endpoint_) endpoint_->stop();
+    if (imu_started_ && imu_) imu_->stop();
     endpoint_started_ = imu_started_ = false; context.gui().unmount_native_content(mount_); content_.reset(); return {};
 }
 std::expected<void, std::string> BleRemoteApp::on_timer(core::AppContext &context, core::TimerId id, std::string_view)

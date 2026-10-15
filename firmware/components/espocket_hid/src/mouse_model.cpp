@@ -42,7 +42,8 @@ std::vector<MouseReport> MouseModel::advance(uint32_t elapsed_ms, bool valid, bo
         if (!have_reference_) { reference_x_ = sample->accel_x_mg; reference_y_ = sample->accel_y_mg; have_reference_ = true; }
         float dx = (sample->accel_y_mg - reference_y_) * air_gain_x * elapsed_ms / 10.0f;
         float dy = (sample->accel_x_mg - reference_x_) * air_gain_y * elapsed_ms / 10.0f;
-        if (std::fabs(dx) < air_dead) dx = 0; if (std::fabs(dy) < air_dead) dy = 0;
+        if (std::fabs(dx) < air_dead) dx = 0;
+        if (std::fabs(dy) < air_dead) dy = 0;
         const float gain = 0.55f + static_cast<float>(state_.sensitivity) * 0.3f;
         dx = dx * gain + fraction_x_; dy = dy * gain + fraction_y_;
         const int ix = clamp_report(static_cast<int>(dx)), iy = clamp_report(static_cast<int>(dy));
@@ -65,7 +66,8 @@ std::vector<MouseReport> MouseModel::advance(uint32_t elapsed_ms, bool valid, bo
         const float radius = std::hypot(static_cast<float>(point.x - center), static_cast<float>(point.y - center));
         if (radius >= ring_inner) {
             float delta = angle(point.x, point.y) - last_angle_;
-            while (delta > 180) delta -= 360; while (delta < -180) delta += 360;
+            while (delta > 180) delta -= 360;
+            while (delta < -180) delta += 360;
             ring_acc_ += delta; while (ring_acc_ >= wheel_degrees) { ring_acc_ -= wheel_degrees; reports.push_back({0,0,0,-1}); }
             while (ring_acc_ <= -wheel_degrees) { ring_acc_ += wheel_degrees; reports.push_back({0,0,0,1}); }
             moved_ = moved_ || std::fabs(delta) > 0.5f;

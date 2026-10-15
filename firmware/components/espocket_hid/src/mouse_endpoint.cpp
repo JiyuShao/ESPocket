@@ -4,10 +4,16 @@
 namespace espocket::hid {
 namespace { int clamp(int value) { return std::clamp(value, -127, 127); } }
 
-std::array<uint8_t, 4> encode_boot_mouse_report(const MouseReport &report)
+std::array<uint8_t, 4> encode_mouse_report(const MouseReport &report)
 {
     return {static_cast<uint8_t>(report.buttons & 0x07), static_cast<uint8_t>(clamp(report.dx)),
             static_cast<uint8_t>(clamp(report.dy)), static_cast<uint8_t>(clamp(report.wheel))};
+}
+
+std::array<uint8_t, 3> encode_boot_mouse_report(const MouseReport &report)
+{
+    const auto encoded = encode_mouse_report(report);
+    return {encoded[0], encoded[1], encoded[2]};
 }
 
 const char *error_name(Error error)

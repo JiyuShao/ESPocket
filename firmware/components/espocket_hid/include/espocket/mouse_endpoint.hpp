@@ -19,7 +19,11 @@ struct MouseReport {
     int wheel = 0;
 };
 
-std::array<uint8_t, 4> encode_boot_mouse_report(const MouseReport &report);
+// Report protocol payload: three buttons, relative X/Y, and wheel. A backend
+// must declare this layout in its Report Map; the report ID is not in the payload.
+std::array<uint8_t, 4> encode_mouse_report(const MouseReport &report);
+// Boot protocol has no wheel byte. Protocol selection belongs to the HID Owner.
+std::array<uint8_t, 3> encode_boot_mouse_report(const MouseReport &report);
 const char *error_name(Error error);
 
 struct Peer {

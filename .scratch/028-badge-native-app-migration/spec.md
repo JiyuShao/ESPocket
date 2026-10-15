@@ -11,7 +11,7 @@ Blocked by: 无额外人工许可；按 tickets 完成公共接口核查与离�
 
 ## Solution
 
-以七个独立可见 Native App 交付：泡泡纸、打砖块、弹球、水池、太阳系、重力迷宫、蓝牙遥控。蓝牙遥控包含触控板和空中鼠标两种模式。应用使用现有 System Core、导航和 GUI 生命周期，硬件能力保持真实 Service/HAL Owner；产品行为已确认，已完成来源锁定、自绘/受控输入接口与暂停/活动接入，泡泡纸已实现为首个独立 Native App；离线构建和设备证据分开记录。打砖块、弹球、水池和太阳系触摸版随后已实现；重力迷宫与蓝牙遥控尚未交付，倾斜控制待 IMU 能力。
+以七个独立可见 Native App 交付：泡泡纸、打砖块、弹球、水池、太阳系、重力迷宫、蓝牙遥控。蓝牙遥控包含触控板和空中鼠标两种模式。应用使用现有 System Core、导航和 GUI 生命周期，硬件能力保持真实 Service/HAL Owner；来源锁定、自绘/受控输入接口与暂停/活动接入已完成。六个游戏/玩具已有触摸版，蓝牙遥控已有离线状态机与页面；真实 IMU/HID backend 尚未接通，遥控的拖动、主机管理及连接策略仍缺实现。离线源码、完整构建和设备证据分开记录。
 
 ## User Stories
 
@@ -81,3 +81,5 @@ Excel 快捷键、录音机、原项目计算器/时钟/Settings/Launcher/锁屏
 2026-10-13：完成 [06](issues/06-native-games-and-toys.md) 的独立水池触摸版：原作 380 粒子流体、小船、RGB565 绘制和 App 所属有界工作线程；[实现与候选记录](records/2026-10-13-water-touch.md)同时记录弹球移植缺口修正。倾斜控制等待 04，太阳系/重力迷宫/蓝牙遥控与真机仍待完成。
 
 2026-10-14：继续完成 [06](issues/06-native-games-and-toys.md) 的独立太阳系 App，保留原作 Orbit 的四球体材质、投影、光照与触摸惯性；[使用说明](../../firmware/native_apps/solar_system/README.md)和[本批记录](records/2026-10-14-orbit-native.md)区分离线实现与真机门槛。重力迷宫、IMU、BLE HID、蓝牙遥控仍待完成，06/08 未关闭。
+
+2026-10-15：重力迷宫触摸版、IMU/HID 最小契约及蓝牙遥控离线页面已提交；两个生产硬件 factory 均明确 `unavailable`，不视为硬件能力完成。[HID Owner 核查](records/2026-10-15-hid-owner-integration.md)确认 ESP-IDF NimBLE HID 可用，但现有 HAL 的 host/GATT 生命周期、安全与主机接口需先补齐；[05](issues/05-ble-hid-capability.md)、[07](issues/07-native-ble-remote.md)保留实际代码缺口，不能写成仅待设备验收。

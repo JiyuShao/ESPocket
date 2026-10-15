@@ -21,11 +21,25 @@ def run(code):
 
 
 class MouseModelTest(unittest.TestCase):
-    def test_boot_report_is_four_bytes_and_clamped(self):
+    def test_report_and_boot_protocol_payloads(self):
         run(r'''
+#include <array>
 #include <cassert>
+#include <climits>
 #include "espocket/mouse_endpoint.hpp"
-int main() { auto a=espocket::hid::encode_boot_mouse_report({7,200,-200,4}); assert(a[0]==7&&a[1]==127&&a[2]==129&&a[3]==4); }
+using namespace espocket::hid;
+int main() {
+  static_assert(sizeof(encode_mouse_report({})) == 4);
+  static_assert(sizeof(encode_boot_mouse_report({})) == 3);
+  const auto full = encode_mouse_report({255, INT_MAX, INT_MIN, INT_MIN});
+  assert((full == std::array<uint8_t, 4>{7, 127, 129, 129}));
+  const auto boot = encode_boot_mouse_report({255, INT_MAX, INT_MIN, INT_MAX});
+  assert((boot == std::array<uint8_t, 3>{7, 127, 129}));
+  const auto boundaries = encode_mouse_report({0, -127, 127, 127});
+  assert((boundaries == std::array<uint8_t, 4>{0, 129, 127, 127}));
+  assert((encode_mouse_report({}) == std::array<uint8_t, 4>{0, 0, 0, 0}));
+  assert((encode_boot_mouse_report({0, 0, 0, 12}) == std::array<uint8_t, 3>{0, 0, 0}));
+}
 ''')
 
     def test_unavailable_endpoint_fails_closed(self):
